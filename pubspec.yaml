@@ -1,0 +1,65 @@
+name: komodo_go
+description: "Flutter app to control Komodo infrastructure management platform."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+  hooks_riverpod: ^2.6.1
+  flutter_hooks: ^0.20.5
+
+  # Networking
+  dio: ^5.8.0+1
+
+  # Code Generation & Immutability
+  freezed_annotation: ^3.0.0
+  json_annotation: ^4.9.0
+
+  # Functional Programming
+  fpdart: ^1.1.1
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # Secure Storage
+  flutter_secure_storage: ^9.2.4
+
+  # Local Storage
+  shared_preferences: ^2.5.3
+
+  # UI Utilities
+  gap: ^3.0.1
+
+  # Icons
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code Generation
+  build_runner: ^2.4.15
+  freezed: ^3.0.0
+  json_serializable: ^6.9.4
+  riverpod_generator: ^2.6.5
+
+  # Testing
+  mocktail: ^1.0.4
+
+  # Linting
+  very_good_analysis: ^7.0.0
+
+  # Integration Testing
+  integration_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
