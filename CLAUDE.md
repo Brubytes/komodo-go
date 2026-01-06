@@ -1,0 +1,191 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+Komodo Go is a Flutter app for controlling the Komodo infrastructure management platform. It uses a modern Flutter stack with Riverpod state management, functional programming patterns, and clean architecture principles.
+
+## Development Commands
+
+Flutter is pinned via FVM (`.fvmrc`) to `3.38.5`. All Flutter commands must be prefixed with `fvm`:
+
+```bash
+# Install dependencies
+fvm flutter pub get
+
+# Run the app
+fvm flutter run
+
+# Code generation (required after model/provider changes)
+fvm dart run build_runner build --delete-conflicting-outputs
+
+# Watch mode for continuous code generation during development
+fvm dart run build_runner watch --delete-conflicting-outputs
+
+# Run tests
+fvm flutter test
+
+# Run specific test file
+fvm flutter test test/unit/features/auth/data/repositories/auth_repository_test.dart
+
+# Lint and analyze
+fvm flutter analyze
+
+# Clean build artifacts
+fvm flutter clean
+```
+
+## Architecture
+
+### State Management: Riverpod with Code Generation
+
+- All state, repositories, and services are Riverpod providers using `@riverpod` annotation
+- Code generation creates provider implementations (`*.g.dart` files)
+- Some providers use `keepAlive: true` to persist across invalidations (e.g., auth state, base URL)
+- Root `ProviderScope` implements exponential backoff retry for network errors (up to 3 retries)
+
+### Error Handling: Either<Failure, T>
+
+- Uses `fpdart` package for functional error handling
+- All repository methods return `Either<Failure, T>` instead of throwing exceptions
+- Sealed union `Failure` type with variants: `NetworkFailure`, `ServerFailure`, `AuthFailure`, `UnknownFailure`
+- Providers unwrap `Either` using `fold()` and throw exceptions for UI error handling
+- User-friendly error messages via `FailureX.displayMessage` extension
+
+### Data Models: Freezed + JSON Serialization
+
+- All models use `@freezed` annotation for immutability
+- Sealed union types for state enums (e.g., `DeploymentState`)
+- Custom `@JsonKey(readValue: ...)` for complex JSON parsing (e.g., MongoDB ObjectId format)
+- Models have private constructors to allow custom methods/getters
+- Run code generation after modifying any `@freezed` or `@riverpod` annotated classes
+- To get the official API documentation use the komodo-docs MCP server.
+
+### API Client: RPC-Style Pattern
+
+The Komodo API uses a custom RPC-like format where all requests are POST to module endpoints:
+
+- `KomodoApiClient` provides `read()`, `write()`, and `execute()` methods
+- Type-safe wrapper: `RpcRequest<T>` with `type` and `params`
+- Responses can be `Map<String, dynamic>` (detail endpoints) or `List<dynamic>` (list endpoints)
+- Auth headers (`X-Api-Key`, `X-Api-Secret`) added via interceptor
+
+### Feature Structure
+
+Each feature follows clean architecture with three layers:
+
+```
+lib/features/{feature_name}/
+├── data/
+│   ├── models/           # Freezed models with JSON serialization
+│   └── repositories/     # Business logic, API calls, Either<Failure, T>
+└── presentation/
+    ├── providers/        # Riverpod state management
+    ├── views/           # Full-screen pages
+    └── widgets/         # Reusable UI components
+```
+
+## Key Patterns
+
+### Repository Pattern
+
+Repositories catch exceptions and map to domain-level failures:
+
+```dart
+Future<Either<Failure, List<Server>>> listServers() async {
+  try {
+    final response = await _client.read(...);
+    return Right(servers);
+  } on ApiException catch (e) {
+    if (e.isUnauthorized) return const Left(Failure.auth());
+    return Left(Failure.server(message: e.message));
+  }
+}
+```
+
+### Conditional Provider Initialization
+
+Providers return `null` when prerequisites aren't met:
+
+```dart
+@riverpod
+Dio? dio(DioRef ref) {
+  final baseUrl = ref.watch(baseUrlProvider);
+  if (baseUrl == null) return null;  // No API calls without base URL
+  // ... setup Dio
+}
+```
+
+### Null-Safe Model Getters
+
+Models use custom getters with fallback chains to handle API inconsistencies:
+
+```dart
+@freezed
+class Server with _$Server {
+  const Server._();  // Private constructor for custom methods
+
+  const factory Server({
+    ServerInfo? info,
+    ServerConfig? config,
+  }) = _Server;
+
+  String get address => info?.address ?? config?.address ?? '';
+}
+```
+
+## Design System
+
+Material 3 theme unified across iOS and Android:
+
+- Primary color: `#014226`
+- Secondary color: `#4EB333`
+- Theme entry points:
+  - Tokens: `lib/core/theme/app_tokens.dart`
+  - Theme: `lib/core/theme/app_theme.dart`
+
+**Guidelines:**
+- Always use `Theme.of(context).colorScheme` for colors
+- Never hard-code hex colors in widgets
+
+## Testing
+
+- Framework: `flutter_test` + `mocktail` for mocking
+- Focus: Unit tests for models and repositories
+- Mock only external dependencies (storage, API clients)
+- Test structure: `setUpAll()` for registrations, `setUp()` for initialization
+- Run `fvm flutter test` after changes to verify no regressions
+
+## Navigation
+
+- `go_router` with single `appRouterProvider`
+- Shell route with bottom navigation wrapper
+- Auth guard: Unauthenticated users redirect to `/login`
+- Router watches `authProvider` for automatic redirects
+
+## Important Notes
+
+### Code Generation is Required
+
+After modifying:
+- `@freezed` classes → regenerate with `build_runner`
+- `@riverpod` providers → regenerate with `build_runner`
+- `@JsonSerializable` models → regenerate with `build_runner`
+
+Generated files (`*.g.dart`, `*.freezed.dart`) are excluded from version control per `.gitignore`.
+
+### API Response Handling
+
+The Komodo API has inconsistencies between endpoints:
+- **ListServers**: Returns `info` object with server details
+- **GetServer**: Returns `config` object instead, `info` is null
+- Models use null-safe getters to handle both formats
+
+### Authentication Flow
+
+1. Credentials stored in `SecureStorageService` (flutter_secure_storage)
+2. Base URL stored separately (required for API calls)
+3. `authProvider.build()` validates credentials on startup
+4. `AuthInterceptor` adds auth headers to all requests
+5. Logout clears both credentials and base URL

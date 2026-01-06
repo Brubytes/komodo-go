@@ -19,6 +19,7 @@ This repo is pinned to Flutter `3.38.5` via FVM (`.fvmrc`). Prefer running:
 - `fvm flutter analyze`: static analysis (lints from `very_good_analysis`).
 - `fvm flutter test`: run all tests.
 - `dart run build_runner build --delete-conflicting-outputs`: regenerate code for Riverpod/Freezed/JSON (`part '*.g.dart'`, `*.freezed.dart`).
+- To get the official API documentation use the komodo-docs MCP server.
 
 ## Coding Style & Naming Conventions
 
