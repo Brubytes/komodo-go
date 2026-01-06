@@ -61,10 +61,23 @@ class LoginView extends HookConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Logo/Title
-                    Icon(
-                      Icons.cloud_outlined,
-                      size: 64,
-                      color: Theme.of(context).colorScheme.primary,
+                    Material(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/komodo-go-logo.png',
+                            width: 64,
+                            height: 64,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
                     ),
                     const Gap(16),
                     Text(

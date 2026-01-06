@@ -9,12 +9,19 @@ class AppTheme {
 
   static const _surfaceTint = Colors.transparent;
 
+  static Color _onColor(Color background) {
+    final brightness = ThemeData.estimateBrightnessForColor(background);
+    return brightness == Brightness.dark ? Colors.white : Colors.black;
+  }
+
   static ColorScheme _lightScheme() {
     final base = ColorScheme.fromSeed(seedColor: AppTokens.brandPrimary);
 
     return base.copyWith(
       primary: AppTokens.brandPrimary,
+      onPrimary: _onColor(AppTokens.brandPrimary),
       secondary: AppTokens.brandSecondary,
+      onSecondary: _onColor(AppTokens.brandSecondary),
     );
   }
 
@@ -24,9 +31,14 @@ class AppTheme {
       brightness: Brightness.dark,
     );
 
+    final primary = AppTokens.brandPrimary;
+    final secondary = AppTokens.brandSecondary;
+
     return base.copyWith(
-      primary: AppTokens.brandPrimary,
-      secondary: AppTokens.brandSecondary,
+      primary: primary,
+      onPrimary: _onColor(primary),
+      secondary: secondary,
+      onSecondary: _onColor(secondary),
     );
   }
 
@@ -34,6 +46,7 @@ class AppTheme {
     final radius = BorderRadius.circular(AppTokens.radiusMd);
     final cardShape = RoundedRectangleBorder(borderRadius: radius);
     final controlShape = RoundedRectangleBorder(borderRadius: radius);
+    final isDark = colorScheme.brightness == Brightness.dark;
 
     return ThemeData(
       useMaterial3: true,
@@ -108,6 +121,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest,
+        labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        floatingLabelStyle: TextStyle(
+          color: isDark ? colorScheme.secondary : colorScheme.primary,
+        ),
         border: OutlineInputBorder(
           borderRadius: radius,
           borderSide: BorderSide.none,
@@ -118,7 +135,10 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: radius,
-          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+          borderSide: BorderSide(
+            color: isDark ? colorScheme.secondary : colorScheme.primary,
+            width: 2,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: radius,
@@ -143,8 +163,10 @@ class AppTheme {
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: radius),
-          backgroundColor: colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
+          backgroundColor: isDark ? colorScheme.secondary : colorScheme.primary,
+          foregroundColor: isDark
+              ? colorScheme.onSecondary
+              : colorScheme.onPrimary,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
