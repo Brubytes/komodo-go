@@ -7,7 +7,6 @@
   - `lib/features/<feature>/`: feature modules split into `data/` (datasources, repositories, models) and `presentation/` (views, widgets, providers).
   - `lib/shared/`: shared models/providers used across features.
 - `test/`: Flutter tests (`test/unit/**` for unit tests, `test/widget_test.dart` for smoke/widget tests).
-- `docs/`: project documentation (see `docs/komodo_api.md` for the API reference used by the app).
 - `android/`, `ios/`, `macos/`, `windows/`, `linux/`, `web/`: Flutter platform projects (usually tool-managed).
 - Generated output: `build/`, `.dart_tool/`, `**/*.g.dart`, `**/*.freezed.dart` (do not edit by hand).
 
