@@ -14,6 +14,8 @@ import '../../../builds/data/models/build.dart';
 import '../../../builds/presentation/providers/builds_provider.dart';
 import '../../../procedures/data/models/procedure.dart';
 import '../../../procedures/presentation/providers/procedures_provider.dart';
+import '../../../actions/data/models/action.dart';
+import '../../../actions/presentation/providers/actions_provider.dart';
 import '../../../repos/data/models/repo.dart';
 import '../../../repos/presentation/providers/repos_provider.dart';
 import '../../../resources/presentation/providers/resources_tab_provider.dart';
@@ -41,6 +43,7 @@ class HomeView extends ConsumerWidget {
     final reposAsync = ref.watch(reposProvider);
     final buildsAsync = ref.watch(buildsProvider);
     final proceduresAsync = ref.watch(proceduresProvider);
+    final actionsAsync = ref.watch(actionsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -82,6 +85,7 @@ class HomeView extends ConsumerWidget {
           ref.invalidate(reposProvider);
           ref.invalidate(buildsProvider);
           ref.invalidate(proceduresProvider);
+          ref.invalidate(actionsProvider);
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -116,7 +120,8 @@ class HomeView extends ConsumerWidget {
                         .length;
                     return '$online online';
                   },
-                  onTap: () => _goToResources(ref, context, ResourceType.servers),
+                  onTap: () =>
+                      _goToResources(ref, context, ResourceType.servers),
                 ),
                 _StatCard(
                   title: 'Deployments',
@@ -145,7 +150,8 @@ class HomeView extends ConsumerWidget {
                         .length;
                     return '$running running';
                   },
-                  onTap: () => _goToResources(ref, context, ResourceType.stacks),
+                  onTap: () =>
+                      _goToResources(ref, context, ResourceType.stacks),
                 ),
                 _StatCard(
                   title: 'Repos',
@@ -171,7 +177,8 @@ class HomeView extends ConsumerWidget {
                         .length;
                     return '$running running';
                   },
-                  onTap: () => _goToResources(ref, context, ResourceType.builds),
+                  onTap: () =>
+                      _goToResources(ref, context, ResourceType.builds),
                 ),
                 _StatCard(
                   title: 'Procedures',
@@ -188,6 +195,21 @@ class HomeView extends ConsumerWidget {
                   onTap: () =>
                       _goToResources(ref, context, ResourceType.procedures),
                 ),
+                _StatCard(
+                  title: 'Actions',
+                  icon: AppIcons.actions,
+                  color: Colors.cyan,
+                  asyncValue: actionsAsync,
+                  valueBuilder: (actions) => actions.length.toString(),
+                  subtitleBuilder: (actions) {
+                    final running = actions
+                        .where((a) => a.info.state == ActionState.running)
+                        .length;
+                    return '$running running';
+                  },
+                  onTap: () =>
+                      _goToResources(ref, context, ResourceType.actions),
+                ),
               ],
             ),
             const Gap(24),
@@ -195,7 +217,8 @@ class HomeView extends ConsumerWidget {
             // Recent servers
             _SectionHeader(
               title: 'Servers',
-              onSeeAll: () => _goToResources(ref, context, ResourceType.servers),
+              onSeeAll: () =>
+                  _goToResources(ref, context, ResourceType.servers),
             ),
             const Gap(8),
             serversAsync.when(
@@ -345,9 +368,35 @@ class HomeView extends ConsumerWidget {
                   children: procedures
                       .take(5)
                       .map(
-                        (procedure) =>
-                            _ProcedureListTile(procedure: procedure),
+                        (procedure) => _ProcedureListTile(procedure: procedure),
                       )
+                      .toList(),
+                );
+              },
+              loading: () => const _LoadingTile(),
+              error: (e, _) => _ErrorTile(message: e.toString()),
+            ),
+            const Gap(24),
+
+            // Recent actions
+            _SectionHeader(
+              title: 'Actions',
+              onSeeAll: () =>
+                  _goToResources(ref, context, ResourceType.actions),
+            ),
+            const Gap(8),
+            actionsAsync.when(
+              data: (actions) {
+                if (actions.isEmpty) {
+                  return const _EmptyListTile(
+                    icon: AppIcons.actions,
+                    message: 'No actions',
+                  );
+                }
+                return Column(
+                  children: actions
+                      .take(5)
+                      .map((action) => _ActionListTile(action: action))
                       .toList(),
                 );
               },
@@ -724,6 +773,44 @@ class _ProcedureListTile extends StatelessWidget {
         ),
         onTap: () => context.go(
           '${AppRoutes.procedures}/${procedure.id}?name=${Uri.encodeComponent(procedure.name)}',
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionListTile extends StatelessWidget {
+  const _ActionListTile({required this.action});
+
+  final ActionListItem action;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = action.info.state;
+    final color = switch (state) {
+      ActionState.running => Colors.blue,
+      ActionState.ok => Colors.green,
+      ActionState.failed => Colors.red,
+      ActionState.unknown => Colors.orange,
+    };
+
+    final hasSchedule = action.info.nextScheduledRun != null;
+
+    return Card(
+      child: ListTile(
+        leading: Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        title: Text(action.name),
+        subtitle: Text(hasSchedule ? 'Scheduled' : 'No schedule'),
+        trailing: Text(
+          state.displayName,
+          style: TextStyle(color: color, fontWeight: FontWeight.w500),
+        ),
+        onTap: () => context.go(
+          '${AppRoutes.actions}/${action.id}?name=${Uri.encodeComponent(action.name)}',
         ),
       ),
     );

@@ -42,4 +42,5 @@ String _routeFor(ResourceType resource) => switch (resource) {
   ResourceType.repos => AppRoutes.repos,
   ResourceType.builds => AppRoutes.builds,
   ResourceType.procedures => AppRoutes.procedures,
+  ResourceType.actions => AppRoutes.actions,
 };

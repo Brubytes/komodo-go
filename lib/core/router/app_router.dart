@@ -12,6 +12,8 @@ import '../../features/deployments/presentation/views/deployments_list_view.dart
 import '../../features/home/presentation/views/home_view.dart';
 import '../../features/builds/presentation/views/build_detail_view.dart';
 import '../../features/builds/presentation/views/builds_list_view.dart';
+import '../../features/actions/presentation/views/action_detail_view.dart';
+import '../../features/actions/presentation/views/actions_list_view.dart';
 import '../../features/notifications/presentation/views/notifications_view.dart';
 import '../../features/resources/presentation/views/resources_view.dart';
 import '../../features/repos/presentation/views/repo_detail_view.dart';
@@ -27,9 +29,8 @@ import '../widgets/adaptive_bottom_navigation_bar.dart';
 
 part 'app_router.g.dart';
 
-Page<void> _noTransitionTabPage(Widget child) => NoTransitionPage<void>(
-  child: child,
-);
+Page<void> _noTransitionTabPage(Widget child) =>
+    NoTransitionPage<void>(child: child);
 
 Page<void> _adaptiveStackPage(BuildContext context, Widget child) {
   final platform = Theme.of(context).platform;
@@ -57,6 +58,7 @@ abstract class AppRoutes {
   static const repos = '/repos';
   static const builds = '/builds';
   static const procedures = '/procedures';
+  static const actions = '/actions';
 
   /// Legacy path (renamed to [settings]).
   static const connections = '/connections';
@@ -211,10 +213,25 @@ GoRouter appRouter(Ref ref) {
                   final name = state.uri.queryParameters['name'] ?? 'Procedure';
                   return _adaptiveStackPage(
                     context,
-                    ProcedureDetailView(
-                      procedureId: id,
-                      procedureName: name,
-                    ),
+                    ProcedureDetailView(procedureId: id, procedureName: name),
+                  );
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: AppRoutes.actions,
+            pageBuilder: (context, state) =>
+                _adaptiveStackPage(context, const ActionsListView()),
+            routes: [
+              GoRoute(
+                path: ':id',
+                pageBuilder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  final name = state.uri.queryParameters['name'] ?? 'Action';
+                  return _adaptiveStackPage(
+                    context,
+                    ActionDetailView(actionId: id, actionName: name),
                   );
                 },
               ),
@@ -274,6 +291,7 @@ class MainShell extends StatelessWidget {
     if (location.startsWith(AppRoutes.repos)) return 1;
     if (location.startsWith(AppRoutes.builds)) return 1;
     if (location.startsWith(AppRoutes.procedures)) return 1;
+    if (location.startsWith(AppRoutes.actions)) return 1;
 
     if (location.startsWith(AppRoutes.notifications)) return 2;
 

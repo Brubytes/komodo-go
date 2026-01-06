@@ -10,7 +10,8 @@ enum ResourceType {
   stacks('Stacks', AppIcons.stacks, Colors.purple),
   repos('Repos', AppIcons.repos, Colors.orange),
   builds('Builds', AppIcons.builds, Colors.teal),
-  procedures('Procedures', AppIcons.procedures, Colors.indigo);
+  procedures('Procedures', AppIcons.procedures, Colors.indigo),
+  actions('Actions', AppIcons.actions, Colors.cyan);
 
   const ResourceType(this.label, this.icon, this.color);
 
