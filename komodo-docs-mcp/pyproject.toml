@@ -1,0 +1,11 @@
+[project]
+name = "komodo-docs-mcp"
+version = "0.1.0"
+description = "MCP server to fetch and format komodo_client docs.rs API docs"
+requires-python = ">=3.9"
+readme = "README.md"
+license = { text = "MIT" }
+
+[project.scripts]
+komodo-docs-mcp = "komodo_docs_mcp.__main__:main"
+
