@@ -45,6 +45,11 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  # App Icon & Splash Screen Generation
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
+  image: ^4.5.4
+
   # Code Generation
   build_runner: ^2.4.15
   freezed: ^3.0.0
@@ -63,3 +68,35 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/komodo-go-logo.png
+    - assets/komodo-go-logo_rounded.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/komodo-go-logo.png
+  remove_alpha_ios: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/komodo-go-logo.png
+  web:
+    generate: true
+    image_path: assets/komodo-go-logo.png
+    background_color: "#FFFFFF"
+    theme_color: "#FFFFFF"
+  windows:
+    generate: true
+    image_path: assets/komodo-go-logo.png
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: assets/komodo-go-logo.png
+
+flutter_native_splash:
+  color: "#014226"
+  image: assets/komodo-go-logo_rounded.png
+  android_gravity: center
+  ios_content_mode: center
+  android_12:
+    color: "#014226"
+    image: assets/komodo-go-logo_rounded.png
