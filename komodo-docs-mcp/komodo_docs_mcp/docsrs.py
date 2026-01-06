@@ -37,6 +37,13 @@ class ModuleDocs:
     sections: list[DocSection]
 
 
+@dataclass(frozen=True)
+class AllItem:
+    kind: str
+    item_path: str
+    href: str
+
+
 def filter_module_docs(module: ModuleDocs, *, query: str) -> ModuleDocs:
     q = (query or "").strip().lower()
     if not q:
@@ -82,6 +89,9 @@ _VERSION_RE = re.compile(r'<span class="version">(?P<ver>[^<]+)</span>', re.S)
 
 _ITEM_DOCBLOCK_RE = re.compile(r'<div class="docblock"[^>]*>(?P<html>.*?)</div>', re.S)
 _ITEM_DECL_RE = re.compile(r'<pre class="rust item-decl">(?P<html>.*?)</pre>', re.S)
+_ALL_SECTION_RE = re.compile(r'<h3 id="(?P<id>[^"]+)">(?P<title>[^<]+)</h3>', re.S)
+_ALL_UL_RE = re.compile(r'<ul class="all-items">(?P<html>.*?)</ul>', re.S)
+_ALL_A_RE = re.compile(r'<a href="(?P<href>[^"]+)">(?P<text>.*?)</a>', re.S)
 
 
 def _strip_tags(html: str) -> str:
@@ -146,6 +156,10 @@ class DocsRsClient:
         if norm == crate:
             return urllib.parse.urljoin(base, f"{crate}/index.html")
         return urllib.parse.urljoin(base, f"{norm}/index.html")
+
+    def all_items_url(self, crate: str, version: str) -> str:
+        base = f"https://docs.rs/{urllib.parse.quote(crate)}/{urllib.parse.quote(version)}/"
+        return urllib.parse.urljoin(base, f"{crate}/all.html")
 
     def parse_module(self, *, crate: str, version: str, module_path: str) -> ModuleDocs:
         page_url = self.module_url(crate, version, module_path)
@@ -235,6 +249,38 @@ class DocsRsClient:
             signature=signature,
             docs=docs,
         )
+
+    def parse_all_items(self, *, crate: str, version: str) -> tuple[str, list[AllItem]]:
+        url = self.all_items_url(crate, version)
+        html = self.fetch_text(url)
+
+        page_version = version
+        vm = _VERSION_RE.search(html)
+        if vm:
+            page_version = unescape(vm.group("ver")).strip()
+
+        items: list[AllItem] = []
+        pos = 0
+        while True:
+            sm = _ALL_SECTION_RE.search(html, pos)
+            if not sm:
+                break
+            section_title = _strip_tags(sm.group("title")).strip()
+            ulm = _ALL_UL_RE.search(html, sm.end())
+            if not ulm:
+                pos = sm.end()
+                continue
+            pos = ulm.end()
+
+            kind = section_title.lower().strip()
+            for am in _ALL_A_RE.finditer(ulm.group("html")):
+                href = unescape(am.group("href"))
+                item_path = _strip_tags(am.group("text")).replace("\u00ad", "").strip()
+                if not item_path:
+                    continue
+                items.append(AllItem(kind=kind, item_path=item_path, href=href))
+
+        return page_version, items
 
 
 def module_docs_to_markdown(
@@ -362,3 +408,26 @@ def ensure_str(v: Any, *, default: str) -> str:
 def ensure_one_of(v: Any, *, default: str, allowed: Iterable[str]) -> str:
     s = ensure_str(v, default=default)
     return s if s in set(allowed) else default
+
+
+def search_all_items(items: list[AllItem], *, query: str, limit: int) -> list[AllItem]:
+    q = (query or "").strip().lower()
+    if not q:
+        return items[:limit]
+
+    def score(it: AllItem) -> tuple[int, int]:
+        hay = it.item_path.lower()
+        name = it.item_path.split("::")[-1].lower()
+        if name == q:
+            return (0, len(hay))
+        if name.startswith(q):
+            return (1, len(hay))
+        if q in name:
+            return (2, len(hay))
+        if q in hay:
+            return (3, len(hay))
+        return (9, len(hay))
+
+    hits = [it for it in items if q in it.item_path.lower()]
+    hits.sort(key=score)
+    return hits[:limit]

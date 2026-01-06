@@ -7,6 +7,10 @@ An MCP (Model Context Protocol) stdio server that fetches `docs.rs` pages for th
 - `komodo_docs_get_module_docs`
   - Fetches a module page (default: `komodo_client::api::read`) and returns a sectioned list of items.
   - Optionally fetches each item's page to include signature + full docs.
+- `komodo_docs_search`
+  - Searches the crate-wide `all.html` index by symbol name/path.
+- `komodo_docs_get_item_docs`
+  - Fetches a single symbol page by name/path (resolves via `komodo_docs_search`) and returns signature + docs.
 
 ## Run
 
@@ -29,6 +33,11 @@ python3 /Users/jan/Development/Flutter/Projekte/komodo-go/komodo-docs-mcp/komodo
   - `includeItemDocs`: `false` (set to `true` to fetch each item page)
   - `maxItems`: cap when `includeItemDocs=true`
   - `format`: `markdown` or `json`
+
+For symbol lookup across the crate:
+
+- `komodo_docs_search({ "query": "StackListItem" })`
+- `komodo_docs_get_item_docs({ "item": "entities::stack::StackListItem" })`
 
 ## Notes
 

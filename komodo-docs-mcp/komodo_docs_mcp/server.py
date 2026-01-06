@@ -9,6 +9,8 @@ from typing import Any, Optional
 
 from . import __version__
 from .docsrs import (
+    AllItem,
+    DocItem,
     DocsRsClient,
     DocsRsError,
     ensure_bool,
@@ -18,6 +20,7 @@ from .docsrs import (
     filter_module_docs,
     module_docs_to_json,
     module_docs_to_markdown,
+    search_all_items,
 )
 
 
@@ -219,6 +222,166 @@ def _tool_schema_get_module_docs() -> dict[str, Any]:
     }
 
 
+def _tool_schema_search() -> dict[str, Any]:
+    return {
+        "name": "komodo_docs_search",
+        "description": "Search the crate-wide docs.rs 'all items' index and return matching symbols with URLs.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "crate": {"type": "string", "default": "komodo_client"},
+                "version": {"type": "string", "default": "latest"},
+                "query": {"type": "string"},
+                "limit": {"type": "integer", "default": 20, "minimum": 1, "maximum": 200},
+                "format": {"type": "string", "default": "markdown", "enum": ["markdown", "json"]},
+            },
+            "required": ["query"],
+        },
+    }
+
+
+def _tool_schema_get_item_docs() -> dict[str, Any]:
+    return {
+        "name": "komodo_docs_get_item_docs",
+        "description": "Fetch docs.rs rustdoc page for a symbol (by name or full path) and return its signature + docs.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "crate": {"type": "string", "default": "komodo_client"},
+                "version": {"type": "string", "default": "latest"},
+                "item": {"type": "string", "description": "Symbol name or full path like entities::stack::StackListItem"},
+                "maxMatches": {"type": "integer", "default": 10, "minimum": 1, "maximum": 50},
+                "format": {"type": "string", "default": "markdown", "enum": ["markdown", "json"]},
+            },
+            "required": ["item"],
+        },
+    }
+
+
+def _format_search_markdown(*, crate: str, version: str, query: str, hits: list[AllItem], base_url: str) -> str:
+    lines: list[str] = []
+    lines.append(f"# Search: {query}")
+    lines.append("")
+    lines.append(f"- Crate: `{crate}`")
+    lines.append(f"- Version: `{version}`")
+    lines.append("")
+    if not hits:
+        lines.append("_No matches._")
+        return "\n".join(lines).strip() + "\n"
+    for it in hits:
+        url = base_url + it.href.lstrip("/")
+        lines.append(f"- `{it.item_path}` ({it.kind}) — {url}")
+    return "\n".join(lines).strip() + "\n"
+
+
+def _handle_tool_search(arguments: dict[str, Any], client: DocsRsClient) -> dict[str, Any]:
+    crate = ensure_str(arguments.get("crate"), default="komodo_client")
+    version = ensure_str(arguments.get("version"), default="latest")
+    query = ensure_str(arguments.get("query"), default="")
+    limit = ensure_int(arguments.get("limit"), default=20, min_value=1, max_value=200)
+    fmt = ensure_one_of(arguments.get("format"), default="markdown", allowed=["markdown", "json"])
+
+    page_version, items = client.parse_all_items(crate=crate, version=version)
+    hits = search_all_items(items, query=query, limit=limit)
+    base_url = f"https://docs.rs/{crate}/{version}/{crate}/"
+
+    if fmt == "json":
+        payload = {
+            "crate": crate,
+            "version": page_version,
+            "query": query,
+            "hits": [
+                {
+                    "kind": it.kind,
+                    "itemPath": it.item_path,
+                    "href": it.href,
+                    "url": base_url + it.href.lstrip("/"),
+                }
+                for it in hits
+            ],
+        }
+        text = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+    else:
+        text = _format_search_markdown(crate=crate, version=page_version, query=query, hits=hits, base_url=base_url)
+
+    return {"content": [{"type": "text", "text": text}]}
+
+
+def _handle_tool_get_item_docs(arguments: dict[str, Any], client: DocsRsClient) -> dict[str, Any]:
+    crate = ensure_str(arguments.get("crate"), default="komodo_client")
+    version = ensure_str(arguments.get("version"), default="latest")
+    item_query = ensure_str(arguments.get("item"), default="")
+    max_matches = ensure_int(arguments.get("maxMatches"), default=10, min_value=1, max_value=50)
+    fmt = ensure_one_of(arguments.get("format"), default="markdown", allowed=["markdown", "json"])
+
+    page_version, items = client.parse_all_items(crate=crate, version=version)
+    hits = search_all_items(items, query=item_query, limit=max_matches)
+
+    base_url = f"https://docs.rs/{crate}/{version}/{crate}/"
+    if not hits:
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"No matches for `{item_query}` in `{crate}` {page_version}. Try komodo_docs_search.\n",
+                }
+            ],
+            "isError": True,
+        }
+
+    # Prefer exact full-path matches if provided.
+    normalized = item_query.strip()
+    exact = [h for h in hits if h.item_path == normalized]
+    chosen = exact[0] if exact else hits[0]
+
+    item = DocItem(kind=chosen.kind, name=chosen.item_path.split("::")[-1], href=chosen.href)
+    detailed = client.parse_item_page(base_url=base_url, item=item)
+
+    url = base_url + chosen.href.lstrip("/")
+    if fmt == "json":
+        payload = {
+            "crate": crate,
+            "version": page_version,
+            "item": {
+                "kind": chosen.kind,
+                "itemPath": chosen.item_path,
+                "url": url,
+                "signature": detailed.signature,
+                "docs": detailed.docs,
+            },
+            "alternatives": [
+                {"kind": h.kind, "itemPath": h.item_path, "url": base_url + h.href.lstrip("/")}
+                for h in hits[1:]
+            ],
+        }
+        text = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+    else:
+        lines: list[str] = []
+        lines.append(f"# {chosen.item_path}")
+        lines.append("")
+        lines.append(f"- Crate: `{crate}`")
+        lines.append(f"- Version: `{page_version}`")
+        lines.append(f"- Source: {url}")
+        lines.append("")
+        if detailed.signature:
+            lines.append("```rust")
+            lines.append(detailed.signature)
+            lines.append("```")
+            lines.append("")
+        if detailed.docs:
+            lines.append(detailed.docs)
+            lines.append("")
+        if len(hits) > 1:
+            lines.append("## Other matches")
+            lines.append("")
+            for h in hits[1:]:
+                lines.append(f"- `{h.item_path}` ({h.kind}) — {base_url + h.href.lstrip('/')}")
+            lines.append("")
+        text = "\n".join(lines).strip() + "\n"
+
+    return {"content": [{"type": "text", "text": text}]}
+
+
 def _handle_tool_get_module_docs(arguments: dict[str, Any], client: DocsRsClient) -> dict[str, Any]:
     crate = ensure_str(arguments.get("crate"), default="komodo_client")
     version = ensure_str(arguments.get("version"), default="latest")
@@ -303,12 +466,16 @@ def main() -> None:
             elif req.method == "ping":
                 _result(req.id, {})
             elif req.method == "tools/list":
-                _result(req.id, {"tools": [_tool_schema_get_module_docs()]})
+                _result(req.id, {"tools": [_tool_schema_get_module_docs(), _tool_schema_search(), _tool_schema_get_item_docs()]})
             elif req.method == "tools/call":
                 name = str(req.params.get("name") or "")
                 arguments = dict(req.params.get("arguments") or {})
                 if name in ("komodo_docs_get_module_docs", "komodo_docs.get_module_docs"):
                     _result(req.id, _handle_tool_get_module_docs(arguments, docs_client))
+                elif name == "komodo_docs_search":
+                    _result(req.id, _handle_tool_search(arguments, docs_client))
+                elif name == "komodo_docs_get_item_docs":
+                    _result(req.id, _handle_tool_get_item_docs(arguments, docs_client))
                 else:
                     _error(req.id, -32601, f"Unknown tool: {name}")
             elif req.method == "resources/list":

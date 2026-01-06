@@ -1,6 +1,6 @@
 import unittest
 
-from komodo_docs_mcp.docsrs import DocsRsClient, module_docs_to_markdown
+from komodo_docs_mcp.docsrs import DocsRsClient, module_docs_to_markdown, search_all_items
 
 
 class _FakeDocsRsClient(DocsRsClient):
@@ -8,10 +8,17 @@ class _FakeDocsRsClient(DocsRsClient):
         super().__init__(user_agent="test")
         self._module_html = module_html
         self._item_html = item_html
+        self._all_html = ""
+
+    def with_all_html(self, all_html: str) -> "_FakeDocsRsClient":
+        self._all_html = all_html
+        return self
 
     def fetch_text(self, url: str, *, ttl_s: int = 300) -> str:  # type: ignore[override]
         if url.endswith("/komodo_client/api/read/index.html"):
             return self._module_html
+        if url.endswith("/komodo_client/all.html"):
+            return self._all_html
         if url.endswith("/komodo_client/api/read/struct.Foo.html"):
             return self._item_html
         raise AssertionError(f"unexpected url {url}")
@@ -76,7 +83,21 @@ class DocsRsParsingTests(unittest.TestCase):
         self.assertIn("```rust", md)
         self.assertIn("pub struct Foo", md)
 
+    def test_all_items_search(self) -> None:
+        all_html = (
+            '<span class="version">1.2.3</span>'
+            '<h3 id="structs">Structs</h3>'
+            '<ul class="all-items">'
+            '<li><a href="entities/stack/type.StackListItem.html">entities::stack::StackListItem</a></li>'
+            '<li><a href="api/read/struct.GetStacksSummary.html">api::read::GetStacksSummary</a></li>'
+            "</ul>"
+        )
+        client = _FakeDocsRsClient(module_html="", item_html="").with_all_html(all_html)
+        ver, items = client.parse_all_items(crate="komodo_client", version="latest")
+        self.assertEqual(ver, "1.2.3")
+        hits = search_all_items(items, query="StackListItem", limit=10)
+        self.assertEqual(hits[0].item_path, "entities::stack::StackListItem")
+
 
 if __name__ == "__main__":
     unittest.main()
-
