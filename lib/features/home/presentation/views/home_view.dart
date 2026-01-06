@@ -23,12 +23,12 @@ import '../../../stacks/presentation/providers/stacks_provider.dart';
 class HomeView extends ConsumerWidget {
   const HomeView({super.key});
 
-  void _goToResourcesTab(
+  void _goToResources(
     WidgetRef ref,
     BuildContext context,
     ResourceType resourceType,
   ) {
-    ref.read(resourcesTabProvider.notifier).setIndex(resourceType.index);
+    ref.read(resourcesTargetProvider.notifier).open(resourceType);
     context.go(AppRoutes.resources);
   }
 
@@ -115,8 +115,7 @@ class HomeView extends ConsumerWidget {
                         .length;
                     return '$online online';
                   },
-                  onTap: () =>
-                      _goToResourcesTab(ref, context, ResourceType.servers),
+                  onTap: () => _goToResources(ref, context, ResourceType.servers),
                 ),
                 _StatCard(
                   title: 'Deployments',
@@ -131,7 +130,7 @@ class HomeView extends ConsumerWidget {
                     return '$running running';
                   },
                   onTap: () =>
-                      _goToResourcesTab(ref, context, ResourceType.deployments),
+                      _goToResources(ref, context, ResourceType.deployments),
                 ),
                 _StatCard(
                   title: 'Stacks',
@@ -145,8 +144,7 @@ class HomeView extends ConsumerWidget {
                         .length;
                     return '$running running';
                   },
-                  onTap: () =>
-                      _goToResourcesTab(ref, context, ResourceType.stacks),
+                  onTap: () => _goToResources(ref, context, ResourceType.stacks),
                 ),
                 _StatCard(
                   title: 'Repos',
@@ -158,8 +156,7 @@ class HomeView extends ConsumerWidget {
                     final busy = repos.where((r) => r.info.state.isBusy).length;
                     return '$busy busy';
                   },
-                  onTap: () =>
-                      _goToResourcesTab(ref, context, ResourceType.repos),
+                  onTap: () => _goToResources(ref, context, ResourceType.repos),
                 ),
                 _StatCard(
                   title: 'Builds',
@@ -173,8 +170,7 @@ class HomeView extends ConsumerWidget {
                         .length;
                     return '$running running';
                   },
-                  onTap: () =>
-                      _goToResourcesTab(ref, context, ResourceType.builds),
+                  onTap: () => _goToResources(ref, context, ResourceType.builds),
                 ),
                 _StatCard(
                   title: 'Procedures',
@@ -189,7 +185,7 @@ class HomeView extends ConsumerWidget {
                     return '$running running';
                   },
                   onTap: () =>
-                      _goToResourcesTab(ref, context, ResourceType.procedures),
+                      _goToResources(ref, context, ResourceType.procedures),
                 ),
               ],
             ),
@@ -198,8 +194,7 @@ class HomeView extends ConsumerWidget {
             // Recent servers
             _SectionHeader(
               title: 'Servers',
-              onSeeAll: () =>
-                  _goToResourcesTab(ref, context, ResourceType.servers),
+              onSeeAll: () => _goToResources(ref, context, ResourceType.servers),
             ),
             const Gap(8),
             serversAsync.when(
@@ -226,7 +221,7 @@ class HomeView extends ConsumerWidget {
             _SectionHeader(
               title: 'Deployments',
               onSeeAll: () =>
-                  _goToResourcesTab(ref, context, ResourceType.deployments),
+                  _goToResources(ref, context, ResourceType.deployments),
             ),
             const Gap(8),
             deploymentsAsync.when(
@@ -255,8 +250,7 @@ class HomeView extends ConsumerWidget {
             // Recent stacks
             _SectionHeader(
               title: 'Stacks',
-              onSeeAll: () =>
-                  _goToResourcesTab(ref, context, ResourceType.stacks),
+              onSeeAll: () => _goToResources(ref, context, ResourceType.stacks),
             ),
             const Gap(8),
             stacksAsync.when(
@@ -282,8 +276,7 @@ class HomeView extends ConsumerWidget {
             // Recent repos
             _SectionHeader(
               title: 'Repos',
-              onSeeAll: () =>
-                  _goToResourcesTab(ref, context, ResourceType.repos),
+              onSeeAll: () => _goToResources(ref, context, ResourceType.repos),
             ),
             const Gap(8),
             reposAsync.when(
@@ -309,8 +302,7 @@ class HomeView extends ConsumerWidget {
             // Recent builds
             _SectionHeader(
               title: 'Builds',
-              onSeeAll: () =>
-                  _goToResourcesTab(ref, context, ResourceType.builds),
+              onSeeAll: () => _goToResources(ref, context, ResourceType.builds),
             ),
             const Gap(8),
             buildsAsync.when(
@@ -337,7 +329,7 @@ class HomeView extends ConsumerWidget {
             _SectionHeader(
               title: 'Procedures',
               onSeeAll: () =>
-                  _goToResourcesTab(ref, context, ResourceType.procedures),
+                  _goToResources(ref, context, ResourceType.procedures),
             ),
             const Gap(8),
             proceduresAsync.when(

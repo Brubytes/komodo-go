@@ -18,13 +18,15 @@ enum ResourceType {
 }
 
 @Riverpod(keepAlive: true)
-class ResourcesTab extends _$ResourcesTab {
+class ResourcesTarget extends _$ResourcesTarget {
   @override
-  int build() => 0;
+  ResourceType? build() => null;
 
-  void setIndex(int index) {
-    if (index < 0 || index >= ResourceType.values.length) return;
-    if (state == index) return;
-    state = index;
+  void open(ResourceType target) {
+    state = target;
+  }
+
+  void clear() {
+    state = null;
   }
 }

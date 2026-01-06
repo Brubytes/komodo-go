@@ -31,13 +31,13 @@ class ProceduresListContent extends ConsumerWidget {
                 separatorBuilder: (context, index) => const Gap(12),
                 itemBuilder: (context, index) {
                   final procedure = procedures[index];
-                  return ProcedureCard(
-                    procedure: procedure,
-                    onTap: () => context.go(
-                      '${AppRoutes.procedures}/${procedure.id}?name=${Uri.encodeComponent(procedure.name)}',
-                    ),
-                    onRun: () => _runProcedure(context, ref, procedure.id),
-                  );
+                    return ProcedureCard(
+                      procedure: procedure,
+                      onTap: () => context.push(
+                        '${AppRoutes.procedures}/${procedure.id}?name=${Uri.encodeComponent(procedure.name)}',
+                      ),
+                      onRun: () => _runProcedure(context, ref, procedure.id),
+                    );
                 },
               );
             },

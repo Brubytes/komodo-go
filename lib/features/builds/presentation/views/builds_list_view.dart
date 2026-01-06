@@ -31,14 +31,14 @@ class BuildsListContent extends ConsumerWidget {
                 separatorBuilder: (context, index) => const Gap(12),
                 itemBuilder: (context, index) {
                   final build = builds[index];
-                  return BuildCard(
-                    buildItem: build,
-                    onTap: () => context.go(
-                      '${AppRoutes.builds}/${build.id}?name=${Uri.encodeComponent(build.name)}',
-                    ),
-                    onAction: (action) =>
-                        _handleAction(context, ref, build.id, action),
-                  );
+                    return BuildCard(
+                      buildItem: build,
+                      onTap: () => context.push(
+                        '${AppRoutes.builds}/${build.id}?name=${Uri.encodeComponent(build.name)}',
+                      ),
+                      onAction: (action) =>
+                          _handleAction(context, ref, build.id, action),
+                    );
                 },
               );
             },

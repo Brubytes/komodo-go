@@ -31,14 +31,14 @@ class StacksListContent extends ConsumerWidget {
                 separatorBuilder: (context, index) => const Gap(12),
                 itemBuilder: (context, index) {
                   final stackItem = stacks[index];
-                  return StackCard(
-                    stack: stackItem,
-                    onTap: () => context.go(
-                      '${AppRoutes.stacks}/${stackItem.id}?name=${Uri.encodeComponent(stackItem.name)}',
-                    ),
-                    onAction: (action) =>
-                        _handleAction(context, ref, stackItem.id, action),
-                  );
+                    return StackCard(
+                      stack: stackItem,
+                      onTap: () => context.push(
+                        '${AppRoutes.stacks}/${stackItem.id}?name=${Uri.encodeComponent(stackItem.name)}',
+                      ),
+                      onAction: (action) =>
+                          _handleAction(context, ref, stackItem.id, action),
+                    );
                 },
               );
             },

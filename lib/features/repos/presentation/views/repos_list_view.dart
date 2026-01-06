@@ -31,14 +31,14 @@ class ReposListContent extends ConsumerWidget {
                 separatorBuilder: (context, index) => const Gap(12),
                 itemBuilder: (context, index) {
                   final repo = repos[index];
-                  return RepoCard(
-                    repo: repo,
-                    onTap: () => context.go(
-                      '${AppRoutes.repos}/${repo.id}?name=${Uri.encodeComponent(repo.name)}',
-                    ),
-                    onAction: (action) =>
-                        _handleAction(context, ref, repo.id, action),
-                  );
+                    return RepoCard(
+                      repo: repo,
+                      onTap: () => context.push(
+                        '${AppRoutes.repos}/${repo.id}?name=${Uri.encodeComponent(repo.name)}',
+                      ),
+                      onAction: (action) =>
+                          _handleAction(context, ref, repo.id, action),
+                    );
                 },
               );
             },

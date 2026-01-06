@@ -29,15 +29,15 @@ class ServersListContent extends ConsumerWidget {
             itemCount: servers.length,
             separatorBuilder: (context, index) => const Gap(12),
             itemBuilder: (context, index) {
-              final server = servers[index];
-              return ServerCard(
-                server: server,
-                onTap: () => context.go(
-                  '${AppRoutes.servers}/${server.id}?name=${Uri.encodeComponent(server.name)}',
-                ),
-              );
-            },
-          );
+                final server = servers[index];
+                return ServerCard(
+                  server: server,
+                  onTap: () => context.push(
+                    '${AppRoutes.servers}/${server.id}?name=${Uri.encodeComponent(server.name)}',
+                  ),
+                );
+              },
+            );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => _ErrorState(

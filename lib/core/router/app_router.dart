@@ -1,3 +1,5 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -22,6 +24,21 @@ import '../../features/settings/presentation/views/connections_view.dart';
 import '../widgets/adaptive_bottom_navigation_bar.dart';
 
 part 'app_router.g.dart';
+
+Page<void> _noTransitionTabPage(Widget child) => NoTransitionPage<void>(
+  child: child,
+);
+
+Page<void> _adaptiveStackPage(BuildContext context, Widget child) {
+  final platform = Theme.of(context).platform;
+  final isCupertino =
+      !kIsWeb &&
+      (platform == TargetPlatform.iOS || platform == TargetPlatform.macOS);
+
+  return isCupertino
+      ? CupertinoPage<void>(child: child)
+      : MaterialPage<void>(child: child);
+}
 
 /// Route paths
 abstract class AppRoutes {
@@ -80,35 +97,38 @@ GoRouter appRouter(Ref ref) {
           GoRoute(
             path: AppRoutes.home,
             pageBuilder: (context, state) =>
-                const NoTransitionPage(child: HomeView()),
+                _noTransitionTabPage(const HomeView()),
           ),
           GoRoute(
             path: AppRoutes.resources,
             pageBuilder: (context, state) =>
-                const NoTransitionPage(child: ResourcesView()),
+                _noTransitionTabPage(const ResourcesView()),
           ),
           GoRoute(
             path: AppRoutes.notifications,
             pageBuilder: (context, state) =>
-                const NoTransitionPage(child: NotificationsView()),
+                _noTransitionTabPage(const NotificationsView()),
           ),
           GoRoute(
             path: AppRoutes.settings,
             pageBuilder: (context, state) =>
-                const NoTransitionPage(child: ConnectionsView()),
+                _noTransitionTabPage(const ConnectionsView()),
           ),
 
           GoRoute(
             path: AppRoutes.servers,
             pageBuilder: (context, state) =>
-                const NoTransitionPage(child: ServersListView()),
+                _adaptiveStackPage(context, const ServersListView()),
             routes: [
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final id = state.pathParameters['id']!;
                   final name = state.uri.queryParameters['name'] ?? 'Server';
-                  return ServerDetailView(serverId: id, serverName: name);
+                  return _adaptiveStackPage(
+                    context,
+                    ServerDetailView(serverId: id, serverName: name),
+                  );
                 },
               ),
             ],
@@ -116,19 +136,22 @@ GoRouter appRouter(Ref ref) {
           GoRoute(
             path: AppRoutes.deployments,
             pageBuilder: (context, state) =>
-                const NoTransitionPage(child: DeploymentsListView()),
+                _adaptiveStackPage(context, const DeploymentsListView()),
           ),
           GoRoute(
             path: AppRoutes.stacks,
             pageBuilder: (context, state) =>
-                const NoTransitionPage(child: StacksListView()),
+                _adaptiveStackPage(context, const StacksListView()),
             routes: [
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final id = state.pathParameters['id']!;
                   final name = state.uri.queryParameters['name'] ?? 'Stack';
-                  return StackDetailView(stackId: id, stackName: name);
+                  return _adaptiveStackPage(
+                    context,
+                    StackDetailView(stackId: id, stackName: name),
+                  );
                 },
               ),
             ],
@@ -136,14 +159,17 @@ GoRouter appRouter(Ref ref) {
           GoRoute(
             path: AppRoutes.repos,
             pageBuilder: (context, state) =>
-                const NoTransitionPage(child: ReposListView()),
+                _adaptiveStackPage(context, const ReposListView()),
             routes: [
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final id = state.pathParameters['id']!;
                   final name = state.uri.queryParameters['name'] ?? 'Repo';
-                  return RepoDetailView(repoId: id, repoName: name);
+                  return _adaptiveStackPage(
+                    context,
+                    RepoDetailView(repoId: id, repoName: name),
+                  );
                 },
               ),
             ],
@@ -151,14 +177,17 @@ GoRouter appRouter(Ref ref) {
           GoRoute(
             path: AppRoutes.builds,
             pageBuilder: (context, state) =>
-                const NoTransitionPage(child: BuildsListView()),
+                _adaptiveStackPage(context, const BuildsListView()),
             routes: [
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final id = state.pathParameters['id']!;
                   final name = state.uri.queryParameters['name'] ?? 'Build';
-                  return BuildDetailView(buildId: id, buildName: name);
+                  return _adaptiveStackPage(
+                    context,
+                    BuildDetailView(buildId: id, buildName: name),
+                  );
                 },
               ),
             ],
@@ -166,16 +195,19 @@ GoRouter appRouter(Ref ref) {
           GoRoute(
             path: AppRoutes.procedures,
             pageBuilder: (context, state) =>
-                const NoTransitionPage(child: ProceduresListView()),
+                _adaptiveStackPage(context, const ProceduresListView()),
             routes: [
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final id = state.pathParameters['id']!;
                   final name = state.uri.queryParameters['name'] ?? 'Procedure';
-                  return ProcedureDetailView(
-                    procedureId: id,
-                    procedureName: name,
+                  return _adaptiveStackPage(
+                    context,
+                    ProcedureDetailView(
+                      procedureId: id,
+                      procedureName: name,
+                    ),
                   );
                 },
               ),
