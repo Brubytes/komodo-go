@@ -11,7 +11,8 @@ part 'dio_provider.g.dart';
 
 /// Provides the base URL for the Komodo API.
 /// This is a simple state that can be updated when credentials change.
-@riverpod
+/// keepAlive ensures the URL persists even when no providers are watching.
+@Riverpod(keepAlive: true)
 class BaseUrl extends _$BaseUrl {
   @override
   String? build() => null;
@@ -26,14 +27,21 @@ class BaseUrl extends _$BaseUrl {
 }
 
 /// Provides the Dio HTTP client configured for Komodo API.
+/// Returns null if no base URL is configured (user not authenticated).
 @riverpod
-Dio dio(Ref ref) {
+Dio? dio(Ref ref) {
   final baseUrl = ref.watch(baseUrlProvider);
+
+  // Don't create Dio instance without a valid base URL
+  if (baseUrl == null || baseUrl.isEmpty) {
+    return null;
+  }
+
   final storage = ref.watch(secureStorageProvider);
 
   final dio = Dio(
     BaseOptions(
-      baseUrl: baseUrl ?? '',
+      baseUrl: baseUrl,
       contentType: 'application/json',
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
@@ -49,9 +57,14 @@ Dio dio(Ref ref) {
 }
 
 /// Provides the Komodo API client.
+/// Returns null if Dio is not configured (user not authenticated).
 @riverpod
-KomodoApiClient apiClient(Ref ref) {
-  return KomodoApiClient(ref.watch(dioProvider));
+KomodoApiClient? apiClient(Ref ref) {
+  final dio = ref.watch(dioProvider);
+  if (dio == null) {
+    return null;
+  }
+  return KomodoApiClient(dio);
 }
 
 /// Creates a Dio instance for validating credentials before saving.

@@ -331,7 +331,7 @@ class _ServerListTile extends StatelessWidget {
           ),
         ),
         title: Text(server.name),
-        subtitle: Text(server.config.address),
+        subtitle: Text(server.info?.address ?? ''),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.go(
           '${AppRoutes.servers}/${server.id}?name=${Uri.encodeComponent(server.name)}',

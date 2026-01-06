@@ -23,37 +23,41 @@ class RpcRequest<T> {
 /// Komodo uses an RPC-like API where all requests are POST requests
 /// to module endpoints (/auth, /read, /write, /execute) with a JSON body
 /// containing the operation type and parameters.
+///
+/// Note: The API can return either a Map or a List depending on the endpoint.
+/// - Single object endpoints return Map<String, dynamic>
+/// - List endpoints return List<dynamic> directly
 class KomodoApiClient {
   KomodoApiClient(this._dio);
 
   final Dio _dio;
 
   /// Sends a request to the auth module.
-  Future<Map<String, dynamic>> auth(RpcRequest<dynamic> request) =>
+  Future<dynamic> auth(RpcRequest<dynamic> request) =>
       _post('/auth', request);
 
   /// Sends a request to the read module.
-  Future<Map<String, dynamic>> read(RpcRequest<dynamic> request) =>
+  Future<dynamic> read(RpcRequest<dynamic> request) =>
       _post('/read', request);
 
   /// Sends a request to the write module.
-  Future<Map<String, dynamic>> write(RpcRequest<dynamic> request) =>
+  Future<dynamic> write(RpcRequest<dynamic> request) =>
       _post('/write', request);
 
   /// Sends a request to the execute module.
-  Future<Map<String, dynamic>> execute(RpcRequest<dynamic> request) =>
+  Future<dynamic> execute(RpcRequest<dynamic> request) =>
       _post('/execute', request);
 
-  Future<Map<String, dynamic>> _post(
+  Future<dynamic> _post(
     String path,
     RpcRequest<dynamic> request,
   ) async {
     try {
-      final response = await _dio.post<Map<String, dynamic>>(
+      final response = await _dio.post<dynamic>(
         path,
         data: request.toJson(),
       );
-      return response.data ?? {};
+      return response.data;
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }

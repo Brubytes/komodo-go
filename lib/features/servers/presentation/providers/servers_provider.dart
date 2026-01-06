@@ -13,6 +13,12 @@ class Servers extends _$Servers {
   @override
   Future<List<Server>> build() async {
     final repository = ref.watch(serverRepositoryProvider);
+
+    // Not authenticated yet - return empty list and wait for auth
+    if (repository == null) {
+      return [];
+    }
+
     final result = await repository.listServers();
 
     return result.fold(
@@ -30,8 +36,12 @@ class Servers extends _$Servers {
 
 /// Provides details for a specific server.
 @riverpod
-Future<Server> serverDetail(Ref ref, String serverId) async {
+Future<Server?> serverDetail(Ref ref, String serverId) async {
   final repository = ref.watch(serverRepositoryProvider);
+  if (repository == null) {
+    return null;
+  }
+
   final result = await repository.getServer(serverId);
 
   return result.fold(
@@ -42,8 +52,12 @@ Future<Server> serverDetail(Ref ref, String serverId) async {
 
 /// Provides system stats for a specific server.
 @riverpod
-Future<SystemStats> serverStats(Ref ref, String serverId) async {
+Future<SystemStats?> serverStats(Ref ref, String serverId) async {
   final repository = ref.watch(serverRepositoryProvider);
+  if (repository == null) {
+    return null;
+  }
+
   final result = await repository.getSystemStats(serverId);
 
   return result.fold(

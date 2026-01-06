@@ -12,6 +12,12 @@ class Deployments extends _$Deployments {
   @override
   Future<List<Deployment>> build() async {
     final repository = ref.watch(deploymentRepositoryProvider);
+
+    // Not authenticated yet - return empty list and wait for auth
+    if (repository == null) {
+      return [];
+    }
+
     final result = await repository.listDeployments();
 
     return result.fold(
@@ -29,8 +35,12 @@ class Deployments extends _$Deployments {
 
 /// Provides details for a specific deployment.
 @riverpod
-Future<Deployment> deploymentDetail(Ref ref, String deploymentId) async {
+Future<Deployment?> deploymentDetail(Ref ref, String deploymentId) async {
   final repository = ref.watch(deploymentRepositoryProvider);
+  if (repository == null) {
+    return null;
+  }
+
   final result = await repository.getDeployment(deploymentId);
 
   return result.fold(
@@ -46,51 +56,45 @@ class DeploymentActions extends _$DeploymentActions {
   AsyncValue<void> build() => const AsyncValue.data(null);
 
   Future<bool> start(String deploymentId) => _executeAction(
-        () => ref.read(deploymentRepositoryProvider).startDeployment(
-              deploymentId,
-            ),
+        (repo) => repo.startDeployment(deploymentId),
       );
 
   Future<bool> stop(String deploymentId) => _executeAction(
-        () => ref.read(deploymentRepositoryProvider).stopDeployment(
-              deploymentId,
-            ),
+        (repo) => repo.stopDeployment(deploymentId),
       );
 
   Future<bool> restart(String deploymentId) => _executeAction(
-        () => ref.read(deploymentRepositoryProvider).restartDeployment(
-              deploymentId,
-            ),
+        (repo) => repo.restartDeployment(deploymentId),
       );
 
   Future<bool> destroy(String deploymentId) => _executeAction(
-        () => ref.read(deploymentRepositoryProvider).destroyDeployment(
-              deploymentId,
-            ),
+        (repo) => repo.destroyDeployment(deploymentId),
       );
 
   Future<bool> deploy(String deploymentId) => _executeAction(
-        () => ref.read(deploymentRepositoryProvider).deploy(deploymentId),
+        (repo) => repo.deploy(deploymentId),
       );
 
   Future<bool> pause(String deploymentId) => _executeAction(
-        () => ref.read(deploymentRepositoryProvider).pauseDeployment(
-              deploymentId,
-            ),
+        (repo) => repo.pauseDeployment(deploymentId),
       );
 
   Future<bool> unpause(String deploymentId) => _executeAction(
-        () => ref.read(deploymentRepositoryProvider).unpauseDeployment(
-              deploymentId,
-            ),
+        (repo) => repo.unpauseDeployment(deploymentId),
       );
 
   Future<bool> _executeAction(
-    Future<dynamic> Function() action,
+    Future<dynamic> Function(DeploymentRepository repo) action,
   ) async {
+    final repository = ref.read(deploymentRepositoryProvider);
+    if (repository == null) {
+      state = AsyncValue.error('Not authenticated', StackTrace.current);
+      return false;
+    }
+
     state = const AsyncValue.loading();
 
-    final result = await action();
+    final result = await action(repository);
 
     // ignore: avoid_dynamic_calls
     final isSuccess = result.isRight() as bool;

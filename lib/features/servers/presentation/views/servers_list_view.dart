@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../data/models/server.dart';
 import '../providers/servers_provider.dart';
 import '../widgets/server_card.dart';
 
@@ -175,7 +176,14 @@ class ServerDetailView extends ConsumerWidget {
           children: [
             // Server Info Card
             serverAsync.when(
-              data: (server) => _ServerInfoCard(server: server),
+              data: (server) => server != null
+                  ? _ServerInfoCard(server: server)
+                  : const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text('Server not found'),
+                      ),
+                    ),
               loading: () => const Card(
                 child: Padding(
                   padding: EdgeInsets.all(16),
@@ -217,7 +225,7 @@ class ServerDetailView extends ConsumerWidget {
 class _ServerInfoCard extends StatelessWidget {
   const _ServerInfoCard({required this.server});
 
-  final dynamic server;
+  final Server server;
 
   @override
   Widget build(BuildContext context) {
@@ -234,12 +242,12 @@ class _ServerInfoCard extends StatelessWidget {
                   ),
             ),
             const Gap(16),
-            _InfoRow(label: 'Name', value: server.name as String),
-            _InfoRow(label: 'Address', value: server.config.address as String),
+            _InfoRow(label: 'Name', value: server.name),
+            _InfoRow(label: 'Address', value: server.info?.address ?? ''),
             if (server.description != null)
               _InfoRow(
                 label: 'Description',
-                value: server.description as String,
+                value: server.description!,
               ),
           ],
         ),

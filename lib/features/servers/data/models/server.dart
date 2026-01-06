@@ -11,31 +11,27 @@ sealed class Server with _$Server {
     required String name,
     String? description,
     @Default([]) List<String> tags,
-    required ServerConfig config,
-    @JsonKey(name: 'info') ServerInfo? info,
+    @Default(false) bool template,
+    ServerInfo? info,
   }) = _Server;
 
   factory Server.fromJson(Map<String, dynamic> json) => _$ServerFromJson(json);
 }
 
-/// Server configuration.
-@freezed
-sealed class ServerConfig with _$ServerConfig {
-  const factory ServerConfig({
-    required String address,
-    int? port,
-    @Default(true) bool enabled,
-  }) = _ServerConfig;
-
-  factory ServerConfig.fromJson(Map<String, dynamic> json) =>
-      _$ServerConfigFromJson(json);
-}
-
-/// Additional server information.
+/// Server information from the API.
 @freezed
 sealed class ServerInfo with _$ServerInfo {
   const factory ServerInfo({
     ServerState? state,
+    @Default('') String region,
+    @Default('') String address,
+    @JsonKey(name: 'external_address') @Default('') String externalAddress,
+    String? version,
+    @JsonKey(name: 'send_unreachable_alerts') @Default(true) bool sendUnreachableAlerts,
+    @JsonKey(name: 'send_cpu_alerts') @Default(true) bool sendCpuAlerts,
+    @JsonKey(name: 'send_mem_alerts') @Default(true) bool sendMemAlerts,
+    @JsonKey(name: 'send_disk_alerts') @Default(true) bool sendDiskAlerts,
+    @JsonKey(name: 'terminals_disabled') @Default(false) bool terminalsDisabled,
   }) = _ServerInfo;
 
   factory ServerInfo.fromJson(Map<String, dynamic> json) =>

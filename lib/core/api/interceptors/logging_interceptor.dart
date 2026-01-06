@@ -28,6 +28,10 @@ class LoggingInterceptor extends Interceptor {
       '← ${response.statusCode} ${response.requestOptions.uri}',
       name: 'HTTP',
     );
+    developer.log(
+      '  Response: ${response.data}',
+      name: 'HTTP',
+    );
     handler.next(response);
   }
 

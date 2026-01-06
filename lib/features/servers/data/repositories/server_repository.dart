@@ -23,7 +23,8 @@ class ServerRepository {
         const RpcRequest(type: 'ListServers', params: <String, dynamic>{}),
       );
 
-      final serversJson = response['servers'] as List<dynamic>? ?? [];
+      // API returns array directly for list endpoints
+      final serversJson = response as List<dynamic>? ?? [];
       final servers = serversJson
           .map((json) => Server.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -36,7 +37,11 @@ class ServerRepository {
       return Left(
         Failure.server(message: e.message, statusCode: e.statusCode),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // ignore: avoid_print
+      print('Error parsing servers: $e');
+      // ignore: avoid_print
+      print('Stack trace: $stackTrace');
       return Left(Failure.unknown(message: e.toString()));
     }
   }
@@ -51,7 +56,7 @@ class ServerRepository {
         ),
       );
 
-      return Right(Server.fromJson(response));
+      return Right(Server.fromJson(response as Map<String, dynamic>));
     } on ApiException catch (e) {
       if (e.isUnauthorized) {
         return const Left(Failure.auth());
@@ -79,7 +84,7 @@ class ServerRepository {
         ),
       );
 
-      return Right(SystemStats.fromJson(response));
+      return Right(SystemStats.fromJson(response as Map<String, dynamic>));
     } on ApiException catch (e) {
       if (e.isUnauthorized) {
         return const Left(Failure.auth());
@@ -94,6 +99,10 @@ class ServerRepository {
 }
 
 @riverpod
-ServerRepository serverRepository(Ref ref) {
-  return ServerRepository(ref.watch(apiClientProvider));
+ServerRepository? serverRepository(Ref ref) {
+  final client = ref.watch(apiClientProvider);
+  if (client == null) {
+    return null;
+  }
+  return ServerRepository(client);
 }

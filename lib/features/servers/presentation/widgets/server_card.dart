@@ -43,7 +43,7 @@ class ServerCard extends StatelessWidget {
                     ),
                     const Gap(4),
                     Text(
-                      server.config.address,
+                      server.info?.address ?? '',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(context)
                                 .colorScheme

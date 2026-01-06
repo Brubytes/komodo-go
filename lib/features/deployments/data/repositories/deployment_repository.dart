@@ -25,7 +25,8 @@ class DeploymentRepository {
         ),
       );
 
-      final deploymentsJson = response['deployments'] as List<dynamic>? ?? [];
+      // API returns array directly for list endpoints
+      final deploymentsJson = response as List<dynamic>? ?? [];
       final deployments = deploymentsJson
           .map((json) => Deployment.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -38,7 +39,12 @@ class DeploymentRepository {
       return Left(
         Failure.server(message: e.message, statusCode: e.statusCode),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // Debug: print parsing errors
+      // ignore: avoid_print
+      print('Error parsing deployments: $e');
+      // ignore: avoid_print
+      print('Stack trace: $stackTrace');
       return Left(Failure.unknown(message: e.toString()));
     }
   }
@@ -55,7 +61,7 @@ class DeploymentRepository {
         ),
       );
 
-      return Right(Deployment.fromJson(response));
+      return Right(Deployment.fromJson(response as Map<String, dynamic>));
     } on ApiException catch (e) {
       if (e.isUnauthorized) {
         return const Left(Failure.auth());
@@ -144,6 +150,10 @@ class DeploymentRepository {
 }
 
 @riverpod
-DeploymentRepository deploymentRepository(Ref ref) {
-  return DeploymentRepository(ref.watch(apiClientProvider));
+DeploymentRepository? deploymentRepository(Ref ref) {
+  final client = ref.watch(apiClientProvider);
+  if (client == null) {
+    return null;
+  }
+  return DeploymentRepository(client);
 }
