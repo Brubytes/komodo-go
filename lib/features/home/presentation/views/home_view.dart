@@ -9,6 +9,8 @@ import '../../../deployments/data/models/deployment.dart';
 import '../../../deployments/presentation/providers/deployments_provider.dart';
 import '../../../servers/data/models/server.dart';
 import '../../../servers/presentation/providers/servers_provider.dart';
+import '../../../stacks/data/models/stack.dart';
+import '../../../stacks/presentation/providers/stacks_provider.dart';
 
 /// Home dashboard view.
 class HomeView extends ConsumerWidget {
@@ -18,6 +20,7 @@ class HomeView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final serversAsync = ref.watch(serversProvider);
     final deploymentsAsync = ref.watch(deploymentsProvider);
+    final stacksAsync = ref.watch(stacksProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -55,6 +58,7 @@ class HomeView extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(serversProvider);
           ref.invalidate(deploymentsProvider);
+          ref.invalidate(stacksProvider);
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -109,6 +113,21 @@ class HomeView extends ConsumerWidget {
                 ),
               ],
             ),
+            const Gap(12),
+            _StatCard(
+              title: 'Stacks',
+              icon: Icons.layers,
+              color: Colors.purple,
+              asyncValue: stacksAsync,
+              valueBuilder: (stacks) => stacks.length.toString(),
+              subtitleBuilder: (stacks) {
+                final running = stacks
+                    .where((s) => s.info.state == StackState.running)
+                    .length;
+                return '$running running';
+              },
+              onTap: () => context.go(AppRoutes.stacks),
+            ),
             const Gap(24),
 
             // Recent servers
@@ -158,6 +177,32 @@ class HomeView extends ConsumerWidget {
                         (deployment) =>
                             _DeploymentListTile(deployment: deployment),
                       )
+                      .toList(),
+                );
+              },
+              loading: () => const _LoadingTile(),
+              error: (e, _) => _ErrorTile(message: e.toString()),
+            ),
+            const Gap(24),
+
+            // Recent stacks
+            _SectionHeader(
+              title: 'Stacks',
+              onSeeAll: () => context.go(AppRoutes.stacks),
+            ),
+            const Gap(8),
+            stacksAsync.when(
+              data: (stacks) {
+                if (stacks.isEmpty) {
+                  return const _EmptyListTile(
+                    icon: Icons.layers_outlined,
+                    message: 'No stacks',
+                  );
+                }
+                return Column(
+                  children: stacks
+                      .take(5)
+                      .map((stack) => _StackListTile(stack: stack))
                       .toList(),
                 );
               },
@@ -357,6 +402,55 @@ class _DeploymentListTile extends StatelessWidget {
         trailing: Text(
           state.displayName,
           style: TextStyle(color: color, fontWeight: FontWeight.w500),
+        ),
+      ),
+    );
+  }
+}
+
+class _StackListTile extends StatelessWidget {
+  const _StackListTile({required this.stack});
+
+  final StackListItem stack;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = stack.info.state;
+    final color = switch (state) {
+      StackState.deploying => Colors.blue,
+      StackState.running => Colors.green,
+      StackState.paused => Colors.grey,
+      StackState.stopped => Colors.orange,
+      StackState.created => Colors.grey,
+      StackState.restarting => Colors.blue,
+      StackState.removing => Colors.grey,
+      StackState.unhealthy => Colors.red,
+      StackState.down => Colors.grey,
+      StackState.dead => Colors.red,
+      StackState.unknown => Colors.orange,
+    };
+
+    final repo = stack.info.repo;
+    final branch = stack.info.branch;
+    final subtitle = repo.isNotEmpty
+        ? (branch.isNotEmpty ? '$repo · $branch' : repo)
+        : 'No repo';
+
+    return Card(
+      child: ListTile(
+        leading: Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        title: Text(stack.name),
+        subtitle: Text(subtitle),
+        trailing: Text(
+          state.displayName,
+          style: TextStyle(color: color, fontWeight: FontWeight.w500),
+        ),
+        onTap: () => context.go(
+          '${AppRoutes.stacks}/${stack.id}?name=${Uri.encodeComponent(stack.name)}',
         ),
       ),
     );

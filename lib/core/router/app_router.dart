@@ -8,6 +8,8 @@ import '../../features/auth/presentation/views/login_view.dart';
 import '../../features/deployments/presentation/views/deployments_list_view.dart';
 import '../../features/home/presentation/views/home_view.dart';
 import '../../features/servers/presentation/views/servers_list_view.dart';
+import '../../features/stacks/presentation/views/stack_detail_view.dart';
+import '../../features/stacks/presentation/views/stacks_list_view.dart';
 import '../widgets/adaptive_bottom_navigation_bar.dart';
 
 part 'app_router.g.dart';
@@ -19,6 +21,7 @@ abstract class AppRoutes {
   static const servers = '/servers';
   static const serverDetail = '/servers/:id';
   static const deployments = '/deployments';
+  static const stacks = '/stacks';
 }
 
 @riverpod
@@ -80,6 +83,21 @@ GoRouter appRouter(Ref ref) {
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: DeploymentsListView()),
           ),
+          GoRoute(
+            path: AppRoutes.stacks,
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: StacksListView()),
+            routes: [
+              GoRoute(
+                path: ':id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  final name = state.uri.queryParameters['name'] ?? 'Stack';
+                  return StackDetailView(stackId: id, stackName: name);
+                },
+              ),
+            ],
+          ),
         ],
       ),
     ],
@@ -115,6 +133,11 @@ class MainShell extends StatelessWidget {
             activeIcon: Icon(Icons.rocket_launch),
             label: 'Deployments',
           ),
+          AdaptiveNavigationItem(
+            icon: Icon(Icons.layers_outlined),
+            activeIcon: Icon(Icons.layers),
+            label: 'Stacks',
+          ),
         ],
       ),
     );
@@ -124,6 +147,7 @@ class MainShell extends StatelessWidget {
     final location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith(AppRoutes.servers)) return 1;
     if (location.startsWith(AppRoutes.deployments)) return 2;
+    if (location.startsWith(AppRoutes.stacks)) return 3;
     return 0;
   }
 
@@ -135,6 +159,8 @@ class MainShell extends StatelessWidget {
         context.go(AppRoutes.servers);
       case 2:
         context.go(AppRoutes.deployments);
+      case 3:
+        context.go(AppRoutes.stacks);
     }
   }
 }
