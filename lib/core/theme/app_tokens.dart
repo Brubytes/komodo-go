@@ -10,6 +10,9 @@ abstract final class AppTokens {
   static const Color brandPrimary = Color(0xFF014226);
   static const Color brandSecondary = Color(0xFF4EB333);
 
+  static const String systemFontStack =
+      '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif';
+
   static const double radiusMd = 12;
   static const EdgeInsets inputPadding = EdgeInsets.symmetric(
     horizontal: 16,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
@@ -38,6 +39,8 @@ class AppTheme {
       useMaterial3: true,
       brightness: colorScheme.brightness,
       colorScheme: colorScheme,
+      typography: Typography.material2021(platform: defaultTargetPlatform),
+      fontFamily: kIsWeb ? AppTokens.systemFontStack : null,
       scaffoldBackgroundColor: colorScheme.surface,
       iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
       dividerTheme: DividerThemeData(
