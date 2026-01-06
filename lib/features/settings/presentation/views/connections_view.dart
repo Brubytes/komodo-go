@@ -4,8 +4,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../core/connections/connection_profile.dart';
 import '../../../../core/providers/connections_provider.dart';
-import '../../../../core/widgets/always_paste_context_menu.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../widgets/add_connection_sheet.dart';
 
 class ConnectionsView extends ConsumerWidget {
   const ConnectionsView({super.key});
@@ -55,7 +55,7 @@ class ConnectionsView extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: authAsync.isLoading
             ? null
-            : () => _showAddConnectionDialog(context, ref),
+            : () => AddConnectionSheet.show(context),
         icon: const Icon(Icons.add),
         label: const Text('Add'),
       ),
@@ -204,120 +204,6 @@ class ConnectionsView extends ConsumerWidget {
           .read(connectionsProvider.notifier)
           .deleteConnection(connection.id);
     }
-  }
-
-  Future<void> _showAddConnectionDialog(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    final nameController = TextEditingController();
-    final baseUrlController = TextEditingController();
-    final apiKeyController = TextEditingController();
-    final apiSecretController = TextEditingController();
-    var obscureSecret = true;
-
-    await showDialog<void>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Add connection'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Name (optional)',
-                    hintText: 'Production',
-                    prefixIcon: Icon(Icons.label_outlined),
-                  ),
-                  autocorrect: false,
-                  enableInteractiveSelection: true,
-                  contextMenuBuilder: alwaysPasteContextMenu,
-                ),
-                const Gap(12),
-                TextField(
-                  controller: baseUrlController,
-                  decoration: const InputDecoration(
-                    labelText: 'Server URL',
-                    hintText: 'https://komodo.example.com',
-                    prefixIcon: Icon(Icons.dns_outlined),
-                  ),
-                  keyboardType: TextInputType.url,
-                  autocorrect: false,
-                  enableInteractiveSelection: true,
-                  contextMenuBuilder: alwaysPasteContextMenu,
-                ),
-                const Gap(12),
-                TextField(
-                  controller: apiKeyController,
-                  decoration: const InputDecoration(
-                    labelText: 'API Key',
-                    prefixIcon: Icon(Icons.key_outlined),
-                  ),
-                  autocorrect: false,
-                  enableInteractiveSelection: true,
-                  contextMenuBuilder: alwaysPasteContextMenu,
-                ),
-                const Gap(12),
-                TextField(
-                  controller: apiSecretController,
-                  decoration: InputDecoration(
-                    labelText: 'API Secret',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        obscureSecret
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                      onPressed: () {
-                        setState(() => obscureSecret = !obscureSecret);
-                      },
-                    ),
-                  ),
-                  obscureText: obscureSecret,
-                  autocorrect: false,
-                  enableInteractiveSelection: true,
-                  contextMenuBuilder: alwaysPasteContextMenu,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final baseUrl = baseUrlController.text.trim();
-                final apiKey = apiKeyController.text.trim();
-                final apiSecret = apiSecretController.text.trim();
-                if (baseUrl.isEmpty || apiKey.isEmpty || apiSecret.isEmpty) {
-                  return;
-                }
-
-                await ref
-                    .read(authProvider.notifier)
-                    .login(
-                      name: nameController.text,
-                      baseUrl: baseUrl,
-                      apiKey: apiKey,
-                      apiSecret: apiSecret,
-                    );
-
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

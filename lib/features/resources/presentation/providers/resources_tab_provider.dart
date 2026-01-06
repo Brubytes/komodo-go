@@ -8,7 +8,7 @@ enum ResourceType {
   deployments('Deployments', Icons.rocket_launch),
   stacks('Stacks', Icons.layers),
   repos('Repos', Icons.source),
-  builds('Builds', Icons.build_circle),
+  builds('Builds', Icons.handyman_rounded),
   procedures('Procedures', Icons.playlist_play);
 
   const ResourceType(this.label, this.icon);
