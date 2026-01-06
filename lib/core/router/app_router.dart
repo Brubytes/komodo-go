@@ -16,6 +16,7 @@ import '../../features/procedures/presentation/views/procedures_list_view.dart';
 import '../../features/servers/presentation/views/servers_list_view.dart';
 import '../../features/stacks/presentation/views/stack_detail_view.dart';
 import '../../features/stacks/presentation/views/stacks_list_view.dart';
+import '../../features/settings/presentation/views/connections_view.dart';
 import '../widgets/adaptive_bottom_navigation_bar.dart';
 
 part 'app_router.g.dart';
@@ -31,6 +32,7 @@ abstract class AppRoutes {
   static const repos = '/repos';
   static const builds = '/builds';
   static const procedures = '/procedures';
+  static const connections = '/connections';
 }
 
 @riverpod
@@ -155,6 +157,11 @@ GoRouter appRouter(Ref ref) {
               ),
             ],
           ),
+          GoRoute(
+            path: AppRoutes.connections,
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: ConnectionsView()),
+          ),
         ],
       ),
     ],
@@ -210,6 +217,11 @@ class MainShell extends StatelessWidget {
             activeIcon: Icon(Icons.playlist_play),
             label: 'Procedures',
           ),
+          AdaptiveNavigationItem(
+            icon: Icon(Icons.swap_horiz_outlined),
+            activeIcon: Icon(Icons.swap_horiz),
+            label: 'Connections',
+          ),
         ],
       ),
     );
@@ -223,6 +235,7 @@ class MainShell extends StatelessWidget {
     if (location.startsWith(AppRoutes.repos)) return 4;
     if (location.startsWith(AppRoutes.builds)) return 5;
     if (location.startsWith(AppRoutes.procedures)) return 6;
+    if (location.startsWith(AppRoutes.connections)) return 7;
     return 0;
   }
 
@@ -230,18 +243,28 @@ class MainShell extends StatelessWidget {
     switch (index) {
       case 0:
         context.go(AppRoutes.home);
+        break;
       case 1:
         context.go(AppRoutes.servers);
+        break;
       case 2:
         context.go(AppRoutes.deployments);
+        break;
       case 3:
         context.go(AppRoutes.stacks);
+        break;
       case 4:
         context.go(AppRoutes.repos);
+        break;
       case 5:
         context.go(AppRoutes.builds);
+        break;
       case 6:
         context.go(AppRoutes.procedures);
+        break;
+      case 7:
+        context.go(AppRoutes.connections);
+        break;
     }
   }
 }

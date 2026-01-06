@@ -19,26 +19,44 @@ class SecureStorageService {
 
   final FlutterSecureStorage _storage;
 
-  static const _baseUrlKey = 'komodo_base_url';
-  static const _apiKeyKey = 'komodo_api_key';
-  static const _apiSecretKey = 'komodo_api_secret';
+  static const _legacyBaseUrlKey = 'komodo_base_url';
+  static const _legacyApiKeyKey = 'komodo_api_key';
+  static const _legacyApiSecretKey = 'komodo_api_secret';
 
-  /// Saves API credentials to secure storage.
-  Future<void> saveCredentials(ApiCredentials credentials) async {
+  static String _baseUrlKey(String connectionId) =>
+      'komodo/$connectionId/base_url';
+  static String _apiKeyKey(String connectionId) =>
+      'komodo/$connectionId/api_key';
+  static String _apiSecretKey(String connectionId) =>
+      'komodo/$connectionId/api_secret';
+
+  /// Saves API credentials for a specific connection.
+  Future<void> saveCredentialsForConnection({
+    required String connectionId,
+    required ApiCredentials credentials,
+  }) async {
     await Future.wait([
-      _storage.write(key: _baseUrlKey, value: credentials.baseUrl),
-      _storage.write(key: _apiKeyKey, value: credentials.apiKey),
-      _storage.write(key: _apiSecretKey, value: credentials.apiSecret),
+      _storage.write(
+        key: _baseUrlKey(connectionId),
+        value: credentials.baseUrl,
+      ),
+      _storage.write(key: _apiKeyKey(connectionId), value: credentials.apiKey),
+      _storage.write(
+        key: _apiSecretKey(connectionId),
+        value: credentials.apiSecret,
+      ),
     ]);
   }
 
-  /// Retrieves stored API credentials.
+  /// Retrieves stored API credentials for a specific connection.
   /// Returns null if credentials are not stored.
-  Future<ApiCredentials?> getCredentials() async {
+  Future<ApiCredentials?> getCredentialsForConnection(
+    String connectionId,
+  ) async {
     final results = await Future.wait([
-      _storage.read(key: _baseUrlKey),
-      _storage.read(key: _apiKeyKey),
-      _storage.read(key: _apiSecretKey),
+      _storage.read(key: _baseUrlKey(connectionId)),
+      _storage.read(key: _apiKeyKey(connectionId)),
+      _storage.read(key: _apiSecretKey(connectionId)),
     ]);
 
     final baseUrl = results[0];
@@ -56,23 +74,44 @@ class SecureStorageService {
     );
   }
 
-  /// Gets just the base URL without the full credentials.
-  Future<String?> getBaseUrl() async {
-    return _storage.read(key: _baseUrlKey);
-  }
-
-  /// Clears all stored credentials.
-  Future<void> clearCredentials() async {
+  /// Deletes credentials for a specific connection.
+  Future<void> deleteCredentialsForConnection(String connectionId) async {
     await Future.wait([
-      _storage.delete(key: _baseUrlKey),
-      _storage.delete(key: _apiKeyKey),
-      _storage.delete(key: _apiSecretKey),
+      _storage.delete(key: _baseUrlKey(connectionId)),
+      _storage.delete(key: _apiKeyKey(connectionId)),
+      _storage.delete(key: _apiSecretKey(connectionId)),
     ]);
   }
 
-  /// Checks if credentials are stored.
-  Future<bool> hasCredentials() async {
-    final credentials = await getCredentials();
-    return credentials != null;
+  /// Reads legacy (single-connection) credentials, if present.
+  Future<ApiCredentials?> getLegacyCredentials() async {
+    final results = await Future.wait([
+      _storage.read(key: _legacyBaseUrlKey),
+      _storage.read(key: _legacyApiKeyKey),
+      _storage.read(key: _legacyApiSecretKey),
+    ]);
+
+    final baseUrl = results[0];
+    final apiKey = results[1];
+    final apiSecret = results[2];
+
+    if (baseUrl == null || apiKey == null || apiSecret == null) {
+      return null;
+    }
+
+    return ApiCredentials(
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      apiSecret: apiSecret,
+    );
+  }
+
+  /// Clears legacy (single-connection) credentials.
+  Future<void> clearLegacyCredentials() async {
+    await Future.wait([
+      _storage.delete(key: _legacyBaseUrlKey),
+      _storage.delete(key: _legacyApiKeyKey),
+      _storage.delete(key: _legacyApiSecretKey),
+    ]);
   }
 }

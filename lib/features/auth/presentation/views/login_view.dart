@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../core/error/failures.dart';
+import '../../../../core/providers/connections_provider.dart';
 import '../../data/models/auth_state.dart';
 import '../providers/auth_provider.dart';
 
@@ -14,6 +15,7 @@ class LoginView extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
+    final connectionsAsync = ref.watch(connectionsProvider);
     final formKey = useMemoized(GlobalKey<FormState>.new);
 
     final baseUrlController = useTextEditingController();
@@ -71,6 +73,99 @@ class LoginView extends HookConsumerWidget {
                       textAlign: TextAlign.center,
                     ),
                     const Gap(32),
+
+                    // Existing connections
+                    connectionsAsync.when(
+                      data: (connectionsState) {
+                        final connections = connectionsState.connections;
+                        if (connections.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Saved connections',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            const Gap(8),
+                            Card(
+                              clipBehavior: Clip.antiAlias,
+                              child: Column(
+                                children: [
+                                  for (final connection in connections)
+                                    ListTile(
+                                      title: Text(connection.name),
+                                      subtitle: Text(connection.baseUrl),
+                                      leading: Icon(
+                                        Icons.dns_outlined,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      ),
+                                      trailing: IconButton(
+                                        tooltip: 'Delete',
+                                        icon: const Icon(Icons.delete_outline),
+                                        onPressed: () async {
+                                          final confirmed = await showDialog<bool>(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: const Text(
+                                                'Delete connection',
+                                              ),
+                                              content: Text(
+                                                'Remove "${connection.name}"?',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop(false),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                FilledButton(
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop(true),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+
+                                          if (confirmed == true) {
+                                            await ref
+                                                .read(
+                                                  connectionsProvider.notifier,
+                                                )
+                                                .deleteConnection(
+                                                  connection.id,
+                                                );
+                                          }
+                                        },
+                                      ),
+                                      onTap: authState.isLoading
+                                          ? null
+                                          : () async {
+                                              await ref
+                                                  .read(authProvider.notifier)
+                                                  .selectConnection(
+                                                    connection.id,
+                                                  );
+                                            },
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const Gap(24),
+                          ],
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
 
                     // Error message
                     if (authState.value is AuthStateError) ...[

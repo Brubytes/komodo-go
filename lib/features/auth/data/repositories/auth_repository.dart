@@ -6,22 +6,33 @@ import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/providers/dio_provider.dart';
-import '../../../../core/providers/storage_provider.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 
 part 'auth_repository.g.dart';
 
-/// Repository for handling authentication operations.
-class AuthRepository {
-  AuthRepository({required SecureStorageService storage}) : _storage = storage;
-
-  final SecureStorageService _storage;
-
-  /// Gets stored credentials if available.
-  Future<ApiCredentials?> getStoredCredentials() {
-    return _storage.getCredentials();
+ApiCredentials normalizeCredentials({
+  required String baseUrl,
+  required String apiKey,
+  required String apiSecret,
+}) {
+  // Normalize base URL
+  var normalizedUrl = baseUrl.trim();
+  if (normalizedUrl.endsWith('/')) {
+    normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length - 1);
+  }
+  if (!normalizedUrl.startsWith('http')) {
+    normalizedUrl = 'https://$normalizedUrl';
   }
 
+  return ApiCredentials(
+    baseUrl: normalizedUrl,
+    apiKey: apiKey.trim(),
+    apiSecret: apiSecret.trim(),
+  );
+}
+
+/// Repository for handling authentication operations.
+class AuthRepository {
   /// Validates credentials by making a test API call.
   Future<Either<Failure, void>> validateCredentials(
     ApiCredentials credentials,
@@ -51,49 +62,26 @@ class AuthRepository {
   }
 
   /// Authenticates with the given credentials.
-  /// Validates the credentials and stores them if valid.
+  /// Validates the credentials and returns normalized credentials if valid.
   Future<Either<Failure, ApiCredentials>> authenticate({
     required String baseUrl,
     required String apiKey,
     required String apiSecret,
   }) async {
-    // Normalize base URL
-    var normalizedUrl = baseUrl.trim();
-    if (normalizedUrl.endsWith('/')) {
-      normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length - 1);
-    }
-    if (!normalizedUrl.startsWith('http')) {
-      normalizedUrl = 'https://$normalizedUrl';
-    }
-
-    final credentials = ApiCredentials(
-      baseUrl: normalizedUrl,
-      apiKey: apiKey.trim(),
-      apiSecret: apiSecret.trim(),
+    final credentials = normalizeCredentials(
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      apiSecret: apiSecret,
     );
 
     // Validate credentials
     final validationResult = await validateCredentials(credentials);
 
-    return validationResult.fold(Left.new, (_) async {
-      // Store credentials
-      await _storage.saveCredentials(credentials);
-      return Right(credentials);
-    });
-  }
-
-  /// Clears stored credentials.
-  Future<void> logout() {
-    return _storage.clearCredentials();
-  }
-
-  /// Checks if credentials are stored.
-  Future<bool> hasStoredCredentials() {
-    return _storage.hasCredentials();
+    return validationResult.fold(Left.new, (_) => Right(credentials));
   }
 }
 
 @riverpod
 AuthRepository authRepository(Ref ref) {
-  return AuthRepository(storage: ref.watch(secureStorageProvider));
+  return AuthRepository();
 }

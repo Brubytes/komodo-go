@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../../core/error/failures.dart';
+import '../../../../core/connections/connection_profile.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 
 part 'auth_state.freezed.dart';
@@ -15,8 +16,10 @@ sealed class AuthState with _$AuthState {
   const factory AuthState.loading() = AuthStateLoading;
 
   /// Authenticated state with valid credentials.
-  const factory AuthState.authenticated({required ApiCredentials credentials}) =
-      AuthStateAuthenticated;
+  const factory AuthState.authenticated({
+    required ConnectionProfile connection,
+    required ApiCredentials credentials,
+  }) = AuthStateAuthenticated;
 
   /// Unauthenticated state, user needs to log in.
   const factory AuthState.unauthenticated() = AuthStateUnauthenticated;
@@ -31,6 +34,11 @@ extension AuthStateX on AuthState {
 
   ApiCredentials? get credentials => switch (this) {
     AuthStateAuthenticated(:final credentials) => credentials,
+    _ => null,
+  };
+
+  ConnectionProfile? get connection => switch (this) {
+    AuthStateAuthenticated(:final connection) => connection,
     _ => null,
   };
 }

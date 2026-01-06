@@ -5,20 +5,29 @@ import '../api/api_client.dart';
 import '../api/interceptors/auth_interceptor.dart';
 import '../api/interceptors/logging_interceptor.dart';
 import '../storage/secure_storage_service.dart';
-import 'storage_provider.dart';
 
 part 'dio_provider.g.dart';
 
-/// Provides the base URL for the Komodo API.
-/// This is a simple state that can be updated when credentials change.
-/// keepAlive ensures the URL persists even when no providers are watching.
-@Riverpod(keepAlive: true)
-class BaseUrl extends _$BaseUrl {
-  @override
-  String? build() => null;
+class ActiveConnectionData {
+  const ActiveConnectionData({
+    required this.connectionId,
+    required this.name,
+    required this.credentials,
+  });
 
-  void setBaseUrl(String url) {
-    state = url;
+  final String connectionId;
+  final String name;
+  final ApiCredentials credentials;
+}
+
+/// In-memory active connection (base URL + credentials) used to configure Dio.
+@Riverpod(keepAlive: true)
+class ActiveConnection extends _$ActiveConnection {
+  @override
+  ActiveConnectionData? build() => null;
+
+  void setActive(ActiveConnectionData data) {
+    state = data;
   }
 
   void clear() {
@@ -27,28 +36,32 @@ class BaseUrl extends _$BaseUrl {
 }
 
 /// Provides the Dio HTTP client configured for Komodo API.
-/// Returns null if no base URL is configured (user not authenticated).
+/// Returns null if no active connection is configured (user not authenticated).
 @riverpod
 Dio? dio(Ref ref) {
-  final baseUrl = ref.watch(baseUrlProvider);
+  final activeConnection = ref.watch(activeConnectionProvider);
+  final credentials = activeConnection?.credentials;
 
-  // Don't create Dio instance without a valid base URL
-  if (baseUrl == null || baseUrl.isEmpty) {
+  if (credentials == null || credentials.baseUrl.isEmpty) {
     return null;
   }
 
-  final storage = ref.watch(secureStorageProvider);
-
   final dio = Dio(
     BaseOptions(
-      baseUrl: baseUrl,
+      baseUrl: credentials.baseUrl,
       contentType: 'application/json',
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
     ),
   );
 
-  dio.interceptors.addAll([AuthInterceptor(storage), LoggingInterceptor()]);
+  dio.interceptors.addAll([
+    AuthInterceptor(
+      apiKey: credentials.apiKey,
+      apiSecret: credentials.apiSecret,
+    ),
+    LoggingInterceptor(),
+  ]);
 
   return dio;
 }
