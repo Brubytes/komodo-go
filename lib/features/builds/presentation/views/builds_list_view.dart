@@ -7,65 +7,61 @@ import '../../../../core/router/app_router.dart';
 import '../providers/builds_provider.dart';
 import '../widgets/build_card.dart';
 
-/// View displaying the list of all builds.
-class BuildsListView extends ConsumerWidget {
-  const BuildsListView({super.key});
+class BuildsListContent extends ConsumerWidget {
+  const BuildsListContent({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final buildsAsync = ref.watch(buildsProvider);
     final actionsState = ref.watch(buildActionsProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Builds')),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: () => ref.read(buildsProvider.notifier).refresh(),
-            child: buildsAsync.when(
-              data: (builds) {
-                if (builds.isEmpty) {
-                  return const _EmptyState();
-                }
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () => ref.read(buildsProvider.notifier).refresh(),
+          child: buildsAsync.when(
+            data: (builds) {
+              if (builds.isEmpty) {
+                return const _EmptyState();
+              }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: builds.length,
-                  separatorBuilder: (context, index) => const Gap(12),
-                  itemBuilder: (context, index) {
-                    final build = builds[index];
-                    return BuildCard(
-                      buildItem: build,
-                      onTap: () => context.go(
-                        '${AppRoutes.builds}/${build.id}?name=${Uri.encodeComponent(build.name)}',
-                      ),
-                      onAction: (action) =>
-                          _handleAction(context, ref, build.id, action),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => _ErrorState(
-                message: error.toString(),
-                onRetry: () => ref.invalidate(buildsProvider),
-              ),
+              return ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: builds.length,
+                separatorBuilder: (context, index) => const Gap(12),
+                itemBuilder: (context, index) {
+                  final build = builds[index];
+                  return BuildCard(
+                    buildItem: build,
+                    onTap: () => context.go(
+                      '${AppRoutes.builds}/${build.id}?name=${Uri.encodeComponent(build.name)}',
+                    ),
+                    onAction: (action) =>
+                        _handleAction(context, ref, build.id, action),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => _ErrorState(
+              message: error.toString(),
+              onRetry: () => ref.invalidate(buildsProvider),
             ),
           ),
-          if (actionsState.isLoading)
-            Container(
-              color: Colors.black26,
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(),
-                  ),
+        ),
+        if (actionsState.isLoading)
+          Container(
+            color: Colors.black26,
+            child: const Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(),
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -93,6 +89,19 @@ class BuildsListView extends ConsumerWidget {
         ),
       );
     }
+  }
+}
+
+/// View displaying the list of all builds.
+class BuildsListView extends StatelessWidget {
+  const BuildsListView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Builds')),
+      body: const BuildsListContent(),
+    );
   }
 }
 

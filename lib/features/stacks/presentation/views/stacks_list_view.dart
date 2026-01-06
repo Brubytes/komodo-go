@@ -7,65 +7,61 @@ import '../../../../core/router/app_router.dart';
 import '../providers/stacks_provider.dart';
 import '../widgets/stack_card.dart';
 
-/// View displaying the list of all stacks.
-class StacksListView extends ConsumerWidget {
-  const StacksListView({super.key});
+class StacksListContent extends ConsumerWidget {
+  const StacksListContent({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stacksAsync = ref.watch(stacksProvider);
     final actionsState = ref.watch(stackActionsProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Stacks')),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: () => ref.read(stacksProvider.notifier).refresh(),
-            child: stacksAsync.when(
-              data: (stacks) {
-                if (stacks.isEmpty) {
-                  return const _EmptyState();
-                }
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () => ref.read(stacksProvider.notifier).refresh(),
+          child: stacksAsync.when(
+            data: (stacks) {
+              if (stacks.isEmpty) {
+                return const _EmptyState();
+              }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: stacks.length,
-                  separatorBuilder: (context, index) => const Gap(12),
-                  itemBuilder: (context, index) {
-                    final stackItem = stacks[index];
-                    return StackCard(
-                      stack: stackItem,
-                      onTap: () => context.go(
-                        '${AppRoutes.stacks}/${stackItem.id}?name=${Uri.encodeComponent(stackItem.name)}',
-                      ),
-                      onAction: (action) =>
-                          _handleAction(context, ref, stackItem.id, action),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => _ErrorState(
-                message: error.toString(),
-                onRetry: () => ref.invalidate(stacksProvider),
-              ),
+              return ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: stacks.length,
+                separatorBuilder: (context, index) => const Gap(12),
+                itemBuilder: (context, index) {
+                  final stackItem = stacks[index];
+                  return StackCard(
+                    stack: stackItem,
+                    onTap: () => context.go(
+                      '${AppRoutes.stacks}/${stackItem.id}?name=${Uri.encodeComponent(stackItem.name)}',
+                    ),
+                    onAction: (action) =>
+                        _handleAction(context, ref, stackItem.id, action),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => _ErrorState(
+              message: error.toString(),
+              onRetry: () => ref.invalidate(stacksProvider),
             ),
           ),
-          if (actionsState.isLoading)
-            Container(
-              color: Colors.black26,
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(),
-                  ),
+        ),
+        if (actionsState.isLoading)
+          Container(
+            color: Colors.black26,
+            child: const Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(),
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -94,6 +90,19 @@ class StacksListView extends ConsumerWidget {
         ),
       );
     }
+  }
+}
+
+/// View displaying the list of all stacks.
+class StacksListView extends StatelessWidget {
+  const StacksListView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Stacks')),
+      body: const StacksListContent(),
+    );
   }
 }
 
@@ -170,4 +179,3 @@ class _ErrorState extends StatelessWidget {
     );
   }
 }
-

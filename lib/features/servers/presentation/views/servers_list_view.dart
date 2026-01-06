@@ -1,59 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../core/router/app_router.dart';
 import '../../data/models/server.dart';
 import '../../data/models/system_stats.dart';
 import '../providers/servers_provider.dart';
 import '../widgets/server_card.dart';
 
-/// View displaying the list of all servers.
-class ServersListView extends ConsumerWidget {
-  const ServersListView({super.key});
+class ServersListContent extends ConsumerWidget {
+  const ServersListContent({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final serversAsync = ref.watch(serversProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Servers')),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(serversProvider.notifier).refresh(),
-        child: serversAsync.when(
-          data: (servers) {
-            if (servers.isEmpty) {
-              return const _EmptyState();
-            }
+    return RefreshIndicator(
+      onRefresh: () => ref.read(serversProvider.notifier).refresh(),
+      child: serversAsync.when(
+        data: (servers) {
+          if (servers.isEmpty) {
+            return const _EmptyState();
+          }
 
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: servers.length,
-              separatorBuilder: (context, index) => const Gap(12),
-              itemBuilder: (context, index) {
-                final server = servers[index];
-                return ServerCard(
-                  server: server,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (context) => ServerDetailView(
-                          serverId: server.id,
-                          serverName: server.name,
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => _ErrorState(
-            message: error.toString(),
-            onRetry: () => ref.invalidate(serversProvider),
-          ),
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: servers.length,
+            separatorBuilder: (context, index) => const Gap(12),
+            itemBuilder: (context, index) {
+              final server = servers[index];
+              return ServerCard(
+                server: server,
+                onTap: () => context.go(
+                  '${AppRoutes.servers}/${server.id}?name=${Uri.encodeComponent(server.name)}',
+                ),
+              );
+            },
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => _ErrorState(
+          message: error.toString(),
+          onRetry: () => ref.invalidate(serversProvider),
         ),
       ),
+    );
+  }
+}
+
+/// View displaying the list of all servers.
+class ServersListView extends StatelessWidget {
+  const ServersListView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Servers')),
+      body: const ServersListContent(),
     );
   }
 }

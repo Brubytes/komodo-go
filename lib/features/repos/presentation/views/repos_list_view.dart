@@ -7,65 +7,61 @@ import '../../../../core/router/app_router.dart';
 import '../providers/repos_provider.dart';
 import '../widgets/repo_card.dart';
 
-/// View displaying the list of all repos.
-class ReposListView extends ConsumerWidget {
-  const ReposListView({super.key});
+class ReposListContent extends ConsumerWidget {
+  const ReposListContent({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reposAsync = ref.watch(reposProvider);
     final actionsState = ref.watch(repoActionsProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Repos')),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: () => ref.read(reposProvider.notifier).refresh(),
-            child: reposAsync.when(
-              data: (repos) {
-                if (repos.isEmpty) {
-                  return const _EmptyState();
-                }
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () => ref.read(reposProvider.notifier).refresh(),
+          child: reposAsync.when(
+            data: (repos) {
+              if (repos.isEmpty) {
+                return const _EmptyState();
+              }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: repos.length,
-                  separatorBuilder: (context, index) => const Gap(12),
-                  itemBuilder: (context, index) {
-                    final repo = repos[index];
-                    return RepoCard(
-                      repo: repo,
-                      onTap: () => context.go(
-                        '${AppRoutes.repos}/${repo.id}?name=${Uri.encodeComponent(repo.name)}',
-                      ),
-                      onAction: (action) =>
-                          _handleAction(context, ref, repo.id, action),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => _ErrorState(
-                message: error.toString(),
-                onRetry: () => ref.invalidate(reposProvider),
-              ),
+              return ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: repos.length,
+                separatorBuilder: (context, index) => const Gap(12),
+                itemBuilder: (context, index) {
+                  final repo = repos[index];
+                  return RepoCard(
+                    repo: repo,
+                    onTap: () => context.go(
+                      '${AppRoutes.repos}/${repo.id}?name=${Uri.encodeComponent(repo.name)}',
+                    ),
+                    onAction: (action) =>
+                        _handleAction(context, ref, repo.id, action),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => _ErrorState(
+              message: error.toString(),
+              onRetry: () => ref.invalidate(reposProvider),
             ),
           ),
-          if (actionsState.isLoading)
-            Container(
-              color: Colors.black26,
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(),
-                  ),
+        ),
+        if (actionsState.isLoading)
+          Container(
+            color: Colors.black26,
+            child: const Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(),
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -94,6 +90,19 @@ class ReposListView extends ConsumerWidget {
         ),
       );
     }
+  }
+}
+
+/// View displaying the list of all repos.
+class ReposListView extends StatelessWidget {
+  const ReposListView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Repos')),
+      body: const ReposListContent(),
+    );
   }
 }
 
@@ -170,4 +179,3 @@ class _ErrorState extends StatelessWidget {
     );
   }
 }
-

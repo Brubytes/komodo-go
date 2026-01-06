@@ -7,64 +7,60 @@ import '../../../../core/router/app_router.dart';
 import '../providers/procedures_provider.dart';
 import '../widgets/procedure_card.dart';
 
-/// View displaying the list of all procedures.
-class ProceduresListView extends ConsumerWidget {
-  const ProceduresListView({super.key});
+class ProceduresListContent extends ConsumerWidget {
+  const ProceduresListContent({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final proceduresAsync = ref.watch(proceduresProvider);
     final actionsState = ref.watch(procedureActionsProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Procedures')),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: () => ref.read(proceduresProvider.notifier).refresh(),
-            child: proceduresAsync.when(
-              data: (procedures) {
-                if (procedures.isEmpty) {
-                  return const _EmptyState();
-                }
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () => ref.read(proceduresProvider.notifier).refresh(),
+          child: proceduresAsync.when(
+            data: (procedures) {
+              if (procedures.isEmpty) {
+                return const _EmptyState();
+              }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: procedures.length,
-                  separatorBuilder: (context, index) => const Gap(12),
-                  itemBuilder: (context, index) {
-                    final procedure = procedures[index];
-                    return ProcedureCard(
-                      procedure: procedure,
-                      onTap: () => context.go(
-                        '${AppRoutes.procedures}/${procedure.id}?name=${Uri.encodeComponent(procedure.name)}',
-                      ),
-                      onRun: () => _runProcedure(context, ref, procedure.id),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => _ErrorState(
-                message: error.toString(),
-                onRetry: () => ref.invalidate(proceduresProvider),
-              ),
+              return ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: procedures.length,
+                separatorBuilder: (context, index) => const Gap(12),
+                itemBuilder: (context, index) {
+                  final procedure = procedures[index];
+                  return ProcedureCard(
+                    procedure: procedure,
+                    onTap: () => context.go(
+                      '${AppRoutes.procedures}/${procedure.id}?name=${Uri.encodeComponent(procedure.name)}',
+                    ),
+                    onRun: () => _runProcedure(context, ref, procedure.id),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => _ErrorState(
+              message: error.toString(),
+              onRetry: () => ref.invalidate(proceduresProvider),
             ),
           ),
-          if (actionsState.isLoading)
-            Container(
-              color: Colors.black26,
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(),
-                  ),
+        ),
+        if (actionsState.isLoading)
+          Container(
+            color: Colors.black26,
+            child: const Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(),
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -88,6 +84,19 @@ class ProceduresListView extends ConsumerWidget {
         ),
       );
     }
+  }
+}
+
+/// View displaying the list of all procedures.
+class ProceduresListView extends StatelessWidget {
+  const ProceduresListView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Procedures')),
+      body: const ProceduresListContent(),
+    );
   }
 }
 
@@ -167,4 +176,3 @@ class _ErrorState extends StatelessWidget {
     );
   }
 }
-

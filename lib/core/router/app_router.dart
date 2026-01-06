@@ -9,6 +9,8 @@ import '../../features/deployments/presentation/views/deployments_list_view.dart
 import '../../features/home/presentation/views/home_view.dart';
 import '../../features/builds/presentation/views/build_detail_view.dart';
 import '../../features/builds/presentation/views/builds_list_view.dart';
+import '../../features/notifications/presentation/views/notifications_view.dart';
+import '../../features/resources/presentation/views/resources_view.dart';
 import '../../features/repos/presentation/views/repo_detail_view.dart';
 import '../../features/repos/presentation/views/repos_list_view.dart';
 import '../../features/procedures/presentation/views/procedure_detail_view.dart';
@@ -25,6 +27,10 @@ part 'app_router.g.dart';
 abstract class AppRoutes {
   static const login = '/login';
   static const home = '/';
+  static const resources = '/resources';
+  static const notifications = '/notifications';
+  static const settings = '/settings';
+
   static const servers = '/servers';
   static const serverDetail = '/servers/:id';
   static const deployments = '/deployments';
@@ -32,6 +38,8 @@ abstract class AppRoutes {
   static const repos = '/repos';
   static const builds = '/builds';
   static const procedures = '/procedures';
+
+  /// Legacy path (renamed to [settings]).
   static const connections = '/connections';
 }
 
@@ -74,6 +82,22 @@ GoRouter appRouter(Ref ref) {
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: HomeView()),
           ),
+          GoRoute(
+            path: AppRoutes.resources,
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: ResourcesView()),
+          ),
+          GoRoute(
+            path: AppRoutes.notifications,
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: NotificationsView()),
+          ),
+          GoRoute(
+            path: AppRoutes.settings,
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: ConnectionsView()),
+          ),
+
           GoRoute(
             path: AppRoutes.servers,
             pageBuilder: (context, state) =>
@@ -159,8 +183,7 @@ GoRouter appRouter(Ref ref) {
           ),
           GoRoute(
             path: AppRoutes.connections,
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: ConnectionsView()),
+            redirect: (_, __) => AppRoutes.settings,
           ),
         ],
       ),
@@ -188,39 +211,19 @@ class MainShell extends StatelessWidget {
             label: 'Home',
           ),
           AdaptiveNavigationItem(
-            icon: Icon(Icons.dns_outlined),
-            activeIcon: Icon(Icons.dns),
-            label: 'Servers',
+            icon: Icon(Icons.grid_view_outlined),
+            activeIcon: Icon(Icons.grid_view),
+            label: 'Resources',
           ),
           AdaptiveNavigationItem(
-            icon: Icon(Icons.rocket_launch_outlined),
-            activeIcon: Icon(Icons.rocket_launch),
-            label: 'Deployments',
+            icon: Icon(Icons.notifications_outlined),
+            activeIcon: Icon(Icons.notifications),
+            label: 'Notifications',
           ),
           AdaptiveNavigationItem(
-            icon: Icon(Icons.layers_outlined),
-            activeIcon: Icon(Icons.layers),
-            label: 'Stacks',
-          ),
-          AdaptiveNavigationItem(
-            icon: Icon(Icons.source_outlined),
-            activeIcon: Icon(Icons.source),
-            label: 'Repos',
-          ),
-          AdaptiveNavigationItem(
-            icon: Icon(Icons.build_circle_outlined),
-            activeIcon: Icon(Icons.build_circle),
-            label: 'Builds',
-          ),
-          AdaptiveNavigationItem(
-            icon: Icon(Icons.playlist_play_outlined),
-            activeIcon: Icon(Icons.playlist_play),
-            label: 'Procedures',
-          ),
-          AdaptiveNavigationItem(
-            icon: Icon(Icons.swap_horiz_outlined),
-            activeIcon: Icon(Icons.swap_horiz),
-            label: 'Connections',
+            icon: Icon(Icons.settings_outlined),
+            activeIcon: Icon(Icons.settings),
+            label: 'Settings',
           ),
         ],
       ),
@@ -229,13 +232,18 @@ class MainShell extends StatelessWidget {
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
+    if (location.startsWith(AppRoutes.resources)) return 1;
     if (location.startsWith(AppRoutes.servers)) return 1;
-    if (location.startsWith(AppRoutes.deployments)) return 2;
-    if (location.startsWith(AppRoutes.stacks)) return 3;
-    if (location.startsWith(AppRoutes.repos)) return 4;
-    if (location.startsWith(AppRoutes.builds)) return 5;
-    if (location.startsWith(AppRoutes.procedures)) return 6;
-    if (location.startsWith(AppRoutes.connections)) return 7;
+    if (location.startsWith(AppRoutes.deployments)) return 1;
+    if (location.startsWith(AppRoutes.stacks)) return 1;
+    if (location.startsWith(AppRoutes.repos)) return 1;
+    if (location.startsWith(AppRoutes.builds)) return 1;
+    if (location.startsWith(AppRoutes.procedures)) return 1;
+
+    if (location.startsWith(AppRoutes.notifications)) return 2;
+
+    if (location.startsWith(AppRoutes.settings)) return 3;
+    if (location.startsWith(AppRoutes.connections)) return 3;
     return 0;
   }
 
@@ -245,25 +253,13 @@ class MainShell extends StatelessWidget {
         context.go(AppRoutes.home);
         break;
       case 1:
-        context.go(AppRoutes.servers);
+        context.go(AppRoutes.resources);
         break;
       case 2:
-        context.go(AppRoutes.deployments);
+        context.go(AppRoutes.notifications);
         break;
       case 3:
-        context.go(AppRoutes.stacks);
-        break;
-      case 4:
-        context.go(AppRoutes.repos);
-        break;
-      case 5:
-        context.go(AppRoutes.builds);
-        break;
-      case 6:
-        context.go(AppRoutes.procedures);
-        break;
-      case 7:
-        context.go(AppRoutes.connections);
+        context.go(AppRoutes.settings);
         break;
     }
   }

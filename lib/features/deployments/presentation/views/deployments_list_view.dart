@@ -5,64 +5,60 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../providers/deployments_provider.dart';
 import '../widgets/deployment_card.dart';
 
-/// View displaying the list of all deployments.
-class DeploymentsListView extends ConsumerWidget {
-  const DeploymentsListView({super.key});
+class DeploymentsListContent extends ConsumerWidget {
+  const DeploymentsListContent({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final deploymentsAsync = ref.watch(deploymentsProvider);
     final actionsState = ref.watch(deploymentActionsProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Deployments')),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: () => ref.read(deploymentsProvider.notifier).refresh(),
-            child: deploymentsAsync.when(
-              data: (deployments) {
-                if (deployments.isEmpty) {
-                  return const _EmptyState();
-                }
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () => ref.read(deploymentsProvider.notifier).refresh(),
+          child: deploymentsAsync.when(
+            data: (deployments) {
+              if (deployments.isEmpty) {
+                return const _EmptyState();
+              }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: deployments.length,
-                  separatorBuilder: (context, index) => const Gap(12),
-                  itemBuilder: (context, index) {
-                    final deployment = deployments[index];
-                    return DeploymentCard(
-                      deployment: deployment,
-                      onAction: (action) =>
-                          _handleAction(context, ref, deployment.id, action),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => _ErrorState(
-                message: error.toString(),
-                onRetry: () => ref.invalidate(deploymentsProvider),
-              ),
+              return ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: deployments.length,
+                separatorBuilder: (context, index) => const Gap(12),
+                itemBuilder: (context, index) {
+                  final deployment = deployments[index];
+                  return DeploymentCard(
+                    deployment: deployment,
+                    onAction: (action) =>
+                        _handleAction(context, ref, deployment.id, action),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => _ErrorState(
+              message: error.toString(),
+              onRetry: () => ref.invalidate(deploymentsProvider),
             ),
           ),
+        ),
 
-          // Loading overlay for actions
-          if (actionsState.isLoading)
-            Container(
-              color: Colors.black26,
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(),
-                  ),
+        // Loading overlay for actions
+        if (actionsState.isLoading)
+          Container(
+            color: Colors.black26,
+            child: const Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(),
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -122,6 +118,19 @@ class DeploymentsListView extends ConsumerWidget {
         ),
       );
     }
+  }
+}
+
+/// View displaying the list of all deployments.
+class DeploymentsListView extends StatelessWidget {
+  const DeploymentsListView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Deployments')),
+      body: const DeploymentsListContent(),
+    );
   }
 }
 
