@@ -9,6 +9,8 @@ import '../../../deployments/data/models/deployment.dart';
 import '../../../deployments/presentation/providers/deployments_provider.dart';
 import '../../../servers/data/models/server.dart';
 import '../../../servers/presentation/providers/servers_provider.dart';
+import '../../../repos/data/models/repo.dart';
+import '../../../repos/presentation/providers/repos_provider.dart';
 import '../../../stacks/data/models/stack.dart';
 import '../../../stacks/presentation/providers/stacks_provider.dart';
 
@@ -21,6 +23,7 @@ class HomeView extends ConsumerWidget {
     final serversAsync = ref.watch(serversProvider);
     final deploymentsAsync = ref.watch(deploymentsProvider);
     final stacksAsync = ref.watch(stacksProvider);
+    final reposAsync = ref.watch(reposProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -59,6 +62,7 @@ class HomeView extends ConsumerWidget {
           ref.invalidate(serversProvider);
           ref.invalidate(deploymentsProvider);
           ref.invalidate(stacksProvider);
+          ref.invalidate(reposProvider);
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -127,6 +131,19 @@ class HomeView extends ConsumerWidget {
                 return '$running running';
               },
               onTap: () => context.go(AppRoutes.stacks),
+            ),
+            const Gap(12),
+            _StatCard(
+              title: 'Repos',
+              icon: Icons.source,
+              color: Colors.orange,
+              asyncValue: reposAsync,
+              valueBuilder: (repos) => repos.length.toString(),
+              subtitleBuilder: (repos) {
+                final busy = repos.where((r) => r.info.state.isBusy).length;
+                return '$busy busy';
+              },
+              onTap: () => context.go(AppRoutes.repos),
             ),
             const Gap(24),
 
@@ -203,6 +220,32 @@ class HomeView extends ConsumerWidget {
                   children: stacks
                       .take(5)
                       .map((stack) => _StackListTile(stack: stack))
+                      .toList(),
+                );
+              },
+              loading: () => const _LoadingTile(),
+              error: (e, _) => _ErrorTile(message: e.toString()),
+            ),
+            const Gap(24),
+
+            // Recent repos
+            _SectionHeader(
+              title: 'Repos',
+              onSeeAll: () => context.go(AppRoutes.repos),
+            ),
+            const Gap(8),
+            reposAsync.when(
+              data: (repos) {
+                if (repos.isEmpty) {
+                  return const _EmptyListTile(
+                    icon: Icons.source_outlined,
+                    message: 'No repos',
+                  );
+                }
+                return Column(
+                  children: repos
+                      .take(5)
+                      .map((repo) => _RepoListTile(repo: repo))
                       .toList(),
                 );
               },
@@ -451,6 +494,50 @@ class _StackListTile extends StatelessWidget {
         ),
         onTap: () => context.go(
           '${AppRoutes.stacks}/${stack.id}?name=${Uri.encodeComponent(stack.name)}',
+        ),
+      ),
+    );
+  }
+}
+
+class _RepoListTile extends StatelessWidget {
+  const _RepoListTile({required this.repo});
+
+  final RepoListItem repo;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = repo.info.state;
+    final color = switch (state) {
+      RepoState.ok => Colors.green,
+      RepoState.failed => Colors.red,
+      RepoState.cloning => Colors.blue,
+      RepoState.pulling => Colors.blue,
+      RepoState.building => Colors.orange,
+      RepoState.unknown => Colors.orange,
+    };
+
+    final repoPath = repo.info.repo;
+    final branch = repo.info.branch;
+    final subtitle = repoPath.isNotEmpty
+        ? (branch.isNotEmpty ? '$repoPath · $branch' : repoPath)
+        : 'No repo';
+
+    return Card(
+      child: ListTile(
+        leading: Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        title: Text(repo.name),
+        subtitle: Text(subtitle),
+        trailing: Text(
+          state.displayName,
+          style: TextStyle(color: color, fontWeight: FontWeight.w500),
+        ),
+        onTap: () => context.go(
+          '${AppRoutes.repos}/${repo.id}?name=${Uri.encodeComponent(repo.name)}',
         ),
       ),
     );
