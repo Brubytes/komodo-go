@@ -5,11 +5,11 @@ part 'resources_tab_provider.g.dart';
 
 enum ResourceType {
   servers('Servers', Icons.dns),
-  deployments('Deploy', Icons.rocket_launch),
+  deployments('Deployments', Icons.rocket_launch),
   stacks('Stacks', Icons.layers),
   repos('Repos', Icons.source),
   builds('Builds', Icons.build_circle),
-  procedures('Procs', Icons.playlist_play);
+  procedures('Procedures', Icons.playlist_play);
 
   const ResourceType(this.label, this.icon);
 

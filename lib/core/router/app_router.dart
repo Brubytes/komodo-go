@@ -21,6 +21,7 @@ import '../../features/servers/presentation/views/servers_list_view.dart';
 import '../../features/stacks/presentation/views/stack_detail_view.dart';
 import '../../features/stacks/presentation/views/stacks_list_view.dart';
 import '../../features/settings/presentation/views/connections_view.dart';
+import '../../features/settings/presentation/views/settings_view.dart';
 import '../widgets/adaptive_bottom_navigation_bar.dart';
 
 part 'app_router.g.dart';
@@ -112,7 +113,12 @@ GoRouter appRouter(Ref ref) {
           GoRoute(
             path: AppRoutes.settings,
             pageBuilder: (context, state) =>
-                _noTransitionTabPage(const ConnectionsView()),
+                _noTransitionTabPage(const SettingsView()),
+          ),
+          GoRoute(
+            path: AppRoutes.connections,
+            pageBuilder: (context, state) =>
+                _adaptiveStackPage(context, const ConnectionsView()),
           ),
 
           GoRoute(
@@ -212,10 +218,6 @@ GoRouter appRouter(Ref ref) {
                 },
               ),
             ],
-          ),
-          GoRoute(
-            path: AppRoutes.connections,
-            redirect: (_, __) => AppRoutes.settings,
           ),
         ],
       ),
