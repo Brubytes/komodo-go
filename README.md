@@ -1,16 +1,30 @@
-# komodo_go
+# Komodo Go
 
-A new Flutter project.
+Flutter app to control the Komodo infrastructure management platform.
 
-## Getting Started
+## Requirements
 
-This project is a starting point for a Flutter application.
+- Flutter is pinned via FVM (`.fvmrc`) to `3.38.5`.
 
-A few resources to get you started if this is your first Flutter project:
+## Development
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- `fvm flutter pub get`
+- `fvm flutter run`
+- `fvm flutter analyze`
+- `fvm flutter test`
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Design system / theming
+
+The app uses a single unified Material 3 theme on both iOS and Android (no platform-specific split).
+
+- Brand colors:
+  - Primary: `#014226`
+  - Secondary: `#4EB333`
+- Theme entry points:
+  - Tokens: `lib/core/theme/app_tokens.dart`
+  - Theme: `lib/core/theme/app_theme.dart`
+
+Guidelines:
+
+- Prefer `Theme.of(context).colorScheme` for UI colors.
+- Don’t hard-code hex colors in widgets unless there is a strong reason.
