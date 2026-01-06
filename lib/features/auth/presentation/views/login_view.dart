@@ -24,7 +24,9 @@ class LoginView extends HookConsumerWidget {
 
     Future<void> handleLogin() async {
       if (formKey.currentState?.validate() ?? false) {
-        await ref.read(authProvider.notifier).login(
+        await ref
+            .read(authProvider.notifier)
+            .login(
               baseUrl: baseUrlController.text,
               apiKey: apiKeyController.text,
               apiSecret: apiSecretController.text,
@@ -54,20 +56,18 @@ class LoginView extends HookConsumerWidget {
                     const Gap(16),
                     Text(
                       'Komodo',
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme.of(context).textTheme.headlineLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const Gap(8),
                     Text(
                       'Connect to your Komodo instance',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const Gap(32),
@@ -77,10 +77,9 @@ class LoginView extends HookConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .error
-                              .withValues(alpha: 0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -181,9 +180,7 @@ class LoginView extends HookConsumerWidget {
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text('Connect'),
                     ),
@@ -194,11 +191,10 @@ class LoginView extends HookConsumerWidget {
                       'You can generate API keys in the Komodo web interface '
                       'under your user settings.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],

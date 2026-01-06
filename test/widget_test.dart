@@ -4,11 +4,7 @@ import 'package:komodo_go/app.dart';
 
 void main() {
   testWidgets('App renders without error', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: KomodoApp(),
-      ),
-    );
+    await tester.pumpWidget(const ProviderScope(child: KomodoApp()));
 
     // Allow the app to settle
     await tester.pump();

@@ -15,9 +15,7 @@ class DeploymentsListView extends ConsumerWidget {
     final actionsState = ref.watch(deploymentActionsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Deployments'),
-      ),
+      appBar: AppBar(title: const Text('Deployments')),
       body: Stack(
         children: [
           RefreshIndicator(
@@ -36,19 +34,13 @@ class DeploymentsListView extends ConsumerWidget {
                     final deployment = deployments[index];
                     return DeploymentCard(
                       deployment: deployment,
-                      onAction: (action) => _handleAction(
-                        context,
-                        ref,
-                        deployment.id,
-                        action,
-                      ),
+                      onAction: (action) =>
+                          _handleAction(context, ref, deployment.id, action),
                     );
                   },
                 );
               },
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => _ErrorState(
                 message: error.toString(),
                 onRetry: () => ref.invalidate(deploymentsProvider),
@@ -97,9 +89,7 @@ class DeploymentsListView extends ConsumerWidget {
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
               child: const Text('Destroy'),
             ),
           ],
@@ -158,11 +148,10 @@ class _EmptyState extends StatelessWidget {
           Text(
             'Create deployments in the Komodo web interface',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.7),
-                ),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
         ],
       ),
@@ -171,10 +160,7 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorState({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
@@ -201,18 +187,14 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
               textAlign: TextAlign.center,
             ),
             const Gap(24),
-            FilledButton.tonal(
-              onPressed: onRetry,
-              child: const Text('Retry'),
-            ),
+            FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
           ],
         ),
       ),

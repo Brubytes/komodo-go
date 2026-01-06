@@ -13,9 +13,7 @@ part 'auth_repository.g.dart';
 
 /// Repository for handling authentication operations.
 class AuthRepository {
-  AuthRepository({
-    required SecureStorageService storage,
-  }) : _storage = storage;
+  AuthRepository({required SecureStorageService storage}) : _storage = storage;
 
   final SecureStorageService _storage;
 
@@ -77,14 +75,11 @@ class AuthRepository {
     // Validate credentials
     final validationResult = await validateCredentials(credentials);
 
-    return validationResult.fold(
-      Left.new,
-      (_) async {
-        // Store credentials
-        await _storage.saveCredentials(credentials);
-        return Right(credentials);
-      },
-    );
+    return validationResult.fold(Left.new, (_) async {
+      // Store credentials
+      await _storage.saveCredentials(credentials);
+      return Right(credentials);
+    });
   }
 
   /// Clears stored credentials.
@@ -100,7 +95,5 @@ class AuthRepository {
 
 @riverpod
 AuthRepository authRepository(Ref ref) {
-  return AuthRepository(
-    storage: ref.watch(secureStorageProvider),
-  );
+  return AuthRepository(storage: ref.watch(secureStorageProvider));
 }

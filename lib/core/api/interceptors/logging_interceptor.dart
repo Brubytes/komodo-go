@@ -6,15 +6,9 @@ import 'package:dio/dio.dart';
 class LoggingInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    developer.log(
-      '→ ${options.method} ${options.uri}',
-      name: 'HTTP',
-    );
+    developer.log('→ ${options.method} ${options.uri}', name: 'HTTP');
     if (options.data != null) {
-      developer.log(
-        '  Body: ${options.data}',
-        name: 'HTTP',
-      );
+      developer.log('  Body: ${options.data}', name: 'HTTP');
     }
     handler.next(options);
   }
@@ -28,10 +22,7 @@ class LoggingInterceptor extends Interceptor {
       '← ${response.statusCode} ${response.requestOptions.uri}',
       name: 'HTTP',
     );
-    developer.log(
-      '  Response: ${response.data}',
-      name: 'HTTP',
-    );
+    developer.log('  Response: ${response.data}', name: 'HTTP');
     handler.next(response);
   }
 

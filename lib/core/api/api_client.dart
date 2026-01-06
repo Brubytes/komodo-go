@@ -4,18 +4,12 @@ import 'api_exception.dart';
 
 /// RPC request structure for Komodo API.
 class RpcRequest<T> {
-  const RpcRequest({
-    required this.type,
-    required this.params,
-  });
+  const RpcRequest({required this.type, required this.params});
 
   final String type;
   final T params;
 
-  Map<String, dynamic> toJson() => {
-        'type': type,
-        'params': params,
-      };
+  Map<String, dynamic> toJson() => {'type': type, 'params': params};
 }
 
 /// Client for interacting with the Komodo API.
@@ -33,12 +27,10 @@ class KomodoApiClient {
   final Dio _dio;
 
   /// Sends a request to the auth module.
-  Future<dynamic> auth(RpcRequest<dynamic> request) =>
-      _post('/auth', request);
+  Future<dynamic> auth(RpcRequest<dynamic> request) => _post('/auth', request);
 
   /// Sends a request to the read module.
-  Future<dynamic> read(RpcRequest<dynamic> request) =>
-      _post('/read', request);
+  Future<dynamic> read(RpcRequest<dynamic> request) => _post('/read', request);
 
   /// Sends a request to the write module.
   Future<dynamic> write(RpcRequest<dynamic> request) =>
@@ -48,15 +40,9 @@ class KomodoApiClient {
   Future<dynamic> execute(RpcRequest<dynamic> request) =>
       _post('/execute', request);
 
-  Future<dynamic> _post(
-    String path,
-    RpcRequest<dynamic> request,
-  ) async {
+  Future<dynamic> _post(String path, RpcRequest<dynamic> request) async {
     try {
-      final response = await _dio.post<dynamic>(
-        path,
-        data: request.toJson(),
-      );
+      final response = await _dio.post<dynamic>(path, data: request.toJson());
       return response.data;
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);

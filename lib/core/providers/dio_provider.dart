@@ -48,10 +48,7 @@ Dio? dio(Ref ref) {
     ),
   );
 
-  dio.interceptors.addAll([
-    AuthInterceptor(storage),
-    LoggingInterceptor(),
-  ]);
+  dio.interceptors.addAll([AuthInterceptor(storage), LoggingInterceptor()]);
 
   return dio;
 }

@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../data/models/server.dart';
+import '../../data/models/system_stats.dart';
 import '../providers/servers_provider.dart';
 import '../widgets/server_card.dart';
 
@@ -15,9 +16,7 @@ class ServersListView extends ConsumerWidget {
     final serversAsync = ref.watch(serversProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Servers'),
-      ),
+      appBar: AppBar(title: const Text('Servers')),
       body: RefreshIndicator(
         onRefresh: () => ref.read(serversProvider.notifier).refresh(),
         child: serversAsync.when(
@@ -48,9 +47,7 @@ class ServersListView extends ConsumerWidget {
               },
             );
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stack) => _ErrorState(
             message: error.toString(),
             onRetry: () => ref.invalidate(serversProvider),
@@ -84,11 +81,10 @@ class _EmptyState extends StatelessWidget {
           Text(
             'Add servers in the Komodo web interface',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.7),
-                ),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
         ],
       ),
@@ -97,10 +93,7 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorState({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
@@ -127,18 +120,14 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
               textAlign: TextAlign.center,
             ),
             const Gap(24),
-            FilledButton.tonal(
-              onPressed: onRetry,
-              child: const Text('Retry'),
-            ),
+            FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
           ],
         ),
       ),
@@ -163,9 +152,7 @@ class ServerDetailView extends ConsumerWidget {
     final statsAsync = ref.watch(serverStatsProvider(serverId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(serverName),
-      ),
+      appBar: AppBar(title: Text(serverName)),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(serverDetailProvider(serverId));
@@ -237,18 +224,15 @@ class _ServerInfoCard extends StatelessWidget {
           children: [
             Text(
               'Server Information',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const Gap(16),
             _InfoRow(label: 'Name', value: server.name),
-            _InfoRow(label: 'Address', value: server.info?.address ?? ''),
+            _InfoRow(label: 'Address', value: server.address),
             if (server.description != null)
-              _InfoRow(
-                label: 'Description',
-                value: server.description!,
-              ),
+              _InfoRow(label: 'Description', value: server.description!),
           ],
         ),
       ),
@@ -259,10 +243,20 @@ class _ServerInfoCard extends StatelessWidget {
 class _StatsCard extends StatelessWidget {
   const _StatsCard({required this.stats});
 
-  final dynamic stats;
+  final SystemStats? stats;
 
   @override
   Widget build(BuildContext context) {
+    final stats = this.stats;
+    if (stats == null) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('No stats available'),
+        ),
+      );
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -271,30 +265,26 @@ class _StatsCard extends StatelessWidget {
           children: [
             Text(
               'System Statistics',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const Gap(16),
-            _StatBar(
-              label: 'CPU',
-              value: stats.cpuPercent as double,
-              color: Colors.blue,
-            ),
+            _StatBar(label: 'CPU', value: stats.cpuPercent, color: Colors.blue),
             const Gap(12),
             _StatBar(
               label: 'Memory',
-              value: stats.memPercent as double,
+              value: stats.memPercent,
               subtitle:
-                  '${(stats.memUsedGb as double).toStringAsFixed(1)} / ${(stats.memTotalGb as double).toStringAsFixed(1)} GB',
+                  '${stats.memUsedGb.toStringAsFixed(1)} / ${stats.memTotalGb.toStringAsFixed(1)} GB',
               color: Colors.green,
             ),
             const Gap(12),
             _StatBar(
               label: 'Disk',
-              value: stats.diskPercent as double,
+              value: stats.diskPercent,
               subtitle:
-                  '${(stats.diskUsedGb as double).toStringAsFixed(1)} / ${(stats.diskTotalGb as double).toStringAsFixed(1)} GB',
+                  '${stats.diskUsedGb.toStringAsFixed(1)} / ${stats.diskTotalGb.toStringAsFixed(1)} GB',
               color: Colors.orange,
             ),
           ],
@@ -305,10 +295,7 @@ class _StatsCard extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.label,
-    required this.value,
-  });
+  const _InfoRow({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -325,18 +312,14 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
           ),
         ],
       ),
@@ -367,16 +350,16 @@ class _StatBar extends StatelessWidget {
           children: [
             Text(
               label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
             ),
             Text(
               '${value.toStringAsFixed(1)}%',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
           ],
         ),
@@ -395,11 +378,10 @@ class _StatBar extends StatelessWidget {
           Text(
             subtitle!,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.5),
-                ),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
           ),
         ],
       ],

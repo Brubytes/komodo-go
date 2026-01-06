@@ -2,11 +2,7 @@ import 'package:dio/dio.dart';
 
 /// Exception thrown when an API request fails.
 class ApiException implements Exception {
-  const ApiException({
-    required this.message,
-    this.statusCode,
-    this.trace,
-  });
+  const ApiException({required this.message, this.statusCode, this.trace});
 
   /// Creates an [ApiException] from a [DioException].
   factory ApiException.fromDioException(DioException error) {
@@ -29,19 +25,20 @@ class ApiException implements Exception {
     return switch (error.type) {
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
-      DioExceptionType.receiveTimeout =>
-        const ApiException(message: 'Connection timed out'),
-      DioExceptionType.connectionError =>
-        const ApiException(message: 'Could not connect to server'),
+      DioExceptionType.receiveTimeout => const ApiException(
+        message: 'Connection timed out',
+      ),
+      DioExceptionType.connectionError => const ApiException(
+        message: 'Could not connect to server',
+      ),
       DioExceptionType.badResponse => ApiException(
-          message: 'Server error: ${response?.statusCode}',
-          statusCode: response?.statusCode,
-        ),
-      DioExceptionType.cancel =>
-        const ApiException(message: 'Request cancelled'),
-      _ => ApiException(
-          message: error.message ?? 'Unknown network error',
-        ),
+        message: 'Server error: ${response?.statusCode}',
+        statusCode: response?.statusCode,
+      ),
+      DioExceptionType.cancel => const ApiException(
+        message: 'Request cancelled',
+      ),
+      _ => ApiException(message: error.message ?? 'Unknown network error'),
     };
   }
 

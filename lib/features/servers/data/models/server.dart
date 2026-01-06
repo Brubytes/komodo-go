@@ -6,17 +6,17 @@ part 'server.g.dart';
 /// Represents a server managed by Komodo.
 @freezed
 sealed class Server with _$Server {
-  const Server._();
-
   const factory Server({
     @JsonKey(readValue: _readId) required String id,
     required String name,
-    @Default('') String description,
+    String? description,
     @Default([]) List<String> tags,
     @Default(false) bool template,
     ServerInfo? info,
     ServerConfig? config,
   }) = _Server;
+
+  const Server._();
 
   factory Server.fromJson(Map<String, dynamic> json) => _$ServerFromJson(json);
 
@@ -60,16 +60,26 @@ sealed class ServerConfig with _$ServerConfig {
 @freezed
 sealed class ServerInfo with _$ServerInfo {
   const factory ServerInfo({
-    ServerState? state,
+    @JsonKey(fromJson: _serverStateFromJson, toJson: _serverStateToJson)
+    @Default(ServerState.unknown)
+    ServerState state,
     @Default('') String region,
     @Default('') String address,
     @JsonKey(name: 'external_address') @Default('') String externalAddress,
-    String? version,
-    @JsonKey(name: 'send_unreachable_alerts') @Default(true) bool sendUnreachableAlerts,
+    @Default('') String version,
+    @JsonKey(name: 'send_unreachable_alerts')
+    @Default(true)
+    bool sendUnreachableAlerts,
     @JsonKey(name: 'send_cpu_alerts') @Default(true) bool sendCpuAlerts,
     @JsonKey(name: 'send_mem_alerts') @Default(true) bool sendMemAlerts,
     @JsonKey(name: 'send_disk_alerts') @Default(true) bool sendDiskAlerts,
+    @JsonKey(name: 'send_version_mismatch_alerts')
+    @Default(true)
+    bool sendVersionMismatchAlerts,
     @JsonKey(name: 'terminals_disabled') @Default(false) bool terminalsDisabled,
+    @JsonKey(name: 'container_exec_disabled')
+    @Default(false)
+    bool containerExecDisabled,
   }) = _ServerInfo;
 
   factory ServerInfo.fromJson(Map<String, dynamic> json) =>
@@ -77,13 +87,24 @@ sealed class ServerInfo with _$ServerInfo {
 }
 
 /// The state of a server.
-@JsonEnum(valueField: 'value')
-enum ServerState {
-  ok('Ok'),
-  notOk('NotOk'),
-  disabled('Disabled'),
-  unknown('Unknown');
+enum ServerState { ok, notOk, disabled, unknown }
 
-  const ServerState(this.value);
-  final String value;
+ServerState _serverStateFromJson(Object? value) {
+  if (value is! String) return ServerState.unknown;
+  final normalized = value.trim().toLowerCase().replaceAll('_', '');
+  return switch (normalized) {
+    'ok' => ServerState.ok,
+    'notok' => ServerState.notOk,
+    'disabled' => ServerState.disabled,
+    _ => ServerState.unknown,
+  };
+}
+
+String _serverStateToJson(ServerState value) {
+  return switch (value) {
+    ServerState.ok => 'Ok',
+    ServerState.notOk => 'NotOk',
+    ServerState.disabled => 'Disabled',
+    ServerState.unknown => 'Unknown',
+  };
 }

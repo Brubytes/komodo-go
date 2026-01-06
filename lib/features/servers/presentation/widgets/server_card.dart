@@ -5,11 +5,7 @@ import '../../data/models/server.dart';
 
 /// Card widget displaying server information.
 class ServerCard extends StatelessWidget {
-  const ServerCard({
-    required this.server,
-    this.onTap,
-    super.key,
-  });
+  const ServerCard({required this.server, this.onTap, super.key});
 
   final Server server;
   final VoidCallback? onTap;
@@ -38,18 +34,17 @@ class ServerCard extends StatelessWidget {
                     Text(
                       server.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const Gap(4),
                     Text(
-                      server.info?.address ?? '',
+                      server.address,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
                     ),
                     if (server.description != null &&
                         server.description!.isNotEmpty) ...[
@@ -57,11 +52,10 @@ class ServerCard extends StatelessWidget {
                       Text(
                         server.description!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.5),
-                            ),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -73,10 +67,9 @@ class ServerCard extends StatelessWidget {
               // Arrow
               Icon(
                 Icons.chevron_right,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.3),
               ),
             ],
           ),
@@ -106,11 +99,7 @@ class _StatusIndicator extends StatelessWidget {
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 24,
-      ),
+      child: Icon(icon, color: color, size: 24),
     );
   }
 }

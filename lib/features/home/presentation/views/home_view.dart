@@ -30,8 +30,7 @@ class HomeView extends ConsumerWidget {
                 context: context,
                 builder: (context) => AlertDialog(
                   title: const Text('Logout'),
-                  content:
-                      const Text('Are you sure you want to disconnect?'),
+                  content: const Text('Are you sure you want to disconnect?'),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
@@ -63,9 +62,9 @@ class HomeView extends ConsumerWidget {
             // Welcome message
             Text(
               'Dashboard',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const Gap(16),
 
@@ -81,9 +80,7 @@ class HomeView extends ConsumerWidget {
                     valueBuilder: (servers) => servers.length.toString(),
                     subtitleBuilder: (servers) {
                       final online = servers
-                          .where(
-                            (s) => s.info?.state == ServerState.ok,
-                          )
+                          .where((s) => s.info?.state == ServerState.ok)
                           .length;
                       return '$online online';
                     },
@@ -102,8 +99,7 @@ class HomeView extends ConsumerWidget {
                     subtitleBuilder: (deployments) {
                       final running = deployments
                           .where(
-                            (d) =>
-                                d.info?.state == DeploymentState.running,
+                            (d) => d.info?.state == DeploymentState.running,
                           )
                           .length;
                       return '$running running';
@@ -132,9 +128,7 @@ class HomeView extends ConsumerWidget {
                 return Column(
                   children: servers
                       .take(3)
-                      .map(
-                        (server) => _ServerListTile(server: server),
-                      )
+                      .map((server) => _ServerListTile(server: server))
                       .toList(),
                 );
               },
@@ -220,10 +214,9 @@ class _StatCard<T> extends StatelessWidget {
                   const Spacer(),
                   Icon(
                     Icons.chevron_right,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.3),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.3),
                   ),
                 ],
               ),
@@ -234,27 +227,24 @@ class _StatCard<T> extends StatelessWidget {
                   children: [
                     Text(
                       valueBuilder(data),
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     Text(
                       title,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
                     ),
                     const Gap(4),
                     Text(
                       subtitleBuilder(data),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: color,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        color: color,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -276,10 +266,7 @@ class _StatCard<T> extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    this.onSeeAll,
-  });
+  const _SectionHeader({required this.title, this.onSeeAll});
 
   final String title;
   final VoidCallback? onSeeAll;
@@ -291,15 +278,12 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         if (onSeeAll != null)
-          TextButton(
-            onPressed: onSeeAll,
-            child: const Text('See all'),
-          ),
+          TextButton(onPressed: onSeeAll, child: const Text('See all')),
       ],
     );
   }
@@ -325,13 +309,10 @@ class _ServerListTile extends StatelessWidget {
         leading: Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         title: Text(server.name),
-        subtitle: Text(server.info?.address ?? ''),
+        subtitle: Text(server.address),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.go(
           '${AppRoutes.servers}/${server.id}?name=${Uri.encodeComponent(server.name)}',
@@ -350,26 +331,29 @@ class _DeploymentListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = deployment.info?.state ?? DeploymentState.unknown;
     final color = switch (state) {
+      DeploymentState.deploying => Colors.blue,
       DeploymentState.running => Colors.green,
+      DeploymentState.created => Colors.grey,
       DeploymentState.restarting => Colors.blue,
+      DeploymentState.removing => Colors.grey,
       DeploymentState.exited => Colors.orange,
+      DeploymentState.dead => Colors.red,
       DeploymentState.paused => Colors.grey,
       DeploymentState.notDeployed => Colors.grey,
       DeploymentState.unknown => Colors.orange,
     };
+
+    final imageLabel = deployment.imageLabel;
 
     return Card(
       child: ListTile(
         leading: Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         title: Text(deployment.name),
-        subtitle: Text(deployment.config.image?.fullName ?? 'No image'),
+        subtitle: Text(imageLabel.isNotEmpty ? imageLabel : 'No image'),
         trailing: Text(
           state.displayName,
           style: TextStyle(color: color, fontWeight: FontWeight.w500),
@@ -416,10 +400,7 @@ class _ErrorTile extends StatelessWidget {
 }
 
 class _EmptyListTile extends StatelessWidget {
-  const _EmptyListTile({
-    required this.icon,
-    required this.message,
-  });
+  const _EmptyListTile({required this.icon, required this.message});
 
   final IconData icon;
   final String message;
@@ -435,20 +416,18 @@ class _EmptyListTile extends StatelessWidget {
               Icon(
                 icon,
                 size: 32,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.3),
               ),
               const Gap(8),
               Text(
                 message,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.5),
-                    ),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
               ),
             ],
           ),

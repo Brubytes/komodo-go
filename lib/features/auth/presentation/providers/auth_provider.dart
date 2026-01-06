@@ -50,14 +50,13 @@ class Auth extends _$Auth {
     );
 
     state = AsyncValue.data(
-      result.fold(
-        (failure) => AuthState.error(failure: failure),
-        (credentials) {
-          // Set the base URL for the API client
-          ref.read(baseUrlProvider.notifier).setBaseUrl(credentials.baseUrl);
-          return AuthState.authenticated(credentials: credentials);
-        },
-      ),
+      result.fold((failure) => AuthState.error(failure: failure), (
+        credentials,
+      ) {
+        // Set the base URL for the API client
+        ref.read(baseUrlProvider.notifier).setBaseUrl(credentials.baseUrl);
+        return AuthState.authenticated(credentials: credentials);
+      }),
     );
   }
 

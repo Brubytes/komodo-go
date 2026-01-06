@@ -55,33 +55,26 @@ class DeploymentActions extends _$DeploymentActions {
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);
 
-  Future<bool> start(String deploymentId) => _executeAction(
-        (repo) => repo.startDeployment(deploymentId),
-      );
+  Future<bool> start(String deploymentId) =>
+      _executeAction((repo) => repo.startDeployment(deploymentId));
 
-  Future<bool> stop(String deploymentId) => _executeAction(
-        (repo) => repo.stopDeployment(deploymentId),
-      );
+  Future<bool> stop(String deploymentId) =>
+      _executeAction((repo) => repo.stopDeployment(deploymentId));
 
-  Future<bool> restart(String deploymentId) => _executeAction(
-        (repo) => repo.restartDeployment(deploymentId),
-      );
+  Future<bool> restart(String deploymentId) =>
+      _executeAction((repo) => repo.restartDeployment(deploymentId));
 
-  Future<bool> destroy(String deploymentId) => _executeAction(
-        (repo) => repo.destroyDeployment(deploymentId),
-      );
+  Future<bool> destroy(String deploymentId) =>
+      _executeAction((repo) => repo.destroyDeployment(deploymentId));
 
-  Future<bool> deploy(String deploymentId) => _executeAction(
-        (repo) => repo.deploy(deploymentId),
-      );
+  Future<bool> deploy(String deploymentId) =>
+      _executeAction((repo) => repo.deploy(deploymentId));
 
-  Future<bool> pause(String deploymentId) => _executeAction(
-        (repo) => repo.pauseDeployment(deploymentId),
-      );
+  Future<bool> pause(String deploymentId) =>
+      _executeAction((repo) => repo.pauseDeployment(deploymentId));
 
-  Future<bool> unpause(String deploymentId) => _executeAction(
-        (repo) => repo.unpauseDeployment(deploymentId),
-      );
+  Future<bool> unpause(String deploymentId) =>
+      _executeAction((repo) => repo.unpauseDeployment(deploymentId));
 
   Future<bool> _executeAction(
     Future<dynamic> Function(DeploymentRepository repo) action,

@@ -24,12 +24,12 @@ sealed class Failure with _$Failure {
 
 extension FailureX on Failure {
   String get displayMessage => switch (this) {
-        NetworkFailure(:final message) =>
-          message ?? 'Network error. Please check your connection.',
-        ServerFailure(:final message) => message,
-        AuthFailure(:final message) =>
-          message ?? 'Authentication failed. Please log in again.',
-        UnknownFailure(:final message) =>
-          message ?? 'An unexpected error occurred.',
-      };
+    NetworkFailure(:final message) =>
+      message ?? 'Network error. Please check your connection.',
+    ServerFailure(:final message) => message,
+    AuthFailure(:final message) =>
+      message ?? 'Authentication failed. Please log in again.',
+    UnknownFailure(:final message) =>
+      message ?? 'An unexpected error occurred.',
+  };
 }

@@ -25,10 +25,7 @@ class AuthInterceptor extends Interceptor {
         name: 'HTTP',
       );
     } else {
-      developer.log(
-        '  Auth: No credentials found!',
-        name: 'HTTP',
-      );
+      developer.log('  Auth: No credentials found!', name: 'HTTP');
     }
 
     handler.next(options);

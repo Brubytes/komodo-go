@@ -19,7 +19,7 @@ class DeploymentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = deployment.info?.state ?? DeploymentState.unknown;
-    final image = deployment.config.image;
+    final image = deployment.info?.image;
 
     return Card(
       child: InkWell(
@@ -43,22 +43,18 @@ class DeploymentCard extends StatelessWidget {
                       children: [
                         Text(
                           deployment.name,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
-                        if (image != null) ...[
+                        if (image != null && image.isNotEmpty) ...[
                           const Gap(4),
                           Text(
-                            image.fullName,
-                            style:
-                                Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.7),
-                                    ),
+                            image,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.7),
+                                ),
                           ),
                         ],
                       ],
@@ -82,11 +78,10 @@ class DeploymentCard extends StatelessWidget {
                 Text(
                   deployment.description!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
-                      ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -168,9 +163,13 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, icon) = switch (state) {
+      DeploymentState.deploying => (Colors.blue, Icons.sync),
       DeploymentState.running => (Colors.green, Icons.check_circle),
+      DeploymentState.created => (Colors.grey, Icons.circle_outlined),
       DeploymentState.restarting => (Colors.blue, Icons.sync),
+      DeploymentState.removing => (Colors.grey, Icons.hourglass_bottom),
       DeploymentState.exited => (Colors.orange, Icons.stop_circle),
+      DeploymentState.dead => (Colors.red, Icons.cancel),
       DeploymentState.paused => (Colors.grey, Icons.pause_circle),
       DeploymentState.notDeployed => (Colors.grey, Icons.circle_outlined),
       DeploymentState.unknown => (Colors.orange, Icons.help),
@@ -203,12 +202,4 @@ class _StatusBadge extends StatelessWidget {
 }
 
 /// Actions available for a deployment.
-enum DeploymentAction {
-  start,
-  stop,
-  restart,
-  pause,
-  unpause,
-  destroy,
-  deploy,
-}
+enum DeploymentAction { start, stop, restart, pause, unpause, destroy, deploy }

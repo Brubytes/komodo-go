@@ -15,13 +15,25 @@ class DeploymentRepository {
 
   final KomodoApiClient _client;
 
+  static const Map<String, dynamic> _emptyDeploymentQuery = <String, dynamic>{
+    'names': <String>[],
+    'templates': 'Include',
+    'tags': <String>[],
+    'tag_behavior': 'All',
+    'specific': <String, dynamic>{
+      'server_ids': <String>[],
+      'build_ids': <String>[],
+      'update_available': false,
+    },
+  };
+
   /// Lists all deployments.
   Future<Either<Failure, List<Deployment>>> listDeployments() async {
     try {
       final response = await _client.read(
         const RpcRequest(
           type: 'ListDeployments',
-          params: <String, dynamic>{},
+          params: <String, dynamic>{'query': _emptyDeploymentQuery},
         ),
       );
 
@@ -36,9 +48,7 @@ class DeploymentRepository {
       if (e.isUnauthorized) {
         return const Left(Failure.auth());
       }
-      return Left(
-        Failure.server(message: e.message, statusCode: e.statusCode),
-      );
+      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
     } catch (e, stackTrace) {
       // Debug: print parsing errors
       // ignore: avoid_print
@@ -69,9 +79,7 @@ class DeploymentRepository {
       if (e.isNotFound) {
         return const Left(Failure.server(message: 'Deployment not found'));
       }
-      return Left(
-        Failure.server(message: e.message, statusCode: e.statusCode),
-      );
+      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
     } catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }
@@ -140,9 +148,7 @@ class DeploymentRepository {
       if (e.isUnauthorized) {
         return const Left(Failure.auth());
       }
-      return Left(
-        Failure.server(message: e.message, statusCode: e.statusCode),
-      );
+      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
     } catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }

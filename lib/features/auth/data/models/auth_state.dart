@@ -15,9 +15,8 @@ sealed class AuthState with _$AuthState {
   const factory AuthState.loading() = AuthStateLoading;
 
   /// Authenticated state with valid credentials.
-  const factory AuthState.authenticated({
-    required ApiCredentials credentials,
-  }) = AuthStateAuthenticated;
+  const factory AuthState.authenticated({required ApiCredentials credentials}) =
+      AuthStateAuthenticated;
 
   /// Unauthenticated state, user needs to log in.
   const factory AuthState.unauthenticated() = AuthStateUnauthenticated;
@@ -31,7 +30,7 @@ extension AuthStateX on AuthState {
   bool get isLoading => this is AuthStateLoading;
 
   ApiCredentials? get credentials => switch (this) {
-        AuthStateAuthenticated(:final credentials) => credentials,
-        _ => null,
-      };
+    AuthStateAuthenticated(:final credentials) => credentials,
+    _ => null,
+  };
 }

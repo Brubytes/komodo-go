@@ -33,8 +33,9 @@ void main() {
           apiSecret: 'test-secret',
         );
 
-        when(() => mockStorage.getCredentials())
-            .thenAnswer((_) async => credentials);
+        when(
+          () => mockStorage.getCredentials(),
+        ).thenAnswer((_) async => credentials);
 
         final result = await repository.getStoredCredentials();
 
@@ -63,8 +64,7 @@ void main() {
 
     group('hasStoredCredentials', () {
       test('returns true when credentials exist', () async {
-        when(() => mockStorage.hasCredentials())
-            .thenAnswer((_) async => true);
+        when(() => mockStorage.hasCredentials()).thenAnswer((_) async => true);
 
         final result = await repository.hasStoredCredentials();
 
@@ -72,8 +72,7 @@ void main() {
       });
 
       test('returns false when no credentials exist', () async {
-        when(() => mockStorage.hasCredentials())
-            .thenAnswer((_) async => false);
+        when(() => mockStorage.hasCredentials()).thenAnswer((_) async => false);
 
         final result = await repository.hasStoredCredentials();
 
@@ -83,8 +82,7 @@ void main() {
 
     group('authenticate', () {
       test('normalizes URL without https prefix', () async {
-        when(() => mockStorage.saveCredentials(any()))
-            .thenAnswer((_) async {});
+        when(() => mockStorage.saveCredentials(any())).thenAnswer((_) async {});
 
         // Note: This test would require mocking the HTTP layer
         // For now, we test the URL normalization logic

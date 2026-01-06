@@ -16,11 +16,22 @@ class ServerRepository {
 
   final KomodoApiClient _client;
 
+  static const Map<String, dynamic> _emptyServerQuery = <String, dynamic>{
+    'names': <String>[],
+    'templates': 'Include',
+    'tags': <String>[],
+    'tag_behavior': 'All',
+    'specific': <String, dynamic>{},
+  };
+
   /// Lists all servers.
   Future<Either<Failure, List<Server>>> listServers() async {
     try {
       final response = await _client.read(
-        const RpcRequest(type: 'ListServers', params: <String, dynamic>{}),
+        const RpcRequest(
+          type: 'ListServers',
+          params: <String, dynamic>{'query': _emptyServerQuery},
+        ),
       );
 
       // API returns array directly for list endpoints
@@ -34,9 +45,7 @@ class ServerRepository {
       if (e.isUnauthorized) {
         return const Left(Failure.auth());
       }
-      return Left(
-        Failure.server(message: e.message, statusCode: e.statusCode),
-      );
+      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
     } catch (e, stackTrace) {
       // ignore: avoid_print
       print('Error parsing servers: $e');
@@ -50,10 +59,7 @@ class ServerRepository {
   Future<Either<Failure, Server>> getServer(String serverIdOrName) async {
     try {
       final response = await _client.read(
-        RpcRequest(
-          type: 'GetServer',
-          params: {'server': serverIdOrName},
-        ),
+        RpcRequest(type: 'GetServer', params: {'server': serverIdOrName}),
       );
 
       return Right(Server.fromJson(response as Map<String, dynamic>));
@@ -64,9 +70,7 @@ class ServerRepository {
       if (e.isNotFound) {
         return const Left(Failure.server(message: 'Server not found'));
       }
-      return Left(
-        Failure.server(message: e.message, statusCode: e.statusCode),
-      );
+      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
     } catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }
@@ -78,10 +82,7 @@ class ServerRepository {
   ) async {
     try {
       final response = await _client.read(
-        RpcRequest(
-          type: 'GetSystemStats',
-          params: {'server': serverIdOrName},
-        ),
+        RpcRequest(type: 'GetSystemStats', params: {'server': serverIdOrName}),
       );
 
       return Right(SystemStats.fromJson(response as Map<String, dynamic>));
@@ -89,9 +90,7 @@ class ServerRepository {
       if (e.isUnauthorized) {
         return const Left(Failure.auth());
       }
-      return Left(
-        Failure.server(message: e.message, statusCode: e.statusCode),
-      );
+      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
     } catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }
