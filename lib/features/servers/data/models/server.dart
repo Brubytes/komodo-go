@@ -6,6 +6,8 @@ part 'server.g.dart';
 /// Represents a server managed by Komodo.
 @freezed
 sealed class Server with _$Server {
+  const Server._();
+
   const factory Server({
     @JsonKey(readValue: _readId) required String id,
     required String name,
@@ -17,6 +19,12 @@ sealed class Server with _$Server {
   }) = _Server;
 
   factory Server.fromJson(Map<String, dynamic> json) => _$ServerFromJson(json);
+
+  /// Gets the server address from either info or config.
+  String get address => info?.address ?? config?.address ?? '';
+
+  /// Gets the server state from info.
+  ServerState get state => info?.state ?? ServerState.unknown;
 }
 
 /// Reads the id from either 'id' or '_id.$oid' format.
