@@ -110,6 +110,134 @@ Docker container stats.
 { "type": "GetDeploymentStats", "params": { "deployment": "<id-or-name>" } }
 ```
 
+### Builds
+
+#### ListBuilds
+List builds matching an optional structured query.
+```json
+{
+  "type": "ListBuilds",
+  "params": {
+    "query": {
+      "builder_ids": [],
+      "repos": [],
+      "built_since": 0
+    }
+  }
+}
+```
+Response: `ListBuildsResponse` (array of `BuildListItem`)
+
+#### ListFullBuilds
+Like `ListBuilds`, but returns full `Build` resources.
+```json
+{ "type": "ListFullBuilds", "params": { "query": { } } }
+```
+Response: `ListFullBuildsResponse` (array of `Build`)
+
+#### GetBuild
+```json
+{ "type": "GetBuild", "params": { "build": "<id-or-name>" } }
+```
+Response: `GetBuildResponse` (a `Build`)
+
+#### GetBuildActionState
+```json
+{ "type": "GetBuildActionState", "params": { "build": "<id-or-name>" } }
+```
+Response: `GetBuildActionStateResponse` (a `BuildActionState`)
+
+#### GetBuildsSummary
+```json
+{ "type": "GetBuildsSummary", "params": { } }
+```
+Response: `GetBuildsSummaryResponse`
+
+#### GetBuildMonthlyStats
+Paginated timeseries stats (1 page = 30 days). Use `page: 0` for most recent.
+```json
+{ "type": "GetBuildMonthlyStats", "params": { "page": 0 } }
+```
+Response: `GetBuildMonthlyStatsResponse`
+
+#### ListBuildVersions
+Returns versions available for deployment (newest first). Optional semver filtering.
+```json
+{
+  "type": "ListBuildVersions",
+  "params": {
+    "build": "<id-or-name>",
+    "major": null,
+    "minor": null,
+    "patch": null,
+    "limit": null
+  }
+}
+```
+Response: `ListBuildVersionsResponse` (array of `BuildVersionResponseItem`)
+
+#### ListCommonBuildExtraArgs
+Returns a list of values used as build extra args across other builds (for suggestions).
+```json
+{ "type": "ListCommonBuildExtraArgs", "params": { "query": { } } }
+```
+Response: `ListCommonBuildExtraArgsResponse` (array of strings)
+
+#### GetBuildWebhookEnabled
+Whether the build’s linked repo has a webhook configured for the build.
+```json
+{ "type": "GetBuildWebhookEnabled", "params": { "build": "<id-or-name>" } }
+```
+Response: `GetBuildWebhookEnabledResponse`
+
+### Repos
+
+#### ListRepos
+List repos matching an optional structured query.
+```json
+{
+  "type": "ListRepos",
+  "params": {
+    "query": {
+      "repos": []
+    }
+  }
+}
+```
+Response: `ListReposResponse` (array of `RepoListItem`)
+
+#### ListFullRepos
+Like `ListRepos`, but returns full `Repo` resources.
+```json
+{ "type": "ListFullRepos", "params": { "query": { } } }
+```
+Response: `ListFullReposResponse` (array of `Repo`)
+
+#### GetRepo
+```json
+{ "type": "GetRepo", "params": { "repo": "<id-or-name>" } }
+```
+Response: `GetRepoResponse` (a `Repo`)
+
+#### GetRepoActionState
+```json
+{ "type": "GetRepoActionState", "params": { "repo": "<id-or-name>" } }
+```
+Response: `GetRepoActionStateResponse` (a `RepoActionState`)
+
+#### GetReposSummary
+```json
+{ "type": "GetReposSummary", "params": { } }
+```
+Response: `GetReposSummaryResponse`
+
+#### GetRepoWebhooksEnabled
+Query which repo webhooks are enabled (clone/pull/build).
+```json
+{ "type": "GetRepoWebhooksEnabled", "params": { "repo": "<id-or-name>" } }
+```
+Response: `GetRepoWebhooksEnabledResponse`
+
 ### Stacks
 
 #### ListStacks
@@ -168,10 +296,8 @@ Response: `ListStackServicesResponse` (array)
   {
     "service": "api",
     "image": "ghcr.io/acme/api:1.2.3",
-    "state": "running",
-    "status": "Up 2 hours",
-    "container_id": "e3a0...",
-    "container_name": "my-stack-api-1"
+    "container": null,
+    "update_available": false
   }
 ]
 ```
@@ -198,7 +324,7 @@ Response: `GetStackActionStateResponse`
 #### GetStackLog
 Fetch stack logs.
 ```json
-{ "type": "GetStackLog", "params": { "stack": "<id-or-name>", "services": [] } }
+{ "type": "GetStackLog", "params": { "stack": "<id-or-name>", "services": [], "tail": 50, "timestamps": false } }
 ```
 Response: `GetStackLogResponse` (a `Log`)
 ```json
@@ -319,6 +445,80 @@ Response: `GetStacksSummaryResponse`
 { "type": "PullDeployment", "params": { "deployment": "<id-or-name>" } }
 ```
 
+### Build Actions
+
+#### RunBuild
+Runs a build (clone repo on builder, docker build, optional push, optional redeploy).
+```json
+{ "type": "RunBuild", "params": { "build": "<id-or-name>" } }
+```
+Response: `Update`
+
+#### BatchRunBuild
+Runs multiple builds matching `pattern` (id/name/wildcard/regex; supports multiline + comma lists).
+```json
+{ "type": "BatchRunBuild", "params": { "pattern": "foo-*\nextra-build-1, extra-build-2" } }
+```
+Response: `BatchExecutionResponse`
+
+#### CancelBuild
+Cancels a currently-running build (no-op if not `building`).
+```json
+{ "type": "CancelBuild", "params": { "build": "<id-or-name>" } }
+```
+Response: `Update`
+
+### Repo Actions
+
+#### CloneRepo
+Clones the repo on its attached `server_id`.
+```json
+{ "type": "CloneRepo", "params": { "repo": "<id-or-name>" } }
+```
+Response: `Update`
+
+#### BatchCloneRepo
+Clones multiple repos matching `pattern`.
+```json
+{ "type": "BatchCloneRepo", "params": { "pattern": "foo-*\nextra-repo-1, extra-repo-2" } }
+```
+Response: `BatchExecutionResponse`
+
+#### PullRepo
+Pulls the repo on its attached `server_id`.
+```json
+{ "type": "PullRepo", "params": { "repo": "<id-or-name>" } }
+```
+Response: `Update`
+
+#### BatchPullRepo
+Pulls multiple repos matching `pattern`.
+```json
+{ "type": "BatchPullRepo", "params": { "pattern": "foo-*\nextra-repo-1, extra-repo-2" } }
+```
+Response: `BatchExecutionResponse`
+
+#### BuildRepo
+Builds the repo using its attached `builder_id`.
+```json
+{ "type": "BuildRepo", "params": { "repo": "<id-or-name>" } }
+```
+Response: `Update`
+
+#### BatchBuildRepo
+Builds multiple repos matching `pattern`.
+```json
+{ "type": "BatchBuildRepo", "params": { "pattern": "foo-*\nextra-repo-1, extra-repo-2" } }
+```
+Response: `BatchExecutionResponse`
+
+#### CancelRepoBuild
+Cancels a currently-running repo build (no-op if not `building`).
+```json
+{ "type": "CancelRepoBuild", "params": { "repo": "<id-or-name>" } }
+```
+Response: `Update`
+
 ### Stack Actions
 
 #### DeployStack
@@ -347,7 +547,7 @@ Response: `Update`
 
 #### DestroyStack
 ```json
-{ "type": "DestroyStack", "params": { "stack": "<id-or-name>", "services": [], "remove_volumes": false, "stop_time": null } }
+{ "type": "DestroyStack", "params": { "stack": "<id-or-name>", "services": [], "remove_orphans": false, "stop_time": null } }
 ```
 Response: `Update`
 
@@ -386,7 +586,15 @@ Run a one-time command against a service using `docker compose run`.
     "stack": "<id-or-name>",
     "service": "api",
     "command": ["sh", "-lc", "echo hello"],
-    "stop_time": null
+    "no_tty": null,
+    "no_deps": null,
+    "detach": null,
+    "service_ports": null,
+    "env": null,
+    "workdir": null,
+    "user": null,
+    "entrypoint": null,
+    "pull": null
   }
 }
 ```
@@ -425,6 +633,115 @@ Response: `Update`
 ```json
 { "type": "DeleteDeployment", "params": { "id": "<deployment-id>" } }
 ```
+
+### Build Management
+
+#### CreateBuild
+```json
+{ "type": "CreateBuild", "params": { "name": "my-build", "config": { } } }
+```
+Response: `Build`
+
+#### CopyBuild
+```json
+{ "type": "CopyBuild", "params": { "name": "my-build-copy", "id": "<build-id>" } }
+```
+Response: `Build`
+
+#### UpdateBuild
+```json
+{ "type": "UpdateBuild", "params": { "id": "<build-id-or-name>", "config": { } } }
+```
+Response: `Build`
+
+#### RenameBuild
+```json
+{ "type": "RenameBuild", "params": { "id": "<build-id-or-name>", "name": "new-build-name" } }
+```
+Response: `Update`
+
+#### DeleteBuild
+```json
+{ "type": "DeleteBuild", "params": { "id": "<build-id-or-name>" } }
+```
+Response: `Build`
+
+#### WriteBuildFileContents
+Updates dockerfile contents (files-on-host or git-repo mode).
+```json
+{ "type": "WriteBuildFileContents", "params": { "build": "<id-or-name>", "contents": "..." } }
+```
+Response: `Update`
+
+#### RefreshBuildCache
+Refreshes cached remote hash/message/dockerfile contents.
+```json
+{ "type": "RefreshBuildCache", "params": { "build": "<id-or-name>" } }
+```
+Response: `NoData`
+
+#### CreateBuildWebhook
+```json
+{ "type": "CreateBuildWebhook", "params": { "build": "<id-or-name>" } }
+```
+Response: `NoData`
+
+#### DeleteBuildWebhook
+```json
+{ "type": "DeleteBuildWebhook", "params": { "build": "<id-or-name>" } }
+```
+Response: `NoData`
+
+### Repo Management
+
+#### CreateRepo
+```json
+{ "type": "CreateRepo", "params": { "name": "my-repo", "config": { } } }
+```
+Response: `Repo`
+
+#### CopyRepo
+```json
+{ "type": "CopyRepo", "params": { "name": "my-repo-copy", "id": "<repo-id>" } }
+```
+Response: `Repo`
+
+#### UpdateRepo
+```json
+{ "type": "UpdateRepo", "params": { "id": "<repo-id>", "config": { } } }
+```
+Response: `Repo`
+
+#### RenameRepo
+```json
+{ "type": "RenameRepo", "params": { "id": "<repo-id-or-name>", "name": "new-repo-name" } }
+```
+Response: `Update`
+
+#### DeleteRepo
+```json
+{ "type": "DeleteRepo", "params": { "id": "<repo-id-or-name>" } }
+```
+Response: `Repo`
+
+#### RefreshRepoCache
+Refreshes cached latest hash/message.
+```json
+{ "type": "RefreshRepoCache", "params": { "repo": "<id-or-name>" } }
+```
+Response: `NoData`
+
+#### CreateRepoWebhook
+```json
+{ "type": "CreateRepoWebhook", "params": { "repo": "<id-or-name>", "action": "Pull" } }
+```
+Response: `NoData`
+
+#### DeleteRepoWebhook
+```json
+{ "type": "DeleteRepoWebhook", "params": { "repo": "<id-or-name>", "action": "Pull" } }
+```
+Response: `NoData`
 
 ### Stack Management
 
@@ -544,6 +861,71 @@ Response: `Update`
 - `NotDeployed`
 - `Unknown`
 
+### BuildActionState
+Returned by `GetBuildActionStateResponse`.
+```json
+{ "building": false }
+```
+
+### RepoActionState
+Returned by `GetRepoActionStateResponse`.
+```json
+{ "cloning": false, "pulling": false, "building": false, "renaming": false }
+```
+
+### BuildQuery
+Used by `ListBuilds` / `ListFullBuilds`.
+```json
+{ "builder_ids": [], "repos": [], "built_since": 0 }
+```
+
+### RepoQuery
+Used by `ListRepos` / `ListFullRepos`.
+```json
+{ "repos": [] }
+```
+
+### BuildListItemInfo
+Returned on `ListBuildsResponse` items in `info`.
+```json
+{
+  "state": "Building | Ok | Failed | Unknown",
+  "last_built_at": 0,
+  "version": { "...": "Version" },
+  "builder_id": "string",
+  "files_on_host": false,
+  "dockerfile_contents": false,
+  "linked_repo": "string",
+  "git_provider": "string",
+  "repo": "string",
+  "branch": "string",
+  "repo_link": "string",
+  "built_hash": null,
+  "latest_hash": null,
+  "image_registry_domain": null
+}
+```
+
+### RepoListItemInfo
+Returned on `ListReposResponse` items in `info`.
+```json
+{
+  "server_id": "string",
+  "builder_id": "string",
+  "last_pulled_at": 0,
+  "last_built_at": 0,
+  "git_provider": "string",
+  "repo": "string",
+  "branch": "string",
+  "repo_link": "string",
+  "state": "Unknown | Ok | Failed | Cloning | Pulling | Building",
+  "cloned_hash": null,
+  "cloned_message": null,
+  "built_hash": null,
+  "latest_hash": null
+}
+```
+
 ### StackListItemInfo
 Used on `ListStacksResponse` / `GetStacksSummaryResponse`.
 ```json
@@ -561,10 +943,8 @@ Returned by `ListStackServicesResponse`.
 {
   "service": "string",
   "image": "string",
-  "state": "string",
-  "status": "string",
-  "container_id": "string",
-  "container_name": "string"
+  "container": null,
+  "update_available": false
 }
 ```
 
