@@ -73,7 +73,7 @@ class LoginView extends HookConsumerWidget {
                     const Gap(32),
 
                     // Error message
-                    if (authState.valueOrNull is AuthStateError) ...[
+                    if (authState.value is AuthStateError) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -92,7 +92,7 @@ class LoginView extends HookConsumerWidget {
                             const Gap(8),
                             Expanded(
                               child: Text(
-                                (authState.valueOrNull! as AuthStateError)
+                                (authState.value! as AuthStateError)
                                     .failure
                                     .displayMessage,
                                 style: TextStyle(

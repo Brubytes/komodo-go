@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -29,8 +28,7 @@ GoRouter appRouter(Ref ref) {
     initialLocation: AppRoutes.home,
     debugLogDiagnostics: true,
     redirect: (context, state) {
-      final isAuthenticated =
-          authState.valueOrNull?.isAuthenticated ?? false;
+      final isAuthenticated = authState.value?.isAuthenticated ?? false;
       final isLoggingIn = state.matchedLocation == AppRoutes.login;
 
       // If not authenticated and not on login page, redirect to login
