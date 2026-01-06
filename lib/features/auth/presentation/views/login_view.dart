@@ -18,17 +18,28 @@ class LoginView extends HookConsumerWidget {
     final connectionsAsync = ref.watch(connectionsProvider);
     final formKey = useMemoized(GlobalKey<FormState>.new);
 
+    final connectionNameController = useTextEditingController();
     final baseUrlController = useTextEditingController();
     final apiKeyController = useTextEditingController();
     final apiSecretController = useTextEditingController();
 
+    final showAddForm = useState(false);
     final obscureSecret = useState(true);
+
+    useEffect(() {
+      final connections = connectionsAsync.asData?.value.connections;
+      if (connections != null && connections.isEmpty && !showAddForm.value) {
+        showAddForm.value = true;
+      }
+      return null;
+    }, [connectionsAsync]);
 
     Future<void> handleLogin() async {
       if (formKey.currentState?.validate() ?? false) {
         await ref
             .read(authProvider.notifier)
             .login(
+              name: connectionNameController.text,
               baseUrl: baseUrlController.text,
               apiKey: apiKeyController.text,
               apiSecret: apiSecretController.text,
@@ -64,7 +75,7 @@ class LoginView extends HookConsumerWidget {
                     ),
                     const Gap(8),
                     Text(
-                      'Connect to your Komodo instance',
+                      'Select a saved connection or add a new one.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Theme.of(
                           context,
@@ -159,7 +170,25 @@ class LoginView extends HookConsumerWidget {
                                 ],
                               ),
                             ),
-                            const Gap(24),
+                            const Gap(12),
+                            OutlinedButton.icon(
+                              onPressed: authState.isLoading
+                                  ? null
+                                  : () {
+                                      showAddForm.value = !showAddForm.value;
+                                    },
+                              icon: Icon(
+                                showAddForm.value
+                                    ? Icons.close
+                                    : Icons.add_outlined,
+                              ),
+                              label: Text(
+                                showAddForm.value
+                                    ? 'Cancel adding'
+                                    : 'Add connection',
+                              ),
+                            ),
+                            const Gap(16),
                           ],
                         );
                       },
@@ -200,98 +229,122 @@ class LoginView extends HookConsumerWidget {
                       const Gap(16),
                     ],
 
-                    // Server URL
-                    TextFormField(
-                      controller: baseUrlController,
-                      decoration: const InputDecoration(
-                        labelText: 'Server URL',
-                        hintText: 'https://komodo.example.com',
-                        prefixIcon: Icon(Icons.dns_outlined),
+                    if (showAddForm.value) ...[
+                      Text(
+                        'Add a connection',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
-                      keyboardType: TextInputType.url,
-                      textInputAction: TextInputAction.next,
-                      autocorrect: false,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter the server URL';
-                        }
-                        return null;
-                      },
-                    ),
-                    const Gap(16),
+                      const Gap(12),
 
-                    // API Key
-                    TextFormField(
-                      controller: apiKeyController,
-                      decoration: const InputDecoration(
-                        labelText: 'API Key',
-                        prefixIcon: Icon(Icons.key_outlined),
-                      ),
-                      textInputAction: TextInputAction.next,
-                      autocorrect: false,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your API key';
-                        }
-                        return null;
-                      },
-                    ),
-                    const Gap(16),
-
-                    // API Secret
-                    TextFormField(
-                      controller: apiSecretController,
-                      decoration: InputDecoration(
-                        labelText: 'API Secret',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            obscureSecret.value
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                          onPressed: () {
-                            obscureSecret.value = !obscureSecret.value;
-                          },
+                      // Connection name (optional)
+                      TextFormField(
+                        controller: connectionNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Name (optional)',
+                          hintText: 'Production',
+                          prefixIcon: Icon(Icons.label_outlined),
                         ),
+                        textInputAction: TextInputAction.next,
+                        autocorrect: false,
                       ),
-                      obscureText: obscureSecret.value,
-                      textInputAction: TextInputAction.done,
-                      autocorrect: false,
-                      onFieldSubmitted: (_) => handleLogin(),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your API secret';
-                        }
-                        return null;
-                      },
-                    ),
-                    const Gap(24),
+                      const Gap(16),
 
-                    // Login Button
-                    FilledButton(
-                      onPressed: authState.isLoading ? null : handleLogin,
-                      child: authState.isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Connect'),
-                    ),
-                    const Gap(16),
-
-                    // Help text
-                    Text(
-                      'You can generate API keys in the Komodo web interface '
-                      'under your user settings.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.5),
+                      // Server URL
+                      TextFormField(
+                        controller: baseUrlController,
+                        decoration: const InputDecoration(
+                          labelText: 'Server URL',
+                          hintText: 'https://komodo.example.com',
+                          prefixIcon: Icon(Icons.dns_outlined),
+                        ),
+                        keyboardType: TextInputType.url,
+                        textInputAction: TextInputAction.next,
+                        autocorrect: false,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter the server URL';
+                          }
+                          return null;
+                        },
                       ),
-                      textAlign: TextAlign.center,
-                    ),
+                      const Gap(16),
+
+                      // API Key
+                      TextFormField(
+                        controller: apiKeyController,
+                        decoration: const InputDecoration(
+                          labelText: 'API Key',
+                          prefixIcon: Icon(Icons.key_outlined),
+                        ),
+                        textInputAction: TextInputAction.next,
+                        autocorrect: false,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your API key';
+                          }
+                          return null;
+                        },
+                      ),
+                      const Gap(16),
+
+                      // API Secret
+                      TextFormField(
+                        controller: apiSecretController,
+                        decoration: InputDecoration(
+                          labelText: 'API Secret',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureSecret.value
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                            onPressed: () {
+                              obscureSecret.value = !obscureSecret.value;
+                            },
+                          ),
+                        ),
+                        obscureText: obscureSecret.value,
+                        textInputAction: TextInputAction.done,
+                        autocorrect: false,
+                        onFieldSubmitted: (_) => handleLogin(),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your API secret';
+                          }
+                          return null;
+                        },
+                      ),
+                      const Gap(24),
+
+                      // Save Button
+                      FilledButton(
+                        onPressed: authState.isLoading ? null : handleLogin,
+                        child: authState.isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Save connection'),
+                      ),
+                      const Gap(16),
+
+                      // Help text
+                      Text(
+                        'You can generate API keys in the Komodo web interface '
+                        'under your user settings.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ],
                 ),
               ),

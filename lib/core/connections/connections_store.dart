@@ -121,38 +121,9 @@ class ConnectionsStore {
     await saveConnections(next);
   }
 
-  Future<void> migrateLegacyCredentialsIfNeeded() async {
-    final existing = await listConnections();
-    if (existing.isNotEmpty) {
-      return;
-    }
-
-    final legacyCredentials = await _secureStorage.getLegacyCredentials();
-    if (legacyCredentials == null) {
-      return;
-    }
-
-    final derivedName = _deriveNameFromBaseUrl(legacyCredentials.baseUrl);
-    final profile = await addConnection(
-      name: derivedName,
-      credentials: legacyCredentials,
-    );
-    await setActiveConnectionId(profile.id);
-    await _secureStorage.clearLegacyCredentials();
-  }
-
   String _newConnectionId() {
     final now = DateTime.now().microsecondsSinceEpoch;
     final random = Random().nextInt(1 << 32);
     return '$now-$random';
-  }
-
-  String _deriveNameFromBaseUrl(String baseUrl) {
-    final uri = Uri.tryParse(baseUrl);
-    final host = uri?.host;
-    if (host != null && host.isNotEmpty) {
-      return host;
-    }
-    return baseUrl;
   }
 }

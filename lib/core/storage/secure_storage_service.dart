@@ -19,10 +19,6 @@ class SecureStorageService {
 
   final FlutterSecureStorage _storage;
 
-  static const _legacyBaseUrlKey = 'komodo_base_url';
-  static const _legacyApiKeyKey = 'komodo_api_key';
-  static const _legacyApiSecretKey = 'komodo_api_secret';
-
   static String _baseUrlKey(String connectionId) =>
       'komodo/$connectionId/base_url';
   static String _apiKeyKey(String connectionId) =>
@@ -80,38 +76,6 @@ class SecureStorageService {
       _storage.delete(key: _baseUrlKey(connectionId)),
       _storage.delete(key: _apiKeyKey(connectionId)),
       _storage.delete(key: _apiSecretKey(connectionId)),
-    ]);
-  }
-
-  /// Reads legacy (single-connection) credentials, if present.
-  Future<ApiCredentials?> getLegacyCredentials() async {
-    final results = await Future.wait([
-      _storage.read(key: _legacyBaseUrlKey),
-      _storage.read(key: _legacyApiKeyKey),
-      _storage.read(key: _legacyApiSecretKey),
-    ]);
-
-    final baseUrl = results[0];
-    final apiKey = results[1];
-    final apiSecret = results[2];
-
-    if (baseUrl == null || apiKey == null || apiSecret == null) {
-      return null;
-    }
-
-    return ApiCredentials(
-      baseUrl: baseUrl,
-      apiKey: apiKey,
-      apiSecret: apiSecret,
-    );
-  }
-
-  /// Clears legacy (single-connection) credentials.
-  Future<void> clearLegacyCredentials() async {
-    await Future.wait([
-      _storage.delete(key: _legacyBaseUrlKey),
-      _storage.delete(key: _legacyApiKeyKey),
-      _storage.delete(key: _legacyApiSecretKey),
     ]);
   }
 }

@@ -57,6 +57,7 @@ class Auth extends _$Auth {
 
   /// Attempts to log in with the provided credentials.
   Future<void> login({
+    String? name,
     required String baseUrl,
     required String apiKey,
     required String apiSecret,
@@ -74,10 +75,12 @@ class Auth extends _$Auth {
     state = await result.fold(
       (failure) async => AsyncValue.data(AuthState.error(failure: failure)),
       (credentials) async {
-        final name = _deriveNameFromBaseUrl(credentials.baseUrl);
+        final displayName = (name == null || name.trim().isEmpty)
+            ? _deriveNameFromBaseUrl(credentials.baseUrl)
+            : name.trim();
         final profile = await ref
             .read(connectionsProvider.notifier)
-            .addConnection(name: name, credentials: credentials);
+            .addConnection(name: displayName, credentials: credentials);
 
         ref
             .read(activeConnectionProvider.notifier)

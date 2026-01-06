@@ -209,6 +209,7 @@ class ConnectionsView extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
   ) async {
+    final nameController = TextEditingController();
     final baseUrlController = TextEditingController();
     final apiKeyController = TextEditingController();
     final apiSecretController = TextEditingController();
@@ -223,6 +224,16 @@ class ConnectionsView extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Name (optional)',
+                    hintText: 'Production',
+                    prefixIcon: Icon(Icons.label_outlined),
+                  ),
+                  autocorrect: false,
+                ),
+                const Gap(12),
                 TextField(
                   controller: baseUrlController,
                   decoration: const InputDecoration(
@@ -282,6 +293,7 @@ class ConnectionsView extends ConsumerWidget {
                 await ref
                     .read(authProvider.notifier)
                     .login(
+                      name: nameController.text,
                       baseUrl: baseUrl,
                       apiKey: apiKey,
                       apiSecret: apiSecret,

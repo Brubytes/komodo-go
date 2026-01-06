@@ -46,8 +46,6 @@ class Connections extends _$Connections {
   Future<ConnectionsState> build() async {
     final store = await ref.watch(connectionsStoreProvider.future);
 
-    await store.migrateLegacyCredentialsIfNeeded();
-
     final connections = await store.listConnections();
     var activeId = await store.getActiveConnectionId();
 
