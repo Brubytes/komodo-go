@@ -9,6 +9,8 @@ import '../../../deployments/data/models/deployment.dart';
 import '../../../deployments/presentation/providers/deployments_provider.dart';
 import '../../../servers/data/models/server.dart';
 import '../../../servers/presentation/providers/servers_provider.dart';
+import '../../../builds/data/models/build.dart';
+import '../../../builds/presentation/providers/builds_provider.dart';
 import '../../../repos/data/models/repo.dart';
 import '../../../repos/presentation/providers/repos_provider.dart';
 import '../../../stacks/data/models/stack.dart';
@@ -24,6 +26,7 @@ class HomeView extends ConsumerWidget {
     final deploymentsAsync = ref.watch(deploymentsProvider);
     final stacksAsync = ref.watch(stacksProvider);
     final reposAsync = ref.watch(reposProvider);
+    final buildsAsync = ref.watch(buildsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -63,6 +66,7 @@ class HomeView extends ConsumerWidget {
           ref.invalidate(deploymentsProvider);
           ref.invalidate(stacksProvider);
           ref.invalidate(reposProvider);
+          ref.invalidate(buildsProvider);
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -144,6 +148,21 @@ class HomeView extends ConsumerWidget {
                 return '$busy busy';
               },
               onTap: () => context.go(AppRoutes.repos),
+            ),
+            const Gap(12),
+            _StatCard(
+              title: 'Builds',
+              icon: Icons.build_circle,
+              color: Colors.teal,
+              asyncValue: buildsAsync,
+              valueBuilder: (builds) => builds.length.toString(),
+              subtitleBuilder: (builds) {
+                final running = builds
+                    .where((b) => b.info.state == BuildState.building)
+                    .length;
+                return '$running running';
+              },
+              onTap: () => context.go(AppRoutes.builds),
             ),
             const Gap(24),
 
@@ -246,6 +265,32 @@ class HomeView extends ConsumerWidget {
                   children: repos
                       .take(5)
                       .map((repo) => _RepoListTile(repo: repo))
+                      .toList(),
+                );
+              },
+              loading: () => const _LoadingTile(),
+              error: (e, _) => _ErrorTile(message: e.toString()),
+            ),
+            const Gap(24),
+
+            // Recent builds
+            _SectionHeader(
+              title: 'Builds',
+              onSeeAll: () => context.go(AppRoutes.builds),
+            ),
+            const Gap(8),
+            buildsAsync.when(
+              data: (builds) {
+                if (builds.isEmpty) {
+                  return const _EmptyListTile(
+                    icon: Icons.build_circle_outlined,
+                    message: 'No builds',
+                  );
+                }
+                return Column(
+                  children: builds
+                      .take(5)
+                      .map((build) => _BuildListTile(buildItem: build))
                       .toList(),
                 );
               },
@@ -538,6 +583,52 @@ class _RepoListTile extends StatelessWidget {
         ),
         onTap: () => context.go(
           '${AppRoutes.repos}/${repo.id}?name=${Uri.encodeComponent(repo.name)}',
+        ),
+      ),
+    );
+  }
+}
+
+class _BuildListTile extends StatelessWidget {
+  const _BuildListTile({required this.buildItem});
+
+  final BuildListItem buildItem;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = buildItem.info.state;
+    final color = switch (state) {
+      BuildState.building => Colors.blue,
+      BuildState.ok => Colors.green,
+      BuildState.failed => Colors.red,
+      BuildState.unknown => Colors.orange,
+    };
+
+    final repo = buildItem.info.repo;
+    final branch = buildItem.info.branch;
+    final versionLabel = buildItem.info.version.label;
+    final subtitleParts = <String>[
+      if (repo.isNotEmpty) branch.isNotEmpty ? '$repo · $branch' : repo,
+      if (versionLabel != '0.0.0') 'v$versionLabel',
+    ];
+
+    return Card(
+      child: ListTile(
+        leading: Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        title: Text(buildItem.name),
+        subtitle: subtitleParts.isEmpty
+            ? const Text('No repo')
+            : Text(subtitleParts.join(' · ')),
+        trailing: Text(
+          state.displayName,
+          style: TextStyle(color: color, fontWeight: FontWeight.w500),
+        ),
+        onTap: () => context.go(
+          '${AppRoutes.builds}/${buildItem.id}?name=${Uri.encodeComponent(buildItem.name)}',
         ),
       ),
     );
