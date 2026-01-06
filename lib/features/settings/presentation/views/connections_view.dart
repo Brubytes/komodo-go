@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../core/connections/connection_profile.dart';
 import '../../../../core/providers/connections_provider.dart';
+import '../../../../core/widgets/always_paste_context_menu.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 class ConnectionsView extends ConsumerWidget {
@@ -232,6 +233,8 @@ class ConnectionsView extends ConsumerWidget {
                     prefixIcon: Icon(Icons.label_outlined),
                   ),
                   autocorrect: false,
+                  enableInteractiveSelection: true,
+                  contextMenuBuilder: alwaysPasteContextMenu,
                 ),
                 const Gap(12),
                 TextField(
@@ -243,6 +246,8 @@ class ConnectionsView extends ConsumerWidget {
                   ),
                   keyboardType: TextInputType.url,
                   autocorrect: false,
+                  enableInteractiveSelection: true,
+                  contextMenuBuilder: alwaysPasteContextMenu,
                 ),
                 const Gap(12),
                 TextField(
@@ -252,6 +257,8 @@ class ConnectionsView extends ConsumerWidget {
                     prefixIcon: Icon(Icons.key_outlined),
                   ),
                   autocorrect: false,
+                  enableInteractiveSelection: true,
+                  contextMenuBuilder: alwaysPasteContextMenu,
                 ),
                 const Gap(12),
                 TextField(
@@ -272,6 +279,8 @@ class ConnectionsView extends ConsumerWidget {
                   ),
                   obscureText: obscureSecret,
                   autocorrect: false,
+                  enableInteractiveSelection: true,
+                  contextMenuBuilder: alwaysPasteContextMenu,
                 ),
               ],
             ),

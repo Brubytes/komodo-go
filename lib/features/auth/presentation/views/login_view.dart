@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../core/error/failures.dart';
 import '../../../../core/providers/connections_provider.dart';
+import '../../../../core/widgets/always_paste_context_menu.dart';
 import '../../data/models/auth_state.dart';
 import '../providers/auth_provider.dart';
 
@@ -61,27 +62,34 @@ class LoginView extends HookConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Logo/Title
-                    Material(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      shape: const CircleBorder(),
-                      clipBehavior: Clip.antiAlias,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
+                    SizedBox(
+                      width: 88,
+                      height: 88,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outlineVariant,
+                          ),
+                        ),
                         child: ClipOval(
-                          child: Image.asset(
-                            'assets/komodo-go-logo.png',
-                            width: 64,
-                            height: 64,
-                            fit: BoxFit.cover,
+                          child: Transform.scale(
+                            scale: 1.25,
+                            child: Image.asset(
+                              'assets/komodo-go-logo.png',
+                              fit: BoxFit.cover,
+                              alignment: Alignment.center,
+                            ),
                           ),
                         ),
                       ),
                     ),
                     const Gap(16),
                     Text(
-                      'Komodo',
+                      'Komodo Go',
                       style: Theme.of(context).textTheme.headlineLarge
                           ?.copyWith(fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
@@ -260,6 +268,8 @@ class LoginView extends HookConsumerWidget {
                         ),
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
+                        enableInteractiveSelection: true,
+                        contextMenuBuilder: alwaysPasteContextMenu,
                       ),
                       const Gap(16),
 
@@ -274,6 +284,8 @@ class LoginView extends HookConsumerWidget {
                         keyboardType: TextInputType.url,
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
+                        enableInteractiveSelection: true,
+                        contextMenuBuilder: alwaysPasteContextMenu,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter the server URL';
@@ -292,6 +304,8 @@ class LoginView extends HookConsumerWidget {
                         ),
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
+                        enableInteractiveSelection: true,
+                        contextMenuBuilder: alwaysPasteContextMenu,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your API key';
@@ -321,6 +335,8 @@ class LoginView extends HookConsumerWidget {
                         obscureText: obscureSecret.value,
                         textInputAction: TextInputAction.done,
                         autocorrect: false,
+                        enableInteractiveSelection: true,
+                        contextMenuBuilder: alwaysPasteContextMenu,
                         onFieldSubmitted: (_) => handleLogin(),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
