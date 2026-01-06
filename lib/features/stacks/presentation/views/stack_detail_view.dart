@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../data/models/stack.dart';
 import '../providers/stacks_provider.dart';
@@ -29,14 +30,14 @@ class StackDetailView extends ConsumerWidget {
         title: Text(stackName),
         actions: [
           PopupMenuButton<StackAction>(
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(AppIcons.moreVertical),
             onSelected: (action) =>
                 _handleAction(context, ref, stackId, action),
             itemBuilder: (context) => const [
               PopupMenuItem(
                 value: StackAction.deploy,
                 child: ListTile(
-                  leading: Icon(Icons.rocket_launch, color: Colors.blue),
+                  leading: Icon(AppIcons.deployments, color: Colors.blue),
                   title: Text('Deploy'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -44,7 +45,7 @@ class StackDetailView extends ConsumerWidget {
               PopupMenuItem(
                 value: StackAction.start,
                 child: ListTile(
-                  leading: Icon(Icons.play_arrow, color: Colors.green),
+                  leading: Icon(AppIcons.play, color: Colors.green),
                   title: Text('Start'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -52,7 +53,7 @@ class StackDetailView extends ConsumerWidget {
               PopupMenuItem(
                 value: StackAction.stop,
                 child: ListTile(
-                  leading: Icon(Icons.stop, color: Colors.orange),
+                  leading: Icon(AppIcons.stop, color: Colors.orange),
                   title: Text('Stop'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -317,7 +318,7 @@ class _StackServiceTile extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: Icon(
-          hasUpdate ? Icons.system_update_alt : Icons.widgets_outlined,
+          hasUpdate ? AppIcons.updateAvailable : AppIcons.widgets,
           color: hasUpdate ? Colors.orange : null,
         ),
         title: Text(service.service),
@@ -325,7 +326,7 @@ class _StackServiceTile extends StatelessWidget {
             ? null
             : Text(subtitleParts.join(' · ')),
         trailing: hasUpdate
-            ? const Icon(Icons.circle, size: 10, color: Colors.orange)
+            ? const Icon(AppIcons.dot, size: 10, color: Colors.orange)
             : null,
       ),
     );

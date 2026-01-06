@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 part 'resources_tab_provider.g.dart';
 
 enum ResourceType {
-  servers('Servers', Icons.dns),
-  deployments('Deployments', Icons.rocket_launch),
-  stacks('Stacks', Icons.layers),
-  repos('Repos', Icons.source),
-  builds('Builds', Icons.handyman_rounded),
-  procedures('Procedures', Icons.playlist_play);
+  servers('Servers', AppIcons.server),
+  deployments('Deployments', AppIcons.deployments),
+  stacks('Stacks', AppIcons.stacks),
+  repos('Repos', AppIcons.repos),
+  builds('Builds', AppIcons.builds),
+  procedures('Procedures', AppIcons.procedures);
 
   const ResourceType(this.label, this.icon);
 

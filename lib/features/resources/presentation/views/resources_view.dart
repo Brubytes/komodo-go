@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../providers/resources_tab_provider.dart';
@@ -25,7 +26,7 @@ class ResourcesView extends ConsumerWidget {
             ListTile(
               leading: Icon(resource.icon),
               title: Text(resource.label),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: Icon(AppIcons.chevron),
               onTap: () => context.push(_routeFor(resource)),
             ),
         ],

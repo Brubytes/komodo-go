@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -46,7 +47,7 @@ class HomeView extends ConsumerWidget {
         title: const Text('Komodo'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(AppIcons.logout),
             onPressed: () async {
               final confirmed = await showDialog<bool>(
                 context: context,
@@ -105,7 +106,7 @@ class HomeView extends ConsumerWidget {
               children: [
                 _StatCard(
                   title: 'Servers',
-                  icon: Icons.dns,
+                  icon: AppIcons.server,
                   color: Colors.blue,
                   asyncValue: serversAsync,
                   valueBuilder: (servers) => servers.length.toString(),
@@ -119,7 +120,7 @@ class HomeView extends ConsumerWidget {
                 ),
                 _StatCard(
                   title: 'Deployments',
-                  icon: Icons.rocket_launch,
+                  icon: AppIcons.deployments,
                   color: Colors.green,
                   asyncValue: deploymentsAsync,
                   valueBuilder: (deployments) => deployments.length.toString(),
@@ -134,7 +135,7 @@ class HomeView extends ConsumerWidget {
                 ),
                 _StatCard(
                   title: 'Stacks',
-                  icon: Icons.layers,
+                  icon: AppIcons.stacks,
                   color: Colors.purple,
                   asyncValue: stacksAsync,
                   valueBuilder: (stacks) => stacks.length.toString(),
@@ -148,7 +149,7 @@ class HomeView extends ConsumerWidget {
                 ),
                 _StatCard(
                   title: 'Repos',
-                  icon: Icons.source,
+                  icon: AppIcons.repos,
                   color: Colors.orange,
                   asyncValue: reposAsync,
                   valueBuilder: (repos) => repos.length.toString(),
@@ -160,7 +161,7 @@ class HomeView extends ConsumerWidget {
                 ),
                 _StatCard(
                   title: 'Builds',
-                  icon: Icons.build_circle,
+                  icon: AppIcons.builds,
                   color: Colors.teal,
                   asyncValue: buildsAsync,
                   valueBuilder: (builds) => builds.length.toString(),
@@ -174,7 +175,7 @@ class HomeView extends ConsumerWidget {
                 ),
                 _StatCard(
                   title: 'Procedures',
-                  icon: Icons.playlist_play,
+                  icon: AppIcons.procedures,
                   color: Colors.indigo,
                   asyncValue: proceduresAsync,
                   valueBuilder: (procedures) => procedures.length.toString(),
@@ -201,7 +202,7 @@ class HomeView extends ConsumerWidget {
               data: (servers) {
                 if (servers.isEmpty) {
                   return const _EmptyListTile(
-                    icon: Icons.dns_outlined,
+                    icon: AppIcons.server,
                     message: 'No servers',
                   );
                 }
@@ -228,7 +229,7 @@ class HomeView extends ConsumerWidget {
               data: (deployments) {
                 if (deployments.isEmpty) {
                   return const _EmptyListTile(
-                    icon: Icons.rocket_launch_outlined,
+                    icon: AppIcons.deployments,
                     message: 'No deployments',
                   );
                 }
@@ -257,7 +258,7 @@ class HomeView extends ConsumerWidget {
               data: (stacks) {
                 if (stacks.isEmpty) {
                   return const _EmptyListTile(
-                    icon: Icons.layers_outlined,
+                    icon: AppIcons.stacks,
                     message: 'No stacks',
                   );
                 }
@@ -283,7 +284,7 @@ class HomeView extends ConsumerWidget {
               data: (repos) {
                 if (repos.isEmpty) {
                   return const _EmptyListTile(
-                    icon: Icons.source_outlined,
+                    icon: AppIcons.repos,
                     message: 'No repos',
                   );
                 }
@@ -309,7 +310,7 @@ class HomeView extends ConsumerWidget {
               data: (builds) {
                 if (builds.isEmpty) {
                   return const _EmptyListTile(
-                    icon: Icons.build_circle_outlined,
+                    icon: AppIcons.builds,
                     message: 'No builds',
                   );
                 }
@@ -336,7 +337,7 @@ class HomeView extends ConsumerWidget {
               data: (procedures) {
                 if (procedures.isEmpty) {
                   return const _EmptyListTile(
-                    icon: Icons.playlist_play_outlined,
+                    icon: AppIcons.procedures,
                     message: 'No procedures',
                   );
                 }
@@ -402,7 +403,7 @@ class _StatCard<T> extends StatelessWidget {
                   ),
                   const Spacer(),
                   Icon(
-                    Icons.chevron_right,
+                    AppIcons.chevron,
                     color: Theme.of(
                       context,
                     ).colorScheme.onSurface.withValues(alpha: 0.3),
@@ -443,7 +444,7 @@ class _StatCard<T> extends StatelessWidget {
                 ),
                 error: (_, __) => const SizedBox(
                   height: 60,
-                  child: Center(child: Icon(Icons.error_outline)),
+                  child: Center(child: Icon(AppIcons.formError)),
                 ),
               ),
             ],
@@ -502,7 +503,7 @@ class _ServerListTile extends StatelessWidget {
         ),
         title: Text(server.name),
         subtitle: Text(server.address),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Icon(AppIcons.chevron),
         onTap: () => context.go(
           '${AppRoutes.servers}/${server.id}?name=${Uri.encodeComponent(server.name)}',
         ),
@@ -755,7 +756,7 @@ class _ErrorTile extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(Icons.error_outline, color: Colors.red),
+            const Icon(AppIcons.formError, color: Colors.red),
             const Gap(8),
             Expanded(child: Text(message)),
           ],

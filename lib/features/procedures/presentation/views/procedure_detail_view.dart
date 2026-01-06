@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../data/models/procedure.dart';
 import '../providers/procedures_provider.dart';
@@ -26,7 +27,7 @@ class ProcedureDetailView extends ConsumerWidget {
         title: Text(procedureName),
         actions: [
           IconButton(
-            icon: const Icon(Icons.play_arrow),
+            icon: const Icon(AppIcons.play),
             tooltip: 'Run',
             onPressed: () => _runProcedure(context, ref, procedureId),
           ),
@@ -180,7 +181,7 @@ class _StageTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: Icon(stage.enabled ? Icons.check_circle : Icons.cancel),
+        leading: Icon(stage.enabled ? AppIcons.ok : AppIcons.canceled),
         title: Text(stage.name.isNotEmpty ? stage.name : 'Stage'),
         subtitle: Text('$enabledExecutions executions enabled'),
       ),
@@ -224,4 +225,3 @@ class _InfoRow extends StatelessWidget {
     );
   }
 }
-

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../../../core/connections/connection_profile.dart';
 import '../../../../core/providers/connections_provider.dart';
@@ -21,7 +22,7 @@ class ConnectionsView extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Disconnect',
-            icon: const Icon(Icons.link_off_outlined),
+            icon: const Icon(AppIcons.disconnect),
             onPressed: authAsync.isLoading
                 ? null
                 : () async {
@@ -56,7 +57,7 @@ class ConnectionsView extends ConsumerWidget {
         onPressed: authAsync.isLoading
             ? null
             : () => AddConnectionSheet.show(context),
-        icon: const Icon(Icons.add),
+        icon: const Icon(AppIcons.add),
         label: const Text('Add'),
       ),
       body: connectionsAsync.when(
@@ -86,7 +87,7 @@ class ConnectionsView extends ConsumerWidget {
                 clipBehavior: Clip.antiAlias,
                 child: ListTile(
                   leading: Icon(
-                    isActive ? Icons.check_circle : Icons.dns_outlined,
+                    isActive ? AppIcons.ok : AppIcons.server,
                     color: isActive
                         ? Theme.of(context).colorScheme.primary
                         : Theme.of(context).colorScheme.onSurfaceVariant,

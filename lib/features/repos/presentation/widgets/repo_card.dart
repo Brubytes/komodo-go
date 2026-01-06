@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../data/models/repo.dart';
 
@@ -58,13 +59,13 @@ class RepoCard extends StatelessWidget {
               ),
               if (onAction != null)
                 PopupMenuButton<RepoAction>(
-                  icon: const Icon(Icons.more_vert),
+                  icon: const Icon(AppIcons.moreVertical),
                   onSelected: onAction,
                   itemBuilder: (context) => const [
                     PopupMenuItem(
                       value: RepoAction.clone,
                       child: ListTile(
-                        leading: Icon(Icons.download, color: Colors.blue),
+                        leading: Icon(AppIcons.download, color: Colors.blue),
                         title: Text('Clone'),
                         contentPadding: EdgeInsets.zero,
                       ),
@@ -72,7 +73,7 @@ class RepoCard extends StatelessWidget {
                     PopupMenuItem(
                       value: RepoAction.pull,
                       child: ListTile(
-                        leading: Icon(Icons.refresh, color: Colors.green),
+                        leading: Icon(AppIcons.refresh, color: Colors.green),
                         title: Text('Pull'),
                         contentPadding: EdgeInsets.zero,
                       ),
@@ -80,7 +81,7 @@ class RepoCard extends StatelessWidget {
                     PopupMenuItem(
                       value: RepoAction.build,
                       child: ListTile(
-                        leading: Icon(Icons.build, color: Colors.orange),
+                        leading: Icon(AppIcons.builds, color: Colors.orange),
                         title: Text('Build'),
                         contentPadding: EdgeInsets.zero,
                       ),
@@ -103,12 +104,12 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, icon) = switch (state) {
-      RepoState.ok => (Colors.green, Icons.check_circle),
-      RepoState.failed => (Colors.red, Icons.error),
-      RepoState.cloning => (Colors.blue, Icons.sync),
-      RepoState.pulling => (Colors.blue, Icons.sync),
-      RepoState.building => (Colors.orange, Icons.sync),
-      RepoState.unknown => (Colors.orange, Icons.help),
+      RepoState.ok => (Colors.green, AppIcons.ok),
+      RepoState.failed => (Colors.red, AppIcons.error),
+      RepoState.cloning => (Colors.blue, AppIcons.loading),
+      RepoState.pulling => (Colors.blue, AppIcons.loading),
+      RepoState.building => (Colors.orange, AppIcons.loading),
+      RepoState.unknown => (Colors.orange, AppIcons.unknown),
     };
 
     return Container(
@@ -139,4 +140,3 @@ class _StatusBadge extends StatelessWidget {
 
 /// Actions available for a repo.
 enum RepoAction { clone, pull, build }
-

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../../../core/error/failures.dart';
 import '../../../../core/providers/connections_provider.dart';
@@ -130,14 +131,14 @@ class LoginView extends HookConsumerWidget {
                                       title: Text(connection.name),
                                       subtitle: Text(connection.baseUrl),
                                       leading: Icon(
-                                        Icons.dns_outlined,
+                                        AppIcons.server,
                                         color: Theme.of(
                                           context,
                                         ).colorScheme.primary,
                                       ),
                                       trailing: IconButton(
                                         tooltip: 'Delete',
-                                        icon: const Icon(Icons.delete_outline),
+                                        icon: const Icon(AppIcons.delete),
                                         onPressed: () async {
                                           final confirmed = await showDialog<bool>(
                                             context: context,
@@ -198,8 +199,8 @@ class LoginView extends HookConsumerWidget {
                                     },
                               icon: Icon(
                                 showAddForm.value
-                                    ? Icons.close
-                                    : Icons.add_outlined,
+                                    ? AppIcons.close
+                                    : AppIcons.add,
                               ),
                               label: Text(
                                 showAddForm.value
@@ -228,7 +229,7 @@ class LoginView extends HookConsumerWidget {
                         child: Row(
                           children: [
                             Icon(
-                              Icons.error_outline,
+                              AppIcons.formError,
                               color: Theme.of(context).colorScheme.error,
                             ),
                             const Gap(8),
@@ -262,7 +263,7 @@ class LoginView extends HookConsumerWidget {
                         decoration: const InputDecoration(
                           labelText: 'Name (optional)',
                           hintText: 'Production',
-                          prefixIcon: Icon(Icons.label_outlined),
+                          prefixIcon: Icon(AppIcons.tag),
                         ),
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
@@ -277,7 +278,7 @@ class LoginView extends HookConsumerWidget {
                         decoration: const InputDecoration(
                           labelText: 'Server URL',
                           hintText: 'https://komodo.example.com',
-                          prefixIcon: Icon(Icons.dns_outlined),
+                          prefixIcon: Icon(AppIcons.server),
                         ),
                         keyboardType: TextInputType.url,
                         textInputAction: TextInputAction.next,
@@ -298,7 +299,7 @@ class LoginView extends HookConsumerWidget {
                         controller: apiKeyController,
                         decoration: const InputDecoration(
                           labelText: 'API Key',
-                          prefixIcon: Icon(Icons.key_outlined),
+                          prefixIcon: Icon(AppIcons.key),
                         ),
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
@@ -318,12 +319,12 @@ class LoginView extends HookConsumerWidget {
                         controller: apiSecretController,
                         decoration: InputDecoration(
                           labelText: 'API Secret',
-                          prefixIcon: const Icon(Icons.lock_outline),
+                          prefixIcon: const Icon(AppIcons.lock),
                           suffixIcon: IconButton(
                             icon: Icon(
                               obscureSecret.value
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
+                                  ? AppIcons.eye
+                                  : AppIcons.eyeOff,
                             ),
                             onPressed: () {
                               obscureSecret.value = !obscureSecret.value;

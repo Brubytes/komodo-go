@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../features/auth/data/models/auth_state.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
@@ -240,23 +241,23 @@ class MainShell extends StatelessWidget {
         onTap: (index) => _onItemTapped(context, index),
         items: const [
           AdaptiveNavigationItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
+            icon: Icon(AppIcons.home),
+            activeIcon: Icon(AppIcons.home),
             label: 'Home',
           ),
           AdaptiveNavigationItem(
-            icon: Icon(Icons.grid_view_outlined),
-            activeIcon: Icon(Icons.grid_view),
+            icon: Icon(AppIcons.resources),
+            activeIcon: Icon(AppIcons.resources),
             label: 'Resources',
           ),
           AdaptiveNavigationItem(
-            icon: Icon(Icons.notifications_outlined),
-            activeIcon: Icon(Icons.notifications),
+            icon: Icon(AppIcons.notifications),
+            activeIcon: Icon(AppIcons.notificationsActive),
             label: 'Notifications',
           ),
           AdaptiveNavigationItem(
-            icon: Icon(Icons.settings_outlined),
-            activeIcon: Icon(Icons.settings),
+            icon: Icon(AppIcons.settings),
+            activeIcon: Icon(AppIcons.settings),
             label: 'Settings',
           ),
         ],

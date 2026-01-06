@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../data/models/build.dart';
 import '../providers/builds_provider.dart';
@@ -27,13 +28,13 @@ class BuildDetailView extends ConsumerWidget {
         title: Text(buildName),
         actions: [
           PopupMenuButton<BuildAction>(
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(AppIcons.moreVertical),
             onSelected: (action) => _handleAction(context, ref, buildId, action),
             itemBuilder: (context) => const [
               PopupMenuItem(
                 value: BuildAction.run,
                 child: ListTile(
-                  leading: Icon(Icons.play_arrow, color: Colors.green),
+                  leading: Icon(AppIcons.play, color: Colors.green),
                   title: Text('Run build'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -41,7 +42,7 @@ class BuildDetailView extends ConsumerWidget {
               PopupMenuItem(
                 value: BuildAction.cancel,
                 child: ListTile(
-                  leading: Icon(Icons.stop, color: Colors.orange),
+                  leading: Icon(AppIcons.stop, color: Colors.orange),
                   title: Text('Cancel'),
                   contentPadding: EdgeInsets.zero,
                 ),

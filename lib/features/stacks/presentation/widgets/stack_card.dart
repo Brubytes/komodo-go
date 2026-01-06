@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../data/models/stack.dart';
 
@@ -61,7 +62,7 @@ class StackCard extends StatelessWidget {
                   ),
                   if (onAction != null)
                     PopupMenuButton<StackAction>(
-                      icon: const Icon(Icons.more_vert),
+                      icon: const Icon(AppIcons.moreVertical),
                       onSelected: onAction,
                       itemBuilder: (context) => _buildMenuItems(state),
                     ),
@@ -92,7 +93,7 @@ class StackCard extends StatelessWidget {
       const PopupMenuItem(
         value: StackAction.deploy,
         child: ListTile(
-          leading: Icon(Icons.rocket_launch, color: Colors.blue),
+          leading: Icon(AppIcons.deployments, color: Colors.blue),
           title: Text('Deploy'),
           contentPadding: EdgeInsets.zero,
         ),
@@ -101,7 +102,7 @@ class StackCard extends StatelessWidget {
         const PopupMenuItem(
           value: StackAction.start,
           child: ListTile(
-            leading: Icon(Icons.play_arrow, color: Colors.green),
+            leading: Icon(AppIcons.play, color: Colors.green),
             title: Text('Start'),
             contentPadding: EdgeInsets.zero,
           ),
@@ -110,7 +111,7 @@ class StackCard extends StatelessWidget {
         const PopupMenuItem(
           value: StackAction.stop,
           child: ListTile(
-            leading: Icon(Icons.stop, color: Colors.orange),
+            leading: Icon(AppIcons.stop, color: Colors.orange),
             title: Text('Stop'),
             contentPadding: EdgeInsets.zero,
           ),
@@ -127,17 +128,17 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, icon) = switch (state) {
-      StackState.deploying => (Colors.blue, Icons.sync),
-      StackState.running => (Colors.green, Icons.check_circle),
-      StackState.paused => (Colors.grey, Icons.pause_circle),
-      StackState.stopped => (Colors.orange, Icons.stop_circle),
-      StackState.created => (Colors.grey, Icons.circle_outlined),
-      StackState.restarting => (Colors.blue, Icons.sync),
-      StackState.removing => (Colors.grey, Icons.hourglass_bottom),
-      StackState.unhealthy => (Colors.red, Icons.error),
-      StackState.down => (Colors.grey, Icons.circle_outlined),
-      StackState.dead => (Colors.red, Icons.cancel),
-      StackState.unknown => (Colors.orange, Icons.help),
+      StackState.deploying => (Colors.blue, AppIcons.loading),
+      StackState.running => (Colors.green, AppIcons.ok),
+      StackState.paused => (Colors.grey, AppIcons.paused),
+      StackState.stopped => (Colors.orange, AppIcons.stopped),
+      StackState.created => (Colors.grey, AppIcons.pending),
+      StackState.restarting => (Colors.blue, AppIcons.loading),
+      StackState.removing => (Colors.grey, AppIcons.waiting),
+      StackState.unhealthy => (Colors.red, AppIcons.error),
+      StackState.down => (Colors.grey, AppIcons.pending),
+      StackState.dead => (Colors.red, AppIcons.canceled),
+      StackState.unknown => (Colors.orange, AppIcons.unknown),
     };
 
     return Container(
@@ -168,4 +169,3 @@ class _StatusBadge extends StatelessWidget {
 
 /// Actions available for a stack.
 enum StackAction { deploy, start, stop }
-

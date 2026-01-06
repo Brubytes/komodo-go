@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 class NotificationsView extends StatelessWidget {
   const NotificationsView({super.key});
@@ -14,7 +15,7 @@ class NotificationsView extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.notifications_none,
+                AppIcons.notifications,
                 size: 64,
                 color: Theme.of(context).colorScheme.primary.withValues(
                   alpha: 0.5,
@@ -42,4 +43,3 @@ class NotificationsView extends StatelessWidget {
     );
   }
 }
-

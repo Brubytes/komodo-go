@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../data/models/procedure.dart';
 
@@ -67,7 +68,7 @@ class ProcedureCard extends StatelessWidget {
               ),
               if (onRun != null)
                 IconButton(
-                  icon: const Icon(Icons.play_arrow),
+                  icon: const Icon(AppIcons.play),
                   onPressed: onRun,
                   tooltip: 'Run',
                 ),
@@ -87,10 +88,10 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, icon) = switch (state) {
-      ProcedureState.running => (Colors.blue, Icons.sync),
-      ProcedureState.ok => (Colors.green, Icons.check_circle),
-      ProcedureState.failed => (Colors.red, Icons.error),
-      ProcedureState.unknown => (Colors.orange, Icons.help),
+      ProcedureState.running => (Colors.blue, AppIcons.loading),
+      ProcedureState.ok => (Colors.green, AppIcons.ok),
+      ProcedureState.failed => (Colors.red, AppIcons.error),
+      ProcedureState.unknown => (Colors.orange, AppIcons.unknown),
     };
 
     return Container(
@@ -118,4 +119,3 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 }
-

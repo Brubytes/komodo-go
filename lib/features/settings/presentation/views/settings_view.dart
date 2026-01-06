@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/features/settings/presentation/providers/theme_provider.dart';
 
 class SettingsView extends ConsumerWidget {
@@ -18,13 +19,13 @@ class SettingsView extends ConsumerWidget {
       body: ListView(
         children: [
           _SettingsItem(
-            icon: Icons.dns_outlined,
+            icon: AppIcons.server,
             title: 'Connections',
             subtitle: 'Manage server connections',
             onTap: () => context.push(AppRoutes.connections),
           ),
           _SettingsItem(
-            icon: Icons.palette_outlined,
+            icon: AppIcons.theme,
             title: 'Theme',
             subtitle: _themeModeLabel(themeMode),
             onTap: () => _showThemeDialog(context, ref, themeMode),
@@ -55,19 +56,19 @@ class SettingsView extends ConsumerWidget {
           _ThemeOption(
             mode: ThemeMode.system,
             label: 'System',
-            icon: Icons.brightness_auto,
+            icon: AppIcons.themeSystem,
             isSelected: currentMode == ThemeMode.system,
           ),
           _ThemeOption(
             mode: ThemeMode.light,
             label: 'Light',
-            icon: Icons.light_mode,
+            icon: AppIcons.themeLight,
             isSelected: currentMode == ThemeMode.light,
           ),
           _ThemeOption(
             mode: ThemeMode.dark,
             label: 'Dark',
-            icon: Icons.dark_mode,
+            icon: AppIcons.themeDark,
             isSelected: currentMode == ThemeMode.dark,
           ),
         ],
@@ -99,7 +100,7 @@ class _SettingsItem extends StatelessWidget {
       leading: Icon(icon),
       title: Text(title),
       subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right),
+      trailing: Icon(AppIcons.chevron),
       onTap: onTap,
     );
   }
@@ -129,7 +130,7 @@ class _ThemeOption extends StatelessWidget {
           Expanded(child: Text(label)),
           if (isSelected)
             Icon(
-              Icons.check,
+              AppIcons.check,
               color: Theme.of(context).colorScheme.primary,
             ),
         ],

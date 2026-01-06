@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../providers/deployments_provider.dart';
 import '../widgets/deployment_card.dart';
@@ -144,7 +145,7 @@ class _EmptyState extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.rocket_launch_outlined,
+            AppIcons.deployments,
             size: 64,
             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
           ),
@@ -183,7 +184,7 @@ class _ErrorState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.error_outline,
+              AppIcons.formError,
               size: 64,
               color: Theme.of(context).colorScheme.error,
             ),

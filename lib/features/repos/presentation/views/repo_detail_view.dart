@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../data/models/repo.dart';
 import '../providers/repos_provider.dart';
@@ -27,13 +28,13 @@ class RepoDetailView extends ConsumerWidget {
         title: Text(repoName),
         actions: [
           PopupMenuButton<RepoAction>(
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(AppIcons.moreVertical),
             onSelected: (action) => _handleAction(context, ref, repoId, action),
             itemBuilder: (context) => const [
               PopupMenuItem(
                 value: RepoAction.clone,
                 child: ListTile(
-                  leading: Icon(Icons.download, color: Colors.blue),
+                  leading: Icon(AppIcons.download, color: Colors.blue),
                   title: Text('Clone'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -41,7 +42,7 @@ class RepoDetailView extends ConsumerWidget {
               PopupMenuItem(
                 value: RepoAction.pull,
                 child: ListTile(
-                  leading: Icon(Icons.refresh, color: Colors.green),
+                  leading: Icon(AppIcons.refresh, color: Colors.green),
                   title: Text('Pull'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -49,7 +50,7 @@ class RepoDetailView extends ConsumerWidget {
               PopupMenuItem(
                 value: RepoAction.build,
                 child: ListTile(
-                  leading: Icon(Icons.build, color: Colors.orange),
+                  leading: Icon(AppIcons.builds, color: Colors.orange),
                   title: Text('Build'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -238,4 +239,3 @@ class _InfoRow extends StatelessWidget {
     );
   }
 }
-

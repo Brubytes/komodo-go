@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../data/models/server.dart';
 
@@ -66,7 +67,7 @@ class ServerCard extends StatelessWidget {
 
               // Arrow
               Icon(
-                Icons.chevron_right,
+                AppIcons.chevron,
                 color: Theme.of(
                   context,
                 ).colorScheme.onSurface.withValues(alpha: 0.3),
@@ -87,10 +88,10 @@ class _StatusIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, icon) = switch (state) {
-      ServerState.ok => (Colors.green, Icons.check_circle),
-      ServerState.notOk => (Colors.red, Icons.error),
-      ServerState.disabled => (Colors.grey, Icons.pause_circle),
-      ServerState.unknown => (Colors.orange, Icons.help),
+      ServerState.ok => (Colors.green, AppIcons.ok),
+      ServerState.notOk => (Colors.red, AppIcons.error),
+      ServerState.disabled => (Colors.grey, AppIcons.paused),
+      ServerState.unknown => (Colors.orange, AppIcons.unknown),
     };
 
     return Container(

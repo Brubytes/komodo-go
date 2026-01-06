@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../data/models/build.dart';
 
@@ -61,13 +62,13 @@ class BuildCard extends StatelessWidget {
               ),
               if (onAction != null)
                 PopupMenuButton<BuildAction>(
-                  icon: const Icon(Icons.more_vert),
+                  icon: const Icon(AppIcons.moreVertical),
                   onSelected: onAction,
                   itemBuilder: (context) => [
                     const PopupMenuItem(
                       value: BuildAction.run,
                       child: ListTile(
-                        leading: Icon(Icons.play_arrow, color: Colors.green),
+                        leading: Icon(AppIcons.play, color: Colors.green),
                         title: Text('Run build'),
                         contentPadding: EdgeInsets.zero,
                       ),
@@ -76,7 +77,7 @@ class BuildCard extends StatelessWidget {
                       const PopupMenuItem(
                         value: BuildAction.cancel,
                         child: ListTile(
-                          leading: Icon(Icons.stop, color: Colors.orange),
+                          leading: Icon(AppIcons.stop, color: Colors.orange),
                           title: Text('Cancel'),
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -99,10 +100,10 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, icon) = switch (state) {
-      BuildState.building => (Colors.blue, Icons.sync),
-      BuildState.ok => (Colors.green, Icons.check_circle),
-      BuildState.failed => (Colors.red, Icons.error),
-      BuildState.unknown => (Colors.orange, Icons.help),
+      BuildState.building => (Colors.blue, AppIcons.loading),
+      BuildState.ok => (Colors.green, AppIcons.ok),
+      BuildState.failed => (Colors.red, AppIcons.error),
+      BuildState.unknown => (Colors.orange, AppIcons.unknown),
     };
 
     return Container(

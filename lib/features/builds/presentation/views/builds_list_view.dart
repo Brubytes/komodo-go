@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../providers/builds_provider.dart';
@@ -115,7 +116,7 @@ class _EmptyState extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.build_circle_outlined,
+            AppIcons.builds,
             size: 64,
             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
           ),
@@ -151,7 +152,7 @@ class _ErrorState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.error_outline,
+              AppIcons.formError,
               size: 64,
               color: Theme.of(context).colorScheme.error,
             ),
