@@ -9,6 +9,7 @@ enum ResourceType {
   deployments('Deployments', AppIcons.deployments, Colors.green),
   stacks('Stacks', AppIcons.stacks, Colors.purple),
   repos('Repos', AppIcons.repos, Colors.orange),
+  syncs('Syncs', AppIcons.syncs, Colors.blueGrey),
   builds('Builds', AppIcons.builds, Colors.teal),
   procedures('Procedures', AppIcons.procedures, Colors.indigo),
   actions('Actions', AppIcons.actions, Colors.cyan);

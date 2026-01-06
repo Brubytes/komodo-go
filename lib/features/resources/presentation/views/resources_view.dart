@@ -40,6 +40,7 @@ String _routeFor(ResourceType resource) => switch (resource) {
   ResourceType.deployments => AppRoutes.deployments,
   ResourceType.stacks => AppRoutes.stacks,
   ResourceType.repos => AppRoutes.repos,
+  ResourceType.syncs => AppRoutes.syncs,
   ResourceType.builds => AppRoutes.builds,
   ResourceType.procedures => AppRoutes.procedures,
   ResourceType.actions => AppRoutes.actions,

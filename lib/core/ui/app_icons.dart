@@ -61,6 +61,7 @@ abstract class AppIcons {
   static const IconData builds = LucideIcons.hammer;
   static const IconData procedures = LucideIcons.route;
   static const IconData actions = LucideIcons.zap;
+  static const IconData syncs = LucideIcons.refreshCw;
   static const IconData maintenance = LucideIcons.wrench;
   static const IconData updateAvailable = LucideIcons.cloudDownload;
   static const IconData widgets = LucideIcons.blocks;

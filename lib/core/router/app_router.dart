@@ -14,6 +14,8 @@ import '../../features/builds/presentation/views/build_detail_view.dart';
 import '../../features/builds/presentation/views/builds_list_view.dart';
 import '../../features/actions/presentation/views/action_detail_view.dart';
 import '../../features/actions/presentation/views/actions_list_view.dart';
+import '../../features/syncs/presentation/views/sync_detail_view.dart';
+import '../../features/syncs/presentation/views/syncs_list_view.dart';
 import '../../features/notifications/presentation/views/notifications_view.dart';
 import '../../features/resources/presentation/views/resources_view.dart';
 import '../../features/repos/presentation/views/repo_detail_view.dart';
@@ -56,6 +58,7 @@ abstract class AppRoutes {
   static const deployments = '/deployments';
   static const stacks = '/stacks';
   static const repos = '/repos';
+  static const syncs = '/syncs';
   static const builds = '/builds';
   static const procedures = '/procedures';
   static const actions = '/actions';
@@ -184,6 +187,24 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
           GoRoute(
+            path: AppRoutes.syncs,
+            pageBuilder: (context, state) =>
+                _adaptiveStackPage(context, const SyncsListView()),
+            routes: [
+              GoRoute(
+                path: ':id',
+                pageBuilder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  final name = state.uri.queryParameters['name'] ?? 'Sync';
+                  return _adaptiveStackPage(
+                    context,
+                    SyncDetailView(syncId: id, syncName: name),
+                  );
+                },
+              ),
+            ],
+          ),
+          GoRoute(
             path: AppRoutes.builds,
             pageBuilder: (context, state) =>
                 _adaptiveStackPage(context, const BuildsListView()),
@@ -289,6 +310,7 @@ class MainShell extends StatelessWidget {
     if (location.startsWith(AppRoutes.deployments)) return 1;
     if (location.startsWith(AppRoutes.stacks)) return 1;
     if (location.startsWith(AppRoutes.repos)) return 1;
+    if (location.startsWith(AppRoutes.syncs)) return 1;
     if (location.startsWith(AppRoutes.builds)) return 1;
     if (location.startsWith(AppRoutes.procedures)) return 1;
     if (location.startsWith(AppRoutes.actions)) return 1;

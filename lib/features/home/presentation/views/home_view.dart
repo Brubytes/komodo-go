@@ -18,6 +18,8 @@ import '../../../actions/data/models/action.dart';
 import '../../../actions/presentation/providers/actions_provider.dart';
 import '../../../repos/data/models/repo.dart';
 import '../../../repos/presentation/providers/repos_provider.dart';
+import '../../../syncs/data/models/sync.dart';
+import '../../../syncs/presentation/providers/syncs_provider.dart';
 import '../../../resources/presentation/providers/resources_tab_provider.dart';
 import '../../../stacks/data/models/stack.dart';
 import '../../../stacks/presentation/providers/stacks_provider.dart';
@@ -41,6 +43,7 @@ class HomeView extends ConsumerWidget {
     final deploymentsAsync = ref.watch(deploymentsProvider);
     final stacksAsync = ref.watch(stacksProvider);
     final reposAsync = ref.watch(reposProvider);
+    final syncsAsync = ref.watch(syncsProvider);
     final buildsAsync = ref.watch(buildsProvider);
     final proceduresAsync = ref.watch(proceduresProvider);
     final actionsAsync = ref.watch(actionsProvider);
@@ -83,6 +86,7 @@ class HomeView extends ConsumerWidget {
           ref.invalidate(deploymentsProvider);
           ref.invalidate(stacksProvider);
           ref.invalidate(reposProvider);
+          ref.invalidate(syncsProvider);
           ref.invalidate(buildsProvider);
           ref.invalidate(proceduresProvider);
           ref.invalidate(actionsProvider);
@@ -164,6 +168,20 @@ class HomeView extends ConsumerWidget {
                     return '$busy busy';
                   },
                   onTap: () => _goToResources(ref, context, ResourceType.repos),
+                ),
+                _StatCard(
+                  title: 'Syncs',
+                  icon: AppIcons.syncs,
+                  color: Colors.blueGrey,
+                  asyncValue: syncsAsync,
+                  valueBuilder: (syncs) => syncs.length.toString(),
+                  subtitleBuilder: (syncs) {
+                    final running = syncs
+                        .where((s) => s.info.state.isRunning)
+                        .length;
+                    return '$running running';
+                  },
+                  onTap: () => _goToResources(ref, context, ResourceType.syncs),
                 ),
                 _StatCard(
                   title: 'Builds',
@@ -315,6 +333,32 @@ class HomeView extends ConsumerWidget {
                   children: repos
                       .take(5)
                       .map((repo) => _RepoListTile(repo: repo))
+                      .toList(),
+                );
+              },
+              loading: () => const _LoadingTile(),
+              error: (e, _) => _ErrorTile(message: e.toString()),
+            ),
+            const Gap(24),
+
+            // Recent syncs
+            _SectionHeader(
+              title: 'Syncs',
+              onSeeAll: () => _goToResources(ref, context, ResourceType.syncs),
+            ),
+            const Gap(8),
+            syncsAsync.when(
+              data: (syncs) {
+                if (syncs.isEmpty) {
+                  return const _EmptyListTile(
+                    icon: AppIcons.syncs,
+                    message: 'No syncs',
+                  );
+                }
+                return Column(
+                  children: syncs
+                      .take(5)
+                      .map((sync) => _SyncListTile(sync: sync))
                       .toList(),
                 );
               },
@@ -689,6 +733,49 @@ class _RepoListTile extends StatelessWidget {
         ),
         onTap: () => context.go(
           '${AppRoutes.repos}/${repo.id}?name=${Uri.encodeComponent(repo.name)}',
+        ),
+      ),
+    );
+  }
+}
+
+class _SyncListTile extends StatelessWidget {
+  const _SyncListTile({required this.sync});
+
+  final ResourceSyncListItem sync;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = sync.info.state;
+    final color = switch (state) {
+      ResourceSyncState.syncing => Colors.blue,
+      ResourceSyncState.pending => Colors.orange,
+      ResourceSyncState.ok => Colors.green,
+      ResourceSyncState.failed => Colors.red,
+      ResourceSyncState.unknown => Colors.orange,
+    };
+
+    final repo = sync.info.repo;
+    final branch = sync.info.branch;
+    final subtitle = repo.isNotEmpty
+        ? (branch.isNotEmpty ? '$repo · $branch' : repo)
+        : 'No repo';
+
+    return Card(
+      child: ListTile(
+        leading: Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        title: Text(sync.name),
+        subtitle: Text(subtitle),
+        trailing: Text(
+          state.displayName,
+          style: TextStyle(color: color, fontWeight: FontWeight.w500),
+        ),
+        onTap: () => context.go(
+          '${AppRoutes.syncs}/${sync.id}?name=${Uri.encodeComponent(sync.name)}',
         ),
       ),
     );
