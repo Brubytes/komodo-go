@@ -7,18 +7,48 @@ part 'server.g.dart';
 @freezed
 sealed class Server with _$Server {
   const factory Server({
-    required String id,
+    @JsonKey(readValue: _readId) required String id,
     required String name,
-    String? description,
+    @Default('') String description,
     @Default([]) List<String> tags,
     @Default(false) bool template,
     ServerInfo? info,
+    ServerConfig? config,
   }) = _Server;
 
   factory Server.fromJson(Map<String, dynamic> json) => _$ServerFromJson(json);
 }
 
-/// Server information from the API.
+/// Reads the id from either 'id' or '_id.$oid' format.
+Object? _readId(Map<dynamic, dynamic> json, String key) {
+  if (json.containsKey('id')) {
+    return json['id'];
+  }
+  if (json.containsKey('_id')) {
+    final id = json['_id'];
+    if (id is Map && id.containsKey(r'$oid')) {
+      return id[r'$oid'];
+    }
+    return id;
+  }
+  return null;
+}
+
+/// Server configuration (from detail endpoint).
+@freezed
+sealed class ServerConfig with _$ServerConfig {
+  const factory ServerConfig({
+    @Default('') String address,
+    @JsonKey(name: 'external_address') @Default('') String externalAddress,
+    @Default('') String region,
+    @Default(true) bool enabled,
+  }) = _ServerConfig;
+
+  factory ServerConfig.fromJson(Map<String, dynamic> json) =>
+      _$ServerConfigFromJson(json);
+}
+
+/// Server information from the API (from list endpoint).
 @freezed
 sealed class ServerInfo with _$ServerInfo {
   const factory ServerInfo({
