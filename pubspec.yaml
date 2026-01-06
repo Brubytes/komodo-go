@@ -71,6 +71,7 @@ flutter:
   assets:
     - assets/komodo-go-logo.png
     - assets/komodo-go-logo_rounded.png
+    - assets/komodo-go-logo_circle.png
 
 flutter_launcher_icons:
   android: true

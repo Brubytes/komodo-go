@@ -62,37 +62,25 @@ class LoginView extends HookConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Logo/Title
-                    SizedBox(
+                    Image.asset(
+                      'assets/komodo-go-logo_circle.png',
                       width: 88,
                       height: 88,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHighest,
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.outlineVariant,
-                          ),
-                        ),
-                        child: ClipOval(
-                          child: Transform.scale(
-                            scale: 1.25,
-                            child: Image.asset(
-                              'assets/komodo-go-logo.png',
-                              fit: BoxFit.cover,
-                              alignment: Alignment.center,
-                            ),
-                          ),
-                        ),
-                      ),
                     ),
                     const Gap(16),
-                    Text(
-                      'Komodo Go',
-                      style: Theme.of(context).textTheme.headlineLarge
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                    RichText(
                       textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: Theme.of(context).textTheme.headlineLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                        children: const [
+                          TextSpan(text: 'Komodo '),
+                          TextSpan(
+                            text: 'Go',
+                            style: TextStyle(fontStyle: FontStyle.italic),
+                          ),
+                        ],
+                      ),
                     ),
                     const Gap(8),
                     Text(
