@@ -11,6 +11,8 @@ import '../../features/builds/presentation/views/build_detail_view.dart';
 import '../../features/builds/presentation/views/builds_list_view.dart';
 import '../../features/repos/presentation/views/repo_detail_view.dart';
 import '../../features/repos/presentation/views/repos_list_view.dart';
+import '../../features/procedures/presentation/views/procedure_detail_view.dart';
+import '../../features/procedures/presentation/views/procedures_list_view.dart';
 import '../../features/servers/presentation/views/servers_list_view.dart';
 import '../../features/stacks/presentation/views/stack_detail_view.dart';
 import '../../features/stacks/presentation/views/stacks_list_view.dart';
@@ -28,6 +30,7 @@ abstract class AppRoutes {
   static const stacks = '/stacks';
   static const repos = '/repos';
   static const builds = '/builds';
+  static const procedures = '/procedures';
 }
 
 @riverpod
@@ -134,6 +137,24 @@ GoRouter appRouter(Ref ref) {
               ),
             ],
           ),
+          GoRoute(
+            path: AppRoutes.procedures,
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: ProceduresListView()),
+            routes: [
+              GoRoute(
+                path: ':id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  final name = state.uri.queryParameters['name'] ?? 'Procedure';
+                  return ProcedureDetailView(
+                    procedureId: id,
+                    procedureName: name,
+                  );
+                },
+              ),
+            ],
+          ),
         ],
       ),
     ],
@@ -184,6 +205,11 @@ class MainShell extends StatelessWidget {
             activeIcon: Icon(Icons.build_circle),
             label: 'Builds',
           ),
+          AdaptiveNavigationItem(
+            icon: Icon(Icons.playlist_play_outlined),
+            activeIcon: Icon(Icons.playlist_play),
+            label: 'Procedures',
+          ),
         ],
       ),
     );
@@ -196,6 +222,7 @@ class MainShell extends StatelessWidget {
     if (location.startsWith(AppRoutes.stacks)) return 3;
     if (location.startsWith(AppRoutes.repos)) return 4;
     if (location.startsWith(AppRoutes.builds)) return 5;
+    if (location.startsWith(AppRoutes.procedures)) return 6;
     return 0;
   }
 
@@ -213,6 +240,8 @@ class MainShell extends StatelessWidget {
         context.go(AppRoutes.repos);
       case 5:
         context.go(AppRoutes.builds);
+      case 6:
+        context.go(AppRoutes.procedures);
     }
   }
 }

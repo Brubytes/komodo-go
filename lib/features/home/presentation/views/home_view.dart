@@ -11,6 +11,8 @@ import '../../../servers/data/models/server.dart';
 import '../../../servers/presentation/providers/servers_provider.dart';
 import '../../../builds/data/models/build.dart';
 import '../../../builds/presentation/providers/builds_provider.dart';
+import '../../../procedures/data/models/procedure.dart';
+import '../../../procedures/presentation/providers/procedures_provider.dart';
 import '../../../repos/data/models/repo.dart';
 import '../../../repos/presentation/providers/repos_provider.dart';
 import '../../../stacks/data/models/stack.dart';
@@ -27,6 +29,7 @@ class HomeView extends ConsumerWidget {
     final stacksAsync = ref.watch(stacksProvider);
     final reposAsync = ref.watch(reposProvider);
     final buildsAsync = ref.watch(buildsProvider);
+    final proceduresAsync = ref.watch(proceduresProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -67,6 +70,7 @@ class HomeView extends ConsumerWidget {
           ref.invalidate(stacksProvider);
           ref.invalidate(reposProvider);
           ref.invalidate(buildsProvider);
+          ref.invalidate(proceduresProvider);
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -81,88 +85,97 @@ class HomeView extends ConsumerWidget {
             const Gap(16),
 
             // Quick stats
-            Row(
+            GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               children: [
-                Expanded(
-                  child: _StatCard(
-                    title: 'Servers',
-                    icon: Icons.dns,
-                    color: Colors.blue,
-                    asyncValue: serversAsync,
-                    valueBuilder: (servers) => servers.length.toString(),
-                    subtitleBuilder: (servers) {
-                      final online = servers
-                          .where((s) => s.info?.state == ServerState.ok)
-                          .length;
-                      return '$online online';
-                    },
-                    onTap: () => context.go(AppRoutes.servers),
-                  ),
+                _StatCard(
+                  title: 'Servers',
+                  icon: Icons.dns,
+                  color: Colors.blue,
+                  asyncValue: serversAsync,
+                  valueBuilder: (servers) => servers.length.toString(),
+                  subtitleBuilder: (servers) {
+                    final online = servers
+                        .where((s) => s.info?.state == ServerState.ok)
+                        .length;
+                    return '$online online';
+                  },
+                  onTap: () => context.go(AppRoutes.servers),
                 ),
-                const Gap(12),
-                Expanded(
-                  child: _StatCard(
-                    title: 'Deployments',
-                    icon: Icons.rocket_launch,
-                    color: Colors.green,
-                    asyncValue: deploymentsAsync,
-                    valueBuilder: (deployments) =>
-                        deployments.length.toString(),
-                    subtitleBuilder: (deployments) {
-                      final running = deployments
-                          .where(
-                            (d) => d.info?.state == DeploymentState.running,
-                          )
-                          .length;
-                      return '$running running';
-                    },
-                    onTap: () => context.go(AppRoutes.deployments),
-                  ),
+                _StatCard(
+                  title: 'Deployments',
+                  icon: Icons.rocket_launch,
+                  color: Colors.green,
+                  asyncValue: deploymentsAsync,
+                  valueBuilder: (deployments) => deployments.length.toString(),
+                  subtitleBuilder: (deployments) {
+                    final running = deployments
+                        .where((d) => d.info?.state == DeploymentState.running)
+                        .length;
+                    return '$running running';
+                  },
+                  onTap: () => context.go(AppRoutes.deployments),
+                ),
+                _StatCard(
+                  title: 'Stacks',
+                  icon: Icons.layers,
+                  color: Colors.purple,
+                  asyncValue: stacksAsync,
+                  valueBuilder: (stacks) => stacks.length.toString(),
+                  subtitleBuilder: (stacks) {
+                    final running = stacks
+                        .where((s) => s.info.state == StackState.running)
+                        .length;
+                    return '$running running';
+                  },
+                  onTap: () => context.go(AppRoutes.stacks),
+                ),
+                _StatCard(
+                  title: 'Repos',
+                  icon: Icons.source,
+                  color: Colors.orange,
+                  asyncValue: reposAsync,
+                  valueBuilder: (repos) => repos.length.toString(),
+                  subtitleBuilder: (repos) {
+                    final busy = repos.where((r) => r.info.state.isBusy).length;
+                    return '$busy busy';
+                  },
+                  onTap: () => context.go(AppRoutes.repos),
+                ),
+                _StatCard(
+                  title: 'Builds',
+                  icon: Icons.build_circle,
+                  color: Colors.teal,
+                  asyncValue: buildsAsync,
+                  valueBuilder: (builds) => builds.length.toString(),
+                  subtitleBuilder: (builds) {
+                    final running = builds
+                        .where((b) => b.info.state == BuildState.building)
+                        .length;
+                    return '$running running';
+                  },
+                  onTap: () => context.go(AppRoutes.builds),
+                ),
+                _StatCard(
+                  title: 'Procedures',
+                  icon: Icons.playlist_play,
+                  color: Colors.indigo,
+                  asyncValue: proceduresAsync,
+                  valueBuilder: (procedures) => procedures.length.toString(),
+                  subtitleBuilder: (procedures) {
+                    final running = procedures
+                        .where((p) => p.info.state == ProcedureState.running)
+                        .length;
+                    return '$running running';
+                  },
+                  onTap: () => context.go(AppRoutes.procedures),
                 ),
               ],
-            ),
-            const Gap(12),
-            _StatCard(
-              title: 'Stacks',
-              icon: Icons.layers,
-              color: Colors.purple,
-              asyncValue: stacksAsync,
-              valueBuilder: (stacks) => stacks.length.toString(),
-              subtitleBuilder: (stacks) {
-                final running = stacks
-                    .where((s) => s.info.state == StackState.running)
-                    .length;
-                return '$running running';
-              },
-              onTap: () => context.go(AppRoutes.stacks),
-            ),
-            const Gap(12),
-            _StatCard(
-              title: 'Repos',
-              icon: Icons.source,
-              color: Colors.orange,
-              asyncValue: reposAsync,
-              valueBuilder: (repos) => repos.length.toString(),
-              subtitleBuilder: (repos) {
-                final busy = repos.where((r) => r.info.state.isBusy).length;
-                return '$busy busy';
-              },
-              onTap: () => context.go(AppRoutes.repos),
-            ),
-            const Gap(12),
-            _StatCard(
-              title: 'Builds',
-              icon: Icons.build_circle,
-              color: Colors.teal,
-              asyncValue: buildsAsync,
-              valueBuilder: (builds) => builds.length.toString(),
-              subtitleBuilder: (builds) {
-                final running = builds
-                    .where((b) => b.info.state == BuildState.building)
-                    .length;
-                return '$running running';
-              },
-              onTap: () => context.go(AppRoutes.builds),
             ),
             const Gap(24),
 
@@ -291,6 +304,35 @@ class HomeView extends ConsumerWidget {
                   children: builds
                       .take(5)
                       .map((build) => _BuildListTile(buildItem: build))
+                      .toList(),
+                );
+              },
+              loading: () => const _LoadingTile(),
+              error: (e, _) => _ErrorTile(message: e.toString()),
+            ),
+            const Gap(24),
+
+            // Recent procedures
+            _SectionHeader(
+              title: 'Procedures',
+              onSeeAll: () => context.go(AppRoutes.procedures),
+            ),
+            const Gap(8),
+            proceduresAsync.when(
+              data: (procedures) {
+                if (procedures.isEmpty) {
+                  return const _EmptyListTile(
+                    icon: Icons.playlist_play_outlined,
+                    message: 'No procedures',
+                  );
+                }
+                return Column(
+                  children: procedures
+                      .take(5)
+                      .map(
+                        (procedure) =>
+                            _ProcedureListTile(procedure: procedure),
+                      )
                       .toList(),
                 );
               },
@@ -629,6 +671,44 @@ class _BuildListTile extends StatelessWidget {
         ),
         onTap: () => context.go(
           '${AppRoutes.builds}/${buildItem.id}?name=${Uri.encodeComponent(buildItem.name)}',
+        ),
+      ),
+    );
+  }
+}
+
+class _ProcedureListTile extends StatelessWidget {
+  const _ProcedureListTile({required this.procedure});
+
+  final ProcedureListItem procedure;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = procedure.info.state;
+    final color = switch (state) {
+      ProcedureState.running => Colors.blue,
+      ProcedureState.ok => Colors.green,
+      ProcedureState.failed => Colors.red,
+      ProcedureState.unknown => Colors.orange,
+    };
+
+    final stages = procedure.info.stages;
+
+    return Card(
+      child: ListTile(
+        leading: Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        title: Text(procedure.name),
+        subtitle: Text('$stages stages'),
+        trailing: Text(
+          state.displayName,
+          style: TextStyle(color: color, fontWeight: FontWeight.w500),
+        ),
+        onTap: () => context.go(
+          '${AppRoutes.procedures}/${procedure.id}?name=${Uri.encodeComponent(procedure.name)}',
         ),
       ),
     );
