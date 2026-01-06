@@ -24,7 +24,7 @@ class ResourcesView extends ConsumerWidget {
           const SizedBox(height: 8),
           for (final resource in ResourceType.values)
             ListTile(
-              leading: Icon(resource.icon),
+              leading: Icon(resource.icon, color: resource.color),
               title: Text(resource.label),
               trailing: Icon(AppIcons.chevron),
               onTap: () => context.push(_routeFor(resource)),
