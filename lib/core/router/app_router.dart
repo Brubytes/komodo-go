@@ -8,6 +8,7 @@ import '../../features/auth/presentation/views/login_view.dart';
 import '../../features/deployments/presentation/views/deployments_list_view.dart';
 import '../../features/home/presentation/views/home_view.dart';
 import '../../features/servers/presentation/views/servers_list_view.dart';
+import '../widgets/adaptive_bottom_navigation_bar.dart';
 
 part 'app_router.g.dart';
 
@@ -56,35 +57,28 @@ GoRouter appRouter(Ref ref) {
         routes: [
           GoRoute(
             path: AppRoutes.home,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: HomeView(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: HomeView()),
           ),
           GoRoute(
             path: AppRoutes.servers,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ServersListView(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: ServersListView()),
             routes: [
               GoRoute(
                 path: ':id',
                 builder: (context, state) {
                   final id = state.pathParameters['id']!;
-                  final name =
-                      state.uri.queryParameters['name'] ?? 'Server';
-                  return ServerDetailView(
-                    serverId: id,
-                    serverName: name,
-                  );
+                  final name = state.uri.queryParameters['name'] ?? 'Server';
+                  return ServerDetailView(serverId: id, serverName: name);
                 },
               ),
             ],
           ),
           GoRoute(
             path: AppRoutes.deployments,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: DeploymentsListView(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: DeploymentsListView()),
           ),
         ],
       ),
@@ -102,23 +96,23 @@ class MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: child,
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: AdaptiveBottomNavigationBar(
         selectedIndex: _calculateSelectedIndex(context),
-        onDestinationSelected: (index) => _onItemTapped(context, index),
-        destinations: const [
-          NavigationDestination(
+        onTap: (index) => _onItemTapped(context, index),
+        items: const [
+          AdaptiveNavigationItem(
             icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
+            activeIcon: Icon(Icons.home),
             label: 'Home',
           ),
-          NavigationDestination(
+          AdaptiveNavigationItem(
             icon: Icon(Icons.dns_outlined),
-            selectedIcon: Icon(Icons.dns),
+            activeIcon: Icon(Icons.dns),
             label: 'Servers',
           ),
-          NavigationDestination(
+          AdaptiveNavigationItem(
             icon: Icon(Icons.rocket_launch_outlined),
-            selectedIcon: Icon(Icons.rocket_launch),
+            activeIcon: Icon(Icons.rocket_launch),
             label: 'Deployments',
           ),
         ],
