@@ -8,6 +8,7 @@ abstract class AppIcons {
   // Navigation
   static const IconData home = LucideIcons.house;
   static const IconData resources = LucideIcons.layoutGrid;
+  static const IconData containers = LucideIcons.box;
   static const IconData notifications = LucideIcons.bell;
   static const IconData notificationsActive = LucideIcons.bellRing;
   static const IconData settings = LucideIcons.settings;

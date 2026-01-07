@@ -17,6 +17,7 @@ import '../../features/actions/presentation/views/action_detail_view.dart';
 import '../../features/actions/presentation/views/actions_list_view.dart';
 import '../../features/syncs/presentation/views/sync_detail_view.dart';
 import '../../features/syncs/presentation/views/syncs_list_view.dart';
+import '../../features/containers/presentation/views/containers_view.dart';
 import '../../features/notifications/presentation/views/notifications_view.dart';
 import '../../features/resources/presentation/views/resources_view.dart';
 import '../../features/repos/presentation/views/repo_detail_view.dart';
@@ -52,6 +53,7 @@ abstract class AppRoutes {
   static const login = '/login';
   static const home = '/';
   static const resources = '/resources';
+  static const containers = '/containers';
   static const notifications = '/notifications';
   static const settings = '/settings';
 
@@ -125,6 +127,11 @@ GoRouter appRouter(Ref ref) {
             path: AppRoutes.resources,
             pageBuilder: (context, state) =>
                 _noTransitionTabPage(const ResourcesView()),
+          ),
+          GoRoute(
+            path: AppRoutes.containers,
+            pageBuilder: (context, state) =>
+                _noTransitionTabPage(const ContainersView()),
           ),
           GoRoute(
             path: AppRoutes.notifications,
@@ -304,6 +311,11 @@ class MainShell extends StatelessWidget {
             label: 'Resources',
           ),
           AdaptiveNavigationItem(
+            icon: Icon(AppIcons.containers),
+            activeIcon: Icon(AppIcons.containers),
+            label: 'Containers',
+          ),
+          AdaptiveNavigationItem(
             icon: Icon(AppIcons.notifications),
             activeIcon: Icon(AppIcons.notificationsActive),
             label: 'Notifications',
@@ -330,10 +342,12 @@ class MainShell extends StatelessWidget {
     if (location.startsWith(AppRoutes.procedures)) return 1;
     if (location.startsWith(AppRoutes.actions)) return 1;
 
-    if (location.startsWith(AppRoutes.notifications)) return 2;
+    if (location.startsWith(AppRoutes.containers)) return 2;
 
-    if (location.startsWith(AppRoutes.settings)) return 3;
-    if (location.startsWith(AppRoutes.connections)) return 3;
+    if (location.startsWith(AppRoutes.notifications)) return 3;
+
+    if (location.startsWith(AppRoutes.settings)) return 4;
+    if (location.startsWith(AppRoutes.connections)) return 4;
     return 0;
   }
 
@@ -346,9 +360,12 @@ class MainShell extends StatelessWidget {
         context.go(AppRoutes.resources);
         break;
       case 2:
-        context.go(AppRoutes.notifications);
+        context.go(AppRoutes.containers);
         break;
       case 3:
+        context.go(AppRoutes.notifications);
+        break;
+      case 4:
         context.go(AppRoutes.settings);
         break;
     }
