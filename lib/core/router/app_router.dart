@@ -7,6 +7,7 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../features/auth/data/models/auth_state.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../features/auth/presentation/views/auth_loading_view.dart';
 import '../../features/auth/presentation/views/login_view.dart';
 import '../../features/deployments/presentation/views/deployments_list_view.dart';
 import '../../features/home/presentation/views/home_view.dart';
@@ -47,6 +48,7 @@ Page<void> _adaptiveStackPage(BuildContext context, Widget child) {
 
 /// Route paths
 abstract class AppRoutes {
+  static const splash = '/splash';
   static const login = '/login';
   static const home = '/';
   static const resources = '/resources';
@@ -72,25 +74,38 @@ GoRouter appRouter(Ref ref) {
   final authState = ref.watch(authProvider);
 
   return GoRouter(
-    initialLocation: AppRoutes.home,
+    initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
     redirect: (context, state) {
-      final isAuthenticated = authState.value?.isAuthenticated ?? false;
-      final isLoggingIn = state.matchedLocation == AppRoutes.login;
+      final isOnSplash = state.matchedLocation == AppRoutes.splash;
+      final isOnLogin = state.matchedLocation == AppRoutes.login;
+      final isAuthLoading = authState.isLoading;
 
-      // If not authenticated and not on login page, redirect to login
-      if (!isAuthenticated && !isLoggingIn) {
-        return AppRoutes.login;
+      if (isAuthLoading) {
+        return isOnSplash ? null : AppRoutes.splash;
       }
 
-      // If authenticated and on login page, redirect to home
-      if (isAuthenticated && isLoggingIn) {
+      final isAuthenticated = authState.value?.isAuthenticated ?? false;
+
+      // If not authenticated and not on login page, redirect to login
+      if (!isAuthenticated) {
+        return isOnLogin ? null : AppRoutes.login;
+      }
+
+      // If authenticated and on auth pages, redirect to home
+      if (isAuthenticated && (isOnLogin || isOnSplash)) {
         return AppRoutes.home;
       }
 
       return null;
     },
     routes: [
+      // Startup splash while auth state is being restored/validated
+      GoRoute(
+        path: AppRoutes.splash,
+        builder: (context, state) => const AuthLoadingView(),
+      ),
+
       // Login
       GoRoute(
         path: AppRoutes.login,
