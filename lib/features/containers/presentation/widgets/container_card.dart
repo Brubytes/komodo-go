@@ -8,9 +8,10 @@ import '../../data/models/container.dart';
 import '../providers/containers_provider.dart';
 
 class ContainerCard extends StatelessWidget {
-  const ContainerCard({required this.item, super.key});
+  const ContainerCard({required this.item, this.onTap, super.key});
 
   final ContainerOverviewItem item;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -24,72 +25,73 @@ class ContainerCard extends StatelessWidget {
     final portsLabel = _formatPorts(item.container.ports);
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _LeadingIcon(color: stateColor),
-                const Gap(12),
-                Expanded(
-                  child: Text(
-                    name,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _LeadingIcon(color: stateColor),
+                  const Gap(12),
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-                const Gap(12),
-                _StateChip(state: item.container.state, color: stateColor),
-              ],
-            ),
-            const Gap(12),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _InfoPill(
-                  icon: AppIcons.server,
-                  label: item.serverName,
-                  backgroundColor: scheme.secondaryContainer.withValues(
-                    alpha: 0.35,
-                  ),
-                  foregroundColor: scheme.onSecondaryContainer,
-                ),
-                if (image.isNotEmpty)
+                  const Gap(12),
+                  _StateChip(state: item.container.state, color: stateColor),
+                ],
+              ),
+              const Gap(12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
                   _InfoPill(
-                    icon: AppIcons.package,
-                    label: image,
-                    backgroundColor: scheme.surfaceContainerHighest.withValues(
-                      alpha: 0.6,
+                    icon: AppIcons.server,
+                    label: item.serverName,
+                    backgroundColor: scheme.secondaryContainer.withValues(
+                      alpha: 0.35,
                     ),
-                    foregroundColor: scheme.onSurface,
+                    foregroundColor: scheme.onSecondaryContainer,
                   ),
-                if (networks.isNotEmpty)
-                  _InfoPill(
-                    icon: AppIcons.network,
-                    label:
-                        '${networks.take(2).join(', ')}${networks.length > 2 ? '…' : ''}',
-                    backgroundColor: scheme.surfaceContainerHighest.withValues(
-                      alpha: 0.6,
+                  if (image.isNotEmpty)
+                    _InfoPill(
+                      icon: AppIcons.package,
+                      label: image,
+                      backgroundColor: scheme.surfaceContainerHighest
+                          .withValues(alpha: 0.6),
+                      foregroundColor: scheme.onSurface,
                     ),
-                    foregroundColor: scheme.onSurface,
-                  ),
-                if (portsLabel.isNotEmpty)
-                  _InfoPill(
-                    icon: AppIcons.plug,
-                    label: portsLabel,
-                    backgroundColor: scheme.surfaceContainerHighest.withValues(
-                      alpha: 0.6,
+                  if (networks.isNotEmpty)
+                    _InfoPill(
+                      icon: AppIcons.network,
+                      label:
+                          '${networks.take(2).join(', ')}${networks.length > 2 ? '…' : ''}',
+                      backgroundColor: scheme.surfaceContainerHighest
+                          .withValues(alpha: 0.6),
+                      foregroundColor: scheme.onSurface,
                     ),
-                    foregroundColor: scheme.onSurface,
-                  ),
-              ],
-            ),
-          ],
+                  if (portsLabel.isNotEmpty)
+                    _InfoPill(
+                      icon: AppIcons.plug,
+                      label: portsLabel,
+                      backgroundColor: scheme.surfaceContainerHighest
+                          .withValues(alpha: 0.6),
+                      foregroundColor: scheme.onSurface,
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

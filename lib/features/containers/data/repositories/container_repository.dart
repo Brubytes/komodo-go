@@ -6,6 +6,7 @@ import '../../../../core/api/api_exception.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/providers/dio_provider.dart';
 import '../models/container.dart';
+import '../models/container_log.dart';
 
 part 'container_repository.g.dart';
 
@@ -45,6 +46,36 @@ class ContainerRepository {
       print('Error parsing containers: $e');
       // ignore: avoid_print
       print('Stack trace: $stackTrace');
+      return Left(Failure.unknown(message: e.toString()));
+    }
+  }
+
+  Future<Either<Failure, ContainerLog>> getContainerLog({
+    required String serverIdOrName,
+    required String containerIdOrName,
+    int tail = 200,
+    bool timestamps = false,
+  }) async {
+    try {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'GetContainerLog',
+          params: {
+            'server': serverIdOrName,
+            'container': containerIdOrName,
+            'tail': tail,
+            'timestamps': timestamps,
+          },
+        ),
+      );
+
+      return Right(ContainerLog.fromJson(response as Map<String, dynamic>));
+    } on ApiException catch (e) {
+      if (e.isUnauthorized) {
+        return const Left(Failure.auth());
+      }
+      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
+    } catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }
   }

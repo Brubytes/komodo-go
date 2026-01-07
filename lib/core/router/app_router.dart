@@ -17,7 +17,9 @@ import '../../features/actions/presentation/views/action_detail_view.dart';
 import '../../features/actions/presentation/views/actions_list_view.dart';
 import '../../features/syncs/presentation/views/sync_detail_view.dart';
 import '../../features/syncs/presentation/views/syncs_list_view.dart';
+import '../../features/containers/presentation/providers/containers_provider.dart';
 import '../../features/containers/presentation/views/containers_view.dart';
+import '../../features/containers/presentation/views/container_detail_view.dart';
 import '../../features/notifications/presentation/views/notifications_view.dart';
 import '../../features/resources/presentation/views/resources_view.dart';
 import '../../features/repos/presentation/views/repo_detail_view.dart';
@@ -54,6 +56,7 @@ abstract class AppRoutes {
   static const home = '/';
   static const resources = '/resources';
   static const containers = '/containers';
+  static const containerDetail = '/containers/:serverId/:container';
   static const notifications = '/notifications';
   static const settings = '/settings';
 
@@ -132,6 +135,25 @@ GoRouter appRouter(Ref ref) {
             path: AppRoutes.containers,
             pageBuilder: (context, state) =>
                 _noTransitionTabPage(const ContainersView()),
+            routes: [
+              GoRoute(
+                path: ':serverId/:container',
+                pageBuilder: (context, state) {
+                  final serverId = state.pathParameters['serverId']!;
+                  final container = state.pathParameters['container']!;
+                  return _adaptiveStackPage(
+                    context,
+                    ContainerDetailView(
+                      serverId: serverId,
+                      containerIdOrName: container,
+                      initialItem: state.extra is ContainerOverviewItem
+                          ? state.extra as ContainerOverviewItem
+                          : null,
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: AppRoutes.notifications,

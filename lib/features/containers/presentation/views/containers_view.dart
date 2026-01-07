@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
+import '../../../../core/router/app_router.dart';
 import '../../../servers/data/models/server.dart';
 import '../../../servers/presentation/providers/servers_provider.dart';
 import '../providers/containers_filters_provider.dart';
@@ -114,7 +116,17 @@ class ContainersView extends HookConsumerWidget {
                       const Gap(12),
                     ],
                     for (final item in filtered) ...[
-                      ContainerCard(item: item),
+                      ContainerCard(
+                        item: item,
+                        onTap: () {
+                          final containerKey =
+                              item.container.id ?? item.container.name;
+                          context.push(
+                            '${AppRoutes.containers}/${item.serverId}/${Uri.encodeComponent(containerKey)}',
+                            extra: item,
+                          );
+                        },
+                      ),
                       const Gap(12),
                     ],
                     const SizedBox(height: 12),
