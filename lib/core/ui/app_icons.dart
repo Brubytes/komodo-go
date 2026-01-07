@@ -21,6 +21,9 @@ abstract class AppIcons {
   static const IconData delete = LucideIcons.trash2;
   static const IconData download = LucideIcons.download;
   static const IconData refresh = LucideIcons.refreshCw;
+  static const IconData network = LucideIcons.network;
+  static const IconData package = LucideIcons.package;
+  static const IconData plug = LucideIcons.plug;
   static const IconData pause = LucideIcons.pause;
   static const IconData play = LucideIcons.play;
   static const IconData stop = LucideIcons.square;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -9,7 +10,7 @@ import '../providers/containers_filters_provider.dart';
 import '../providers/containers_provider.dart';
 import '../widgets/container_card.dart';
 
-class ContainersView extends ConsumerWidget {
+class ContainersView extends HookConsumerWidget {
   const ContainersView({super.key});
 
   @override
@@ -18,11 +19,39 @@ class ContainersView extends ConsumerWidget {
     final serversAsync = ref.watch(serversProvider);
     final selectedServerId = ref.watch(containersServerFilterProvider);
     final searchQuery = ref.watch(containersSearchQueryProvider);
+    final isSearchVisible = useState(false);
+    final searchFocusNode = useFocusNode();
+    final searchController = useTextEditingController(text: searchQuery);
+
+    useEffect(() {
+      if (searchController.text == searchQuery) return null;
+      final selection = searchController.selection;
+      searchController.text = searchQuery;
+      searchController.selection = selection.copyWith(
+        baseOffset: searchController.text.length,
+        extentOffset: searchController.text.length,
+      );
+      return null;
+    }, [searchQuery]);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Containers'),
         actions: [
+          IconButton(
+            tooltip: isSearchVisible.value ? 'Hide search' : 'Search',
+            icon: Icon(isSearchVisible.value ? Icons.close : Icons.search),
+            onPressed: () {
+              isSearchVisible.value = !isSearchVisible.value;
+              if (isSearchVisible.value) {
+                Future<void>.delayed(const Duration(milliseconds: 50), () {
+                  if (context.mounted) searchFocusNode.requestFocus();
+                });
+              } else {
+                FocusManager.instance.primaryFocus?.unfocus();
+              }
+            },
+          ),
           IconButton(
             tooltip: 'Refresh',
             icon: const Icon(AppIcons.refresh),
@@ -38,13 +67,32 @@ class ContainersView extends ConsumerWidget {
             _FiltersRow(
               serversAsync: serversAsync,
               selectedServerId: selectedServerId,
-              searchQuery: searchQuery,
               onServerChanged: (value) => ref
                   .read(containersServerFilterProvider.notifier)
                   .setServerId(value),
-              onSearchChanged: (value) => ref
-                  .read(containersSearchQueryProvider.notifier)
-                  .setQuery(value),
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: isSearchVisible.value
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _SearchField(
+                        focusNode: searchFocusNode,
+                        controller: searchController,
+                        onChanged: (value) => ref
+                            .read(containersSearchQueryProvider.notifier)
+                            .setQuery(value),
+                        onClear: () {
+                          searchController.clear();
+                          ref
+                              .read(containersSearchQueryProvider.notifier)
+                              .setQuery('');
+                        },
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
             const Gap(12),
             containersAsync.when(
@@ -93,21 +141,15 @@ class _FiltersRow extends StatelessWidget {
   const _FiltersRow({
     required this.serversAsync,
     required this.selectedServerId,
-    required this.searchQuery,
     required this.onServerChanged,
-    required this.onSearchChanged,
   });
 
   final AsyncValue<List<Server>> serversAsync;
   final String? selectedServerId;
-  final String searchQuery;
   final ValueChanged<String?> onServerChanged;
-  final ValueChanged<String> onSearchChanged;
 
   @override
   Widget build(BuildContext context) {
-    final isNarrow = MediaQuery.sizeOf(context).width < 520;
-
     final serverField = serversAsync.maybeWhen(
       data: (servers) => DropdownButtonFormField<String?>(
         value: selectedServerId,
@@ -135,25 +177,42 @@ class _FiltersRow extends StatelessWidget {
       ),
     );
 
-    final searchField = TextFormField(
-      initialValue: searchQuery,
-      onChanged: onSearchChanged,
-      decoration: const InputDecoration(
+    return serverField;
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  const _SearchField({
+    required this.focusNode,
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final FocusNode focusNode;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      key: const ValueKey('containers_search'),
+      focusNode: focusNode,
+      controller: controller,
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
         labelText: 'Search',
-        prefixIcon: Icon(Icons.search),
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: controller.text.trim().isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Clear',
+                icon: const Icon(Icons.close),
+                onPressed: onClear,
+              ),
       ),
-    );
-
-    if (isNarrow) {
-      return Column(children: [serverField, const Gap(12), searchField]);
-    }
-
-    return Row(
-      children: [
-        Expanded(child: serverField),
-        const Gap(12),
-        Expanded(child: searchField),
-      ],
     );
   }
 }

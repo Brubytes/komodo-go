@@ -25,77 +25,94 @@ class ContainerCard extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
+        padding: const EdgeInsets.all(16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Icon(AppIcons.containers, color: stateColor),
-            ),
-            const Gap(12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: Theme.of(context).textTheme.titleMedium),
-                  const Gap(4),
-                  Text(
-                    item.serverName,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _LeadingIcon(color: stateColor),
+                const Gap(12),
+                Expanded(
+                  child: Text(
+                    name,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  if (image.isNotEmpty) ...[
-                    const Gap(4),
-                    Text(
-                      image,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                  if (networks.isNotEmpty) ...[
-                    const Gap(6),
-                    Text(
-                      'Networks: ${networks.take(3).join(', ')}${networks.length > 3 ? '…' : ''}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+                ),
+                const Gap(12),
+                _StateChip(state: item.container.state, color: stateColor),
+              ],
             ),
             const Gap(12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
               children: [
-                _StateChip(state: item.container.state, color: stateColor),
-                const Gap(8),
+                _InfoPill(
+                  icon: AppIcons.server,
+                  label: item.serverName,
+                  backgroundColor: scheme.secondaryContainer.withValues(
+                    alpha: 0.35,
+                  ),
+                  foregroundColor: scheme.onSecondaryContainer,
+                ),
+                if (image.isNotEmpty)
+                  _InfoPill(
+                    icon: AppIcons.package,
+                    label: image,
+                    backgroundColor: scheme.surfaceContainerHighest.withValues(
+                      alpha: 0.6,
+                    ),
+                    foregroundColor: scheme.onSurface,
+                  ),
+                if (networks.isNotEmpty)
+                  _InfoPill(
+                    icon: AppIcons.network,
+                    label:
+                        '${networks.take(2).join(', ')}${networks.length > 2 ? '…' : ''}',
+                    backgroundColor: scheme.surfaceContainerHighest.withValues(
+                      alpha: 0.6,
+                    ),
+                    foregroundColor: scheme.onSurface,
+                  ),
                 if (portsLabel.isNotEmpty)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        AppIcons.dot,
-                        size: 18,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                      const Gap(4),
-                      Text(
-                        portsLabel,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                  _InfoPill(
+                    icon: AppIcons.plug,
+                    label: portsLabel,
+                    backgroundColor: scheme.surfaceContainerHighest.withValues(
+                      alpha: 0.6,
+                    ),
+                    foregroundColor: scheme.onSurface,
                   ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LeadingIcon extends StatelessWidget {
+  const _LeadingIcon({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        color: color.withValues(alpha: 0.18),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Icon(AppIcons.containers, color: color),
       ),
     );
   }
@@ -140,6 +157,60 @@ class _StateChip extends StatelessWidget {
   }
 }
 
+class _InfoPill extends StatelessWidget {
+  const _InfoPill({
+    required this.icon,
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+      color: foregroundColor,
+      fontWeight: FontWeight.w600,
+    );
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 34, maxWidth: 520),
+      child: DecoratedBox(
+        decoration: ShapeDecoration(
+          color: backgroundColor,
+          shape: const StadiumBorder(),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: foregroundColor.withValues(alpha: 0.9),
+              ),
+              const Gap(8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textStyle,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 Color _stateColor(ContainerState state, ColorScheme scheme) {
   return switch (state) {
     ContainerState.running => AppTokens.statusGreen,
@@ -153,10 +224,14 @@ Color _stateColor(ContainerState state, ColorScheme scheme) {
 }
 
 String _formatPorts(List<ContainerPort> ports) {
-  final publicPorts =
-      ports.map((port) => port.publicPort).whereType<int>().toSet().toList()
+  final values =
+      ports
+          .map((port) => port.publicPort ?? port.privatePort)
+          .where((port) => port > 0)
+          .toSet()
+          .toList()
         ..sort();
 
-  if (publicPorts.isEmpty) return '';
-  return publicPorts.take(4).join(' | ') + (publicPorts.length > 4 ? '…' : '');
+  if (values.isEmpty) return '';
+  return values.take(6).join(' • ') + (values.length > 6 ? '…' : '');
 }
