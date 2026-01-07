@@ -60,18 +60,34 @@ abstract class AppRoutes {
   static const notifications = '/notifications';
   static const settings = '/settings';
 
-  static const servers = '/servers';
-  static const serverDetail = '/servers/:id';
-  static const deployments = '/deployments';
-  static const stacks = '/stacks';
-  static const repos = '/repos';
-  static const syncs = '/syncs';
-  static const builds = '/builds';
-  static const procedures = '/procedures';
-  static const actions = '/actions';
+  static const servers = '$resources/servers';
+  static const serverDetail = '$servers/:id';
+  static const deployments = '$resources/deployments';
+  static const stacks = '$resources/stacks';
+  static const repos = '$resources/repos';
+  static const syncs = '$resources/syncs';
+  static const builds = '$resources/builds';
+  static const procedures = '$resources/procedures';
+  static const actions = '$resources/actions';
 
-  /// Legacy path (renamed to [settings]).
-  static const connections = '/connections';
+  static const connections = '$settings/connections';
+
+  /// Legacy paths.
+  static const legacyConnections = '/connections';
+  static const legacyServers = '/servers';
+  static const legacyDeployments = '/deployments';
+  static const legacyStacks = '/stacks';
+  static const legacyRepos = '/repos';
+  static const legacySyncs = '/syncs';
+  static const legacyBuilds = '/builds';
+  static const legacyProcedures = '/procedures';
+  static const legacyActions = '/actions';
+}
+
+String _withQuery(String location, Uri uri) {
+  final query = uri.query;
+  if (query.isEmpty) return location;
+  return '$location?$query';
 }
 
 @riverpod
@@ -117,188 +133,328 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const LoginView(),
       ),
 
-      // Shell route for bottom navigation
-      ShellRoute(
-        builder: (context, state, child) => MainShell(child: child),
+      // Legacy redirects (pre-stateful-shell paths).
+      GoRoute(
+        path: AppRoutes.legacyConnections,
+        redirect: (context, state) =>
+            _withQuery(AppRoutes.connections, state.uri),
+      ),
+      GoRoute(
+        path: AppRoutes.legacyServers,
+        redirect: (context, state) => _withQuery(AppRoutes.servers, state.uri),
         routes: [
           GoRoute(
-            path: AppRoutes.home,
-            pageBuilder: (context, state) =>
-                _noTransitionTabPage(const HomeView()),
+            path: ':id',
+            redirect: (context, state) => _withQuery(
+              '${AppRoutes.servers}/${state.pathParameters['id']!}',
+              state.uri,
+            ),
           ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.legacyDeployments,
+        redirect: (context, state) =>
+            _withQuery(AppRoutes.deployments, state.uri),
+      ),
+      GoRoute(
+        path: AppRoutes.legacyStacks,
+        redirect: (context, state) => _withQuery(AppRoutes.stacks, state.uri),
+        routes: [
           GoRoute(
-            path: AppRoutes.resources,
-            pageBuilder: (context, state) =>
-                _noTransitionTabPage(const ResourcesView()),
+            path: ':id',
+            redirect: (context, state) => _withQuery(
+              '${AppRoutes.stacks}/${state.pathParameters['id']!}',
+              state.uri,
+            ),
           ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.legacyRepos,
+        redirect: (context, state) => _withQuery(AppRoutes.repos, state.uri),
+        routes: [
           GoRoute(
-            path: AppRoutes.containers,
-            pageBuilder: (context, state) =>
-                _noTransitionTabPage(const ContainersView()),
-            routes: [
-              GoRoute(
-                path: ':serverId/:container',
-                pageBuilder: (context, state) {
-                  final serverId = state.pathParameters['serverId']!;
-                  final container = state.pathParameters['container']!;
-                  return _adaptiveStackPage(
-                    context,
-                    ContainerDetailView(
-                      serverId: serverId,
-                      containerIdOrName: container,
-                      initialItem: state.extra is ContainerOverviewItem
-                          ? state.extra as ContainerOverviewItem
-                          : null,
-                    ),
-                  );
-                },
-              ),
-            ],
+            path: ':id',
+            redirect: (context, state) => _withQuery(
+              '${AppRoutes.repos}/${state.pathParameters['id']!}',
+              state.uri,
+            ),
           ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.legacySyncs,
+        redirect: (context, state) => _withQuery(AppRoutes.syncs, state.uri),
+        routes: [
           GoRoute(
-            path: AppRoutes.notifications,
-            pageBuilder: (context, state) =>
-                _noTransitionTabPage(const NotificationsView()),
+            path: ':id',
+            redirect: (context, state) => _withQuery(
+              '${AppRoutes.syncs}/${state.pathParameters['id']!}',
+              state.uri,
+            ),
           ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.legacyBuilds,
+        redirect: (context, state) => _withQuery(AppRoutes.builds, state.uri),
+        routes: [
           GoRoute(
-            path: AppRoutes.settings,
-            pageBuilder: (context, state) =>
-                _noTransitionTabPage(const SettingsView()),
+            path: ':id',
+            redirect: (context, state) => _withQuery(
+              '${AppRoutes.builds}/${state.pathParameters['id']!}',
+              state.uri,
+            ),
           ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.legacyProcedures,
+        redirect: (context, state) =>
+            _withQuery(AppRoutes.procedures, state.uri),
+        routes: [
           GoRoute(
-            path: AppRoutes.connections,
-            pageBuilder: (context, state) =>
-                _adaptiveStackPage(context, const ConnectionsView()),
+            path: ':id',
+            redirect: (context, state) => _withQuery(
+              '${AppRoutes.procedures}/${state.pathParameters['id']!}',
+              state.uri,
+            ),
           ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.legacyActions,
+        redirect: (context, state) => _withQuery(AppRoutes.actions, state.uri),
+        routes: [
+          GoRoute(
+            path: ':id',
+            redirect: (context, state) => _withQuery(
+              '${AppRoutes.actions}/${state.pathParameters['id']!}',
+              state.uri,
+            ),
+          ),
+        ],
+      ),
 
-          GoRoute(
-            path: AppRoutes.servers,
-            pageBuilder: (context, state) =>
-                _adaptiveStackPage(context, const ServersListView()),
+      // Bottom navigation with stateful branch navigators.
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            MainShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
             routes: [
               GoRoute(
-                path: ':id',
-                pageBuilder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  final name = state.uri.queryParameters['name'] ?? 'Server';
-                  return _adaptiveStackPage(
-                    context,
-                    ServerDetailView(serverId: id, serverName: name),
-                  );
-                },
+                path: AppRoutes.home,
+                pageBuilder: (context, state) =>
+                    _noTransitionTabPage(const HomeView()),
               ),
             ],
           ),
-          GoRoute(
-            path: AppRoutes.deployments,
-            pageBuilder: (context, state) =>
-                _adaptiveStackPage(context, const DeploymentsListView()),
-          ),
-          GoRoute(
-            path: AppRoutes.stacks,
-            pageBuilder: (context, state) =>
-                _adaptiveStackPage(context, const StacksListView()),
+          StatefulShellBranch(
             routes: [
               GoRoute(
-                path: ':id',
-                pageBuilder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  final name = state.uri.queryParameters['name'] ?? 'Stack';
-                  return _adaptiveStackPage(
-                    context,
-                    StackDetailView(stackId: id, stackName: name),
-                  );
-                },
+                path: AppRoutes.resources,
+                pageBuilder: (context, state) =>
+                    _noTransitionTabPage(const ResourcesView()),
+                routes: [
+                  GoRoute(
+                    path: 'servers',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const ServersListView()),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        pageBuilder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          final name =
+                              state.uri.queryParameters['name'] ?? 'Server';
+                          return _adaptiveStackPage(
+                            context,
+                            ServerDetailView(serverId: id, serverName: name),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'deployments',
+                    pageBuilder: (context, state) => _adaptiveStackPage(
+                      context,
+                      const DeploymentsListView(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'stacks',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const StacksListView()),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        pageBuilder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          final name =
+                              state.uri.queryParameters['name'] ?? 'Stack';
+                          return _adaptiveStackPage(
+                            context,
+                            StackDetailView(stackId: id, stackName: name),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'repos',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const ReposListView()),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        pageBuilder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          final name =
+                              state.uri.queryParameters['name'] ?? 'Repo';
+                          return _adaptiveStackPage(
+                            context,
+                            RepoDetailView(repoId: id, repoName: name),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'syncs',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const SyncsListView()),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        pageBuilder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          final name =
+                              state.uri.queryParameters['name'] ?? 'Sync';
+                          return _adaptiveStackPage(
+                            context,
+                            SyncDetailView(syncId: id, syncName: name),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'builds',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const BuildsListView()),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        pageBuilder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          final name =
+                              state.uri.queryParameters['name'] ?? 'Build';
+                          return _adaptiveStackPage(
+                            context,
+                            BuildDetailView(buildId: id, buildName: name),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'procedures',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const ProceduresListView()),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        pageBuilder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          final name =
+                              state.uri.queryParameters['name'] ?? 'Procedure';
+                          return _adaptiveStackPage(
+                            context,
+                            ProcedureDetailView(
+                              procedureId: id,
+                              procedureName: name,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'actions',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const ActionsListView()),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        pageBuilder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          final name =
+                              state.uri.queryParameters['name'] ?? 'Action';
+                          return _adaptiveStackPage(
+                            context,
+                            ActionDetailView(actionId: id, actionName: name),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
-          GoRoute(
-            path: AppRoutes.repos,
-            pageBuilder: (context, state) =>
-                _adaptiveStackPage(context, const ReposListView()),
+          StatefulShellBranch(
             routes: [
               GoRoute(
-                path: ':id',
-                pageBuilder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  final name = state.uri.queryParameters['name'] ?? 'Repo';
-                  return _adaptiveStackPage(
-                    context,
-                    RepoDetailView(repoId: id, repoName: name),
-                  );
-                },
+                path: AppRoutes.containers,
+                pageBuilder: (context, state) =>
+                    _noTransitionTabPage(const ContainersView()),
+                routes: [
+                  GoRoute(
+                    path: ':serverId/:container',
+                    pageBuilder: (context, state) {
+                      final serverId = state.pathParameters['serverId']!;
+                      final container = state.pathParameters['container']!;
+                      return _adaptiveStackPage(
+                        context,
+                        ContainerDetailView(
+                          serverId: serverId,
+                          containerIdOrName: container,
+                          initialItem: state.extra is ContainerOverviewItem
+                              ? state.extra as ContainerOverviewItem
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
-          GoRoute(
-            path: AppRoutes.syncs,
-            pageBuilder: (context, state) =>
-                _adaptiveStackPage(context, const SyncsListView()),
+          StatefulShellBranch(
             routes: [
               GoRoute(
-                path: ':id',
-                pageBuilder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  final name = state.uri.queryParameters['name'] ?? 'Sync';
-                  return _adaptiveStackPage(
-                    context,
-                    SyncDetailView(syncId: id, syncName: name),
-                  );
-                },
+                path: AppRoutes.notifications,
+                pageBuilder: (context, state) =>
+                    _noTransitionTabPage(const NotificationsView()),
               ),
             ],
           ),
-          GoRoute(
-            path: AppRoutes.builds,
-            pageBuilder: (context, state) =>
-                _adaptiveStackPage(context, const BuildsListView()),
+          StatefulShellBranch(
             routes: [
               GoRoute(
-                path: ':id',
-                pageBuilder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  final name = state.uri.queryParameters['name'] ?? 'Build';
-                  return _adaptiveStackPage(
-                    context,
-                    BuildDetailView(buildId: id, buildName: name),
-                  );
-                },
-              ),
-            ],
-          ),
-          GoRoute(
-            path: AppRoutes.procedures,
-            pageBuilder: (context, state) =>
-                _adaptiveStackPage(context, const ProceduresListView()),
-            routes: [
-              GoRoute(
-                path: ':id',
-                pageBuilder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  final name = state.uri.queryParameters['name'] ?? 'Procedure';
-                  return _adaptiveStackPage(
-                    context,
-                    ProcedureDetailView(procedureId: id, procedureName: name),
-                  );
-                },
-              ),
-            ],
-          ),
-          GoRoute(
-            path: AppRoutes.actions,
-            pageBuilder: (context, state) =>
-                _adaptiveStackPage(context, const ActionsListView()),
-            routes: [
-              GoRoute(
-                path: ':id',
-                pageBuilder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  final name = state.uri.queryParameters['name'] ?? 'Action';
-                  return _adaptiveStackPage(
-                    context,
-                    ActionDetailView(actionId: id, actionName: name),
-                  );
-                },
+                path: AppRoutes.settings,
+                pageBuilder: (context, state) =>
+                    _noTransitionTabPage(const SettingsView()),
+                routes: [
+                  GoRoute(
+                    path: 'connections',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const ConnectionsView()),
+                  ),
+                ],
               ),
             ],
           ),
@@ -310,17 +466,17 @@ GoRouter appRouter(Ref ref) {
 
 /// Main shell with bottom navigation.
 class MainShell extends StatelessWidget {
-  const MainShell({required this.child, super.key});
+  const MainShell({required this.navigationShell, super.key});
 
-  final Widget child;
+  final StatefulNavigationShell navigationShell;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: child,
+      body: navigationShell,
       bottomNavigationBar: AdaptiveBottomNavigationBar(
-        selectedIndex: _calculateSelectedIndex(context),
-        onTap: (index) => _onItemTapped(context, index),
+        selectedIndex: navigationShell.currentIndex,
+        onTap: (index) => _onItemTapped(index),
         items: const [
           AdaptiveNavigationItem(
             icon: Icon(AppIcons.home),
@@ -352,44 +508,7 @@ class MainShell extends StatelessWidget {
     );
   }
 
-  int _calculateSelectedIndex(BuildContext context) {
-    final location = GoRouterState.of(context).matchedLocation;
-    if (location.startsWith(AppRoutes.resources)) return 1;
-    if (location.startsWith(AppRoutes.servers)) return 1;
-    if (location.startsWith(AppRoutes.deployments)) return 1;
-    if (location.startsWith(AppRoutes.stacks)) return 1;
-    if (location.startsWith(AppRoutes.repos)) return 1;
-    if (location.startsWith(AppRoutes.syncs)) return 1;
-    if (location.startsWith(AppRoutes.builds)) return 1;
-    if (location.startsWith(AppRoutes.procedures)) return 1;
-    if (location.startsWith(AppRoutes.actions)) return 1;
-
-    if (location.startsWith(AppRoutes.containers)) return 2;
-
-    if (location.startsWith(AppRoutes.notifications)) return 3;
-
-    if (location.startsWith(AppRoutes.settings)) return 4;
-    if (location.startsWith(AppRoutes.connections)) return 4;
-    return 0;
-  }
-
-  void _onItemTapped(BuildContext context, int index) {
-    switch (index) {
-      case 0:
-        context.go(AppRoutes.home);
-        break;
-      case 1:
-        context.go(AppRoutes.resources);
-        break;
-      case 2:
-        context.go(AppRoutes.containers);
-        break;
-      case 3:
-        context.go(AppRoutes.notifications);
-        break;
-      case 4:
-        context.go(AppRoutes.settings);
-        break;
-    }
+  void _onItemTapped(int index) {
+    navigationShell.goBranch(index);
   }
 }

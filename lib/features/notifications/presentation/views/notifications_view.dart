@@ -232,7 +232,7 @@ class _AlertTile extends ConsumerWidget {
         onTap: () {
           final route = _routeForTarget(target);
           if (route != null) {
-            context.push(route);
+            context.go(route);
           }
         },
       ),
@@ -317,7 +317,7 @@ class _UpdateTile extends ConsumerWidget {
         onTap: () {
           final route = _routeForTarget(target);
           if (route != null) {
-            context.push(route);
+            context.go(route);
           }
         },
       ),
