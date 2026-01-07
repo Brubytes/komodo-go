@@ -9,6 +9,7 @@ import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/target_display_name_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
 
 class NotificationsView extends ConsumerWidget {
@@ -160,18 +161,26 @@ class _UpdatesTab extends ConsumerWidget {
   }
 }
 
-class _AlertTile extends StatelessWidget {
+class _AlertTile extends ConsumerWidget {
   const _AlertTile({required this.alert});
 
   final Alert alert;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
 
     final title = alert.payload.displayTitle;
     final primary = alert.payload.primaryName;
     final target = alert.target;
+    final targetName = target == null
+        ? null
+        : ref
+              .watch(targetDisplayNameProvider(target))
+              .maybeWhen(
+                data: (value) => value,
+                orElse: () => target.displayName,
+              );
 
     final severityColor = switch (alert.level) {
       SeverityLevel.critical => scheme.error,
@@ -188,25 +197,15 @@ class _AlertTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (primary != null && primary.isNotEmpty) Text(primary),
-            const Gap(4),
-            Row(
-              children: [
-                Icon(
-                  _iconForTargetType(target?.type),
-                  size: 16,
+            if (targetName != null && targetName.isNotEmpty) ...[
+              const Gap(4),
+              Text(
+                targetName,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
-                const Gap(6),
-                Expanded(
-                  child: Text(
-                    _labelForTarget(target),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
             const Gap(4),
             Row(
               children: [
@@ -241,13 +240,13 @@ class _AlertTile extends StatelessWidget {
   }
 }
 
-class _UpdateTile extends StatelessWidget {
+class _UpdateTile extends ConsumerWidget {
   const _UpdateTile({required this.update});
 
   final UpdateListItem update;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
 
     final title = update.operation.isNotEmpty
@@ -256,6 +255,14 @@ class _UpdateTile extends StatelessWidget {
     final target = update.target;
     final operator = _bestOperatorLabel(update);
     final startTime = _formatDateTime(update.timestamp.toLocal());
+    final targetName = target == null
+        ? 'Unknown target'
+        : ref
+              .watch(targetDisplayNameProvider(target))
+              .maybeWhen(
+                data: (value) => value,
+                orElse: () => target.displayName,
+              );
 
     return Card(
       child: ListTile(
@@ -273,23 +280,11 @@ class _UpdateTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Gap(4),
-            Row(
-              children: [
-                Icon(
-                  _iconForTargetType(target?.type),
-                  size: 16,
-                  color: scheme.onSurfaceVariant,
-                ),
-                const Gap(6),
-                Expanded(
-                  child: Text(
-                    _labelForTarget(target),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
+            Text(
+              targetName,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
             const Gap(4),
             Row(
@@ -306,8 +301,7 @@ class _UpdateTile extends StatelessWidget {
                     ),
                   ),
                   const Gap(12),
-                ] else
-                  const Spacer(),
+                ],
                 Icon(AppIcons.clock, size: 16, color: scheme.onSurfaceVariant),
                 const Gap(6),
                 Text(
@@ -548,11 +542,6 @@ IconData _iconForTargetType(ResourceTargetType? type) {
     ResourceTargetType.alerter => AppIcons.notifications,
     ResourceTargetType.unknown || null => AppIcons.widgets,
   };
-}
-
-String _labelForTarget(ResourceTarget? target) {
-  if (target == null) return 'Unknown target';
-  return target.displayName;
 }
 
 String? _shortId(String raw) {
