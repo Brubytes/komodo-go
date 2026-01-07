@@ -529,7 +529,7 @@ String _humanizeVariant(String value) {
 
 IconData _iconForTargetType(ResourceTargetType? type) {
   return switch (type) {
-    ResourceTargetType.system => AppIcons.maintenance,
+    ResourceTargetType.system => AppIcons.settings,
     ResourceTargetType.server => AppIcons.server,
     ResourceTargetType.stack => AppIcons.stacks,
     ResourceTargetType.deployment => AppIcons.deployments,
@@ -538,7 +538,7 @@ IconData _iconForTargetType(ResourceTargetType? type) {
     ResourceTargetType.procedure => AppIcons.procedures,
     ResourceTargetType.action => AppIcons.actions,
     ResourceTargetType.resourceSync => AppIcons.syncs,
-    ResourceTargetType.builder => AppIcons.builds,
+    ResourceTargetType.builder => AppIcons.factory,
     ResourceTargetType.alerter => AppIcons.notifications,
     ResourceTargetType.unknown || null => AppIcons.widgets,
   };

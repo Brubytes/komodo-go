@@ -25,6 +25,7 @@ abstract class AppIcons {
   static const IconData stop = LucideIcons.square;
   static const IconData user = LucideIcons.user;
   static const IconData clock = LucideIcons.clock;
+  static const IconData factory = LucideIcons.factory;
 
   // Directional
   static IconData chevron = LucideIcons.chevronRight.dir();
