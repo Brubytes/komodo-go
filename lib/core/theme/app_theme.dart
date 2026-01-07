@@ -31,7 +31,7 @@ class AppTheme {
       brightness: Brightness.dark,
     );
 
-    final primary = AppTokens.brandPrimary;
+    final primary = AppTokens.brandPrimaryDark;
     final secondary = AppTokens.brandSecondary;
 
     return base.copyWith(
