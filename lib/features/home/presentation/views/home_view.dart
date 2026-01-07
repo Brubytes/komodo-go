@@ -5,7 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../../../core/router/app_router.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/widgets/main_app_bar.dart';
 import '../../../deployments/data/models/deployment.dart';
 import '../../../deployments/presentation/providers/deployments_provider.dart';
 import '../../../servers/data/models/server.dart';
@@ -54,36 +54,9 @@ class HomeView extends ConsumerWidget {
     final actionsAsync = ref.watch(actionsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Komodo'),
-        actions: [
-          IconButton(
-            icon: const Icon(AppIcons.logout),
-            onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Logout'),
-                  content: const Text('Are you sure you want to disconnect?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Cancel'),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('Logout'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirmed == true) {
-                await ref.read(authProvider.notifier).logout();
-              }
-            },
-          ),
-        ],
+      appBar: const MainAppBar(
+        title: 'Dashboard',
+        icon: AppIcons.home,
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -99,15 +72,6 @@ class HomeView extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Welcome message
-            Text(
-              'Dashboard',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Gap(16),
-
             // Quick stats
             GridView.count(
               crossAxisCount: 2,

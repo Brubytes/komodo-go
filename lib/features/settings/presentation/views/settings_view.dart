@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/settings/presentation/providers/theme_provider.dart';
 
 class SettingsView extends ConsumerWidget {
@@ -11,10 +13,13 @@ class SettingsView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final authAsync = ref.watch(authProvider);
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
+      appBar: const MainAppBar(
+        title: 'Settings',
+        icon: AppIcons.settings,
       ),
       body: ListView(
         children: [
@@ -29,6 +34,40 @@ class SettingsView extends ConsumerWidget {
             title: 'Theme',
             subtitle: _themeModeLabel(themeMode),
             onTap: () => _showThemeDialog(context, ref, themeMode),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: Icon(AppIcons.logout, color: scheme.error),
+            title: const Text('Logout'),
+            subtitle: const Text('Disconnect from the current instance'),
+            enabled: !authAsync.isLoading,
+            onTap: authAsync.isLoading
+                ? null
+                : () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Logout'),
+                        content: const Text(
+                          'Are you sure you want to disconnect?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text('Logout'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmed == true) {
+                      await ref.read(authProvider.notifier).logout();
+                    }
+                  },
           ),
         ],
       ),

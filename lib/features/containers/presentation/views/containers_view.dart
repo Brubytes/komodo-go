@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../core/widgets/main_app_bar.dart';
 import '../../../servers/data/models/server.dart';
 import '../../../servers/presentation/providers/servers_provider.dart';
 import '../providers/containers_filters_provider.dart';
@@ -37,8 +38,9 @@ class ContainersView extends HookConsumerWidget {
     }, [searchQuery]);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Containers'),
+      appBar: MainAppBar(
+        title: 'Containers',
+        icon: AppIcons.containers,
         actions: [
           IconButton(
             tooltip: isSearchVisible.value ? 'Hide search' : 'Search',
@@ -53,11 +55,6 @@ class ContainersView extends HookConsumerWidget {
                 FocusManager.instance.primaryFocus?.unfocus();
               }
             },
-          ),
-          IconButton(
-            tooltip: 'Refresh',
-            icon: const Icon(AppIcons.refresh),
-            onPressed: () => ref.invalidate(containersProvider),
           ),
         ],
       ),

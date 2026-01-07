@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../core/widgets/main_app_bar.dart';
 import '../providers/resources_tab_provider.dart';
 
 class ResourcesView extends ConsumerWidget {
@@ -18,7 +19,10 @@ class ResourcesView extends ConsumerWidget {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Resources')),
+      appBar: const MainAppBar(
+        title: 'Resources',
+        icon: AppIcons.resources,
+      ),
       body: ListView(
         children: [
           const SizedBox(height: 8),

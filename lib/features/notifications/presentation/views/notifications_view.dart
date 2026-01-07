@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
@@ -20,19 +21,10 @@ class NotificationsView extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Notifications'),
-          actions: [
-            IconButton(
-              tooltip: 'Refresh',
-              icon: const Icon(AppIcons.refresh),
-              onPressed: () {
-                ref.invalidate(alertsProvider);
-                ref.invalidate(updatesProvider);
-              },
-            ),
-          ],
-          bottom: const TabBar(
+        appBar: const MainAppBar(
+          title: 'Notifications',
+          icon: AppIcons.notifications,
+          bottom: TabBar(
             tabs: [
               Tab(text: 'Alerts'),
               Tab(text: 'Updates'),

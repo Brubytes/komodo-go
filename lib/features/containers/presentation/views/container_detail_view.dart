@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
+import '../../../../core/widgets/main_app_bar.dart';
 import '../providers/container_log_provider.dart';
 import '../providers/containers_provider.dart';
 import '../widgets/container_card.dart';
@@ -39,23 +40,9 @@ class ContainerDetailView extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Container'),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            icon: const Icon(AppIcons.refresh),
-            onPressed: () {
-              ref.invalidate(_containerItemProviderFamily);
-              ref.invalidate(
-                containerLogProvider(
-                  serverIdOrName: serverId,
-                  containerIdOrName: decodedContainerIdOrName,
-                ),
-              );
-            },
-          ),
-        ],
+      appBar: const MainAppBar(
+        title: 'Container',
+        icon: AppIcons.containers,
       ),
       body: RefreshIndicator(
         onRefresh: () async {
