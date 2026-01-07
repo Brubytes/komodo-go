@@ -23,6 +23,8 @@ abstract class AppIcons {
   static const IconData pause = LucideIcons.pause;
   static const IconData play = LucideIcons.play;
   static const IconData stop = LucideIcons.square;
+  static const IconData user = LucideIcons.user;
+  static const IconData clock = LucideIcons.clock;
 
   // Directional
   static IconData chevron = LucideIcons.chevronRight.dir();

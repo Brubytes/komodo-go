@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
@@ -168,29 +169,67 @@ class _AlertTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    final (icon, color) = switch (alert.level) {
-      SeverityLevel.critical => (AppIcons.error, scheme.error),
-      SeverityLevel.warning => (AppIcons.warning, scheme.tertiary),
-      SeverityLevel.ok => (AppIcons.ok, scheme.primary),
-      SeverityLevel.unknown => (AppIcons.unknown, scheme.onSurfaceVariant),
-    };
-
     final title = alert.payload.displayTitle;
     final primary = alert.payload.primaryName;
     final target = alert.target;
-    final secondary = [
-      if (primary != null) primary,
-      if (primary == null && target != null)
-        '${target.displayName} ${target.id}',
-      _formatTimestamp(alert.timestamp.toLocal()),
-    ].where((s) => s.isNotEmpty).join(' · ');
+
+    final severityColor = switch (alert.level) {
+      SeverityLevel.critical => scheme.error,
+      SeverityLevel.warning => scheme.tertiary,
+      SeverityLevel.ok => scheme.primary,
+      SeverityLevel.unknown => scheme.onSurfaceVariant,
+    };
 
     return Card(
       child: ListTile(
-        leading: Icon(icon, color: color),
+        leading: Icon(_iconForAlert(alert), color: severityColor),
         title: Text(title),
-        subtitle: Text(secondary),
-        trailing: alert.resolved ? const _Badge(label: 'Resolved') : null,
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (primary != null && primary.isNotEmpty) Text(primary),
+            const Gap(4),
+            Row(
+              children: [
+                Icon(
+                  _iconForTargetType(target?.type),
+                  size: 16,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const Gap(6),
+                Expanded(
+                  child: Text(
+                    _labelForTarget(target),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Gap(4),
+            Row(
+              children: [
+                Icon(AppIcons.clock, size: 16, color: scheme.onSurfaceVariant),
+                const Gap(6),
+                Expanded(
+                  child: Text(
+                    _formatTimestamp(alert.timestamp.toLocal()),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        trailing: alert.resolved
+            ? const _StatusChip(label: 'RESOLVED', kind: _ChipKind.neutral)
+            : _StatusChip(
+                label: _labelForSeverity(alert.level),
+                kind: _chipKindForAlertLevel(alert.level),
+              ),
         onTap: () {
           final route = _routeForTarget(target);
           if (route != null) {
@@ -211,32 +250,73 @@ class _UpdateTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    final (icon, color) = switch (update.status) {
-      UpdateStatus.running => (AppIcons.loading, scheme.primary),
-      UpdateStatus.success => (AppIcons.ok, scheme.primary),
-      UpdateStatus.failed => (AppIcons.error, scheme.error),
-      UpdateStatus.canceled => (AppIcons.canceled, scheme.onSurfaceVariant),
-      _ =>
-        update.success
-            ? (AppIcons.ok, scheme.primary)
-            : (AppIcons.unknown, scheme.onSurfaceVariant),
-    };
-
     final title = update.operation.isNotEmpty
         ? _humanizeVariant(update.operation)
         : 'Update';
     final target = update.target;
-    final secondary = [
-      if (target != null) '${target.displayName} ${target.id}',
-      if (update.operatorName.isNotEmpty) update.operatorName,
-      _formatTimestamp(update.timestamp.toLocal()),
-    ].where((s) => s.isNotEmpty).join(' · ');
+    final operator = _bestOperatorLabel(update);
+    final startTime = _formatDateTime(update.timestamp.toLocal());
 
     return Card(
       child: ListTile(
-        leading: Icon(icon, color: color),
-        title: Text(title),
-        subtitle: Text(secondary),
+        leading: Icon(_iconForTargetType(target?.type), color: scheme.primary),
+        title: Row(
+          children: [
+            Expanded(child: Text(title)),
+            _StatusChip(
+              label: _labelForUpdateStatus(update),
+              kind: _kindForUpdate(update),
+            ),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Gap(4),
+            Row(
+              children: [
+                Icon(
+                  _iconForTargetType(target?.type),
+                  size: 16,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const Gap(6),
+                Expanded(
+                  child: Text(
+                    _labelForTarget(target),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Gap(4),
+            Row(
+              children: [
+                Icon(AppIcons.user, size: 16, color: scheme.onSurfaceVariant),
+                const Gap(6),
+                Expanded(
+                  child: Text(
+                    operator,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const Gap(12),
+                Icon(AppIcons.clock, size: 16, color: scheme.onSurfaceVariant),
+                const Gap(6),
+                Text(
+                  startTime,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         onTap: () {
           final route = _routeForTarget(target);
           if (route != null) {
@@ -365,20 +445,47 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-class _Badge extends StatelessWidget {
-  const _Badge({required this.label});
+enum _ChipKind { success, warning, error, neutral }
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.label, required this.kind});
 
   final String label;
+  final _ChipKind kind;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    final (bg, fg) = switch (kind) {
+      _ChipKind.success => (
+        AppTokens.statusGreen.withValues(alpha: 0.16),
+        AppTokens.statusGreen,
+      ),
+      _ChipKind.warning => (
+        AppTokens.statusOrange.withValues(alpha: 0.18),
+        AppTokens.statusOrange,
+      ),
+      _ChipKind.error => (
+        AppTokens.statusRed.withValues(alpha: 0.16),
+        AppTokens.statusRed,
+      ),
+      _ChipKind.neutral => (
+        scheme.surfaceContainerHighest,
+        scheme.onSurfaceVariant,
+      ),
+    };
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: bg,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(label, style: Theme.of(context).textTheme.labelMedium),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg),
+      ),
     );
   }
 }
@@ -421,4 +528,150 @@ String _humanizeVariant(String value) {
   );
   if (withSpaces.isEmpty) return value;
   return withSpaces[0].toUpperCase() + withSpaces.substring(1);
+}
+
+IconData _iconForTargetType(ResourceTargetType? type) {
+  return switch (type) {
+    ResourceTargetType.system => AppIcons.maintenance,
+    ResourceTargetType.server => AppIcons.server,
+    ResourceTargetType.stack => AppIcons.stacks,
+    ResourceTargetType.deployment => AppIcons.deployments,
+    ResourceTargetType.build => AppIcons.builds,
+    ResourceTargetType.repo => AppIcons.repos,
+    ResourceTargetType.procedure => AppIcons.procedures,
+    ResourceTargetType.action => AppIcons.actions,
+    ResourceTargetType.resourceSync => AppIcons.syncs,
+    ResourceTargetType.builder => AppIcons.builds,
+    ResourceTargetType.alerter => AppIcons.notifications,
+    ResourceTargetType.unknown || null => AppIcons.widgets,
+  };
+}
+
+String _labelForTarget(ResourceTarget? target) {
+  if (target == null) return 'Unknown target';
+  if (target.type == ResourceTargetType.system) return target.displayName;
+  final id = target.id.trim();
+  if (id.isEmpty) return target.displayName;
+
+  final normalizedId = id.toLowerCase();
+  if (target.type == ResourceTargetType.system &&
+      (normalizedId == 'system' || normalizedId == 'core')) {
+    return target.displayName;
+  }
+
+  final suffix = _shortId(id);
+  return suffix == null
+      ? target.displayName
+      : '${target.displayName} · $suffix';
+}
+
+String? _shortId(String raw) {
+  final value = raw.trim();
+  if (value.isEmpty) return null;
+  if (value.length <= 12) return value;
+
+  final isHexish = RegExp(r'^[a-fA-F0-9]{12,}$').hasMatch(value);
+  final isDigits = RegExp(r'^[0-9]{12,}$').hasMatch(value);
+  if (!isHexish && !isDigits) return null;
+
+  return '${value.substring(0, 6)}…${value.substring(value.length - 4)}';
+}
+
+IconData _iconForAlert(Alert alert) {
+  return switch (alert.level) {
+    SeverityLevel.critical => AppIcons.error,
+    SeverityLevel.warning => AppIcons.warning,
+    SeverityLevel.ok => AppIcons.ok,
+    SeverityLevel.unknown => AppIcons.unknown,
+  };
+}
+
+String _labelForSeverity(SeverityLevel level) {
+  return switch (level) {
+    SeverityLevel.ok => 'OK',
+    SeverityLevel.warning => 'WARNING',
+    SeverityLevel.critical => 'CRITICAL',
+    SeverityLevel.unknown => 'ALERT',
+  };
+}
+
+String _labelForUpdateStatus(UpdateListItem update) {
+  return switch (update.status) {
+    UpdateStatus.running => 'RUNNING',
+    UpdateStatus.queued => 'QUEUED',
+    UpdateStatus.success => 'SUCCESS',
+    UpdateStatus.failed => 'FAILED',
+    UpdateStatus.canceled => 'CANCELED',
+    UpdateStatus.unknown => update.success ? 'SUCCESS' : 'UNKNOWN',
+  };
+}
+
+_ChipKind _kindForUpdate(UpdateListItem update) {
+  return switch (update.status) {
+    UpdateStatus.success => _ChipKind.success,
+    UpdateStatus.failed => _ChipKind.error,
+    UpdateStatus.running || UpdateStatus.queued => _ChipKind.warning,
+    UpdateStatus.canceled => _ChipKind.neutral,
+    UpdateStatus.unknown =>
+      update.success ? _ChipKind.success : _ChipKind.neutral,
+  };
+}
+
+_ChipKind _chipKindForAlertLevel(SeverityLevel level) {
+  return switch (level) {
+    SeverityLevel.ok => _ChipKind.success,
+    SeverityLevel.warning => _ChipKind.warning,
+    SeverityLevel.critical => _ChipKind.error,
+    SeverityLevel.unknown => _ChipKind.neutral,
+  };
+}
+
+String _bestOperatorLabel(UpdateListItem update) {
+  final preferred = update.operatorName.trim();
+  final fallback = update.username.trim();
+
+  if (preferred.isNotEmpty && _shortId(preferred) == null) {
+    return preferred;
+  }
+  if (fallback.isNotEmpty) {
+    return fallback;
+  }
+  return preferred.isNotEmpty ? preferred : 'Unknown';
+}
+
+String _formatDateTime(DateTime dateTime) {
+  final local = dateTime.toLocal();
+  final now = DateTime.now();
+
+  final isToday =
+      now.year == local.year &&
+      now.month == local.month &&
+      now.day == local.day;
+
+  final hour = local.hour;
+  final isPm = hour >= 12;
+  final hour12 = hour % 12 == 0 ? 12 : hour % 12;
+  final minute = local.minute.toString().padLeft(2, '0');
+  final ampm = isPm ? 'PM' : 'AM';
+
+  if (isToday) {
+    return '$hour12:$minute $ampm';
+  }
+
+  const months = <String>[
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  final month = months[local.month - 1];
+  return '$month ${local.day} · $hour12:$minute $ampm';
 }
