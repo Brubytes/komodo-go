@@ -28,13 +28,18 @@ import '../../../stacks/presentation/providers/stacks_provider.dart';
 class HomeView extends ConsumerWidget {
   const HomeView({super.key});
 
-  void _goToResources(
-    WidgetRef ref,
-    BuildContext context,
-    ResourceType resourceType,
-  ) {
-    ref.read(resourcesTargetProvider.notifier).open(resourceType);
-    context.go(AppRoutes.resources);
+  void _goToResources(BuildContext context, ResourceType resourceType) {
+    final route = switch (resourceType) {
+      ResourceType.servers => AppRoutes.servers,
+      ResourceType.deployments => AppRoutes.deployments,
+      ResourceType.stacks => AppRoutes.stacks,
+      ResourceType.repos => AppRoutes.repos,
+      ResourceType.syncs => AppRoutes.syncs,
+      ResourceType.builds => AppRoutes.builds,
+      ResourceType.procedures => AppRoutes.procedures,
+      ResourceType.actions => AppRoutes.actions,
+    };
+    context.go(route);
   }
 
   @override
@@ -106,9 +111,9 @@ class HomeView extends ConsumerWidget {
             // Quick stats
             GridView.count(
               crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 1.25,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               children: [
@@ -124,8 +129,7 @@ class HomeView extends ConsumerWidget {
                         .length;
                     return '$online online';
                   },
-                  onTap: () =>
-                      _goToResources(ref, context, ResourceType.servers),
+                  onTap: () => _goToResources(context, ResourceType.servers),
                 ),
                 _StatCard(
                   title: 'Deployments',
@@ -140,7 +144,7 @@ class HomeView extends ConsumerWidget {
                     return '$running running';
                   },
                   onTap: () =>
-                      _goToResources(ref, context, ResourceType.deployments),
+                      _goToResources(context, ResourceType.deployments),
                 ),
                 _StatCard(
                   title: 'Stacks',
@@ -154,8 +158,7 @@ class HomeView extends ConsumerWidget {
                         .length;
                     return '$running running';
                   },
-                  onTap: () =>
-                      _goToResources(ref, context, ResourceType.stacks),
+                  onTap: () => _goToResources(context, ResourceType.stacks),
                 ),
                 _StatCard(
                   title: 'Repos',
@@ -167,7 +170,7 @@ class HomeView extends ConsumerWidget {
                     final busy = repos.where((r) => r.info.state.isBusy).length;
                     return '$busy busy';
                   },
-                  onTap: () => _goToResources(ref, context, ResourceType.repos),
+                  onTap: () => _goToResources(context, ResourceType.repos),
                 ),
                 _StatCard(
                   title: 'Syncs',
@@ -181,7 +184,7 @@ class HomeView extends ConsumerWidget {
                         .length;
                     return '$running running';
                   },
-                  onTap: () => _goToResources(ref, context, ResourceType.syncs),
+                  onTap: () => _goToResources(context, ResourceType.syncs),
                 ),
                 _StatCard(
                   title: 'Builds',
@@ -195,8 +198,7 @@ class HomeView extends ConsumerWidget {
                         .length;
                     return '$running running';
                   },
-                  onTap: () =>
-                      _goToResources(ref, context, ResourceType.builds),
+                  onTap: () => _goToResources(context, ResourceType.builds),
                 ),
                 _StatCard(
                   title: 'Procedures',
@@ -210,8 +212,7 @@ class HomeView extends ConsumerWidget {
                         .length;
                     return '$running running';
                   },
-                  onTap: () =>
-                      _goToResources(ref, context, ResourceType.procedures),
+                  onTap: () => _goToResources(context, ResourceType.procedures),
                 ),
                 _StatCard(
                   title: 'Actions',
@@ -225,8 +226,7 @@ class HomeView extends ConsumerWidget {
                         .length;
                     return '$running running';
                   },
-                  onTap: () =>
-                      _goToResources(ref, context, ResourceType.actions),
+                  onTap: () => _goToResources(context, ResourceType.actions),
                 ),
               ],
             ),
@@ -235,8 +235,7 @@ class HomeView extends ConsumerWidget {
             // Recent servers
             _SectionHeader(
               title: 'Servers',
-              onSeeAll: () =>
-                  _goToResources(ref, context, ResourceType.servers),
+              onSeeAll: () => _goToResources(context, ResourceType.servers),
             ),
             const Gap(8),
             serversAsync.when(
@@ -262,8 +261,7 @@ class HomeView extends ConsumerWidget {
             // Recent deployments
             _SectionHeader(
               title: 'Deployments',
-              onSeeAll: () =>
-                  _goToResources(ref, context, ResourceType.deployments),
+              onSeeAll: () => _goToResources(context, ResourceType.deployments),
             ),
             const Gap(8),
             deploymentsAsync.when(
@@ -292,7 +290,7 @@ class HomeView extends ConsumerWidget {
             // Recent stacks
             _SectionHeader(
               title: 'Stacks',
-              onSeeAll: () => _goToResources(ref, context, ResourceType.stacks),
+              onSeeAll: () => _goToResources(context, ResourceType.stacks),
             ),
             const Gap(8),
             stacksAsync.when(
@@ -318,7 +316,7 @@ class HomeView extends ConsumerWidget {
             // Recent repos
             _SectionHeader(
               title: 'Repos',
-              onSeeAll: () => _goToResources(ref, context, ResourceType.repos),
+              onSeeAll: () => _goToResources(context, ResourceType.repos),
             ),
             const Gap(8),
             reposAsync.when(
@@ -344,7 +342,7 @@ class HomeView extends ConsumerWidget {
             // Recent syncs
             _SectionHeader(
               title: 'Syncs',
-              onSeeAll: () => _goToResources(ref, context, ResourceType.syncs),
+              onSeeAll: () => _goToResources(context, ResourceType.syncs),
             ),
             const Gap(8),
             syncsAsync.when(
@@ -370,7 +368,7 @@ class HomeView extends ConsumerWidget {
             // Recent builds
             _SectionHeader(
               title: 'Builds',
-              onSeeAll: () => _goToResources(ref, context, ResourceType.builds),
+              onSeeAll: () => _goToResources(context, ResourceType.builds),
             ),
             const Gap(8),
             buildsAsync.when(
@@ -396,8 +394,7 @@ class HomeView extends ConsumerWidget {
             // Recent procedures
             _SectionHeader(
               title: 'Procedures',
-              onSeeAll: () =>
-                  _goToResources(ref, context, ResourceType.procedures),
+              onSeeAll: () => _goToResources(context, ResourceType.procedures),
             ),
             const Gap(8),
             proceduresAsync.when(
@@ -425,8 +422,7 @@ class HomeView extends ConsumerWidget {
             // Recent actions
             _SectionHeader(
               title: 'Actions',
-              onSeeAll: () =>
-                  _goToResources(ref, context, ResourceType.actions),
+              onSeeAll: () => _goToResources(context, ResourceType.actions),
             ),
             const Gap(8),
             actionsAsync.when(
@@ -480,19 +476,19 @@ class _StatCard<T> extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(icon, color: color, size: 20),
+                    child: Icon(icon, color: color, size: 18),
                   ),
                   const Spacer(),
                   Icon(
@@ -503,14 +499,14 @@ class _StatCard<T> extends StatelessWidget {
                   ),
                 ],
               ),
-              const Gap(12),
+              const Gap(8),
               asyncValue.when(
                 data: (data) => Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       valueBuilder(data),
-                      style: Theme.of(context).textTheme.headlineMedium
+                      style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     Text(
@@ -521,7 +517,7 @@ class _StatCard<T> extends StatelessWidget {
                         ).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
-                    const Gap(4),
+                    const Gap(2),
                     Text(
                       subtitleBuilder(data),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -532,11 +528,11 @@ class _StatCard<T> extends StatelessWidget {
                   ],
                 ),
                 loading: () => const SizedBox(
-                  height: 60,
+                  height: 44,
                   child: Center(child: CircularProgressIndicator()),
                 ),
                 error: (_, __) => const SizedBox(
-                  height: 60,
+                  height: 44,
                   child: Center(child: Icon(AppIcons.formError)),
                 ),
               ),
