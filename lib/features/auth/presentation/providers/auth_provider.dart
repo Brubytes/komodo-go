@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/providers/dio_provider.dart';
@@ -12,6 +13,16 @@ part 'auth_provider.g.dart';
 class Auth extends _$Auth {
   @override
   Future<AuthState> build() async {
+    if (kDebugMode) {
+      const delayMs = int.fromEnvironment(
+        'AUTH_BOOT_DELAY_MS',
+        defaultValue: 0,
+      );
+      if (delayMs > 0) {
+        await Future<void>.delayed(Duration(milliseconds: delayMs));
+      }
+    }
+
     final repository = ref.read(authRepositoryProvider);
     final connectionsState = await ref.watch(connectionsProvider.future);
     final activeProfile = connectionsState.activeConnection;
