@@ -294,17 +294,20 @@ class _UpdateTile extends StatelessWidget {
             const Gap(4),
             Row(
               children: [
-                Icon(AppIcons.user, size: 16, color: scheme.onSurfaceVariant),
-                const Gap(6),
-                Expanded(
-                  child: Text(
-                    operator,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
+                if (operator != null) ...[
+                  Icon(AppIcons.user, size: 16, color: scheme.onSurfaceVariant),
+                  const Gap(6),
+                  Expanded(
+                    child: Text(
+                      operator,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
-                ),
-                const Gap(12),
+                  const Gap(12),
+                ] else
+                  const Spacer(),
                 Icon(AppIcons.clock, size: 16, color: scheme.onSurfaceVariant),
                 const Gap(6),
                 Text(
@@ -549,20 +552,7 @@ IconData _iconForTargetType(ResourceTargetType? type) {
 
 String _labelForTarget(ResourceTarget? target) {
   if (target == null) return 'Unknown target';
-  if (target.type == ResourceTargetType.system) return target.displayName;
-  final id = target.id.trim();
-  if (id.isEmpty) return target.displayName;
-
-  final normalizedId = id.toLowerCase();
-  if (target.type == ResourceTargetType.system &&
-      (normalizedId == 'system' || normalizedId == 'core')) {
-    return target.displayName;
-  }
-
-  final suffix = _shortId(id);
-  return suffix == null
-      ? target.displayName
-      : '${target.displayName} · $suffix';
+  return target.displayName;
 }
 
 String? _shortId(String raw) {
@@ -576,6 +566,8 @@ String? _shortId(String raw) {
 
   return '${value.substring(0, 6)}…${value.substring(value.length - 4)}';
 }
+
+bool _looksLikeOpaqueId(String raw) => _shortId(raw) != null;
 
 IconData _iconForAlert(Alert alert) {
   return switch (alert.level) {
@@ -626,17 +618,17 @@ _ChipKind _chipKindForAlertLevel(SeverityLevel level) {
   };
 }
 
-String _bestOperatorLabel(UpdateListItem update) {
+String? _bestOperatorLabel(UpdateListItem update) {
   final preferred = update.operatorName.trim();
   final fallback = update.username.trim();
 
-  if (preferred.isNotEmpty && _shortId(preferred) == null) {
+  if (preferred.isNotEmpty && !_looksLikeOpaqueId(preferred)) {
     return preferred;
   }
-  if (fallback.isNotEmpty) {
+  if (fallback.isNotEmpty && !_looksLikeOpaqueId(fallback)) {
     return fallback;
   }
-  return preferred.isNotEmpty ? preferred : 'Unknown';
+  return null;
 }
 
 String _formatDateTime(DateTime dateTime) {
