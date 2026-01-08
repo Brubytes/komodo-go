@@ -181,7 +181,6 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
                   ? _DetailSection(
                       title: 'Config',
                       icon: AppIcons.settings,
-                      tone: _SectionTone.secondary,
                       child: _ServerConfigContent(config: server!.config!),
                     )
                   : const _MessageCard(message: 'No config available'),
@@ -194,7 +193,6 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
                   ? _DetailSection(
                       title: 'System',
                       icon: AppIcons.server,
-                      tone: _SectionTone.tertiary,
                       child: _SystemInfoContent(info: info),
                     )
                   : const _MessageCard(message: 'System info unavailable'),
@@ -337,7 +335,7 @@ class _ServerHeroPanel extends StatelessWidget {
                 icon: AppIcons.hardDrive,
                 label: 'Disk',
                 value: diskUsed != null && diskTotal != null && diskTotal > 0
-                    ? '${_formatStorageGb(diskUsed)} / ${_formatStorageGb(diskTotal)}'
+                    ? _formatDiskUsage(usedGb: diskUsed, totalGb: diskTotal)
                     : '—',
                 progress: diskPercent,
                 tone: _MetricTone.tertiary,
@@ -367,12 +365,15 @@ class _ServerHeroPanel extends StatelessWidget {
     );
   }
 
-  String _formatStorageGb(double gb) {
-    if (gb >= 1024) {
-      final tb = gb / 1024;
-      return '${tb.toStringAsFixed(2)} TB';
+  String _formatDiskUsage({required double usedGb, required double totalGb}) {
+    final showTb = usedGb >= 1024 || totalGb >= 1024;
+    if (showTb) {
+      final usedTb = usedGb / 1024;
+      final totalTb = totalGb / 1024;
+      final decimals = (totalTb < 10 && usedTb < 10) ? 2 : 1;
+      return '${usedTb.toStringAsFixed(decimals)} / ${totalTb.toStringAsFixed(decimals)} TB';
     }
-    return '${gb.toStringAsFixed(1)} GB';
+    return '${usedGb.toStringAsFixed(1)} / ${totalGb.toStringAsFixed(1)} GB';
   }
 }
 
@@ -381,25 +382,18 @@ class _DetailSection extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.child,
-    this.tone = _SectionTone.primary,
   });
 
   final String title;
   final IconData icon;
   final Widget child;
-  final _SectionTone tone;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final (Color accent, Color accent2) = switch (tone) {
-      _SectionTone.primary => (scheme.primary, scheme.secondary),
-      _SectionTone.secondary => (scheme.secondary, scheme.primary),
-      _SectionTone.tertiary => (scheme.tertiary, scheme.primary),
-    };
+    final accent = scheme.primary;
 
     return Container(
       decoration: BoxDecoration(
@@ -417,7 +411,6 @@ class _DetailSection extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: [
                   accent.withValues(alpha: 0.10),
-                  accent2.withValues(alpha: 0.08),
                   scheme.surfaceContainer,
                 ],
               )
@@ -456,8 +449,6 @@ class _DetailSection extends StatelessWidget {
     );
   }
 }
-
-enum _SectionTone { primary, secondary, tertiary }
 
 class _HeroInfoRow extends StatelessWidget {
   const _HeroInfoRow({
@@ -614,48 +605,74 @@ class _SubCard extends StatelessWidget {
 class _StatusPill extends StatelessWidget {
   const _StatusPill({
     required this.label,
-    required this.color,
-    required this.background,
     required this.icon,
+    required this.tone,
   });
 
   factory _StatusPill.onOff({
     required bool isOn,
     required String onLabel,
     required String offLabel,
+    _PillTone onTone = _PillTone.success,
+    _PillTone offTone = _PillTone.neutral,
+    IconData onIcon = AppIcons.ok,
+    IconData offIcon = AppIcons.close,
   }) {
     return _StatusPill(
       label: isOn ? onLabel : offLabel,
-      color: isOn ? const Color(0xFF014226) : const Color(0xFF8C1D1D),
-      background: isOn ? const Color(0x1A4EB333) : const Color(0x1ADF2C2C),
-      icon: isOn ? AppIcons.ok : AppIcons.error,
+      tone: isOn ? onTone : offTone,
+      icon: isOn ? onIcon : offIcon,
     );
   }
 
   final String label;
-  final Color color;
-  final Color background;
   final IconData icon;
+  final _PillTone tone;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final (Color bg, Color fg, Color iconColor) = switch (tone) {
+      _PillTone.success => (
+        scheme.secondaryContainer.withValues(alpha: isDark ? 0.22 : 0.60),
+        scheme.onSecondaryContainer,
+        scheme.secondary,
+      ),
+      _PillTone.warning => (
+        scheme.tertiaryContainer.withValues(alpha: isDark ? 0.22 : 0.60),
+        scheme.onTertiaryContainer,
+        scheme.tertiary,
+      ),
+      _PillTone.alert => (
+        scheme.errorContainer.withValues(alpha: isDark ? 0.22 : 0.60),
+        scheme.onErrorContainer,
+        scheme.error,
+      ),
+      _PillTone.neutral => (
+        scheme.surfaceContainerHigh,
+        scheme.onSurface,
+        scheme.onSurfaceVariant,
+      ),
+    };
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: background,
+        color: bg,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: scheme.outlineVariant),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
+          Icon(icon, size: 16, color: iconColor),
           const Gap(6),
           Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: scheme.onSurface,
+              color: fg,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -664,6 +681,8 @@ class _StatusPill extends StatelessWidget {
     );
   }
 }
+
+enum _PillTone { success, neutral, warning, alert }
 
 class _ValuePill extends StatelessWidget {
   const _ValuePill({required this.label, required this.value});
@@ -840,7 +859,7 @@ class _SystemInfoContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final isLockedDown = info.terminalsDisabled || info.containerExecDisabled;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -900,17 +919,20 @@ class _SystemInfoContent extends StatelessWidget {
                 isOn: !info.terminalsDisabled,
                 onLabel: 'Terminal enabled',
                 offLabel: 'Terminal disabled',
+                offTone: _PillTone.warning,
+                offIcon: AppIcons.warning,
               ),
               _StatusPill.onOff(
                 isOn: !info.containerExecDisabled,
                 onLabel: 'Exec enabled',
                 offLabel: 'Exec disabled',
+                offTone: _PillTone.warning,
+                offIcon: AppIcons.warning,
               ),
               _StatusPill(
-                label: info.terminalsDisabled ? 'Locked down' : 'Operational',
-                color: scheme.primary,
-                background: scheme.primaryContainer.withValues(alpha: 0.55),
-                icon: AppIcons.ok,
+                label: isLockedDown ? 'Locked down' : 'Operational',
+                icon: isLockedDown ? AppIcons.warning : AppIcons.ok,
+                tone: isLockedDown ? _PillTone.warning : _PillTone.success,
               ),
             ],
           ),
@@ -957,18 +979,16 @@ class _ServerConfigContent extends StatelessWidget {
             statsMonitoringPill,
             autoPrunePill,
             if (config.passkey.isNotEmpty)
-              _StatusPill(
+              const _StatusPill(
                 label: 'Passkey set',
-                color: scheme.primary,
-                background: scheme.primaryContainer.withValues(alpha: 0.55),
                 icon: AppIcons.key,
+                tone: _PillTone.success,
               )
             else
-              _StatusPill(
+              const _StatusPill(
                 label: 'No passkey',
-                color: scheme.onSurfaceVariant,
-                background: scheme.surfaceContainerHigh,
                 icon: AppIcons.lock,
+                tone: _PillTone.neutral,
               ),
           ],
         ),
@@ -1240,7 +1260,7 @@ class _StatsHistoryContent extends StatelessWidget {
     final mem = latestStats?.memPercent;
     final disk = latestStats?.diskPercent;
 
-    const windowSamples = 32; // ~80s @ 2.5s refresh
+    const windowSamples = 48; // ~2 min @ 2.5s refresh
     final visibleHistory = history.length > windowSamples
         ? history.sublist(history.length - windowSamples)
         : history;
