@@ -6,6 +6,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Komodo Go is a Flutter app for controlling the Komodo infrastructure management platform. It uses a modern Flutter stack with Riverpod state management, functional programming patterns, and clean architecture principles.
 
+## Project Structure
+
+- `lib/`: application code.
+  - `lib/core/`: shared infrastructure (API client/interceptors, routing, storage, theming, utilities).
+  - `lib/features/<feature>/`: feature modules split into:
+    - `data/` (datasources, repositories, models)
+    - `presentation/` (views, widgets, providers)
+  - `lib/shared/`: shared models/providers used across features.
+- `test/`: Flutter tests (`test/unit/**` for unit tests, `test/widget_test.dart` for smoke/widget tests).
+- `android/`, `ios/`, `macos/`, `windows/`, `linux/`, `web/`: Flutter platform projects (tool-managed).
+- Generated output (do not edit by hand): `build/`, `.dart_tool/`, `**/*.g.dart`, `**/*.freezed.dart`.
+
 ## Development Commands
 
 Flutter is pinned via FVM (`.fvmrc`) to `3.38.5`. All Flutter commands must be prefixed with `fvm`:
@@ -35,6 +47,17 @@ fvm flutter analyze
 # Clean build artifacts
 fvm flutter clean
 ```
+
+## Coding Style
+
+- Use standard Dart formatting (2-space indentation, trailing commas where appropriate).
+- Names:
+  - Files: `lower_snake_case.dart`
+  - Types: `UpperCamelCase`
+  - Locals: `lowerCamelCase`
+- Riverpod:
+  - Keep providers in `lib/features/**/presentation/providers/` or `lib/core/providers/`.
+  - Don’t modify generated `*.g.dart` files.
 
 ## Architecture
 
@@ -150,6 +173,8 @@ Material 3 theme unified across iOS and Android:
 - Never hard-code hex colors in widgets
 - Light mode: no gradients (use solid/tinted surfaces)
 - Dark mode: subtle gradients are OK, sparingly
+- Avoid platform-adaptive widgets/styles when the goal is consistent UI across platforms.
+- Avoid too heavy android styles, should not feel and look like an android app on ios but rather a consistent compromise of ios and android design patterns.
 
 ### Detail Pages (Reusable UI Kit)
 
@@ -183,6 +208,7 @@ Detail screens should follow the same layout and components so we can apply a co
 - Mock only external dependencies (storage, API clients)
 - Test structure: `setUpAll()` for registrations, `setUp()` for initialization
 - Run `fvm flutter test` after changes to verify no regressions
+- Lints are driven by `very_good_analysis` via `analysis_options.yaml`.
 
 ## Navigation
 
@@ -216,3 +242,10 @@ The Komodo API has inconsistencies between endpoints:
 3. `authProvider.build()` validates credentials on startup
 4. `AuthInterceptor` adds auth headers to all requests
 5. Logout clears both credentials and base URL
+
+## Contributing
+
+## Security
+
+- Never commit real API credentials.
+- Secrets are stored via `flutter_secure_storage`; keep secrets out of logs and sample configs.
