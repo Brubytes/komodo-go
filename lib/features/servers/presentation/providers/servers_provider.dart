@@ -1,9 +1,9 @@
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/features/servers/data/models/server.dart';
+import 'package:komodo_go/features/servers/data/models/system_information.dart';
+import 'package:komodo_go/features/servers/data/models/system_stats.dart';
+import 'package:komodo_go/features/servers/data/repositories/server_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../data/models/server.dart';
-import '../../data/models/system_stats.dart';
-import '../../data/repositories/server_repository.dart';
 
 part 'servers_provider.g.dart';
 
@@ -63,5 +63,24 @@ Future<SystemStats?> serverStats(Ref ref, String serverId) async {
   return result.fold(
     (failure) => throw Exception(failure.displayMessage),
     (stats) => stats,
+  );
+}
+
+/// Provides system information for a specific server.
+@riverpod
+Future<SystemInformation?> serverSystemInformation(
+  Ref ref,
+  String serverId,
+) async {
+  final repository = ref.watch(serverRepositoryProvider);
+  if (repository == null) {
+    return null;
+  }
+
+  final result = await repository.getSystemInformation(serverId);
+
+  return result.fold(
+    (failure) => throw Exception(failure.displayMessage),
+    (info) => info,
   );
 }

@@ -50,10 +50,82 @@ sealed class ServerConfig with _$ServerConfig {
     @JsonKey(name: 'external_address') @Default('') String externalAddress,
     @Default('') String region,
     @Default(true) bool enabled,
+    @JsonKey(name: 'timeout_seconds') @Default(0) int timeoutSeconds,
+
+    /// Server passkey (sensitive) - do not display in UI.
+    @Default('') String passkey,
+    @JsonKey(name: 'ignore_mounts') @Default([]) List<String> ignoreMounts,
+    @JsonKey(name: 'stats_monitoring') @Default(true) bool statsMonitoring,
+    @JsonKey(name: 'auto_prune') @Default(false) bool autoPrune,
+    @Default([]) List<String> links,
+    @JsonKey(name: 'send_unreachable_alerts')
+    @Default(true)
+    bool sendUnreachableAlerts,
+    @JsonKey(name: 'send_cpu_alerts') @Default(true) bool sendCpuAlerts,
+    @JsonKey(name: 'send_mem_alerts') @Default(true) bool sendMemAlerts,
+    @JsonKey(name: 'send_disk_alerts') @Default(true) bool sendDiskAlerts,
+    @JsonKey(name: 'send_version_mismatch_alerts')
+    @Default(true)
+    bool sendVersionMismatchAlerts,
+    @JsonKey(name: 'cpu_warning') @Default(0) double cpuWarning,
+    @JsonKey(name: 'cpu_critical') @Default(0) double cpuCritical,
+    @JsonKey(name: 'mem_warning') @Default(0) double memWarning,
+    @JsonKey(name: 'mem_critical') @Default(0) double memCritical,
+    @JsonKey(name: 'disk_warning') @Default(0) double diskWarning,
+    @JsonKey(name: 'disk_critical') @Default(0) double diskCritical,
+    @JsonKey(name: 'maintenance_windows')
+    @Default([])
+    List<MaintenanceWindow> maintenanceWindows,
   }) = _ServerConfig;
 
   factory ServerConfig.fromJson(Map<String, dynamic> json) =>
       _$ServerConfigFromJson(json);
+}
+
+@freezed
+sealed class MaintenanceWindow with _$MaintenanceWindow {
+  const factory MaintenanceWindow({
+    @Default('') String name,
+    @Default('') String description,
+    @JsonKey(
+      name: 'schedule_type',
+      fromJson: _maintenanceScheduleTypeFromJson,
+      toJson: _maintenanceScheduleTypeToJson,
+    )
+    @Default(MaintenanceScheduleType.daily)
+    MaintenanceScheduleType scheduleType,
+    @JsonKey(name: 'day_of_week') @Default('') String dayOfWeek,
+    @Default('') String date,
+    @Default(0) int hour,
+    @Default(0) int minute,
+    @JsonKey(name: 'duration_minutes') @Default(0) int durationMinutes,
+    @Default('') String timezone,
+    @Default(false) bool enabled,
+  }) = _MaintenanceWindow;
+
+  factory MaintenanceWindow.fromJson(Map<String, dynamic> json) =>
+      _$MaintenanceWindowFromJson(json);
+}
+
+enum MaintenanceScheduleType { daily, weekly, oneTime }
+
+MaintenanceScheduleType _maintenanceScheduleTypeFromJson(Object? value) {
+  if (value is! String) return MaintenanceScheduleType.daily;
+  final normalized = value.trim().toLowerCase().replaceAll('_', '');
+  return switch (normalized) {
+    'daily' => MaintenanceScheduleType.daily,
+    'weekly' => MaintenanceScheduleType.weekly,
+    'onetime' => MaintenanceScheduleType.oneTime,
+    _ => MaintenanceScheduleType.daily,
+  };
+}
+
+String _maintenanceScheduleTypeToJson(MaintenanceScheduleType value) {
+  return switch (value) {
+    MaintenanceScheduleType.daily => 'Daily',
+    MaintenanceScheduleType.weekly => 'Weekly',
+    MaintenanceScheduleType.oneTime => 'OneTime',
+  };
 }
 
 /// Server information from the API (from list endpoint).

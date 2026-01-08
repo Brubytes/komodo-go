@@ -27,6 +27,7 @@ import '../../features/repos/presentation/views/repos_list_view.dart';
 import '../../features/procedures/presentation/views/procedure_detail_view.dart';
 import '../../features/procedures/presentation/views/procedures_list_view.dart';
 import '../../features/servers/presentation/views/servers_list_view.dart';
+import '../../features/servers/presentation/views/server_detail_view.dart';
 import '../../features/stacks/presentation/views/stack_detail_view.dart';
 import '../../features/stacks/presentation/views/stacks_list_view.dart';
 import '../../features/settings/presentation/views/connections_view.dart';

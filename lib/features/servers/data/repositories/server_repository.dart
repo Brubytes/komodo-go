@@ -6,6 +6,7 @@ import '../../../../core/api/api_exception.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/providers/dio_provider.dart';
 import '../models/server.dart';
+import '../models/system_information.dart';
 import '../models/system_stats.dart';
 
 part 'server_repository.g.dart';
@@ -86,6 +87,31 @@ class ServerRepository {
       );
 
       return Right(SystemStats.fromJson(response as Map<String, dynamic>));
+    } on ApiException catch (e) {
+      if (e.isUnauthorized) {
+        return const Left(Failure.auth());
+      }
+      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
+    } catch (e) {
+      return Left(Failure.unknown(message: e.toString()));
+    }
+  }
+
+  /// Gets system information for a server.
+  Future<Either<Failure, SystemInformation>> getSystemInformation(
+    String serverIdOrName,
+  ) async {
+    try {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'GetSystemInformation',
+          params: {'server': serverIdOrName},
+        ),
+      );
+
+      return Right(
+        SystemInformation.fromJson(response as Map<String, dynamic>),
+      );
     } on ApiException catch (e) {
       if (e.isUnauthorized) {
         return const Left(Failure.auth());
