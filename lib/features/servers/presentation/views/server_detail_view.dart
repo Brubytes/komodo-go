@@ -151,9 +151,9 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
             ..invalidate(serverStatsProvider(widget.serverId));
         },
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           children: [
-            _ServerSummaryCard(
+            _ServerHeroPanel(
               server: server ?? listServer,
               listServer: listServer,
               stats: stats,
@@ -163,8 +163,14 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
             ),
             const Gap(16),
             statsAsync.when(
-              data: (stats) =>
-                  _StatsHistoryCard(history: _history, latestStats: stats),
+              data: (stats) => _DetailSection(
+                title: 'Stats',
+                icon: AppIcons.activity,
+                child: _StatsHistoryContent(
+                  history: _history,
+                  latestStats: stats,
+                ),
+              ),
               loading: () => const _LoadingCard(),
               error: (error, _) =>
                   _MessageCard(message: 'Stats unavailable: $error'),
@@ -172,7 +178,11 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
             const Gap(16),
             serverAsync.when(
               data: (server) => server?.config != null
-                  ? _ServerConfigCard(config: server!.config!)
+                  ? _DetailSection(
+                      title: 'Config',
+                      icon: AppIcons.settings,
+                      child: _ServerConfigContent(config: server!.config!),
+                    )
                   : const _MessageCard(message: 'No config available'),
               loading: () => const _LoadingCard(),
               error: (error, _) => _MessageCard(message: 'Config: $error'),
@@ -180,7 +190,11 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
             const Gap(16),
             systemInfoAsync.when(
               data: (info) => info != null
-                  ? _SystemInfoCard(info: info)
+                  ? _DetailSection(
+                      title: 'System',
+                      icon: AppIcons.server,
+                      child: _SystemInfoContent(info: info),
+                    )
                   : const _MessageCard(message: 'System info unavailable'),
               loading: () => const _LoadingCard(),
               error: (error, _) =>
@@ -193,8 +207,8 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
   }
 }
 
-class _ServerSummaryCard extends StatelessWidget {
-  const _ServerSummaryCard({
+class _ServerHeroPanel extends StatelessWidget {
+  const _ServerHeroPanel({
     required this.server,
     required this.listServer,
     required this.stats,
@@ -244,102 +258,116 @@ class _ServerSummaryCard extends StatelessWidget {
         ? (stats.diskPercent / 100).clamp(0.0, 1.0)
         : null;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _MetricChip(
-                  icon: AppIcons.ok,
-                  label: 'Version',
-                  value: (version?.isNotEmpty ?? false) ? version! : '—',
-                ),
-                _MetricChip(
-                  icon: AppIcons.cpu,
-                  label: 'Cores',
-                  value: cores != null ? cores.toString() : '—',
-                ),
-                _MetricChip(
-                  icon: AppIcons.activity,
-                  label: 'Load (1m)',
-                  value: load != null ? load.toStringAsFixed(2) : '—',
-                  progress: loadPercent,
-                ),
-                _MetricChip(
-                  icon: AppIcons.memory,
-                  label: 'Memory',
-                  value: memUsed != null && memTotal != null && memTotal > 0
-                      ? '${memUsed.toStringAsFixed(1)} / ${memTotal.toStringAsFixed(1)} GB'
-                      : '—',
-                  progress: memPercent,
-                ),
-                _MetricChip(
-                  icon: AppIcons.hardDrive,
-                  label: 'Disk',
-                  value: diskUsed != null && diskTotal != null && diskTotal > 0
-                      ? '${diskUsed.toStringAsFixed(1)} / ${diskTotal.toStringAsFixed(1)} GB'
-                      : '—',
-                  progress: diskPercent,
-                ),
-                _MetricChip(
-                  icon: AppIcons.wifi,
-                  label: 'Net (in/out)',
-                  value:
-                      ingressBytesPerSecond != null &&
-                          egressBytesPerSecond != null
-                      ? '${formatBytesPerSecond(ingressBytesPerSecond!)} / ${formatBytesPerSecond(egressBytesPerSecond!)}'
-                      : '—',
-                ),
-              ],
-            ),
-            if ((address?.isNotEmpty ?? false) ||
-                (description?.isNotEmpty ?? false)) ...[
-              const Gap(12),
-              if (address?.isNotEmpty ?? false)
-                _InfoRow(label: 'Address', value: address!),
-              if (description?.isNotEmpty ?? false)
-                _InfoRow(label: 'Description', value: description!),
-            ],
-            if (server?.tags.isNotEmpty ?? false) ...[
-              const Gap(12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final tag in server!.tags)
-                    Chip(
-                      label: Text(tag),
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: scheme.secondaryContainer,
-                      labelStyle: TextStyle(color: scheme.onSecondaryContainer),
-                    ),
-                ],
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: scheme.outlineVariant),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            scheme.primary.withValues(alpha: 0.12),
+            scheme.secondary.withValues(alpha: 0.10),
+            scheme.surfaceContainer,
           ],
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (address?.isNotEmpty ?? false) ...[
+            _HeroInfoRow(
+              icon: AppIcons.network,
+              label: 'Address',
+              value: address!,
+            ),
+            const Gap(10),
+          ],
+          if (description?.isNotEmpty ?? false) ...[
+            _HeroInfoRow(
+              icon: AppIcons.tag,
+              label: 'Description',
+              value: description!,
+            ),
+            const Gap(12),
+          ],
+          _MetricGrid(
+            items: [
+              _MetricTileData(
+                icon: AppIcons.ok,
+                label: 'Version',
+                value: (version?.isNotEmpty ?? false) ? version! : '—',
+                tone: _MetricTone.success,
+              ),
+              _MetricTileData(
+                icon: AppIcons.cpu,
+                label: 'Cores',
+                value: cores != null ? cores.toString() : '—',
+                tone: _MetricTone.neutral,
+              ),
+              _MetricTileData(
+                icon: AppIcons.activity,
+                label: 'Load (1m)',
+                value: load != null ? load.toStringAsFixed(2) : '—',
+                progress: loadPercent,
+                tone: _MetricTone.primary,
+              ),
+              _MetricTileData(
+                icon: AppIcons.memory,
+                label: 'Memory',
+                value: memUsed != null && memTotal != null && memTotal > 0
+                    ? '${memUsed.toStringAsFixed(1)} / ${memTotal.toStringAsFixed(1)} GB'
+                    : '—',
+                progress: memPercent,
+                tone: _MetricTone.secondary,
+              ),
+              _MetricTileData(
+                icon: AppIcons.hardDrive,
+                label: 'Disk',
+                value: diskUsed != null && diskTotal != null && diskTotal > 0
+                    ? '${diskUsed.toStringAsFixed(1)} / ${diskTotal.toStringAsFixed(1)} GB'
+                    : '—',
+                progress: diskPercent,
+                tone: _MetricTone.tertiary,
+              ),
+              _MetricTileData(
+                icon: AppIcons.wifi,
+                label: 'Net (in/out)',
+                value:
+                    ingressBytesPerSecond != null &&
+                        egressBytesPerSecond != null
+                    ? '${formatBytesPerSecond(ingressBytesPerSecond!)} / ${formatBytesPerSecond(egressBytesPerSecond!)}'
+                    : '—',
+                tone: _MetricTone.neutral,
+              ),
+            ],
+          ),
+          if (server?.tags.isNotEmpty ?? false) ...[
+            const Gap(12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [for (final tag in server!.tags) _TagPill(text: tag)],
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
-class _MetricChip extends StatelessWidget {
-  const _MetricChip({
+class _DetailSection extends StatelessWidget {
+  const _DetailSection({
+    required this.title,
     required this.icon,
-    required this.label,
-    required this.value,
-    this.progress,
+    required this.child,
   });
 
+  final String title;
   final IconData icon;
-  final String label;
-  final String value;
-  final double? progress;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -347,225 +375,403 @@ class _MetricChip extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(color: scheme.outlineVariant),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: scheme.onSurfaceVariant),
-          const Gap(8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Icon(icon, size: 18, color: scheme.primary),
+              ),
+              const Gap(12),
               Text(
-                label,
-                style: textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
+                title,
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
                 ),
               ),
-              Text(
-                value,
-                style: textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (progress != null) ...[
-                const Gap(6),
-                SizedBox(
-                  width: 120,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: progress!.clamp(0, 1),
-                      minHeight: 4,
-                      backgroundColor: scheme.onSurfaceVariant.withValues(
-                        alpha: 0.12,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
+          const Gap(14),
+          child,
         ],
       ),
     );
   }
 }
 
-class _SystemInfoCard extends StatelessWidget {
-  const _SystemInfoCard({required this.info});
+class _HeroInfoRow extends StatelessWidget {
+  const _HeroInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
-  final SystemInformation info;
+  final IconData icon;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'System',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Gap(16),
-            if (info.name?.isNotEmpty ?? false)
-              _InfoRow(label: 'Name', value: info.name!),
-            if (info.hostName?.isNotEmpty ?? false)
-              _InfoRow(label: 'Host', value: info.hostName!),
-            if (info.os?.isNotEmpty ?? false)
-              _InfoRow(label: 'OS', value: info.os!),
-            if (info.kernel?.isNotEmpty ?? false)
-              _InfoRow(label: 'Kernel', value: info.kernel!),
-            if (info.cpuBrand.isNotEmpty)
-              _InfoRow(label: 'CPU', value: info.cpuBrand),
-            if (info.coreCount != null)
-              _InfoRow(label: 'Cores', value: info.coreCount.toString()),
-            _InfoRow(
-              label: 'Terminal',
-              value: info.terminalsDisabled ? 'Disabled' : 'Enabled',
-            ),
-            _InfoRow(
-              label: 'Container exec',
-              value: info.containerExecDisabled ? 'Disabled' : 'Enabled',
-            ),
-          ],
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: scheme.primary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Icon(icon, size: 18, color: scheme.primary),
+        ),
+        const Gap(12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const Gap(2),
+              Text(
+                value,
+                style: textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TagPill extends StatelessWidget {
+  const _TagPill({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: scheme.onSecondaryContainer,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 }
 
-class _ServerConfigCard extends StatelessWidget {
-  const _ServerConfigCard({required this.config});
+enum _MetricTone { primary, secondary, tertiary, success, neutral }
+
+class _MetricTileData {
+  const _MetricTileData({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.tone,
+    this.progress,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final double? progress;
+  final _MetricTone tone;
+}
+
+class _MetricGrid extends StatelessWidget {
+  const _MetricGrid({required this.items});
+
+  final List<_MetricTileData> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth >= 520 ? 3 : 2;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.55,
+          ),
+          itemBuilder: (context, index) => _MetricTile(item: items[index]),
+        );
+      },
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({required this.item});
+
+  final _MetricTileData item;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final (Color accent, Color accentContainer) = switch (item.tone) {
+      _MetricTone.primary => (scheme.primary, scheme.primaryContainer),
+      _MetricTone.secondary => (scheme.secondary, scheme.secondaryContainer),
+      _MetricTone.tertiary => (scheme.tertiary, scheme.tertiaryContainer),
+      _MetricTone.success => (scheme.secondary, scheme.secondaryContainer),
+      _MetricTone.neutral => (
+        scheme.onSurfaceVariant,
+        scheme.surfaceContainerHigh,
+      ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: accentContainer.withValues(alpha: 0.38),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: scheme.surface.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Icon(item.icon, size: 18, color: accent),
+              ),
+              const Gap(10),
+              Expanded(
+                child: Text(
+                  item.label,
+                  style: textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Text(
+            item.value,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (item.progress != null) ...[
+            const Gap(10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: item.progress!.clamp(0, 1),
+                minHeight: 6,
+                backgroundColor: scheme.onSurfaceVariant.withValues(
+                  alpha: 0.10,
+                ),
+                valueColor: AlwaysStoppedAnimation(accent),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SystemInfoContent extends StatelessWidget {
+  const _SystemInfoContent({required this.info});
+
+  final SystemInformation info;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (info.name?.isNotEmpty ?? false)
+          _InfoRow(label: 'Name', value: info.name!),
+        if (info.hostName?.isNotEmpty ?? false)
+          _InfoRow(label: 'Host', value: info.hostName!),
+        if (info.os?.isNotEmpty ?? false)
+          _InfoRow(label: 'OS', value: info.os!),
+        if (info.kernel?.isNotEmpty ?? false)
+          _InfoRow(label: 'Kernel', value: info.kernel!),
+        if (info.cpuBrand.isNotEmpty)
+          _InfoRow(label: 'CPU', value: info.cpuBrand),
+        if (info.coreCount != null)
+          _InfoRow(label: 'Cores', value: info.coreCount.toString()),
+        _InfoRow(
+          label: 'Terminal',
+          value: info.terminalsDisabled ? 'Disabled' : 'Enabled',
+        ),
+        _InfoRow(
+          label: 'Container exec',
+          value: info.containerExecDisabled ? 'Disabled' : 'Enabled',
+        ),
+      ],
+    );
+  }
+}
+
+class _ServerConfigContent extends StatelessWidget {
+  const _ServerConfigContent({required this.config});
 
   final ServerConfig config;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Config',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Gap(16),
-            _InfoRow(label: 'Enabled', value: config.enabled ? 'Yes' : 'No'),
-            _InfoRow(
-              label: 'Region',
-              value: config.region.isNotEmpty ? config.region : '—',
-            ),
-            _InfoRow(
-              label: 'Address',
-              value: config.address.isNotEmpty ? config.address : '—',
-            ),
-            _InfoRow(
-              label: 'External',
-              value: config.externalAddress.isNotEmpty
-                  ? config.externalAddress
-                  : '—',
-            ),
-            _InfoRow(
-              label: 'Timeout',
-              value: config.timeoutSeconds > 0
-                  ? '${config.timeoutSeconds}s'
-                  : '—',
-            ),
-            _InfoRow(
-              label: 'Passkey',
-              value: config.passkey.isNotEmpty ? 'Set' : 'Not set',
-            ),
-            _InfoRow(
-              label: 'Stats monitoring',
-              value: config.statsMonitoring ? 'On' : 'Off',
-            ),
-            _InfoRow(
-              label: 'Auto prune',
-              value: config.autoPrune ? 'On' : 'Off',
-            ),
-            if (config.ignoreMounts.isNotEmpty)
-              _InfoRow(
-                label: 'Ignore mounts',
-                value: config.ignoreMounts.join(', '),
-              ),
-            if (config.links.isNotEmpty)
-              _InfoRow(label: 'Links', value: config.links.join('\n')),
-            const Gap(8),
-            Text(
-              'Alerts & thresholds',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const Gap(8),
-            _InfoRow(
-              label: 'Unreachable',
-              value: config.sendUnreachableAlerts ? 'On' : 'Off',
-            ),
-            _InfoRow(
-              label: 'CPU alerts',
-              value: config.sendCpuAlerts ? 'On' : 'Off',
-            ),
-            _InfoRow(
-              label: 'Mem alerts',
-              value: config.sendMemAlerts ? 'On' : 'Off',
-            ),
-            _InfoRow(
-              label: 'Disk alerts',
-              value: config.sendDiskAlerts ? 'On' : 'Off',
-            ),
-            _InfoRow(
-              label: 'Version mismatch',
-              value: config.sendVersionMismatchAlerts ? 'On' : 'Off',
-            ),
-            _InfoRow(
-              label: 'CPU warn/crit',
-              value:
-                  '${config.cpuWarning.toStringAsFixed(0)}% / ${config.cpuCritical.toStringAsFixed(0)}%',
-            ),
-            _InfoRow(
-              label: 'Mem warn/crit',
-              value:
-                  '${config.memWarning.toStringAsFixed(1)} GB / ${config.memCritical.toStringAsFixed(1)} GB',
-            ),
-            _InfoRow(
-              label: 'Disk warn/crit',
-              value:
-                  '${config.diskWarning.toStringAsFixed(1)} GB / ${config.diskCritical.toStringAsFixed(1)} GB',
-            ),
-            if (config.maintenanceWindows.isNotEmpty) ...[
-              const Gap(8),
-              Text(
-                'Maintenance windows',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const Gap(8),
-              for (final window in config.maintenanceWindows)
-                _InfoRow(
-                  label: window.enabled ? 'Enabled' : 'Disabled',
-                  value:
-                      '${window.name} • ${window.scheduleType.name} • ${window.hour.toString().padLeft(2, '0')}:${window.minute.toString().padLeft(2, '0')} (${window.timezone})',
-                ),
-            ],
-          ],
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _InfoRow(label: 'Enabled', value: config.enabled ? 'Yes' : 'No'),
+        _InfoRow(
+          label: 'Region',
+          value: config.region.isNotEmpty ? config.region : '—',
         ),
-      ),
+        _InfoRow(
+          label: 'Address',
+          value: config.address.isNotEmpty ? config.address : '—',
+        ),
+        _InfoRow(
+          label: 'External',
+          value: config.externalAddress.isNotEmpty
+              ? config.externalAddress
+              : '—',
+        ),
+        _InfoRow(
+          label: 'Timeout',
+          value: config.timeoutSeconds > 0 ? '${config.timeoutSeconds}s' : '—',
+        ),
+        _InfoRow(
+          label: 'Passkey',
+          value: config.passkey.isNotEmpty ? 'Set' : 'Not set',
+        ),
+        _InfoRow(
+          label: 'Stats monitoring',
+          value: config.statsMonitoring ? 'On' : 'Off',
+        ),
+        _InfoRow(label: 'Auto prune', value: config.autoPrune ? 'On' : 'Off'),
+        if (config.ignoreMounts.isNotEmpty)
+          _InfoRow(
+            label: 'Ignore mounts',
+            value: config.ignoreMounts.join(', '),
+          ),
+        if (config.links.isNotEmpty)
+          _InfoRow(label: 'Links', value: config.links.join('\n')),
+        const Gap(10),
+        Text(
+          'Alerts & thresholds',
+          style: textTheme.titleSmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const Gap(8),
+        _InfoRow(
+          label: 'Unreachable',
+          value: config.sendUnreachableAlerts ? 'On' : 'Off',
+        ),
+        _InfoRow(
+          label: 'CPU alerts',
+          value: config.sendCpuAlerts ? 'On' : 'Off',
+        ),
+        _InfoRow(
+          label: 'Mem alerts',
+          value: config.sendMemAlerts ? 'On' : 'Off',
+        ),
+        _InfoRow(
+          label: 'Disk alerts',
+          value: config.sendDiskAlerts ? 'On' : 'Off',
+        ),
+        _InfoRow(
+          label: 'Version mismatch',
+          value: config.sendVersionMismatchAlerts ? 'On' : 'Off',
+        ),
+        _InfoRow(
+          label: 'CPU warn/crit',
+          value:
+              '${config.cpuWarning.toStringAsFixed(0)}% / ${config.cpuCritical.toStringAsFixed(0)}%',
+        ),
+        _InfoRow(
+          label: 'Mem warn/crit',
+          value:
+              '${config.memWarning.toStringAsFixed(1)} GB / ${config.memCritical.toStringAsFixed(1)} GB',
+        ),
+        _InfoRow(
+          label: 'Disk warn/crit',
+          value:
+              '${config.diskWarning.toStringAsFixed(1)} GB / ${config.diskCritical.toStringAsFixed(1)} GB',
+        ),
+        if (config.maintenanceWindows.isNotEmpty) ...[
+          const Gap(10),
+          Text(
+            'Maintenance windows',
+            style: textTheme.titleSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Gap(8),
+          for (final window in config.maintenanceWindows)
+            _InfoRow(
+              label: window.enabled ? 'Enabled' : 'Disabled',
+              value:
+                  '${window.name} • ${window.scheduleType.name} • ${window.hour.toString().padLeft(2, '0')}:${window.minute.toString().padLeft(2, '0')} (${window.timezone})',
+            ),
+        ],
+      ],
     );
   }
 }
@@ -577,8 +783,15 @@ class _MessageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(padding: const EdgeInsets.all(16), child: Text(message)),
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Text(message),
     );
   }
 }
@@ -588,11 +801,15 @@ class _LoadingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: scheme.outlineVariant),
       ),
+      child: const Center(child: CircularProgressIndicator()),
     );
   }
 }
@@ -615,8 +832,11 @@ class _StatsSample {
   final double egressBytesPerSecond;
 }
 
-class _StatsHistoryCard extends StatelessWidget {
-  const _StatsHistoryCard({required this.history, required this.latestStats});
+class _StatsHistoryContent extends StatelessWidget {
+  const _StatsHistoryContent({
+    required this.history,
+    required this.latestStats,
+  });
 
   final List<_StatsSample> history;
   final SystemStats? latestStats;
@@ -642,86 +862,74 @@ class _StatsHistoryCard extends StatelessWidget {
         .map((e) => e.egressBytesPerSecond)
         .toList(growable: false);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Stats',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Gap(16),
-            _HistoryRow(
-              label: 'CPU',
-              value: cpu != null ? '${cpu.toStringAsFixed(1)}%' : '—',
-              child: _SparklineChart(
-                values: cpuSeries,
-                color: scheme.primary,
-                capMinY: 0,
-                capMaxY: 100,
-              ),
-            ),
-            const Gap(12),
-            _HistoryRow(
-              label: 'Memory',
-              value: mem != null ? '${mem.toStringAsFixed(1)}%' : '—',
-              child: _SparklineChart(
-                values: memSeries,
-                color: scheme.secondary,
-                capMinY: 0,
-                capMaxY: 100,
-              ),
-            ),
-            const Gap(12),
-            _HistoryRow(
-              label: 'Disk',
-              value: disk != null ? '${disk.toStringAsFixed(1)}%' : '—',
-              child: _SparklineChart(
-                values: diskSeries,
-                color: scheme.tertiary,
-                capMinY: 0,
-                capMaxY: 100,
-              ),
-            ),
-            const Gap(16),
-            Text(
-              'Network',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const Gap(8),
-            _HistoryRow(
-              label: 'In / Out',
-              value: history.isNotEmpty
-                  ? '${formatBytesPerSecond(history.last.ingressBytesPerSecond)} / ${formatBytesPerSecond(history.last.egressBytesPerSecond)}'
-                  : '—',
-              child: _DualSparklineChart(
-                aValues: ingressSeries,
-                bValues: egressSeries,
-                aColor: scheme.primary,
-                bColor: scheme.secondary,
-              ),
-            ),
-            const Gap(12),
-            _InfoRow(
-              label: 'UI refresh',
-              value: uiRefreshSeconds != null
-                  ? '~${uiRefreshSeconds.toStringAsFixed(1)} s'
-                  : '—',
-            ),
-            if (latestStats?.pollingRate?.isNotEmpty ?? false)
-              _InfoRow(
-                label: 'Server polling',
-                value: latestStats!.pollingRate!,
-              ),
-          ],
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _HistoryRow(
+          label: 'CPU',
+          value: cpu != null ? '${cpu.toStringAsFixed(1)}%' : '—',
+          child: _SparklineChart(
+            values: cpuSeries,
+            color: scheme.primary,
+            capMinY: 0,
+            capMaxY: 100,
+          ),
         ),
-      ),
+        const Gap(12),
+        _HistoryRow(
+          label: 'Memory',
+          value: mem != null ? '${mem.toStringAsFixed(1)}%' : '—',
+          child: _SparklineChart(
+            values: memSeries,
+            color: scheme.secondary,
+            capMinY: 0,
+            capMaxY: 100,
+          ),
+        ),
+        const Gap(12),
+        _HistoryRow(
+          label: 'Disk',
+          value: disk != null ? '${disk.toStringAsFixed(1)}%' : '—',
+          child: _SparklineChart(
+            values: diskSeries,
+            color: scheme.tertiary,
+            capMinY: 0,
+            capMaxY: 100,
+          ),
+        ),
+        const Gap(14),
+        Text(
+          'Network',
+          style: textTheme.titleSmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const Gap(8),
+        _HistoryRow(
+          label: 'In / Out',
+          value: history.isNotEmpty
+              ? '${formatBytesPerSecond(history.last.ingressBytesPerSecond)} / ${formatBytesPerSecond(history.last.egressBytesPerSecond)}'
+              : '—',
+          child: _DualSparklineChart(
+            aValues: ingressSeries,
+            bValues: egressSeries,
+            aColor: scheme.primary,
+            bColor: scheme.secondary,
+          ),
+        ),
+        const Gap(12),
+        _InfoRow(
+          label: 'UI refresh',
+          value: uiRefreshSeconds != null
+              ? '~${uiRefreshSeconds.toStringAsFixed(1)} s'
+              : '—',
+        ),
+        if (latestStats?.pollingRate?.isNotEmpty ?? false)
+          _InfoRow(label: 'Server polling', value: latestStats!.pollingRate!),
+      ],
     );
   }
 
@@ -919,6 +1127,16 @@ class _SparklinePainter extends CustomPainter {
         path.lineTo(x, y);
       }
     }
+
+    final fillPath = Path.from(path)
+      ..lineTo(rect.right, rect.bottom)
+      ..lineTo(rect.left, rect.bottom)
+      ..close();
+
+    final fillPaint = Paint()
+      ..color = color.withValues(alpha: 0.14)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(fillPath, fillPaint);
 
     final linePaint = Paint()
       ..color = color
