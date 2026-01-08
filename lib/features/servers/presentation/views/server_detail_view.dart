@@ -337,7 +337,7 @@ class _ServerHeroPanel extends StatelessWidget {
                 icon: AppIcons.hardDrive,
                 label: 'Disk',
                 value: diskUsed != null && diskTotal != null && diskTotal > 0
-                    ? '${diskUsed.toStringAsFixed(1)} / ${diskTotal.toStringAsFixed(1)} GB'
+                    ? '${_formatStorageGb(diskUsed)} / ${_formatStorageGb(diskTotal)}'
                     : '—',
                 progress: diskPercent,
                 tone: _MetricTone.tertiary,
@@ -365,6 +365,14 @@ class _ServerHeroPanel extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatStorageGb(double gb) {
+    if (gb >= 1024) {
+      final tb = gb / 1024;
+      return '${tb.toStringAsFixed(2)} TB';
+    }
+    return '${gb.toStringAsFixed(1)} GB';
   }
 }
 
@@ -538,32 +546,37 @@ class _SubCard extends StatelessWidget {
   const _SubCard({
     required this.title,
     required this.icon,
-    required this.tone,
     required this.child,
   });
 
   final String title;
   final IconData icon;
-  final _SectionTone tone;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final accent = switch (tone) {
-      _SectionTone.primary => scheme.primary,
-      _SectionTone.secondary => scheme.secondary,
-      _SectionTone.tertiary => scheme.tertiary,
-    };
+    final accent = scheme.primary;
+    final base = scheme.surfaceContainerHigh;
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.08),
+        color: isDark
+            ? base
+            : Color.alphaBlend(accent.withValues(alpha: 0.06), base),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: scheme.outlineVariant),
+        gradient: isDark
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [accent.withValues(alpha: 0.10), base],
+              )
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -834,7 +847,6 @@ class _SystemInfoContent extends StatelessWidget {
         _SubCard(
           title: 'Basics',
           icon: AppIcons.server,
-          tone: _SectionTone.primary,
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -850,7 +862,6 @@ class _SystemInfoContent extends StatelessWidget {
         _SubCard(
           title: 'OS',
           icon: AppIcons.settings,
-          tone: _SectionTone.secondary,
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -866,7 +877,6 @@ class _SystemInfoContent extends StatelessWidget {
         _SubCard(
           title: 'Hardware',
           icon: AppIcons.cpu,
-          tone: _SectionTone.tertiary,
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -882,7 +892,6 @@ class _SystemInfoContent extends StatelessWidget {
         _SubCard(
           title: 'Access',
           icon: AppIcons.lock,
-          tone: _SectionTone.secondary,
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -967,7 +976,6 @@ class _ServerConfigContent extends StatelessWidget {
         _SubCard(
           title: 'Connection',
           icon: AppIcons.network,
-          tone: _SectionTone.secondary,
           child: Column(
             children: [
               _InfoRow(
@@ -1004,7 +1012,6 @@ class _ServerConfigContent extends StatelessWidget {
         _SubCard(
           title: 'Alerts',
           icon: AppIcons.notifications,
-          tone: _SectionTone.primary,
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -1041,7 +1048,6 @@ class _ServerConfigContent extends StatelessWidget {
         _SubCard(
           title: 'Thresholds',
           icon: AppIcons.warning,
-          tone: _SectionTone.tertiary,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1121,7 +1127,6 @@ class _ServerConfigContent extends StatelessWidget {
           _SubCard(
             title: 'Maintenance',
             icon: AppIcons.maintenance,
-            tone: _SectionTone.secondary,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1385,7 +1390,7 @@ class _HistoryRow extends StatelessWidget {
           ],
         ),
         const Gap(6),
-        SizedBox(height: 56, child: child),
+        SizedBox(height: 56, width: double.infinity, child: child),
       ],
     );
   }
