@@ -234,6 +234,7 @@ class _ServerHeroPanel extends StatelessWidget {
     final systemInformation = this.systemInformation;
 
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final version = (listServer?.info?.version.isNotEmpty ?? false)
         ? listServer!.info!.version
@@ -260,157 +261,108 @@ class _ServerHeroPanel extends StatelessWidget {
         ? (stats.diskPercent / 100).clamp(0.0, 1.0)
         : null;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: Stack(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: scheme.outlineVariant),
-              gradient: LinearGradient(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? scheme.surfaceContainer
+            : Color.alphaBlend(
+                scheme.primary.withValues(alpha: 0.06),
+                scheme.surfaceContainer,
+              ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: scheme.outlineVariant),
+        gradient: isDark
+            ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  scheme.primary.withValues(alpha: 0.18),
-                  scheme.secondary.withValues(alpha: 0.14),
-                  scheme.tertiary.withValues(alpha: 0.10),
+                  scheme.primary.withValues(alpha: 0.14),
+                  scheme.secondary.withValues(alpha: 0.10),
                   scheme.surfaceContainer,
                 ],
-              ),
-            ),
-          ),
-          Positioned(
-            top: -90,
-            right: -80,
-            child: _Blob(
-              color: scheme.primary.withValues(alpha: 0.22),
-              size: 190,
-            ),
-          ),
-          Positioned(
-            bottom: -100,
-            left: -80,
-            child: _Blob(
-              color: scheme.secondary.withValues(alpha: 0.20),
-              size: 220,
-            ),
-          ),
-          Positioned(
-            top: 90,
-            left: -40,
-            child: _Blob(
-              color: scheme.tertiary.withValues(alpha: 0.16),
-              size: 130,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (address?.isNotEmpty ?? false) ...[
-                  _HeroInfoRow(
-                    icon: AppIcons.network,
-                    label: 'Address',
-                    value: address!,
-                  ),
-                  const Gap(10),
-                ],
-                if (description?.isNotEmpty ?? false) ...[
-                  _HeroInfoRow(
-                    icon: AppIcons.tag,
-                    label: 'Description',
-                    value: description!,
-                  ),
-                  const Gap(12),
-                ],
-                _MetricGrid(
-                  items: [
-                    _MetricTileData(
-                      icon: AppIcons.ok,
-                      label: 'Version',
-                      value: (version?.isNotEmpty ?? false) ? version! : '—',
-                      tone: _MetricTone.success,
-                    ),
-                    _MetricTileData(
-                      icon: AppIcons.cpu,
-                      label: 'Cores',
-                      value: cores != null ? cores.toString() : '—',
-                      tone: _MetricTone.neutral,
-                    ),
-                    _MetricTileData(
-                      icon: AppIcons.activity,
-                      label: 'Load (1m)',
-                      value: load != null ? load.toStringAsFixed(2) : '—',
-                      progress: loadPercent,
-                      tone: _MetricTone.primary,
-                    ),
-                    _MetricTileData(
-                      icon: AppIcons.memory,
-                      label: 'Memory',
-                      value: memUsed != null && memTotal != null && memTotal > 0
-                          ? '${memUsed.toStringAsFixed(1)} / ${memTotal.toStringAsFixed(1)} GB'
-                          : '—',
-                      progress: memPercent,
-                      tone: _MetricTone.secondary,
-                    ),
-                    _MetricTileData(
-                      icon: AppIcons.hardDrive,
-                      label: 'Disk',
-                      value:
-                          diskUsed != null && diskTotal != null && diskTotal > 0
-                          ? '${diskUsed.toStringAsFixed(1)} / ${diskTotal.toStringAsFixed(1)} GB'
-                          : '—',
-                      progress: diskPercent,
-                      tone: _MetricTone.tertiary,
-                    ),
-                    _MetricTileData(
-                      icon: AppIcons.wifi,
-                      label: 'Net (in/out)',
-                      value:
-                          ingressBytesPerSecond != null &&
-                              egressBytesPerSecond != null
-                          ? '${formatBytesPerSecond(ingressBytesPerSecond!)} / ${formatBytesPerSecond(egressBytesPerSecond!)}'
-                          : '—',
-                      tone: _MetricTone.neutral,
-                    ),
-                  ],
-                ),
-                if (server?.tags.isNotEmpty ?? false) ...[
-                  const Gap(12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final tag in server!.tags) _TagPill(text: tag),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
+              )
+            : null,
       ),
-    );
-  }
-}
-
-class _Blob extends StatelessWidget {
-  const _Blob({required this.color, required this.size});
-
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (address?.isNotEmpty ?? false) ...[
+            _HeroInfoRow(
+              icon: AppIcons.network,
+              label: 'Address',
+              value: address!,
+            ),
+            const Gap(10),
+          ],
+          if (description?.isNotEmpty ?? false) ...[
+            _HeroInfoRow(
+              icon: AppIcons.tag,
+              label: 'Description',
+              value: description!,
+            ),
+            const Gap(12),
+          ],
+          _MetricGrid(
+            items: [
+              _MetricTileData(
+                icon: AppIcons.ok,
+                label: 'Version',
+                value: (version?.isNotEmpty ?? false) ? version! : '—',
+                tone: _MetricTone.success,
+              ),
+              _MetricTileData(
+                icon: AppIcons.cpu,
+                label: 'Cores',
+                value: cores != null ? cores.toString() : '—',
+                tone: _MetricTone.neutral,
+              ),
+              _MetricTileData(
+                icon: AppIcons.activity,
+                label: 'Load (1m)',
+                value: load != null ? load.toStringAsFixed(2) : '—',
+                progress: loadPercent,
+                tone: _MetricTone.primary,
+              ),
+              _MetricTileData(
+                icon: AppIcons.memory,
+                label: 'Memory',
+                value: memUsed != null && memTotal != null && memTotal > 0
+                    ? '${memUsed.toStringAsFixed(1)} / ${memTotal.toStringAsFixed(1)} GB'
+                    : '—',
+                progress: memPercent,
+                tone: _MetricTone.secondary,
+              ),
+              _MetricTileData(
+                icon: AppIcons.hardDrive,
+                label: 'Disk',
+                value: diskUsed != null && diskTotal != null && diskTotal > 0
+                    ? '${diskUsed.toStringAsFixed(1)} / ${diskTotal.toStringAsFixed(1)} GB'
+                    : '—',
+                progress: diskPercent,
+                tone: _MetricTone.tertiary,
+              ),
+              _MetricTileData(
+                icon: AppIcons.wifi,
+                label: 'Net (in/out)',
+                value:
+                    ingressBytesPerSecond != null &&
+                        egressBytesPerSecond != null
+                    ? '${formatBytesPerSecond(ingressBytesPerSecond!)} / ${formatBytesPerSecond(egressBytesPerSecond!)}'
+                    : '—',
+                tone: _MetricTone.neutral,
+              ),
+            ],
+          ),
+          if (server?.tags.isNotEmpty ?? false) ...[
+            const Gap(12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [for (final tag in server!.tags) _TagPill(text: tag)],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -433,6 +385,7 @@ class _DetailSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final (Color accent, Color accent2) = switch (tone) {
       _SectionTone.primary => (scheme.primary, scheme.secondary),
@@ -442,18 +395,25 @@ class _DetailSection extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
+        color: isDark
+            ? scheme.surfaceContainer
+            : Color.alphaBlend(
+                accent.withValues(alpha: 0.06),
+                scheme.surfaceContainer,
+              ),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: scheme.outlineVariant),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            accent.withValues(alpha: 0.10),
-            accent2.withValues(alpha: 0.08),
-            scheme.surfaceContainer,
-          ],
-        ),
+        gradient: isDark
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  accent.withValues(alpha: 0.10),
+                  accent2.withValues(alpha: 0.08),
+                  scheme.surfaceContainer,
+                ],
+              )
+            : null,
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -1275,15 +1235,24 @@ class _StatsHistoryContent extends StatelessWidget {
     final mem = latestStats?.memPercent;
     final disk = latestStats?.diskPercent;
 
-    final cpuSeries = history.map((e) => e.cpuPercent).toList(growable: false);
-    final memSeries = history.map((e) => e.memPercent).toList(growable: false);
-    final diskSeries = history
+    const windowSamples = 32; // ~80s @ 2.5s refresh
+    final visibleHistory = history.length > windowSamples
+        ? history.sublist(history.length - windowSamples)
+        : history;
+
+    final cpuSeries = visibleHistory
+        .map((e) => e.cpuPercent)
+        .toList(growable: false);
+    final memSeries = visibleHistory
+        .map((e) => e.memPercent)
+        .toList(growable: false);
+    final diskSeries = visibleHistory
         .map((e) => e.diskPercent)
         .toList(growable: false);
-    final ingressSeries = history
+    final ingressSeries = visibleHistory
         .map((e) => e.ingressBytesPerSecond)
         .toList(growable: false);
-    final egressSeries = history
+    final egressSeries = visibleHistory
         .map((e) => e.egressBytesPerSecond)
         .toList(growable: false);
 
