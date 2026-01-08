@@ -148,6 +148,33 @@ Material 3 theme unified across iOS and Android:
 **Guidelines:**
 - Always use `Theme.of(context).colorScheme` for colors
 - Never hard-code hex colors in widgets
+- Light mode: no gradients (use solid/tinted surfaces)
+- Dark mode: subtle gradients are OK, sparingly
+
+### Detail Pages (Reusable UI Kit)
+
+Detail screens should follow the same layout and components so we can apply a consistent, branded style across the app.
+
+- Import: `package:komodo_go/core/widgets/detail/detail_widgets.dart`
+- Components live in: `lib/core/widgets/detail/`
+
+**Layout pattern**
+- Hero/header panel: `DetailHeroPanel` with a compact info header + `DetailMetricGrid`
+- Sections: `DetailSection` for primary blocks (e.g. Stats / Config / System)
+- Inner grouping: `DetailSubCard` to break up long info into digestible chunks
+
+**Surface & color rules**
+- Use `DetailSurface` (via `DetailHeroPanel`/`DetailSection`/`DetailSubCard`) for consistent rounding, borders, and theming.
+- Prefer a single tint color per screen (defaults to `colorScheme.primary`) instead of introducing many different card colors.
+- Keep light mode clean (no gradients); allow subtle depth in dark mode only.
+
+**Pills / badges**
+- Use only these tones: `PillTone.success`, `PillTone.warning`, `PillTone.alert`, `PillTone.neutral`.
+- Prefer `StatusPill` for boolean/on-off state, `ValuePill` for small key/value facts, `TextPill` for tags/labels.
+
+**Charts**
+- Use `DetailHistoryRow` + `SparklineChart` / `DualSparklineChart` for lightweight history graphs.
+- Keep chart sizing stable and full-width (avoid layout that constrains the paint area).
 
 ## Testing
 
