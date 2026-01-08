@@ -181,6 +181,7 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
                   ? _DetailSection(
                       title: 'Config',
                       icon: AppIcons.settings,
+                      tone: _SectionTone.secondary,
                       child: _ServerConfigContent(config: server!.config!),
                     )
                   : const _MessageCard(message: 'No config available'),
@@ -193,6 +194,7 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
                   ? _DetailSection(
                       title: 'System',
                       icon: AppIcons.server,
+                      tone: _SectionTone.tertiary,
                       child: _SystemInfoContent(info: info),
                     )
                   : const _MessageCard(message: 'System info unavailable'),
@@ -258,101 +260,157 @@ class _ServerHeroPanel extends StatelessWidget {
         ? (stats.diskPercent / 100).clamp(0.0, 1.0)
         : null;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: scheme.outlineVariant),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            scheme.primary.withValues(alpha: 0.12),
-            scheme.secondary.withValues(alpha: 0.10),
-            scheme.surfaceContainer,
-          ],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: Stack(
         children: [
-          if (address?.isNotEmpty ?? false) ...[
-            _HeroInfoRow(
-              icon: AppIcons.network,
-              label: 'Address',
-              value: address!,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: scheme.outlineVariant),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  scheme.primary.withValues(alpha: 0.18),
+                  scheme.secondary.withValues(alpha: 0.14),
+                  scheme.tertiary.withValues(alpha: 0.10),
+                  scheme.surfaceContainer,
+                ],
+              ),
             ),
-            const Gap(10),
-          ],
-          if (description?.isNotEmpty ?? false) ...[
-            _HeroInfoRow(
-              icon: AppIcons.tag,
-              label: 'Description',
-              value: description!,
-            ),
-            const Gap(12),
-          ],
-          _MetricGrid(
-            items: [
-              _MetricTileData(
-                icon: AppIcons.ok,
-                label: 'Version',
-                value: (version?.isNotEmpty ?? false) ? version! : '—',
-                tone: _MetricTone.success,
-              ),
-              _MetricTileData(
-                icon: AppIcons.cpu,
-                label: 'Cores',
-                value: cores != null ? cores.toString() : '—',
-                tone: _MetricTone.neutral,
-              ),
-              _MetricTileData(
-                icon: AppIcons.activity,
-                label: 'Load (1m)',
-                value: load != null ? load.toStringAsFixed(2) : '—',
-                progress: loadPercent,
-                tone: _MetricTone.primary,
-              ),
-              _MetricTileData(
-                icon: AppIcons.memory,
-                label: 'Memory',
-                value: memUsed != null && memTotal != null && memTotal > 0
-                    ? '${memUsed.toStringAsFixed(1)} / ${memTotal.toStringAsFixed(1)} GB'
-                    : '—',
-                progress: memPercent,
-                tone: _MetricTone.secondary,
-              ),
-              _MetricTileData(
-                icon: AppIcons.hardDrive,
-                label: 'Disk',
-                value: diskUsed != null && diskTotal != null && diskTotal > 0
-                    ? '${diskUsed.toStringAsFixed(1)} / ${diskTotal.toStringAsFixed(1)} GB'
-                    : '—',
-                progress: diskPercent,
-                tone: _MetricTone.tertiary,
-              ),
-              _MetricTileData(
-                icon: AppIcons.wifi,
-                label: 'Net (in/out)',
-                value:
-                    ingressBytesPerSecond != null &&
-                        egressBytesPerSecond != null
-                    ? '${formatBytesPerSecond(ingressBytesPerSecond!)} / ${formatBytesPerSecond(egressBytesPerSecond!)}'
-                    : '—',
-                tone: _MetricTone.neutral,
-              ),
-            ],
           ),
-          if (server?.tags.isNotEmpty ?? false) ...[
-            const Gap(12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [for (final tag in server!.tags) _TagPill(text: tag)],
+          Positioned(
+            top: -90,
+            right: -80,
+            child: _Blob(
+              color: scheme.primary.withValues(alpha: 0.22),
+              size: 190,
             ),
-          ],
+          ),
+          Positioned(
+            bottom: -100,
+            left: -80,
+            child: _Blob(
+              color: scheme.secondary.withValues(alpha: 0.20),
+              size: 220,
+            ),
+          ),
+          Positioned(
+            top: 90,
+            left: -40,
+            child: _Blob(
+              color: scheme.tertiary.withValues(alpha: 0.16),
+              size: 130,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (address?.isNotEmpty ?? false) ...[
+                  _HeroInfoRow(
+                    icon: AppIcons.network,
+                    label: 'Address',
+                    value: address!,
+                  ),
+                  const Gap(10),
+                ],
+                if (description?.isNotEmpty ?? false) ...[
+                  _HeroInfoRow(
+                    icon: AppIcons.tag,
+                    label: 'Description',
+                    value: description!,
+                  ),
+                  const Gap(12),
+                ],
+                _MetricGrid(
+                  items: [
+                    _MetricTileData(
+                      icon: AppIcons.ok,
+                      label: 'Version',
+                      value: (version?.isNotEmpty ?? false) ? version! : '—',
+                      tone: _MetricTone.success,
+                    ),
+                    _MetricTileData(
+                      icon: AppIcons.cpu,
+                      label: 'Cores',
+                      value: cores != null ? cores.toString() : '—',
+                      tone: _MetricTone.neutral,
+                    ),
+                    _MetricTileData(
+                      icon: AppIcons.activity,
+                      label: 'Load (1m)',
+                      value: load != null ? load.toStringAsFixed(2) : '—',
+                      progress: loadPercent,
+                      tone: _MetricTone.primary,
+                    ),
+                    _MetricTileData(
+                      icon: AppIcons.memory,
+                      label: 'Memory',
+                      value: memUsed != null && memTotal != null && memTotal > 0
+                          ? '${memUsed.toStringAsFixed(1)} / ${memTotal.toStringAsFixed(1)} GB'
+                          : '—',
+                      progress: memPercent,
+                      tone: _MetricTone.secondary,
+                    ),
+                    _MetricTileData(
+                      icon: AppIcons.hardDrive,
+                      label: 'Disk',
+                      value:
+                          diskUsed != null && diskTotal != null && diskTotal > 0
+                          ? '${diskUsed.toStringAsFixed(1)} / ${diskTotal.toStringAsFixed(1)} GB'
+                          : '—',
+                      progress: diskPercent,
+                      tone: _MetricTone.tertiary,
+                    ),
+                    _MetricTileData(
+                      icon: AppIcons.wifi,
+                      label: 'Net (in/out)',
+                      value:
+                          ingressBytesPerSecond != null &&
+                              egressBytesPerSecond != null
+                          ? '${formatBytesPerSecond(ingressBytesPerSecond!)} / ${formatBytesPerSecond(egressBytesPerSecond!)}'
+                          : '—',
+                      tone: _MetricTone.neutral,
+                    ),
+                  ],
+                ),
+                if (server?.tags.isNotEmpty ?? false) ...[
+                  const Gap(12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final tag in server!.tags) _TagPill(text: tag),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _Blob extends StatelessWidget {
+  const _Blob({required this.color, required this.size});
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
       ),
     );
   }
@@ -363,22 +421,39 @@ class _DetailSection extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.child,
+    this.tone = _SectionTone.primary,
   });
 
   final String title;
   final IconData icon;
   final Widget child;
+  final _SectionTone tone;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    final (Color accent, Color accent2) = switch (tone) {
+      _SectionTone.primary => (scheme.primary, scheme.secondary),
+      _SectionTone.secondary => (scheme.secondary, scheme.primary),
+      _SectionTone.tertiary => (scheme.tertiary, scheme.primary),
+    };
+
     return Container(
       decoration: BoxDecoration(
         color: scheme.surfaceContainer,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: scheme.outlineVariant),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            accent.withValues(alpha: 0.10),
+            accent2.withValues(alpha: 0.08),
+            scheme.surfaceContainer,
+          ],
+        ),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -390,11 +465,11 @@ class _DetailSection extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: 0.12),
+                  color: accent.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: scheme.outlineVariant),
                 ),
-                child: Icon(icon, size: 18, color: scheme.primary),
+                child: Icon(icon, size: 18, color: accent),
               ),
               const Gap(12),
               Text(
@@ -413,6 +488,8 @@ class _DetailSection extends StatelessWidget {
     );
   }
 }
+
+enum _SectionTone { primary, secondary, tertiary }
 
 class _HeroInfoRow extends StatelessWidget {
   const _HeroInfoRow({
@@ -496,6 +573,162 @@ class _TagPill extends StatelessWidget {
 }
 
 enum _MetricTone { primary, secondary, tertiary, success, neutral }
+
+class _SubCard extends StatelessWidget {
+  const _SubCard({
+    required this.title,
+    required this.icon,
+    required this.tone,
+    required this.child,
+  });
+
+  final String title;
+  final IconData icon;
+  final _SectionTone tone;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final accent = switch (tone) {
+      _SectionTone.primary => scheme.primary,
+      _SectionTone.secondary => scheme.secondary,
+      _SectionTone.tertiary => scheme.tertiary,
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Icon(icon, size: 18, color: accent),
+              ),
+              const Gap(10),
+              Text(
+                title,
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
+          ),
+          const Gap(12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({
+    required this.label,
+    required this.color,
+    required this.background,
+    required this.icon,
+  });
+
+  factory _StatusPill.onOff({
+    required bool isOn,
+    required String onLabel,
+    required String offLabel,
+  }) {
+    return _StatusPill(
+      label: isOn ? onLabel : offLabel,
+      color: isOn ? const Color(0xFF014226) : const Color(0xFF8C1D1D),
+      background: isOn ? const Color(0x1A4EB333) : const Color(0x1ADF2C2C),
+      icon: isOn ? AppIcons.ok : AppIcons.error,
+    );
+  }
+
+  final String label;
+  final Color color;
+  final Color background;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const Gap(6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: scheme.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ValuePill extends StatelessWidget {
+  const _ValuePill({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: textTheme.labelMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Gap(6),
+          Text(
+            value,
+            style: textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _MetricTileData {
   const _MetricTileData({
@@ -634,28 +867,84 @@ class _SystemInfoContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (info.name?.isNotEmpty ?? false)
-          _InfoRow(label: 'Name', value: info.name!),
-        if (info.hostName?.isNotEmpty ?? false)
-          _InfoRow(label: 'Host', value: info.hostName!),
-        if (info.os?.isNotEmpty ?? false)
-          _InfoRow(label: 'OS', value: info.os!),
-        if (info.kernel?.isNotEmpty ?? false)
-          _InfoRow(label: 'Kernel', value: info.kernel!),
-        if (info.cpuBrand.isNotEmpty)
-          _InfoRow(label: 'CPU', value: info.cpuBrand),
-        if (info.coreCount != null)
-          _InfoRow(label: 'Cores', value: info.coreCount.toString()),
-        _InfoRow(
-          label: 'Terminal',
-          value: info.terminalsDisabled ? 'Disabled' : 'Enabled',
+        _SubCard(
+          title: 'Basics',
+          icon: AppIcons.server,
+          tone: _SectionTone.primary,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (info.name?.isNotEmpty ?? false)
+                _ValuePill(label: 'Name', value: info.name!),
+              if (info.hostName?.isNotEmpty ?? false)
+                _ValuePill(label: 'Host', value: info.hostName!),
+            ],
+          ),
         ),
-        _InfoRow(
-          label: 'Container exec',
-          value: info.containerExecDisabled ? 'Disabled' : 'Enabled',
+        const Gap(12),
+        _SubCard(
+          title: 'OS',
+          icon: AppIcons.settings,
+          tone: _SectionTone.secondary,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (info.os?.isNotEmpty ?? false)
+                _ValuePill(label: 'OS', value: info.os!),
+              if (info.kernel?.isNotEmpty ?? false)
+                _ValuePill(label: 'Kernel', value: info.kernel!),
+            ],
+          ),
+        ),
+        const Gap(12),
+        _SubCard(
+          title: 'Hardware',
+          icon: AppIcons.cpu,
+          tone: _SectionTone.tertiary,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (info.cpuBrand.isNotEmpty)
+                _ValuePill(label: 'CPU', value: info.cpuBrand),
+              if (info.coreCount != null)
+                _ValuePill(label: 'Cores', value: info.coreCount.toString()),
+            ],
+          ),
+        ),
+        const Gap(12),
+        _SubCard(
+          title: 'Access',
+          icon: AppIcons.lock,
+          tone: _SectionTone.secondary,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _StatusPill.onOff(
+                isOn: !info.terminalsDisabled,
+                onLabel: 'Terminal enabled',
+                offLabel: 'Terminal disabled',
+              ),
+              _StatusPill.onOff(
+                isOn: !info.containerExecDisabled,
+                onLabel: 'Exec enabled',
+                offLabel: 'Exec disabled',
+              ),
+              _StatusPill(
+                label: info.terminalsDisabled ? 'Locked down' : 'Operational',
+                color: scheme.primary,
+                background: scheme.primaryContainer.withValues(alpha: 0.55),
+                icon: AppIcons.ok,
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -672,104 +961,240 @@ class _ServerConfigContent extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    final enabledPill = _StatusPill.onOff(
+      isOn: config.enabled,
+      onLabel: 'Enabled',
+      offLabel: 'Disabled',
+    );
+    final statsMonitoringPill = _StatusPill.onOff(
+      isOn: config.statsMonitoring,
+      onLabel: 'Monitoring on',
+      offLabel: 'Monitoring off',
+    );
+    final autoPrunePill = _StatusPill.onOff(
+      isOn: config.autoPrune,
+      onLabel: 'Auto prune on',
+      offLabel: 'Auto prune off',
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _InfoRow(label: 'Enabled', value: config.enabled ? 'Yes' : 'No'),
-        _InfoRow(
-          label: 'Region',
-          value: config.region.isNotEmpty ? config.region : '—',
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            enabledPill,
+            statsMonitoringPill,
+            autoPrunePill,
+            if (config.passkey.isNotEmpty)
+              _StatusPill(
+                label: 'Passkey set',
+                color: scheme.primary,
+                background: scheme.primaryContainer.withValues(alpha: 0.55),
+                icon: AppIcons.key,
+              )
+            else
+              _StatusPill(
+                label: 'No passkey',
+                color: scheme.onSurfaceVariant,
+                background: scheme.surfaceContainerHigh,
+                icon: AppIcons.lock,
+              ),
+          ],
         ),
-        _InfoRow(
-          label: 'Address',
-          value: config.address.isNotEmpty ? config.address : '—',
-        ),
-        _InfoRow(
-          label: 'External',
-          value: config.externalAddress.isNotEmpty
-              ? config.externalAddress
-              : '—',
-        ),
-        _InfoRow(
-          label: 'Timeout',
-          value: config.timeoutSeconds > 0 ? '${config.timeoutSeconds}s' : '—',
-        ),
-        _InfoRow(
-          label: 'Passkey',
-          value: config.passkey.isNotEmpty ? 'Set' : 'Not set',
-        ),
-        _InfoRow(
-          label: 'Stats monitoring',
-          value: config.statsMonitoring ? 'On' : 'Off',
-        ),
-        _InfoRow(label: 'Auto prune', value: config.autoPrune ? 'On' : 'Off'),
-        if (config.ignoreMounts.isNotEmpty)
-          _InfoRow(
-            label: 'Ignore mounts',
-            value: config.ignoreMounts.join(', '),
+        const Gap(14),
+        _SubCard(
+          title: 'Connection',
+          icon: AppIcons.network,
+          tone: _SectionTone.secondary,
+          child: Column(
+            children: [
+              _InfoRow(
+                label: 'Address',
+                value: config.address.isNotEmpty ? config.address : '—',
+              ),
+              _InfoRow(
+                label: 'External',
+                value: config.externalAddress.isNotEmpty
+                    ? config.externalAddress
+                    : '—',
+              ),
+              _InfoRow(
+                label: 'Region',
+                value: config.region.isNotEmpty ? config.region : '—',
+              ),
+              _InfoRow(
+                label: 'Timeout',
+                value: config.timeoutSeconds > 0
+                    ? '${config.timeoutSeconds}s'
+                    : '—',
+              ),
+              if (config.links.isNotEmpty)
+                _InfoRow(label: 'Links', value: config.links.join('\n')),
+              if (config.ignoreMounts.isNotEmpty)
+                _InfoRow(
+                  label: 'Ignore mounts',
+                  value: config.ignoreMounts.join(', '),
+                ),
+            ],
           ),
-        if (config.links.isNotEmpty)
-          _InfoRow(label: 'Links', value: config.links.join('\n')),
-        const Gap(10),
-        Text(
-          'Alerts & thresholds',
-          style: textTheme.titleSmall?.copyWith(
-            color: scheme.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
+        ),
+        const Gap(12),
+        _SubCard(
+          title: 'Alerts',
+          icon: AppIcons.notifications,
+          tone: _SectionTone.primary,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _StatusPill.onOff(
+                isOn: config.sendUnreachableAlerts,
+                onLabel: 'Unreachable alerts',
+                offLabel: 'Unreachable alerts',
+              ),
+              _StatusPill.onOff(
+                isOn: config.sendCpuAlerts,
+                onLabel: 'CPU alerts',
+                offLabel: 'CPU alerts',
+              ),
+              _StatusPill.onOff(
+                isOn: config.sendMemAlerts,
+                onLabel: 'Memory alerts',
+                offLabel: 'Memory alerts',
+              ),
+              _StatusPill.onOff(
+                isOn: config.sendDiskAlerts,
+                onLabel: 'Disk alerts',
+                offLabel: 'Disk alerts',
+              ),
+              _StatusPill.onOff(
+                isOn: config.sendVersionMismatchAlerts,
+                onLabel: 'Version mismatch',
+                offLabel: 'Version mismatch',
+              ),
+            ],
           ),
         ),
-        const Gap(8),
-        _InfoRow(
-          label: 'Unreachable',
-          value: config.sendUnreachableAlerts ? 'On' : 'Off',
-        ),
-        _InfoRow(
-          label: 'CPU alerts',
-          value: config.sendCpuAlerts ? 'On' : 'Off',
-        ),
-        _InfoRow(
-          label: 'Mem alerts',
-          value: config.sendMemAlerts ? 'On' : 'Off',
-        ),
-        _InfoRow(
-          label: 'Disk alerts',
-          value: config.sendDiskAlerts ? 'On' : 'Off',
-        ),
-        _InfoRow(
-          label: 'Version mismatch',
-          value: config.sendVersionMismatchAlerts ? 'On' : 'Off',
-        ),
-        _InfoRow(
-          label: 'CPU warn/crit',
-          value:
-              '${config.cpuWarning.toStringAsFixed(0)}% / ${config.cpuCritical.toStringAsFixed(0)}%',
-        ),
-        _InfoRow(
-          label: 'Mem warn/crit',
-          value:
-              '${config.memWarning.toStringAsFixed(1)} GB / ${config.memCritical.toStringAsFixed(1)} GB',
-        ),
-        _InfoRow(
-          label: 'Disk warn/crit',
-          value:
-              '${config.diskWarning.toStringAsFixed(1)} GB / ${config.diskCritical.toStringAsFixed(1)} GB',
+        const Gap(12),
+        _SubCard(
+          title: 'Thresholds',
+          icon: AppIcons.warning,
+          tone: _SectionTone.tertiary,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'CPU',
+                style: textTheme.labelLarge?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Gap(6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _ValuePill(
+                    label: 'Warn',
+                    value: '${config.cpuWarning.toStringAsFixed(0)}%',
+                  ),
+                  _ValuePill(
+                    label: 'Crit',
+                    value: '${config.cpuCritical.toStringAsFixed(0)}%',
+                  ),
+                ],
+              ),
+              const Gap(10),
+              Text(
+                'Memory',
+                style: textTheme.labelLarge?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Gap(6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _ValuePill(
+                    label: 'Warn',
+                    value: '${config.memWarning.toStringAsFixed(1)} GB',
+                  ),
+                  _ValuePill(
+                    label: 'Crit',
+                    value: '${config.memCritical.toStringAsFixed(1)} GB',
+                  ),
+                ],
+              ),
+              const Gap(10),
+              Text(
+                'Disk',
+                style: textTheme.labelLarge?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Gap(6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _ValuePill(
+                    label: 'Warn',
+                    value: '${config.diskWarning.toStringAsFixed(1)} GB',
+                  ),
+                  _ValuePill(
+                    label: 'Crit',
+                    value: '${config.diskCritical.toStringAsFixed(1)} GB',
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
         if (config.maintenanceWindows.isNotEmpty) ...[
-          const Gap(10),
-          Text(
-            'Maintenance windows',
-            style: textTheme.titleSmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
+          const Gap(12),
+          _SubCard(
+            title: 'Maintenance',
+            icon: AppIcons.maintenance,
+            tone: _SectionTone.secondary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final window in config.maintenanceWindows)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _StatusPill.onOff(
+                          isOn: window.enabled,
+                          onLabel: 'Enabled',
+                          offLabel: 'Disabled',
+                        ),
+                        _ValuePill(label: 'Name', value: window.name),
+                        _ValuePill(
+                          label: 'Type',
+                          value: window.scheduleType.name,
+                        ),
+                        _ValuePill(
+                          label: 'At',
+                          value:
+                              '${window.hour.toString().padLeft(2, '0')}:${window.minute.toString().padLeft(2, '0')}',
+                        ),
+                        _ValuePill(label: 'TZ', value: window.timezone),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
-          const Gap(8),
-          for (final window in config.maintenanceWindows)
-            _InfoRow(
-              label: window.enabled ? 'Enabled' : 'Disabled',
-              value:
-                  '${window.name} • ${window.scheduleType.name} • ${window.hour.toString().padLeft(2, '0')}:${window.minute.toString().padLeft(2, '0')} (${window.timezone})',
-            ),
         ],
       ],
     );
