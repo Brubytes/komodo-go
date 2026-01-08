@@ -1,13 +1,12 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:komodo_go/features/servers/data/models/server.dart';
+import 'package:komodo_go/features/servers/data/models/system_information.dart';
+import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_exception.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/providers/dio_provider.dart';
-import '../models/server.dart';
-import '../models/system_information.dart';
-import '../models/system_stats.dart';
 
 part 'server_repository.g.dart';
 
@@ -47,9 +46,11 @@ class ServerRepository {
         return const Left(Failure.auth());
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e, stackTrace) {
+    } on Object catch (e, stackTrace) {
+      // Logging parsing errors helps diagnose API mismatch during development.
       // ignore: avoid_print
       print('Error parsing servers: $e');
+      // Logging stack traces helps diagnose API mismatch during development.
       // ignore: avoid_print
       print('Stack trace: $stackTrace');
       return Left(Failure.unknown(message: e.toString()));
@@ -72,7 +73,7 @@ class ServerRepository {
         return const Left(Failure.server(message: 'Server not found'));
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
+    } on Object catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }
   }
@@ -92,7 +93,7 @@ class ServerRepository {
         return const Left(Failure.auth());
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
+    } on Object catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }
   }
@@ -117,7 +118,7 @@ class ServerRepository {
         return const Left(Failure.auth());
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
+    } on Object catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }
   }
