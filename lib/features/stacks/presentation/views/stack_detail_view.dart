@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 
-import '../../data/models/stack.dart';
-import '../providers/stacks_provider.dart';
-import '../widgets/stack_card.dart';
+import 'package:komodo_go/features/stacks/data/models/stack.dart';
+import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
+import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
 
 /// View displaying detailed stack information.
 class StackDetailView extends ConsumerWidget {
@@ -23,7 +24,25 @@ class StackDetailView extends ConsumerWidget {
     final stackAsync = ref.watch(stackDetailProvider(stackId));
     final servicesAsync = ref.watch(stackServicesProvider(stackId));
     final logAsync = ref.watch(stackLogProvider(stackId));
+    final stacksListAsync = ref.watch(stacksProvider);
     final actionsState = ref.watch(stackActionsProvider);
+
+    final scheme = Theme.of(context).colorScheme;
+
+    StackListItem? listItem;
+    final stacks = stacksListAsync.asData?.value;
+    if (stacks != null) {
+      for (final s in stacks) {
+        if (s.id == stackId) {
+          listItem = s;
+          break;
+        }
+      }
+    }
+
+    final services = servicesAsync.asData?.value;
+    final serviceCount = services?.length;
+    final updateCount = services?.where((e) => e.updateAvailable).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -33,28 +52,28 @@ class StackDetailView extends ConsumerWidget {
             icon: const Icon(AppIcons.moreVertical),
             onSelected: (action) =>
                 _handleAction(context, ref, stackId, action),
-            itemBuilder: (context) => const [
+            itemBuilder: (context) => [
               PopupMenuItem(
                 value: StackAction.deploy,
                 child: ListTile(
-                  leading: Icon(AppIcons.deployments, color: Colors.blue),
-                  title: Text('Deploy'),
+                  leading: Icon(AppIcons.deployments, color: scheme.primary),
+                  title: const Text('Deploy'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
               PopupMenuItem(
                 value: StackAction.start,
                 child: ListTile(
-                  leading: Icon(AppIcons.play, color: Colors.green),
-                  title: Text('Start'),
+                  leading: Icon(AppIcons.play, color: scheme.secondary),
+                  title: const Text('Start'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
               PopupMenuItem(
                 value: StackAction.stop,
                 child: ListTile(
-                  leading: Icon(AppIcons.stop, color: Colors.orange),
-                  title: Text('Stop'),
+                  leading: Icon(AppIcons.stop, color: scheme.tertiary),
+                  title: const Text('Stop'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -66,101 +85,81 @@ class StackDetailView extends ConsumerWidget {
         children: [
           RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(stackDetailProvider(stackId));
-              ref.invalidate(stackServicesProvider(stackId));
-              ref.invalidate(stackLogProvider(stackId));
+              ref
+                ..invalidate(stackDetailProvider(stackId))
+                ..invalidate(stackServicesProvider(stackId))
+                ..invalidate(stackLogProvider(stackId));
             },
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               children: [
                 stackAsync.when(
                   data: (stack) => stack != null
-                      ? _StackInfoCard(stack: stack)
-                      : const Card(
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Text('Stack not found'),
-                          ),
-                        ),
-                  loading: () => const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  ),
-                  error: (error, _) => Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text('Error: $error'),
-                    ),
-                  ),
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _StackHeroPanel(
+                              stack: stack,
+                              listItem: listItem,
+                              serviceCount: serviceCount,
+                              updateCount: updateCount,
+                            ),
+                            const Gap(16),
+                            DetailSection(
+                              title: 'Config',
+                              icon: AppIcons.settings,
+                              child: _StackConfigContent(config: stack.config),
+                            ),
+                            const Gap(16),
+                            DetailSection(
+                              title: 'Deployment',
+                              icon: AppIcons.deployments,
+                              child: _StackDeploymentContent(info: stack.info),
+                            ),
+                          ],
+                        )
+                      : const _MessageSurface(message: 'Stack not found'),
+                  loading: () => const _LoadingSurface(),
+                  error: (error, _) =>
+                      _MessageSurface(message: 'Error: $error'),
                 ),
                 const Gap(16),
-                Text(
-                  'Services',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Gap(8),
                 servicesAsync.when(
-                  data: (services) {
-                    if (services.isEmpty) {
-                      return const Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text('No services found'),
-                        ),
-                      );
-                    }
-                    return Column(
-                      children: services
-                          .map((service) => _StackServiceTile(service: service))
-                          .toList(),
-                    );
-                  },
-                  loading: () => const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
+                  data: (services) => DetailSection(
+                    title: 'Services',
+                    icon: AppIcons.widgets,
+                    child: services.isEmpty
+                        ? const Text('No services found')
+                        : Column(
+                            children: [
+                              for (final service in services) ...[
+                                _StackServiceCard(service: service),
+                                const Gap(12),
+                              ],
+                            ],
+                          ),
                   ),
-                  error: (error, _) => Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text('Services unavailable: $error'),
-                    ),
-                  ),
+                  loading: () => const _LoadingSurface(),
+                  error: (error, _) =>
+                      _MessageSurface(message: 'Services unavailable: $error'),
                 ),
                 const Gap(16),
-                Text(
-                  'Logs',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Gap(8),
                 logAsync.when(
-                  data: (log) => _StackLogCard(log: log),
-                  loading: () => const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
+                  data: (log) => DetailSection(
+                    title: 'Logs',
+                    icon: AppIcons.activity,
+                    child: _StackLogContent(log: log),
                   ),
-                  error: (error, _) => Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text('Logs unavailable: $error'),
-                    ),
-                  ),
+                  loading: () => const _LoadingSurface(),
+                  error: (error, _) =>
+                      _MessageSurface(message: 'Logs unavailable: $error'),
                 ),
               ],
             ),
           ),
           if (actionsState.isLoading)
-            Container(
-              color: Colors.black26,
+            ColoredBox(
+              color: scheme.scrim.withValues(alpha: 0.25),
               child: const Center(
                 child: Card(
                   child: Padding(
@@ -189,9 +188,10 @@ class StackDetailView extends ConsumerWidget {
     };
 
     if (success) {
-      ref.invalidate(stackDetailProvider(stackId));
-      ref.invalidate(stackServicesProvider(stackId));
-      ref.invalidate(stackLogProvider(stackId));
+      ref
+        ..invalidate(stackDetailProvider(stackId))
+        ..invalidate(stackServicesProvider(stackId))
+        ..invalidate(stackLogProvider(stackId));
     }
 
     if (context.mounted) {
@@ -202,139 +202,477 @@ class StackDetailView extends ConsumerWidget {
                 ? 'Action completed successfully'
                 : 'Action failed. Please try again.',
           ),
-          backgroundColor: success ? Colors.green : Colors.red,
+          backgroundColor: success
+              ? Theme.of(context).colorScheme.secondaryContainer
+              : Theme.of(context).colorScheme.errorContainer,
         ),
       );
     }
   }
 }
 
-class _StackInfoCard extends StatelessWidget {
-  const _StackInfoCard({required this.stack});
+class _StackHeroPanel extends StatelessWidget {
+  const _StackHeroPanel({
+    required this.stack,
+    required this.listItem,
+    required this.serviceCount,
+    required this.updateCount,
+  });
 
   final KomodoStack stack;
+  final StackListItem? listItem;
+  final int? serviceCount;
+  final int? updateCount;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final config = stack.config;
     final info = stack.info;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Stack Information',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Gap(16),
-            _InfoRow(label: 'Name', value: stack.name),
-            _InfoRow(label: 'Server ID', value: config.serverId),
-            if (config.repo.isNotEmpty)
-              _InfoRow(
-                label: 'Repo',
-                value: config.branch.isNotEmpty
-                    ? '${config.repo} (${config.branch})'
-                    : config.repo,
-              ),
-            if (config.projectName.isNotEmpty)
-              _InfoRow(label: 'Project', value: config.projectName),
-            if (config.runDirectory.isNotEmpty)
-              _InfoRow(label: 'Directory', value: config.runDirectory),
-            if (info.latestHash != null)
-              _InfoRow(label: 'Latest hash', value: info.latestHash!),
-            if (info.deployedHash != null)
-              _InfoRow(label: 'Deployed hash', value: info.deployedHash!),
-            if (info.missingFiles.isNotEmpty)
-              _InfoRow(
-                label: 'Missing files',
-                value: info.missingFiles.join(', '),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+    final state = listItem?.info.state;
+    final status = listItem?.info.status;
+    final projectMissing = listItem?.info.projectMissing ?? false;
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
+    final missingCount = info.missingFiles.length;
+    final upToDate =
+        info.latestHash != null && info.deployedHash == info.latestHash;
 
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
+    return DetailHeroPanel(
+      tintColor: scheme.primary,
+      header: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface.withValues(
-                  alpha: 0.7,
-                ),
-              ),
+          if (stack.description.trim().isNotEmpty) ...[
+            DetailIconInfoRow(
+              icon: AppIcons.tag,
+              label: 'Description',
+              value: stack.description.trim(),
             ),
-          ),
-          Expanded(
-            child: Text(
-              value.isNotEmpty ? value : '-',
-              style: Theme.of(context).textTheme.bodyMedium,
+            const Gap(10),
+          ],
+          if (config.serverId.isNotEmpty) ...[
+            DetailIconInfoRow(
+              icon: AppIcons.server,
+              label: 'Server',
+              value: config.serverId,
             ),
-          ),
+            const Gap(10),
+          ],
+          if (config.repo.isNotEmpty) ...[
+            DetailIconInfoRow(
+              icon: AppIcons.repos,
+              label: 'Repo',
+              value: config.branch.isNotEmpty
+                  ? '${config.repo} (${config.branch})'
+                  : config.repo,
+            ),
+            const Gap(10),
+          ],
+          if (config.runDirectory.isNotEmpty)
+            DetailIconInfoRow(
+              icon: AppIcons.package,
+              label: 'Directory',
+              value: config.runDirectory,
+            ),
+        ],
+      ),
+      metrics: [
+        DetailMetricTileData(
+          icon: _stateIcon(state),
+          label: 'State',
+          value: state?.displayName ?? '—',
+          tone: _stateTone(state),
+        ),
+        DetailMetricTileData(
+          icon: AppIcons.dot,
+          label: 'Status',
+          value: (status?.trim().isNotEmpty ?? false) ? status!.trim() : '—',
+          tone: DetailMetricTone.neutral,
+        ),
+        DetailMetricTileData(
+          icon: AppIcons.widgets,
+          label: 'Services',
+          value: serviceCount?.toString() ?? '—',
+          tone: DetailMetricTone.neutral,
+        ),
+        DetailMetricTileData(
+          icon: AppIcons.updateAvailable,
+          label: 'Updates',
+          value: updateCount?.toString() ?? '—',
+          tone: (updateCount ?? 0) > 0
+              ? DetailMetricTone.tertiary
+              : DetailMetricTone.success,
+        ),
+        DetailMetricTileData(
+          icon: AppIcons.warning,
+          label: 'Missing',
+          value: missingCount.toString(),
+          tone: missingCount > 0
+              ? DetailMetricTone.tertiary
+              : DetailMetricTone.success,
+        ),
+        DetailMetricTileData(
+          icon: upToDate ? AppIcons.ok : AppIcons.warning,
+          label: 'Git',
+          value: upToDate ? 'Up to date' : 'Out of date',
+          tone: upToDate ? DetailMetricTone.success : DetailMetricTone.tertiary,
+        ),
+      ],
+      footer: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          if (projectMissing)
+            const StatusPill(
+              label: 'Project missing',
+              icon: AppIcons.warning,
+              tone: PillTone.warning,
+            ),
+          for (final tag in stack.tags) TextPill(label: tag),
         ],
       ),
     );
   }
+
+  IconData _stateIcon(StackState? state) {
+    return switch (state) {
+      StackState.running => AppIcons.ok,
+      StackState.deploying || StackState.restarting => AppIcons.loading,
+      StackState.unhealthy => AppIcons.error,
+      StackState.stopped ||
+      StackState.created ||
+      StackState.down ||
+      StackState.dead => AppIcons.stopped,
+      StackState.paused => AppIcons.paused,
+      StackState.removing => AppIcons.warning,
+      _ => AppIcons.unknown,
+    };
+  }
+
+  DetailMetricTone _stateTone(StackState? state) {
+    return switch (state) {
+      StackState.running => DetailMetricTone.success,
+      StackState.deploying || StackState.restarting => DetailMetricTone.primary,
+      StackState.unhealthy => DetailMetricTone.tertiary,
+      StackState.stopped ||
+      StackState.created ||
+      StackState.down ||
+      StackState.dead => DetailMetricTone.neutral,
+      StackState.paused => DetailMetricTone.secondary,
+      _ => DetailMetricTone.neutral,
+    };
+  }
 }
 
-class _StackServiceTile extends StatelessWidget {
-  const _StackServiceTile({required this.service});
+class _StackConfigContent extends StatelessWidget {
+  const _StackConfigContent({required this.config});
+
+  final StackConfig config;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            StatusPill.onOff(
+              isOn: config.autoPull,
+              onLabel: 'Auto pull',
+              offLabel: 'Manual pull',
+              onIcon: AppIcons.ok,
+              offIcon: AppIcons.pause,
+            ),
+            StatusPill.onOff(
+              isOn: config.autoUpdate,
+              onLabel: 'Auto update',
+              offLabel: 'Manual update',
+              onIcon: AppIcons.ok,
+              offIcon: AppIcons.pause,
+            ),
+            StatusPill.onOff(
+              isOn: config.pollForUpdates,
+              onLabel: 'Polling on',
+              offLabel: 'Polling off',
+              onIcon: AppIcons.ok,
+              offIcon: AppIcons.pause,
+            ),
+            StatusPill.onOff(
+              isOn: config.sendAlerts,
+              onLabel: 'Alerts on',
+              offLabel: 'Alerts off',
+              onIcon: AppIcons.ok,
+              offIcon: AppIcons.notifications,
+            ),
+          ],
+        ),
+        const Gap(14),
+        DetailSubCard(
+          title: 'Repository',
+          icon: AppIcons.repos,
+          child: Column(
+            children: [
+              DetailKeyValueRow(
+                label: 'Repo',
+                value: config.repo.isNotEmpty ? config.repo : '—',
+              ),
+              DetailKeyValueRow(
+                label: 'Branch',
+                value: config.branch.isNotEmpty ? config.branch : '—',
+              ),
+              DetailKeyValueRow(
+                label: 'Commit',
+                value: config.commit.isNotEmpty ? config.commit : '—',
+                bottomPadding: 0,
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+        DetailSubCard(
+          title: 'Paths',
+          icon: AppIcons.package,
+          child: Column(
+            children: [
+              DetailKeyValueRow(
+                label: 'Project',
+                value: config.projectName.isNotEmpty ? config.projectName : '—',
+              ),
+              DetailKeyValueRow(
+                label: 'Clone path',
+                value: config.clonePath.isNotEmpty ? config.clonePath : '—',
+              ),
+              DetailKeyValueRow(
+                label: 'Run dir',
+                value: config.runDirectory.isNotEmpty
+                    ? config.runDirectory
+                    : '—',
+              ),
+              DetailKeyValueRow(
+                label: 'Env file',
+                value: config.envFilePath.isNotEmpty ? config.envFilePath : '—',
+                bottomPadding: 0,
+              ),
+            ],
+          ),
+        ),
+        if (config.links.isNotEmpty ||
+            config.additionalEnvFiles.isNotEmpty ||
+            config.filePaths.isNotEmpty ||
+            config.ignoreServices.isNotEmpty) ...[
+          const Gap(12),
+          DetailSubCard(
+            title: 'Extras',
+            icon: AppIcons.widgets,
+            child: Column(
+              children: [
+                if (config.links.isNotEmpty)
+                  DetailKeyValueRow(
+                    label: 'Links',
+                    value: config.links.join('\n'),
+                  ),
+                if (config.additionalEnvFiles.isNotEmpty)
+                  DetailKeyValueRow(
+                    label: 'Extra env',
+                    value: config.additionalEnvFiles.join('\n'),
+                  ),
+                if (config.filePaths.isNotEmpty)
+                  DetailKeyValueRow(
+                    label: 'Files',
+                    value: config.filePaths.join('\n'),
+                  ),
+                if (config.ignoreServices.isNotEmpty)
+                  DetailKeyValueRow(
+                    label: 'Ignore',
+                    value: config.ignoreServices.join(', '),
+                    bottomPadding: 0,
+                  ),
+              ],
+            ),
+          ),
+        ],
+        if (config.serverId.isNotEmpty) ...[
+          const Gap(12),
+          DetailSubCard(
+            title: 'Server',
+            icon: AppIcons.server,
+            child: DetailKeyValueRow(
+              label: 'Server ID',
+              value: config.serverId,
+              bottomPadding: 0,
+            ),
+          ),
+        ],
+        if (config.linkedRepo.isNotEmpty) ...[
+          const Gap(12),
+          DetailSubCard(
+            title: 'Linked repo',
+            icon: AppIcons.repos,
+            child: DetailKeyValueRow(
+              label: 'Repo',
+              value: config.linkedRepo,
+              bottomPadding: 0,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _StackDeploymentContent extends StatelessWidget {
+  const _StackDeploymentContent({required this.info});
+
+  final StackInfo info;
+
+  @override
+  Widget build(BuildContext context) {
+    final latest = info.latestHash;
+    final deployed = info.deployedHash;
+
+    final upToDate = latest != null && deployed == latest;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            StatusPill(
+              label: upToDate ? 'Up to date' : 'Out of date',
+              icon: upToDate ? AppIcons.ok : AppIcons.warning,
+              tone: upToDate ? PillTone.success : PillTone.warning,
+            ),
+            if (info.missingFiles.isNotEmpty)
+              StatusPill(
+                label: '${info.missingFiles.length} missing files',
+                icon: AppIcons.warning,
+                tone: PillTone.warning,
+              ),
+          ],
+        ),
+        const Gap(14),
+        DetailSubCard(
+          title: 'Commits',
+          icon: AppIcons.repos,
+          child: Column(
+            children: [
+              DetailKeyValueRow(
+                label: 'Latest',
+                value: _shortHash(latest) ?? '—',
+              ),
+              if (info.latestMessage?.trim().isNotEmpty ?? false)
+                DetailKeyValueRow(
+                  label: 'Message',
+                  value: info.latestMessage!.trim(),
+                ),
+              DetailKeyValueRow(
+                label: 'Deployed',
+                value: _shortHash(deployed) ?? '—',
+              ),
+              if (info.deployedMessage?.trim().isNotEmpty ?? false)
+                DetailKeyValueRow(
+                  label: 'Message',
+                  value: info.deployedMessage!.trim(),
+                  bottomPadding: 0,
+                )
+              else
+                const DetailKeyValueRow(
+                  label: 'Message',
+                  value: '—',
+                  bottomPadding: 0,
+                ),
+            ],
+          ),
+        ),
+        if (info.missingFiles.isNotEmpty) ...[
+          const Gap(12),
+          DetailSubCard(
+            title: 'Missing files',
+            icon: AppIcons.warning,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [for (final f in info.missingFiles) TextPill(label: f)],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  String? _shortHash(String? value) {
+    if (value == null) return null;
+    final v = value.trim();
+    if (v.isEmpty) return null;
+    return v.length > 8 ? v.substring(0, 8) : v;
+  }
+}
+
+class _StackServiceCard extends StatelessWidget {
+  const _StackServiceCard({required this.service});
 
   final StackService service;
 
   @override
   Widget build(BuildContext context) {
     final container = service.container;
-    final status = container?.status ?? '';
-    final state = container?.state ?? '';
+    final status = container?.status?.trim() ?? '';
+    final state = container?.state.trim() ?? '';
     final hasUpdate = service.updateAvailable;
 
-    final subtitleParts = <String>[
-      if (state.isNotEmpty) state,
-      if (status.isNotEmpty) status,
-    ];
-
-    return Card(
-      child: ListTile(
-        leading: Icon(
-          hasUpdate ? AppIcons.updateAvailable : AppIcons.widgets,
-          color: hasUpdate ? Colors.orange : null,
-        ),
-        title: Text(service.service),
-        subtitle: subtitleParts.isEmpty
-            ? null
-            : Text(subtitleParts.join(' · ')),
-        trailing: hasUpdate
-            ? const Icon(AppIcons.dot, size: 10, color: Colors.orange)
-            : null,
+    return DetailSubCard(
+      title: service.service,
+      icon: hasUpdate ? AppIcons.updateAvailable : AppIcons.widgets,
+      child: Column(
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (hasUpdate)
+                const StatusPill(
+                  label: 'Update available',
+                  icon: AppIcons.updateAvailable,
+                  tone: PillTone.warning,
+                )
+              else
+                const StatusPill(
+                  label: 'Up to date',
+                  icon: AppIcons.ok,
+                  tone: PillTone.success,
+                ),
+              if (state.isNotEmpty) ValuePill(label: 'State', value: state),
+              if (status.isNotEmpty) ValuePill(label: 'Status', value: status),
+            ],
+          ),
+          if ((container?.image?.trim().isNotEmpty ?? false) ||
+              (container?.name.trim().isNotEmpty ?? false)) ...[
+            const Gap(12),
+            if (container?.name.trim().isNotEmpty ?? false)
+              DetailKeyValueRow(
+                label: 'Container',
+                value: container!.name.trim(),
+              ),
+            if (container?.image?.trim().isNotEmpty ?? false)
+              DetailKeyValueRow(
+                label: 'Image',
+                value: container!.image!.trim(),
+                bottomPadding: 0,
+              ),
+          ],
+        ],
       ),
     );
   }
 }
 
-class _StackLogCard extends StatelessWidget {
-  const _StackLogCard({required this.log});
+class _StackLogContent extends StatelessWidget {
+  const _StackLogContent({required this.log});
 
   final StackLog? log;
 
@@ -342,60 +680,83 @@ class _StackLogCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final log = this.log;
     if (log == null) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('No logs available'),
-        ),
-      );
+      return const Text('No logs available');
     }
+
+    final scheme = Theme.of(context).colorScheme;
 
     final output = [
       if (log.stdout.trim().isNotEmpty) log.stdout.trim(),
       if (log.stderr.trim().isNotEmpty) log.stderr.trim(),
     ].join('\n');
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final duration = (log.endTs > 0 && log.startTs > 0)
+        ? Duration(milliseconds: log.endTs - log.startTs)
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
-            Text(
-              log.stage.isNotEmpty ? log.stage : 'Log',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+            StatusPill(
+              label: log.success ? 'Success' : 'Failed',
+              icon: log.success ? AppIcons.ok : AppIcons.error,
+              tone: log.success ? PillTone.success : PillTone.alert,
             ),
-            if (log.command.isNotEmpty) ...[
-              const Gap(4),
-              Text(
-                log.command,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(
+            if (duration != null)
+              ValuePill(label: 'Duration', value: '${duration.inSeconds}s'),
+          ],
+        ),
+        const Gap(14),
+        DetailSubCard(
+          title: log.stage.isNotEmpty ? log.stage : 'Log',
+          icon: log.success ? AppIcons.ok : AppIcons.error,
+          child: Column(
+            children: [
+              if (log.command.isNotEmpty) ...[
+                DetailKeyValueRow(label: 'Command', value: log.command),
+              ],
+              DetailSurface(
+                baseColor: scheme.surfaceContainerHighest,
+                enableGradientInDark: false,
+                radius: 16,
+                padding: const EdgeInsets.all(12),
+                child: SelectableText(
+                  output.isNotEmpty ? output : 'No output',
+                  style: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                 ),
               ),
             ],
-            const Gap(12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: SelectableText(
-                output.isNotEmpty ? output : 'No output',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
+  }
+}
+
+class _LoadingSurface extends StatelessWidget {
+  const _LoadingSurface();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DetailSurface(
+      child: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+class _MessageSurface extends StatelessWidget {
+  const _MessageSurface({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return DetailSurface(child: Text(message));
   }
 }
