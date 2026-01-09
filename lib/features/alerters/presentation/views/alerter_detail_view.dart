@@ -80,6 +80,18 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
   Widget build(BuildContext context) {
     final actionsState = ref.watch(alerterActionsProvider);
     final alerterAsync = ref.watch(alerterJsonProvider(widget.alerterIdOrName));
+    final resourceNameLookup = _resourceNameLookup(
+      servers: _asyncListOrEmpty(ref.watch(serversProvider)),
+      stacks: _asyncListOrEmpty(ref.watch(stacksProvider)),
+      deployments: _asyncListOrEmpty(ref.watch(deploymentsProvider)),
+      builds: _asyncListOrEmpty(ref.watch(buildsProvider)),
+      repos: _asyncListOrEmpty(ref.watch(reposProvider)),
+      procedures: _asyncListOrEmpty(ref.watch(proceduresProvider)),
+      actions: _asyncListOrEmpty(ref.watch(actionsProvider)),
+      syncs: _asyncListOrEmpty(ref.watch(syncsProvider)),
+      builders: _asyncListOrEmpty(ref.watch(buildersProvider)),
+      alerters: _asyncListOrEmpty(ref.watch(alertersProvider)),
+    );
 
     final title = alerterAsync.maybeWhen(
       data: (json) {
@@ -314,10 +326,10 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                             context,
                             labels: _resources
                                 .map(
-                                  (entry) => entry.name?.trim().isNotEmpty ==
-                                          true
-                                      ? entry.name!
-                                      : '${entry.variant} ${_shortId(entry.value)}',
+                                  (entry) => _resourceLabel(
+                                    entry,
+                                    resourceNameLookup,
+                                  ),
                                 )
                                 .toList(),
                             emptyLabel: 'No resource filter',
@@ -358,10 +370,10 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                             context,
                             labels: _exceptResources
                                 .map(
-                                  (entry) => entry.name?.trim().isNotEmpty ==
-                                          true
-                                      ? entry.name!
-                                      : '${entry.variant} ${_shortId(entry.value)}',
+                                  (entry) => _resourceLabel(
+                                    entry,
+                                    resourceNameLookup,
+                                  ),
                                 )
                                 .toList(),
                             emptyLabel: 'No exclusions',
@@ -914,6 +926,113 @@ String _shortId(String value) {
   final start = trimmed.substring(0, 6);
   final end = trimmed.substring(trimmed.length - 4);
   return '$start...$end';
+}
+
+String _resourceLabel(
+  _ResourceTargetEntry entry,
+  Map<String, String> lookup,
+) {
+  final directName = entry.name?.trim();
+  if (directName != null && directName.isNotEmpty) {
+    return directName;
+  }
+  final lookupName = lookup[entry.key];
+  if (lookupName != null && lookupName.trim().isNotEmpty) {
+    return lookupName.trim();
+  }
+  return '${entry.variant} ${_shortId(entry.value)}';
+}
+
+Map<String, String> _resourceNameLookup({
+  required List<Server> servers,
+  required List<StackListItem> stacks,
+  required List<Deployment> deployments,
+  required List<BuildListItem> builds,
+  required List<RepoListItem> repos,
+  required List<ProcedureListItem> procedures,
+  required List<ActionListItem> actions,
+  required List<ResourceSyncListItem> syncs,
+  required List<BuilderListItem> builders,
+  required List<AlerterListItem> alerters,
+}) {
+  final out = <String, String>{};
+
+  void addAll<T>({
+    required String variant,
+    required List<T> items,
+    required String Function(T item) getId,
+    required String Function(T item) getName,
+  }) {
+    for (final item in items) {
+      final id = getId(item).trim();
+      final name = getName(item).trim();
+      if (id.isEmpty || name.isEmpty) continue;
+      out['${variant.toLowerCase()}:$id'] = name;
+    }
+  }
+
+  addAll<Server>(
+    variant: 'Server',
+    items: servers,
+    getId: (item) => item.id,
+    getName: (item) => item.name,
+  );
+  addAll<StackListItem>(
+    variant: 'Stack',
+    items: stacks,
+    getId: (item) => item.id,
+    getName: (item) => item.name,
+  );
+  addAll<Deployment>(
+    variant: 'Deployment',
+    items: deployments,
+    getId: (item) => item.id,
+    getName: (item) => item.name,
+  );
+  addAll<BuildListItem>(
+    variant: 'Build',
+    items: builds,
+    getId: (item) => item.id,
+    getName: (item) => item.name,
+  );
+  addAll<RepoListItem>(
+    variant: 'Repo',
+    items: repos,
+    getId: (item) => item.id,
+    getName: (item) => item.name,
+  );
+  addAll<ProcedureListItem>(
+    variant: 'Procedure',
+    items: procedures,
+    getId: (item) => item.id,
+    getName: (item) => item.name,
+  );
+  addAll<ActionListItem>(
+    variant: 'Action',
+    items: actions,
+    getId: (item) => item.id,
+    getName: (item) => item.name,
+  );
+  addAll<ResourceSyncListItem>(
+    variant: 'ResourceSync',
+    items: syncs,
+    getId: (item) => item.id,
+    getName: (item) => item.name,
+  );
+  addAll<BuilderListItem>(
+    variant: 'Builder',
+    items: builders,
+    getId: (item) => item.id,
+    getName: (item) => item.name,
+  );
+  addAll<AlerterListItem>(
+    variant: 'Alerter',
+    items: alerters,
+    getId: (item) => item.id,
+    getName: (item) => item.name,
+  );
+
+  return out;
 }
 
 class _AlertTypesPickerSheet extends StatefulWidget {
