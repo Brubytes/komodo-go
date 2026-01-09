@@ -1,5 +1,6 @@
 export 'detail_history_row.dart';
 export 'detail_hero_panel.dart';
+export 'detail_code_block.dart';
 export 'detail_metric_grid.dart';
 export 'detail_pills.dart';
 export 'detail_rows.dart';

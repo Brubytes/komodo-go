@@ -135,12 +135,6 @@ class StackDetailView extends ConsumerWidget {
                               icon: AppIcons.deployments,
                               child: _StackDeploymentContent(info: stack.info),
                             ),
-                            const Gap(16),
-                            DetailSection(
-                              title: 'Compose',
-                              icon: AppIcons.stacks,
-                              child: _StackComposeContent(config: stack.config),
-                            ),
                           ],
                         )
                       : const _MessageSurface(message: 'Stack not found'),
@@ -427,6 +421,9 @@ class _StackConfigContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compose = config.fileContents.trim();
+    final environment = config.environment.trim();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -573,6 +570,40 @@ class _StackConfigContent extends StatelessWidget {
             ),
           ),
         ],
+        if (compose.isNotEmpty || environment.isNotEmpty) ...[
+          const Gap(12),
+          DetailSubCard(
+            title: 'Compose',
+            icon: AppIcons.stacks,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (config.filePaths.isNotEmpty) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final path in config.filePaths)
+                        TextPill(label: path),
+                    ],
+                  ),
+                  const Gap(12),
+                ],
+                if (compose.isNotEmpty)
+                  DetailCodeBlock(
+                    code: compose,
+                    language: DetailCodeLanguage.yaml,
+                  )
+                else
+                  const Text('No compose contents available'),
+                if (environment.isNotEmpty) ...[
+                  const Gap(12),
+                  DetailCodeBlock(code: environment),
+                ],
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -665,86 +696,6 @@ class _StackDeploymentContent extends StatelessWidget {
     final v = value.trim();
     if (v.isEmpty) return null;
     return v.length > 8 ? v.substring(0, 8) : v;
-  }
-}
-
-class _StackComposeContent extends StatelessWidget {
-  const _StackComposeContent({required this.config});
-
-  final StackConfig config;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final contents = config.fileContents.trim();
-    final environment = config.environment.trim();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (config.filePaths.isNotEmpty) ...[
-          DetailSubCard(
-            title: 'Files',
-            icon: AppIcons.package,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final path in config.filePaths) TextPill(label: path),
-              ],
-            ),
-          ),
-          const Gap(12),
-        ],
-        DetailSubCard(
-          title: 'Compose file',
-          icon: AppIcons.stacks,
-          child: contents.isEmpty
-              ? const Text('No compose contents available')
-              : DetailSurface(
-                  baseColor: scheme.surfaceContainerHighest,
-                  enableGradientInDark: false,
-                  radius: 16,
-                  padding: const EdgeInsets.all(12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 360),
-                    child: SingleChildScrollView(
-                      child: SelectableText(
-                        contents,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-        ),
-        if (environment.isNotEmpty) ...[
-          const Gap(12),
-          DetailSubCard(
-            title: 'Environment',
-            icon: AppIcons.factory,
-            child: DetailSurface(
-              baseColor: scheme.surfaceContainerHighest,
-              enableGradientInDark: false,
-              radius: 16,
-              padding: const EdgeInsets.all(12),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 220),
-                child: SingleChildScrollView(
-                  child: SelectableText(
-                    environment,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
   }
 }
 
