@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
@@ -117,16 +118,10 @@ class SyncDetailView extends ConsumerWidget {
     }
 
     if (context.mounted) {
-      final scheme = Theme.of(context).colorScheme;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            success ? 'Sync started' : 'Action failed. Please try again.',
-          ),
-          backgroundColor: success
-              ? scheme.secondaryContainer
-              : scheme.errorContainer,
-        ),
+      AppSnackBar.show(
+        context,
+        success ? 'Sync started' : 'Action failed. Please try again.',
+        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
       );
     }
   }

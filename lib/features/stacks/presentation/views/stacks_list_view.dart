@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
@@ -108,17 +109,12 @@ class StacksListContent extends ConsumerWidget {
     };
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            success
-                ? 'Action completed successfully'
-                : 'Action failed. Please try again.',
-          ),
-          backgroundColor: success
-              ? Theme.of(context).colorScheme.secondaryContainer
-              : Theme.of(context).colorScheme.errorContainer,
-        ),
+      AppSnackBar.show(
+        context,
+        success
+            ? 'Action completed successfully'
+            : 'Action failed. Please try again.',
+        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
       );
     }
   }
