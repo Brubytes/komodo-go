@@ -416,13 +416,27 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                             label: 'Windows',
                             value: _maintenanceWindows.length.toString(),
                           ),
-                          const Gap(10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
+                          const Gap(8),
+                          _selectionPills(
+                            context,
+                            items: _maintenanceWindows
+                                .map(
+                                  (window) => _PillData(
+                                    (window['name'] ?? 'Maintenance')
+                                        .toString(),
+                                    AppIcons.maintenance,
+                                  ),
+                                )
+                                .toList(),
+                            emptyLabel: 'No maintenance windows',
+                          ),
+                          const Gap(6),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
                               onPressed: _editMaintenance,
-                              icon: const Icon(AppIcons.maintenance, size: 18),
-                              label: const Text('Edit maintenance windows'),
+                              icon: const Icon(AppIcons.edit, size: 16),
+                              label: const Text('Edit'),
                             ),
                           ),
                         ],
@@ -1267,7 +1281,7 @@ class _AlertTypesPickerSheetState extends State<_AlertTypesPickerSheet> {
           Positioned(
             left: 16,
             right: 16,
-            bottom: 16 + MediaQuery.of(context).padding.bottom,
+            bottom: MediaQuery.of(context).padding.bottom - 16,
             child: SafeArea(
               top: false,
               child: FilledButton(
