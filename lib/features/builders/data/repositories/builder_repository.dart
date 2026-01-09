@@ -71,7 +71,10 @@ class BuilderRepository {
   }) async {
     try {
       await _client.write(
-        RpcRequest(type: 'RenameBuilder', params: <String, dynamic>{'id': id, 'name': name}),
+        RpcRequest(
+          type: 'RenameBuilder',
+          params: <String, dynamic>{'id': id, 'name': name},
+        ),
       );
       return const Right(null);
     } on ApiException catch (e) {
@@ -95,6 +98,26 @@ class BuilderRepository {
       return Left(Failure.unknown(message: e.toString()));
     }
   }
+
+  Future<Either<Failure, void>> updateBuilderConfig({
+    required String id,
+    required Map<String, dynamic> config,
+  }) async {
+    try {
+      await _client.write(
+        RpcRequest(
+          type: 'UpdateBuilder',
+          params: <String, dynamic>{'id': id, 'config': config},
+        ),
+      );
+      return const Right(null);
+    } on ApiException catch (e) {
+      if (e.isUnauthorized) return const Left(Failure.auth());
+      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
+    } on Object catch (e) {
+      return Left(Failure.unknown(message: e.toString()));
+    }
+  }
 }
 
 @riverpod
@@ -103,4 +126,3 @@ BuilderRepository? builderRepository(Ref ref) {
   if (client == null) return null;
   return BuilderRepository(client);
 }
-

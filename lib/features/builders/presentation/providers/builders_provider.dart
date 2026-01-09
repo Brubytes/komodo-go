@@ -28,11 +28,16 @@ class Builders extends _$Builders {
 }
 
 @riverpod
-Future<Map<String, dynamic>?> builderJson(Ref ref, String builderIdOrName) async {
+Future<Map<String, dynamic>?> builderJson(
+  Ref ref,
+  String builderIdOrName,
+) async {
   final repository = ref.watch(builderRepositoryProvider);
   if (repository == null) return null;
 
-  final result = await repository.getBuilderJson(builderIdOrName: builderIdOrName);
+  final result = await repository.getBuilderJson(
+    builderIdOrName: builderIdOrName,
+  );
   return result.fold(
     (failure) => throw Exception(failure.displayMessage),
     (json) => json,
@@ -50,6 +55,13 @@ class BuilderActions extends _$BuilderActions {
 
   Future<bool> delete({required String id}) async {
     return _execute((repo) => repo.deleteBuilder(id: id));
+  }
+
+  Future<bool> updateConfig({
+    required String id,
+    required Map<String, dynamic> config,
+  }) async {
+    return _execute((repo) => repo.updateBuilderConfig(id: id, config: config));
   }
 
   Future<bool> _execute(
@@ -77,4 +89,3 @@ class BuilderActions extends _$BuilderActions {
     );
   }
 }
-

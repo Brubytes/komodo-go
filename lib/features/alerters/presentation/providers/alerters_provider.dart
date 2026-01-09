@@ -28,11 +28,16 @@ class Alerters extends _$Alerters {
 }
 
 @riverpod
-Future<Map<String, dynamic>?> alerterJson(Ref ref, String alerterIdOrName) async {
+Future<Map<String, dynamic>?> alerterJson(
+  Ref ref,
+  String alerterIdOrName,
+) async {
   final repository = ref.watch(alerterRepositoryProvider);
   if (repository == null) return null;
 
-  final result = await repository.getAlerterJson(alerterIdOrName: alerterIdOrName);
+  final result = await repository.getAlerterJson(
+    alerterIdOrName: alerterIdOrName,
+  );
   return result.fold(
     (failure) => throw Exception(failure.displayMessage),
     (json) => json,
@@ -54,6 +59,13 @@ class AlerterActions extends _$AlerterActions {
 
   Future<bool> setEnabled({required String id, required bool enabled}) async {
     return _execute((repo) => repo.setEnabled(id: id, enabled: enabled));
+  }
+
+  Future<bool> updateConfig({
+    required String id,
+    required Map<String, dynamic> config,
+  }) async {
+    return _execute((repo) => repo.updateAlerterConfig(id: id, config: config));
   }
 
   Future<bool> test({required String idOrName}) async {
@@ -85,4 +97,3 @@ class AlerterActions extends _$AlerterActions {
     );
   }
 }
-

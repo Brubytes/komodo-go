@@ -71,7 +71,10 @@ class AlerterRepository {
   }) async {
     try {
       await _client.write(
-        RpcRequest(type: 'RenameAlerter', params: <String, dynamic>{'id': id, 'name': name}),
+        RpcRequest(
+          type: 'RenameAlerter',
+          params: <String, dynamic>{'id': id, 'name': name},
+        ),
       );
       return const Right(null);
     } on ApiException catch (e) {
@@ -100,14 +103,21 @@ class AlerterRepository {
     required String id,
     required bool enabled,
   }) async {
+    return updateAlerterConfig(
+      id: id,
+      config: <String, dynamic>{'enabled': enabled},
+    );
+  }
+
+  Future<Either<Failure, void>> updateAlerterConfig({
+    required String id,
+    required Map<String, dynamic> config,
+  }) async {
     try {
       await _client.write(
         RpcRequest(
           type: 'UpdateAlerter',
-          params: <String, dynamic>{
-            'id': id,
-            'config': <String, dynamic>{'enabled': enabled},
-          },
+          params: <String, dynamic>{'id': id, 'config': config},
         ),
       );
       return const Right(null);
@@ -143,4 +153,3 @@ AlerterRepository? alerterRepository(Ref ref) {
   if (client == null) return null;
   return AlerterRepository(client);
 }
-
