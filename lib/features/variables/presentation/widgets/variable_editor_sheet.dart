@@ -123,7 +123,7 @@ class _VariableEditorSheetState extends State<VariableEditorSheet> {
             controller: _valueController,
             obscureText: _obscureValue,
             minLines: 1,
-            maxLines: 6,
+            maxLines: _obscureValue ? 1 : 6,
             decoration: InputDecoration(
               labelText: 'Value',
               prefixIcon: const Icon(AppIcons.key),
@@ -175,4 +175,3 @@ class _VariableEditorSheetState extends State<VariableEditorSheet> {
     );
   }
 }
-
