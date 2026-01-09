@@ -30,6 +30,7 @@ class VariableEditorSheet extends StatefulWidget {
     return showModalBottomSheet<VariableEditorResult>(
       context: context,
       useSafeArea: true,
+      useRootNavigator: true,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (context) => VariableEditorSheet(initial: initial),

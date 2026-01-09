@@ -23,6 +23,7 @@ class TagEditorSheet extends StatefulWidget {
     return showModalBottomSheet<TagEditorResult>(
       context: context,
       useSafeArea: true,
+      useRootNavigator: true,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (context) => TagEditorSheet(initial: initial),
@@ -137,4 +138,3 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
     );
   }
 }
-
