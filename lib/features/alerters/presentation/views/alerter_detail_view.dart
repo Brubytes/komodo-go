@@ -78,7 +78,6 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final actionsState = ref.watch(alerterActionsProvider);
     final alerterAsync = ref.watch(alerterJsonProvider(widget.alerterIdOrName));
 
@@ -271,13 +270,21 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                                 ? 'All'
                                 : _alertTypes.length.toString(),
                           ),
-                          const Gap(10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
+                          const Gap(8),
+                          _selectionPills(
+                            context,
+                            labels: (_alertTypes.toList()..sort())
+                                .map(_humanizeEnum)
+                                .toList(),
+                            emptyLabel: 'All alert types',
+                          ),
+                          const Gap(6),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
                               onPressed: _pickAlertTypes,
-                              icon: const Icon(AppIcons.edit, size: 18),
-                              label: const Text('Edit alert types'),
+                              icon: const Icon(AppIcons.edit, size: 16),
+                              label: const Text('Edit'),
                             ),
                           ),
                         ],
@@ -302,13 +309,26 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                             label: 'Selected',
                             value: _resources.length.toString(),
                           ),
-                          const Gap(10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
+                          const Gap(8),
+                          _selectionPills(
+                            context,
+                            labels: _resources
+                                .map(
+                                  (entry) => entry.name?.trim().isNotEmpty ==
+                                          true
+                                      ? entry.name!
+                                      : '${entry.variant} ${_shortId(entry.value)}',
+                                )
+                                .toList(),
+                            emptyLabel: 'No resource filter',
+                          ),
+                          const Gap(6),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
                               onPressed: _editWhitelist,
-                              icon: const Icon(AppIcons.edit, size: 18),
-                              label: const Text('Edit resources'),
+                              icon: const Icon(AppIcons.edit, size: 16),
+                              label: const Text('Edit'),
                             ),
                           ),
                         ],
@@ -333,13 +353,26 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                             label: 'Selected',
                             value: _exceptResources.length.toString(),
                           ),
-                          const Gap(10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
+                          const Gap(8),
+                          _selectionPills(
+                            context,
+                            labels: _exceptResources
+                                .map(
+                                  (entry) => entry.name?.trim().isNotEmpty ==
+                                          true
+                                      ? entry.name!
+                                      : '${entry.variant} ${_shortId(entry.value)}',
+                                )
+                                .toList(),
+                            emptyLabel: 'No exclusions',
+                          ),
+                          const Gap(6),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
                               onPressed: _editBlacklist,
-                              icon: const Icon(AppIcons.edit, size: 18),
-                              label: const Text('Edit resources'),
+                              icon: const Icon(AppIcons.edit, size: 16),
+                              label: const Text('Edit'),
                             ),
                           ),
                         ],
@@ -683,10 +716,15 @@ _EndpointConfig _parseEndpointConfig(Object? raw) {
 }
 
 class _ResourceTargetEntry {
-  const _ResourceTargetEntry({required this.variant, required this.value});
+  const _ResourceTargetEntry({
+    required this.variant,
+    required this.value,
+    this.name,
+  });
 
   final String variant;
   final String value;
+  final String? name;
 
   String get key => '${variant.toLowerCase()}:$value';
 
@@ -754,6 +792,33 @@ bool _deepEquals(Object? a, Object? b) {
   return a == b;
 }
 
+Widget _selectionPills(
+  BuildContext context, {
+  required List<String> labels,
+  required String emptyLabel,
+}) {
+  if (labels.isEmpty) {
+    return TextPill(label: emptyLabel);
+  }
+
+  final sorted = List<String>.from(labels)..sort();
+  final visible = sorted.take(6).toList();
+  final remaining = sorted.length - visible.length;
+
+  return Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      for (final label in visible) TextPill(label: label),
+      if (remaining > 0)
+        ValuePill(
+          label: 'More',
+          value: '+$remaining',
+        ),
+    ],
+  );
+}
+
 class _ResourceOption {
   const _ResourceOption({
     required this.variant,
@@ -770,7 +835,7 @@ class _ResourceOption {
   String get key => '${variant.toLowerCase()}:$id';
 
   _ResourceTargetEntry toEntry() =>
-      _ResourceTargetEntry(variant: variant, value: id);
+      _ResourceTargetEntry(variant: variant, value: id, name: name);
 }
 
 List<_ResourceTargetEntry> _parseResourceTargets(Object? raw) {
@@ -787,6 +852,17 @@ List<_ResourceTargetEntry> _parseResourceTargets(Object? raw) {
           k.trim().isNotEmpty &&
           v.trim().isNotEmpty) {
         out.add(_ResourceTargetEntry(variant: k.trim(), value: v.trim()));
+      }
+      continue;
+    }
+    if (e is Map) {
+      final type = e['type']?.toString();
+      final id = e['id']?.toString();
+      if (type != null &&
+          id != null &&
+          type.trim().isNotEmpty &&
+          id.trim().isNotEmpty) {
+        out.add(_ResourceTargetEntry(variant: type.trim(), value: id.trim()));
       }
     }
   }
@@ -830,6 +906,14 @@ String _humanizeEnum(String v) {
     (m) => '${m[1]} ${m[2]}',
   );
   return out.replaceAll('_', ' ').trim();
+}
+
+String _shortId(String value) {
+  final trimmed = value.trim();
+  if (trimmed.length <= 10) return trimmed;
+  final start = trimmed.substring(0, 6);
+  final end = trimmed.substring(trimmed.length - 4);
+  return '$start...$end';
 }
 
 class _AlertTypesPickerSheet extends StatefulWidget {
