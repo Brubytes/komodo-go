@@ -98,79 +98,129 @@ class DeploymentCard extends StatelessWidget {
     DeploymentState state,
   ) {
     final scheme = Theme.of(context).colorScheme;
-    return [
+    final items = <PopupMenuEntry<DeploymentAction>>[];
+
+    final deployLabel =
+        (state == DeploymentState.notDeployed ||
+            state == DeploymentState.unknown)
+        ? 'Deploy'
+        : 'Redeploy';
+
+    items.add(
       PopupMenuItem(
         value: DeploymentAction.deploy,
         child: ListTile(
           leading: Icon(AppIcons.deployments, color: scheme.primary),
-          title: const Text('Redeploy'),
+          title: Text(deployLabel),
           contentPadding: EdgeInsets.zero,
         ),
       ),
-      PopupMenuItem(
-        value: DeploymentAction.pullImages,
-        child: ListTile(
-          leading: Icon(AppIcons.download, color: scheme.primary),
-          title: const Text('Pull image'),
-          contentPadding: EdgeInsets.zero,
-        ),
-      ),
-      const PopupMenuDivider(),
-      if (state.isStopped || state == DeploymentState.notDeployed)
+    );
+
+    final hasImage = deployment.info?.image.isNotEmpty ?? false;
+    if (hasImage) {
+      items.add(
         PopupMenuItem(
-          value: DeploymentAction.start,
+          value: DeploymentAction.pullImages,
           child: ListTile(
-            leading: Icon(AppIcons.play, color: scheme.secondary),
-            title: const Text('Start'),
+            leading: Icon(AppIcons.download, color: scheme.primary),
+            title: const Text('Pull image'),
             contentPadding: EdgeInsets.zero,
           ),
         ),
-      if (state.isRunning)
-        PopupMenuItem(
-          value: DeploymentAction.stop,
-          child: ListTile(
-            leading: Icon(AppIcons.stop, color: scheme.tertiary),
-            title: const Text('Stop'),
-            contentPadding: EdgeInsets.zero,
+      );
+    }
+
+    final showStart =
+        state == DeploymentState.created || state == DeploymentState.exited;
+    final showStop = state.isRunning;
+    final showRestart = state.isRunning || state.isPaused;
+    final showPause = state.isRunning;
+    final showUnpause = state.isPaused;
+
+    final hasLifecycle =
+        showStart || showStop || showRestart || showPause || showUnpause;
+    if (hasLifecycle) {
+      items.add(const PopupMenuDivider());
+      if (showStart) {
+        items.add(
+          PopupMenuItem(
+            value: DeploymentAction.start,
+            child: ListTile(
+              leading: Icon(AppIcons.play, color: scheme.secondary),
+              title: const Text('Start'),
+              contentPadding: EdgeInsets.zero,
+            ),
           ),
-        ),
-      if (state.isRunning || state.isPaused)
-        PopupMenuItem(
-          value: DeploymentAction.restart,
-          child: ListTile(
-            leading: Icon(AppIcons.refresh, color: scheme.primary),
-            title: const Text('Restart'),
-            contentPadding: EdgeInsets.zero,
+        );
+      }
+      if (showStop) {
+        items.add(
+          PopupMenuItem(
+            value: DeploymentAction.stop,
+            child: ListTile(
+              leading: Icon(AppIcons.stop, color: scheme.tertiary),
+              title: const Text('Stop'),
+              contentPadding: EdgeInsets.zero,
+            ),
           ),
-        ),
-      if (state.isRunning)
-        PopupMenuItem(
-          value: DeploymentAction.pause,
-          child: ListTile(
-            leading: Icon(AppIcons.pause, color: scheme.tertiary),
-            title: const Text('Pause'),
-            contentPadding: EdgeInsets.zero,
+        );
+      }
+      if (showRestart) {
+        items.add(
+          PopupMenuItem(
+            value: DeploymentAction.restart,
+            child: ListTile(
+              leading: Icon(AppIcons.refresh, color: scheme.primary),
+              title: const Text('Restart'),
+              contentPadding: EdgeInsets.zero,
+            ),
           ),
-        ),
-      if (state.isPaused)
-        PopupMenuItem(
-          value: DeploymentAction.unpause,
-          child: ListTile(
-            leading: Icon(AppIcons.play, color: scheme.primary),
-            title: const Text('Unpause'),
-            contentPadding: EdgeInsets.zero,
+        );
+      }
+      if (showPause) {
+        items.add(
+          PopupMenuItem(
+            value: DeploymentAction.pause,
+            child: ListTile(
+              leading: Icon(AppIcons.pause, color: scheme.tertiary),
+              title: const Text('Pause'),
+              contentPadding: EdgeInsets.zero,
+            ),
           ),
-        ),
-      const PopupMenuDivider(),
-      PopupMenuItem(
-        value: DeploymentAction.destroy,
-        child: ListTile(
-          leading: Icon(AppIcons.delete, color: scheme.error),
-          title: const Text('Destroy'),
-          contentPadding: EdgeInsets.zero,
-        ),
-      ),
-    ];
+        );
+      }
+      if (showUnpause) {
+        items.add(
+          PopupMenuItem(
+            value: DeploymentAction.unpause,
+            child: ListTile(
+              leading: Icon(AppIcons.play, color: scheme.primary),
+              title: const Text('Unpause'),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        );
+      }
+    }
+
+    final showDestroy = state != DeploymentState.notDeployed;
+    if (showDestroy) {
+      items
+        ..add(const PopupMenuDivider())
+        ..add(
+          PopupMenuItem(
+            value: DeploymentAction.destroy,
+            child: ListTile(
+              leading: Icon(AppIcons.delete, color: scheme.error),
+              title: const Text('Destroy'),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        );
+    }
+
+    return items;
   }
 }
 
