@@ -1,12 +1,9 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
-import 'package:komodo_go/core/widgets/detail/detail_code_block.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -75,8 +72,6 @@ class _BuilderTile extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final info = item.info;
 
-    final shortId = item.id.length <= 6 ? item.id : item.id.substring(0, 6);
-
     return DetailSurface(
       padding: const EdgeInsets.all(14),
       radius: 20,
@@ -123,8 +118,6 @@ class _BuilderTile extends ConsumerWidget {
                   switch (action) {
                     case _BuilderAction.editConfig:
                       await _editConfig(context, ref);
-                    case _BuilderAction.viewJson:
-                      await _showJson(context, ref, item.id);
                     case _BuilderAction.rename:
                       await _rename(context, ref);
                     case _BuilderAction.delete:
@@ -139,16 +132,6 @@ class _BuilderTile extends ConsumerWidget {
                         Icon(AppIcons.edit, color: scheme.primary, size: 18),
                         const Gap(10),
                         const Text('Edit config'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: _BuilderAction.viewJson,
-                    child: Row(
-                      children: [
-                        Icon(AppIcons.package, color: scheme.primary, size: 18),
-                        const Gap(10),
-                        const Text('View JSON'),
                       ],
                     ),
                   ),
@@ -181,7 +164,6 @@ class _BuilderTile extends ConsumerWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              ValuePill(label: 'ID', value: shortId),
               if (item.template) const TextPill(label: 'Template'),
               if (info.builderType.trim().isNotEmpty)
                 TextPill(label: info.builderType),
@@ -238,55 +220,6 @@ class _BuilderTile extends ConsumerWidget {
       context,
       ok ? 'Builder updated' : 'Failed to update builder',
       tone: ok ? AppSnackBarTone.success : AppSnackBarTone.error,
-    );
-  }
-
-  Future<void> _showJson(BuildContext context, WidgetRef ref, String id) async {
-    final jsonAsync = await ref.read(builderJsonProvider(id).future);
-    if (!context.mounted) return;
-
-    final pretty = jsonAsync == null
-        ? '{}'
-        : const JsonEncoder.withIndent('  ').convert(jsonAsync);
-
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
-          top: 8,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Builder JSON',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  tooltip: 'Close',
-                  icon: const Icon(AppIcons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const Gap(12),
-            DetailCodeBlock(code: pretty, maxHeight: 520),
-            const Gap(12),
-          ],
-        ),
-      ),
     );
   }
 
@@ -360,7 +293,7 @@ class _BuilderTile extends ConsumerWidget {
   }
 }
 
-enum _BuilderAction { editConfig, viewJson, rename, delete }
+enum _BuilderAction { editConfig, rename, delete }
 
 class BuilderConfigEditorResult {
   const BuilderConfigEditorResult({required this.config});
