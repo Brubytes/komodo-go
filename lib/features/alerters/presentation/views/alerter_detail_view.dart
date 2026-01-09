@@ -986,129 +986,141 @@ class _AlertTypesPickerSheetState extends State<_AlertTypesPickerSheet> {
       initialChildSize: 0.92,
       minChildSize: 0.55,
       maxChildSize: 0.96,
-      builder: (context, controller) => ListView(
-        controller: controller,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      builder: (context, controller) => Stack(
         children: [
-          Row(
-            children: [
-              Text(
-                'Alert types',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                tooltip: 'Close',
-                icon: const Icon(AppIcons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-          const Gap(8),
-          Text(
-            'Select the alert types to send. Leave empty to send all.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          const Gap(12),
-          TextField(
-            controller: _searchController,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              labelText: 'Search alert types',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.trim().isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Clear search',
-                      icon: const Icon(AppIcons.close),
-                      onPressed: () => _searchController.clear(),
-                    ),
+          ListView(
+            controller: controller,
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              16 + MediaQuery.of(context).padding.bottom + 72,
             ),
-          ),
-          const Gap(12),
-          Row(
             children: [
-              Text(
-                '${_selected.length} selected',
-                style: textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${_knownAlertTypes.length} types',
-                style: textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-          const Gap(12),
-          DetailSurface(
-            padding: EdgeInsets.zero,
-            radius: 16,
-            enableGradientInDark: false,
-            child: Column(
-              children: [
-                if (filtered.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'No alert types match your search.',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+              Row(
+                children: [
+                  Text(
+                    'Alert types',
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.2,
                     ),
-                  )
-                else
-                  for (final (index, type) in filtered.indexed) ...[
-                    if (index > 0)
-                      Divider(
-                        height: 1,
-                        color: scheme.outlineVariant.withValues(alpha: 0.35),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _humanizeEnum(type),
-                              style: textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Close',
+                    icon: const Icon(AppIcons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const Gap(8),
+              Text(
+                'Select the alert types to send. Leave empty to send all.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              const Gap(12),
+              TextField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  labelText: 'Search alert types',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.trim().isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear search',
+                          icon: const Icon(AppIcons.close),
+                          onPressed: () => _searchController.clear(),
+                        ),
+                ),
+              ),
+              const Gap(12),
+              Row(
+                children: [
+                  Text(
+                    '${_selected.length} selected',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${_knownAlertTypes.length} types',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const Gap(12),
+              DetailSurface(
+                padding: EdgeInsets.zero,
+                radius: 16,
+                enableGradientInDark: false,
+                child: Column(
+                  children: [
+                    if (filtered.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          'No alert types match your search.',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      )
+                    else
+                      for (final (index, type) in filtered.indexed) ...[
+                        if (index > 0)
+                          Divider(
+                            height: 1,
+                            color: scheme.outlineVariant.withValues(alpha: 0.35),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _humanizeEnum(type),
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
-                            ),
+                              Switch(
+                                value: _selected.contains(type),
+                                onChanged: (next) => _toggleType(type, next),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ],
                           ),
-                          Switch(
-                            value: _selected.contains(type),
-                            onChanged: (next) => _toggleType(type, next),
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                          ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      ],
                   ],
-              ],
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16 + MediaQuery.of(context).padding.bottom,
+            child: SafeArea(
+              top: false,
+              child: FilledButton(
+                onPressed: () => Navigator.of(context).pop(_selected),
+                child: const Text('Confirm'),
+              ),
             ),
           ),
-          const Gap(12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () => Navigator.of(context).pop(_selected),
-              child: const Text('Confirm'),
-            ),
-          ),
-          const Gap(12),
         ],
       ),
     );
@@ -1336,283 +1348,293 @@ class _ResourceTargetsEditorSheetState
       initialChildSize: 0.92,
       minChildSize: 0.55,
       maxChildSize: 0.96,
-      builder: (context, controller) => ListView(
-        controller: controller,
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
-          top: 8,
-        ),
+      builder: (context, controller) => Stack(
         children: [
-          Row(
+          ListView(
+            controller: controller,
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              bottom:
+                  16 + MediaQuery.of(context).viewInsets.bottom + 72,
+              top: 8,
+            ),
             children: [
-              Expanded(
-                child: Text(
-                  widget.title,
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Close',
-                icon: const Icon(AppIcons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-          const Gap(8),
-          Text(
-            widget.subtitle,
-            style: textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const Gap(12),
-          TextField(
-            controller: _searchController,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              labelText: 'Search resources',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.trim().isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Clear search',
-                      icon: const Icon(AppIcons.close),
-                      onPressed: () => _searchController.clear(),
-                    ),
-            ),
-          ),
-          const Gap(12),
-          Row(
-            children: [
-              Text(
-                '${_items.length} selected',
-                style: textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${options.length} resources',
-                style: textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-          if (isLoading) ...[
-            const Gap(8),
-            Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: scheme.primary,
-                  ),
-                ),
-                const Gap(8),
-                Text(
-                  'Loading resources...',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ],
-          if (hasErrors) ...[
-            const Gap(8),
-            Text(
-              'Some resources could not be loaded.',
-              style: textTheme.bodySmall?.copyWith(color: scheme.error),
-            ),
-          ],
-          const Gap(12),
-          DetailSurface(
-            padding: EdgeInsets.zero,
-            radius: 16,
-            enableGradientInDark: false,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: Text(
-                          'Resource',
-                          style: textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 4,
-                        child: Text(
-                          'Target',
-                          style: textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 84,
-                        child: Text(
-                          widget.modeLabel,
-                          textAlign: TextAlign.end,
-                          style: textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Divider(
-                  height: 1,
-                  color: scheme.outlineVariant.withValues(alpha: 0.35),
-                ),
-                if (filtered.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
+              Row(
+                children: [
+                  Expanded(
                     child: Text(
-                      query.isEmpty
-                          ? 'No resources available.'
-                          : 'No resources match your search.',
+                      widget.title,
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    icon: const Icon(AppIcons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const Gap(8),
+              Text(
+                widget.subtitle,
+                style: textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const Gap(12),
+              TextField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  labelText: 'Search resources',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.trim().isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear search',
+                          icon: const Icon(AppIcons.close),
+                          onPressed: () => _searchController.clear(),
+                        ),
+                ),
+              ),
+              const Gap(12),
+              Row(
+                children: [
+                  Text(
+                    '${_items.length} selected',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${options.length} resources',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              if (isLoading) ...[
+                const Gap(8),
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: scheme.primary,
+                      ),
+                    ),
+                    const Gap(8),
+                    Text(
+                      'Loading resources...',
                       style: textTheme.bodySmall?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
-                  )
-                else
-                  for (final (index, option) in filtered.indexed) ...[
-                    if (index > 0)
-                      Divider(
-                        height: 1,
-                        color: scheme.outlineVariant.withValues(alpha: 0.35),
-                      ),
+                  ],
+                ),
+              ],
+              if (hasErrors) ...[
+                const Gap(8),
+                Text(
+                  'Some resources could not be loaded.',
+                  style: textTheme.bodySmall?.copyWith(color: scheme.error),
+                ),
+              ],
+              const Gap(12),
+              DetailSurface(
+                padding: EdgeInsets.zero,
+                radius: 16,
+                enableGradientInDark: false,
+                child: Column(
+                  children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                       child: Row(
                         children: [
                           Expanded(
                             flex: 3,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  option.icon,
-                                  size: 16,
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                                const Gap(6),
-                                Flexible(
-                                  child: Text(
-                                    option.variant,
-                                    style: textTheme.bodySmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              'Resource',
+                              style: textTheme.labelMedium?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                           Expanded(
                             flex: 4,
                             child: Text(
-                              option.name,
-                              style: textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
+                              'Target',
+                              style: textTheme.labelMedium?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           SizedBox(
                             width: 84,
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: Switch(
-                                value: selectedKeys.contains(option.key),
-                                onChanged: (next) =>
-                                    _toggleOption(option, next),
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
+                            child: Text(
+                              widget.modeLabel,
+                              textAlign: TextAlign.end,
+                              style: textTheme.labelMedium?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
+                    Divider(
+                      height: 1,
+                      color: scheme.outlineVariant.withValues(alpha: 0.35),
+                    ),
+                    if (filtered.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          query.isEmpty
+                              ? 'No resources available.'
+                              : 'No resources match your search.',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      )
+                    else
+                      for (final (index, option) in filtered.indexed) ...[
+                        if (index > 0)
+                          Divider(
+                            height: 1,
+                            color:
+                                scheme.outlineVariant.withValues(alpha: 0.35),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      option.icon,
+                                      size: 16,
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                                    const Gap(6),
+                                    Flexible(
+                                      child: Text(
+                                        option.variant,
+                                        style: textTheme.bodySmall?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                flex: 4,
+                                child: Text(
+                                  option.name,
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              SizedBox(
+                                width: 84,
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Switch(
+                                    value: selectedKeys.contains(option.key),
+                                    onChanged: (next) =>
+                                        _toggleOption(option, next),
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                   ],
+                ),
+              ),
+              if (unknownItems.isNotEmpty) ...[
+                const Gap(12),
+                DetailSurface(
+                  padding: const EdgeInsets.all(12),
+                  radius: 16,
+                  enableGradientInDark: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Other selections',
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Gap(6),
+                      Text(
+                        'These targets are not available in the list above.',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const Gap(8),
+                      for (final (index, item) in unknownItems.indexed) ...[
+                        if (index > 0)
+                          Divider(
+                            height: 1,
+                            color:
+                                scheme.outlineVariant.withValues(alpha: 0.35),
+                          ),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(item.variant),
+                          subtitle: const Text('Unavailable target'),
+                          trailing: IconButton(
+                            tooltip: 'Remove',
+                            icon: Icon(AppIcons.delete, color: scheme.error),
+                            onPressed: () => _removeUnknown(item),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ],
-            ),
+            ],
           ),
-          if (unknownItems.isNotEmpty) ...[
-            const Gap(12),
-            DetailSurface(
-              padding: const EdgeInsets.all(12),
-              radius: 16,
-              enableGradientInDark: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Other selections',
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Gap(6),
-                  Text(
-                    'These targets are not available in the list above.',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const Gap(8),
-                  for (final (index, item) in unknownItems.indexed) ...[
-                    if (index > 0)
-                      Divider(
-                        height: 1,
-                        color: scheme.outlineVariant.withValues(alpha: 0.35),
-                      ),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(item.variant),
-                      subtitle: const Text('Unavailable target'),
-                      trailing: IconButton(
-                        tooltip: 'Remove',
-                        icon: Icon(AppIcons.delete, color: scheme.error),
-                        onPressed: () => _removeUnknown(item),
-                      ),
-                    ),
-                  ],
-                ],
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: MediaQuery.of(context).padding.bottom - 16,
+            child: SafeArea(
+              top: false,
+              child: FilledButton(
+                onPressed: () => Navigator.of(context).pop(_items),
+                child: const Text('Confirm'),
               ),
             ),
-          ],
-          const Gap(12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () => Navigator.of(context).pop(_items),
-              child: const Text('Confirm'),
-            ),
           ),
-          const Gap(12),
         ],
       ),
     );
