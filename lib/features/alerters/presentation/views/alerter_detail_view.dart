@@ -52,6 +52,16 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
   List<_ResourceTargetEntry> _exceptResources = <_ResourceTargetEntry>[];
   List<Map<String, dynamic>> _maintenanceWindows = <Map<String, dynamic>>[];
 
+  bool _initialEnabled = false;
+  String? _initialEndpointType;
+  String? _initialEndpointUrl;
+  String? _initialEndpointEmail;
+  Set<String> _initialAlertTypes = <String>{};
+  List<_ResourceTargetEntry> _initialResources = <_ResourceTargetEntry>[];
+  List<_ResourceTargetEntry> _initialExceptResources = <_ResourceTargetEntry>[];
+  List<Map<String, dynamic>> _initialMaintenanceWindows =
+      <Map<String, dynamic>>[];
+
   @override
   void initState() {
     super.initState();
@@ -438,6 +448,17 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
       config['maintenance_windows'],
     );
 
+    _initialEnabled = _enabled;
+    _initialEndpointType = _endpointType;
+    _initialEndpointUrl = _endpointUrlController.text;
+    _initialEndpointEmail = _endpointEmailController.text;
+    _initialAlertTypes = Set<String>.from(_alertTypes);
+    _initialResources = List<_ResourceTargetEntry>.from(_resources);
+    _initialExceptResources = List<_ResourceTargetEntry>.from(_exceptResources);
+    _initialMaintenanceWindows = _maintenanceWindows
+        .map((window) => Map<String, dynamic>.from(window))
+        .toList();
+
     if (mounted) setState(() {});
   }
 
@@ -505,20 +526,38 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     final endpointEmail = _endpointEmailController.text.trim();
 
     final config = <String, dynamic>{
-      'enabled': _enabled,
-      'endpoint': <String, dynamic>{
-        'type': _endpointType,
-        'params': <String, dynamic>{
-          'url': endpointUrl,
-          if (_endpointType == 'Ntfy' && endpointEmail.isNotEmpty)
-            'email': endpointEmail,
-        },
-      },
-      'alert_types': _alertTypes.toList()..sort(),
-      'resources': _resources.map((e) => e.toJson()).toList(),
-      'except_resources': _exceptResources.map((e) => e.toJson()).toList(),
-      'maintenance_windows': _maintenanceWindows,
+      if (_enabled != _initialEnabled) 'enabled': _enabled,
+      if (_endpointChanged(
+        currentType: _endpointType,
+        initialType: _initialEndpointType,
+        currentUrl: endpointUrl,
+        initialUrl: _initialEndpointUrl,
+        currentEmail: endpointEmail,
+        initialEmail: _initialEndpointEmail,
+      ))
+        'endpoint': _buildEndpointPayload(
+          type: _endpointType,
+          url: endpointUrl,
+          email: endpointEmail,
+        ),
+      if (!_setEquals(_alertTypes, _initialAlertTypes))
+        'alert_types': _alertTypes.toList()..sort(),
+      if (!_resourceSetsEqual(_resources, _initialResources))
+        'resources': _resources.map((e) => e.toJson()).toList(),
+      if (!_resourceSetsEqual(_exceptResources, _initialExceptResources))
+        'except_resources': _exceptResources.map((e) => e.toJson()).toList(),
+      if (!_deepEquals(_maintenanceWindows, _initialMaintenanceWindows))
+        'maintenance_windows': _maintenanceWindows,
     };
+
+    if (config.isEmpty) {
+      AppSnackBar.show(
+        context,
+        'No changes to save',
+        tone: AppSnackBarTone.neutral,
+      );
+      return;
+    }
 
     final ok = await ref
         .read(alerterActionsProvider.notifier)
@@ -681,7 +720,68 @@ class _ResourceTargetEntry {
 
   String get key => '${variant.toLowerCase()}:$value';
 
-  Map<String, dynamic> toJson() => <String, dynamic>{variant: value};
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'type': variant,
+        'id': value,
+      };
+}
+
+bool _endpointChanged({
+  required String currentType,
+  required String? initialType,
+  required String currentUrl,
+  required String? initialUrl,
+  required String currentEmail,
+  required String? initialEmail,
+}) {
+  return currentType != initialType ||
+      currentUrl != (initialUrl ?? '') ||
+      currentEmail != (initialEmail ?? '');
+}
+
+Map<String, dynamic> _buildEndpointPayload({
+  required String type,
+  required String url,
+  required String email,
+}) {
+  final params = <String, dynamic>{'url': url};
+  if (type == 'Ntfy' && email.isNotEmpty) {
+    params['email'] = email;
+  }
+  return <String, dynamic>{type: params};
+}
+
+bool _resourceSetsEqual(
+  List<_ResourceTargetEntry> a,
+  List<_ResourceTargetEntry> b,
+) {
+  final aKeys = a.map((entry) => entry.key).toSet();
+  final bKeys = b.map((entry) => entry.key).toSet();
+  return aKeys.length == bKeys.length && aKeys.containsAll(bKeys);
+}
+
+bool _setEquals(Set<String> a, Set<String> b) {
+  if (a.length != b.length) return false;
+  return a.containsAll(b);
+}
+
+bool _deepEquals(Object? a, Object? b) {
+  if (a is Map && b is Map) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (!b.containsKey(entry.key)) return false;
+      if (!_deepEquals(entry.value, b[entry.key])) return false;
+    }
+    return true;
+  }
+  if (a is List && b is List) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i += 1) {
+      if (!_deepEquals(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  return a == b;
 }
 
 class _ResourceOption {

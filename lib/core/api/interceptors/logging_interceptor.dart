@@ -33,6 +33,10 @@ class LoggingInterceptor extends Interceptor {
       name: 'HTTP',
       error: err.message,
     );
+    final data = err.response?.data;
+    if (data != null) {
+      developer.log('  Error response: $data', name: 'HTTP');
+    }
     handler.next(err);
   }
 }
