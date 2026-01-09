@@ -31,7 +31,10 @@ class TextPill extends StatelessWidget {
         scheme.errorContainer.withValues(alpha: isDark ? 0.22 : 0.60),
         scheme.onErrorContainer,
       ),
-      PillTone.neutral => (scheme.surfaceContainerHigh, scheme.onSurface),
+      PillTone.neutral => (
+        isDark ? scheme.surfaceContainerHighest : scheme.surfaceContainerHigh,
+        scheme.onSurface,
+      ),
     };
 
     return Container(

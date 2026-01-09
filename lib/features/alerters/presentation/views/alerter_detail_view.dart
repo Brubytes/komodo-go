@@ -246,33 +246,49 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                           ListTile(
                             contentPadding: EdgeInsets.zero,
                             title: const Text('Select alert types'),
-                            subtitle: Text(
-                              _alertTypes.isEmpty
-                                  ? 'All alert types (no filter)'
-                                  : '${_alertTypes.length} selected',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
-                            ),
+                            subtitle: _alertTypes.isEmpty
+                                ? Text(
+                                    'All alert types (no filter)',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: scheme.onSurfaceVariant,
+                                        ),
+                                  )
+                                : Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${_alertTypes.length} selected',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: scheme.onSurfaceVariant,
+                                            ),
+                                      ),
+                                      const Gap(6),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          for (final t
+                                              in (_alertTypes.toList()..sort())
+                                                  .take(6))
+                                            TextPill(label: _humanizeEnum(t)),
+                                          if (_alertTypes.length > 6)
+                                            ValuePill(
+                                              label: 'More',
+                                              value:
+                                                  '+${_alertTypes.length - 6}',
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                             trailing: Icon(AppIcons.chevron, size: 18),
                             onTap: _pickAlertTypes,
                           ),
-                          if (_alertTypes.isNotEmpty) ...[
-                            const Gap(4),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                for (final t
-                                    in (_alertTypes.toList()..sort()).take(6))
-                                  TextPill(label: _humanizeEnum(t)),
-                                if (_alertTypes.length > 6)
-                                  ValuePill(
-                                    label: 'More',
-                                    value: '+${_alertTypes.length - 6}',
-                                  ),
-                              ],
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -386,7 +402,12 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     if (_loadedMarker == marker) return;
     _loadedMarker = marker;
 
-    _name = (json['name'] ?? '').toString();
+    final nested = json['alerter'];
+    _name = switch (nested) {
+      Map<String, dynamic>() =>
+        (nested['name'] ?? json['name'] ?? '').toString(),
+      _ => (json['name'] ?? '').toString(),
+    };
 
     final config = json['config'];
     if (config is! Map<String, dynamic>) return;
@@ -923,12 +944,7 @@ class _ResourceTargetsEditorSheetState
         final name = getName(item).trim();
         if (id.isEmpty || name.isEmpty) continue;
         options.add(
-          _ResourceOption(
-            variant: variant,
-            id: id,
-            name: name,
-            icon: icon,
-          ),
+          _ResourceOption(variant: variant, id: id, name: name, icon: icon),
         );
       }
     }
@@ -1014,12 +1030,12 @@ class _ResourceTargetsEditorSheetState
     final filtered = query.isEmpty
         ? options
         : options
-            .where(
-              (option) =>
-                  option.name.toLowerCase().contains(query) ||
-                  option.variant.toLowerCase().contains(query),
-            )
-            .toList();
+              .where(
+                (option) =>
+                    option.name.toLowerCase().contains(query) ||
+                    option.variant.toLowerCase().contains(query),
+              )
+              .toList();
 
     final selectedKeys = _items.map((e) => e.key).toSet();
     final optionKeys = options.map((e) => e.key).toSet();
