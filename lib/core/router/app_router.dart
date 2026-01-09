@@ -33,6 +33,8 @@ import '../../features/stacks/presentation/views/stack_detail_view.dart';
 import '../../features/stacks/presentation/views/stacks_list_view.dart';
 import '../../features/settings/presentation/views/connections_view.dart';
 import '../../features/settings/presentation/views/settings_view.dart';
+import '../../features/builders/presentation/views/builders_view.dart';
+import '../../features/alerters/presentation/views/alerters_view.dart';
 import '../../features/tags/presentation/views/tags_view.dart';
 import '../../features/variables/presentation/views/variables_view.dart';
 import '../widgets/adaptive_bottom_navigation_bar.dart';
@@ -77,6 +79,8 @@ abstract class AppRoutes {
   static const connections = '$settings/connections';
   static const komodoVariables = '$settings/komodo/variables';
   static const komodoTags = '$settings/komodo/tags';
+  static const komodoBuilders = '$settings/komodo/builders';
+  static const komodoAlerters = '$settings/komodo/alerters';
 
   /// Legacy paths.
   static const legacyConnections = '/connections';
@@ -482,6 +486,16 @@ GoRouter appRouter(Ref ref) {
                     path: 'komodo/tags',
                     pageBuilder: (context, state) =>
                         _adaptiveStackPage(context, const TagsView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/builders',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const BuildersView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/alerters',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const AlertersView()),
                   ),
                 ],
               ),
