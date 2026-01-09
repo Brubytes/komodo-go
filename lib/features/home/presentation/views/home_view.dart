@@ -45,6 +45,14 @@ class HomeView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final width = MediaQuery.sizeOf(context).width;
+    final quickStatsColumns = width >= 720 ? 4 : (width >= 520 ? 3 : 2);
+    final quickStatsAspectRatio = switch (quickStatsColumns) {
+      4 => 1.85,
+      3 => 1.70,
+      _ => 1.55,
+    };
+
     final serversAsync = ref.watch(serversProvider);
     final deploymentsAsync = ref.watch(deploymentsProvider);
     final stacksAsync = ref.watch(stacksProvider);
@@ -68,14 +76,14 @@ class HomeView extends ConsumerWidget {
           ref.invalidate(actionsProvider);
         },
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
           children: [
             // Quick stats
             GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.25,
+              crossAxisCount: quickStatsColumns,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: quickStatsAspectRatio,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               children: [
@@ -192,7 +200,7 @@ class HomeView extends ConsumerWidget {
                 ),
               ],
             ),
-            const Gap(24),
+            const Gap(16),
 
             // Recent servers
             _SectionHeader(
@@ -218,7 +226,7 @@ class HomeView extends ConsumerWidget {
               loading: () => const _LoadingTile(),
               error: (e, _) => _ErrorTile(message: e.toString()),
             ),
-            const Gap(24),
+            const Gap(16),
 
             // Recent deployments
             _SectionHeader(
@@ -247,7 +255,7 @@ class HomeView extends ConsumerWidget {
               loading: () => const _LoadingTile(),
               error: (e, _) => _ErrorTile(message: e.toString()),
             ),
-            const Gap(24),
+            const Gap(16),
 
             // Recent stacks
             _SectionHeader(
@@ -273,7 +281,7 @@ class HomeView extends ConsumerWidget {
               loading: () => const _LoadingTile(),
               error: (e, _) => _ErrorTile(message: e.toString()),
             ),
-            const Gap(24),
+            const Gap(16),
 
             // Recent repos
             _SectionHeader(
@@ -299,7 +307,7 @@ class HomeView extends ConsumerWidget {
               loading: () => const _LoadingTile(),
               error: (e, _) => _ErrorTile(message: e.toString()),
             ),
-            const Gap(24),
+            const Gap(16),
 
             // Recent syncs
             _SectionHeader(
@@ -325,7 +333,7 @@ class HomeView extends ConsumerWidget {
               loading: () => const _LoadingTile(),
               error: (e, _) => _ErrorTile(message: e.toString()),
             ),
-            const Gap(24),
+            const Gap(16),
 
             // Recent builds
             _SectionHeader(
@@ -351,7 +359,7 @@ class HomeView extends ConsumerWidget {
               loading: () => const _LoadingTile(),
               error: (e, _) => _ErrorTile(message: e.toString()),
             ),
-            const Gap(24),
+            const Gap(16),
 
             // Recent procedures
             _SectionHeader(
@@ -379,7 +387,7 @@ class HomeView extends ConsumerWidget {
               loading: () => const _LoadingTile(),
               error: (e, _) => _ErrorTile(message: e.toString()),
             ),
-            const Gap(24),
+            const Gap(16),
 
             // Recent actions
             _SectionHeader(
@@ -433,73 +441,116 @@ class _StatCard<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Card(
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // In tests and very compact layouts the grid can become quite short.
+            // Keep this threshold generous to avoid overflows.
+            final isTight = constraints.maxHeight < 110;
+            final padding = isTight ? 7.0 : 10.0;
+            final iconSize = isTight ? 15.0 : 18.0;
+            final gap = isTight ? 2.0 : 6.0;
+            final showSubtitle = !isTight;
+
+            final valueStyle =
+                (isTight ? textTheme.titleMedium : textTheme.headlineSmall)
+                    ?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.2,
+                    );
+            final titleStyle =
+                (isTight ? textTheme.labelMedium : textTheme.titleSmall)
+                    ?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onSurfaceVariant,
+                      letterSpacing: -0.1,
+                    );
+            final subtitleStyle = (isTight
+                    ? textTheme.labelSmall
+                    : textTheme.labelMedium)
+                ?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                );
+
+            return Padding(
+              padding: EdgeInsets.all(padding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(icon, color: color, size: 18),
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(isTight ? 4 : 6),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(icon, color: color, size: iconSize),
+                      ),
+                      const Spacer(),
+                      Icon(
+                        AppIcons.chevron,
+                        size: isTight ? 18 : 20,
+                        color: scheme.onSurfaceVariant.withValues(alpha: 0.55),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  Icon(
-                    AppIcons.chevron,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.3),
+                  Gap(gap),
+                  asyncValue.when(
+                    data: (data) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(valueBuilder(data), style: valueStyle),
+                            const Gap(8),
+                            Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: isTight ? 0 : 2,
+                                ),
+                                child: Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: titleStyle,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (showSubtitle) ...[
+                          const Gap(2),
+                          Text(
+                            subtitleBuilder(data),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: subtitleStyle,
+                          ),
+                        ],
+                      ],
+                    ),
+                    loading: () => SizedBox(
+                      height: isTight ? 32 : 40,
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (_, __) => SizedBox(
+                      height: isTight ? 32 : 40,
+                      child: const Center(child: Icon(AppIcons.formError)),
+                    ),
                   ),
                 ],
               ),
-              const Gap(8),
-              asyncValue.when(
-                data: (data) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      valueBuilder(data),
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    const Gap(2),
-                    Text(
-                      subtitleBuilder(data),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                loading: () => const SizedBox(
-                  height: 44,
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-                error: (_, __) => const SizedBox(
-                  height: 44,
-                  child: Center(child: Icon(AppIcons.formError)),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

@@ -81,7 +81,7 @@ void main() {
 
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(AppBar, 'Komodo'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Dashboard'), findsOneWidget);
 
     await tester.tap(find.text('Resources'));
     await tester.pumpAndSettle();
