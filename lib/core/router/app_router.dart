@@ -33,6 +33,8 @@ import '../../features/stacks/presentation/views/stack_detail_view.dart';
 import '../../features/stacks/presentation/views/stacks_list_view.dart';
 import '../../features/settings/presentation/views/connections_view.dart';
 import '../../features/settings/presentation/views/settings_view.dart';
+import '../../features/tags/presentation/views/tags_view.dart';
+import '../../features/variables/presentation/views/variables_view.dart';
 import '../widgets/adaptive_bottom_navigation_bar.dart';
 
 part 'app_router.g.dart';
@@ -73,6 +75,8 @@ abstract class AppRoutes {
   static const actions = '$resources/actions';
 
   static const connections = '$settings/connections';
+  static const komodoVariables = '$settings/komodo/variables';
+  static const komodoTags = '$settings/komodo/tags';
 
   /// Legacy paths.
   static const legacyConnections = '/connections';
@@ -468,6 +472,16 @@ GoRouter appRouter(Ref ref) {
                     path: 'connections',
                     pageBuilder: (context, state) =>
                         _adaptiveStackPage(context, const ConnectionsView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/variables',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const VariablesView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/tags',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const TagsView()),
                   ),
                 ],
               ),
