@@ -73,7 +73,6 @@ class DetailIconInfoRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: tint.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: scheme.outlineVariant),
           ),
           child: Icon(icon, size: 18, color: tint),
         ),

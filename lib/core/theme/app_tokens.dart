@@ -34,6 +34,7 @@ abstract final class AppTokens {
       '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif';
 
   static const double radiusMd = 12;
+  static const double radiusLg = 24;
   static const EdgeInsets inputPadding = EdgeInsets.symmetric(
     horizontal: 16,
     vertical: 16,

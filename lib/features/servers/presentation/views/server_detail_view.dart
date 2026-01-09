@@ -744,8 +744,7 @@ class _MessageCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
       ),
       child: Text(message),
     );
@@ -762,8 +761,7 @@ class _LoadingCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
       ),
       child: const Center(child: CircularProgressIndicator()),
     );

@@ -28,6 +28,8 @@ class DetailSubCard extends StatelessWidget {
       baseColor: scheme.surfaceContainerHigh,
       tintColor: tint,
       padding: const EdgeInsets.all(12),
+      enableGradientInDark: false,
+      enableShadow: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -39,7 +41,6 @@ class DetailSubCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: tint.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: scheme.outlineVariant),
                 ),
                 child: Icon(icon, size: 18, color: tint),
               ),

@@ -56,6 +56,7 @@ class _DetailMetricTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final (Color accent, Color accentContainer) = switch (item.tone) {
       DetailMetricTone.primary => (scheme.primary, scheme.primaryContainer),
@@ -72,12 +73,16 @@ class _DetailMetricTile extends StatelessWidget {
       DetailMetricTone.alert => (scheme.error, scheme.errorContainer),
     };
 
+    final tileBorder = scheme.outlineVariant.withValues(
+      alpha: isDark ? 0.22 : 0.40,
+    );
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: accentContainer.withValues(alpha: 0.38),
+        color: accentContainer.withValues(alpha: isDark ? 0.26 : 0.34),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: scheme.outlineVariant),
+        border: Border.all(color: tileBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,9 +93,8 @@ class _DetailMetricTile extends StatelessWidget {
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: scheme.surface.withValues(alpha: 0.65),
+                  color: scheme.surface.withValues(alpha: isDark ? 0.55 : 0.85),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: scheme.outlineVariant),
                 ),
                 child: Icon(item.icon, size: 18, color: accent),
               ),

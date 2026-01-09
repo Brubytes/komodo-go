@@ -31,6 +31,7 @@ class DetailCodeBlock extends StatelessWidget {
     return DetailSurface(
       baseColor: scheme.surfaceContainerHighest,
       enableGradientInDark: false,
+      enableShadow: false,
       radius: 16,
       padding: const EdgeInsets.all(12),
       child: ConstrainedBox(
