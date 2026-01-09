@@ -7,10 +7,12 @@ class TextPill extends StatelessWidget {
   const TextPill({
     required this.label,
     super.key,
+    this.icon,
     this.tone = PillTone.neutral,
   });
 
   final String label;
+  final IconData? icon;
   final PillTone tone;
 
   @override
@@ -43,13 +45,28 @@ class TextPill extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: fg,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+      child: icon == null
+          ? Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: fg,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: fg),
+                const Gap(6),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: fg,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }

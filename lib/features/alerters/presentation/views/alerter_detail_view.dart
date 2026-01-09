@@ -836,14 +836,10 @@ Widget _selectionPills(
     runSpacing: 8,
     children: [
       for (final item in visible)
-        if (item.icon == null)
-          TextPill(label: item.label)
-        else
-          StatusPill(
-            label: item.label,
-            icon: item.icon!,
-            tone: PillTone.neutral,
-          ),
+        TextPill(
+          label: item.label,
+          icon: item.icon,
+        ),
       if (remaining > 0)
         ValuePill(
           label: 'More',
