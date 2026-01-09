@@ -1959,14 +1959,14 @@ class _MaintenanceWindowsEditorSheetState
   }
 
   Future<void> _addWindow() async {
-    final next = await _MaintenanceWindowEditorDialog.show(context);
+    final next = await _MaintenanceWindowEditorSheet.show(context);
     if (!mounted) return;
     if (next != null) setState(() => _items = [..._items, next]);
   }
 
   Future<void> _editWindow(int index) async {
     final current = _items[index];
-    final next = await _MaintenanceWindowEditorDialog.show(
+    final next = await _MaintenanceWindowEditorSheet.show(
       context,
       initial: current,
     );
@@ -1975,8 +1975,8 @@ class _MaintenanceWindowsEditorSheetState
   }
 }
 
-class _MaintenanceWindowEditorDialog extends StatefulWidget {
-  const _MaintenanceWindowEditorDialog({this.initial});
+class _MaintenanceWindowEditorSheet extends StatefulWidget {
+  const _MaintenanceWindowEditorSheet({this.initial});
 
   final Map<String, dynamic>? initial;
 
@@ -1984,19 +1984,23 @@ class _MaintenanceWindowEditorDialog extends StatefulWidget {
     BuildContext context, {
     Map<String, dynamic>? initial,
   }) {
-    return showDialog<Map<String, dynamic>?>(
+    return showModalBottomSheet<Map<String, dynamic>>(
       context: context,
-      builder: (context) => _MaintenanceWindowEditorDialog(initial: initial),
+      useSafeArea: true,
+      useRootNavigator: true,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => _MaintenanceWindowEditorSheet(initial: initial),
     );
   }
 
   @override
-  State<_MaintenanceWindowEditorDialog> createState() =>
+  State<_MaintenanceWindowEditorSheet> createState() =>
       _MaintenanceWindowEditorDialogState();
 }
 
 class _MaintenanceWindowEditorDialogState
-    extends State<_MaintenanceWindowEditorDialog> {
+    extends State<_MaintenanceWindowEditorSheet> {
   static const List<String> _scheduleTypes = <String>[
     'Daily',
     'Weekly',
@@ -2058,132 +2062,192 @@ class _MaintenanceWindowEditorDialogState
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(
-        widget.initial == null
-            ? 'Add maintenance window'
-            : 'Edit maintenance window',
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
+    final isEditing = widget.initial != null;
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.92,
+      minChildSize: 0.55,
+      maxChildSize: 0.96,
+      builder: (context, controller) => Stack(
+        children: [
+          ListView(
+            controller: controller,
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 8,
+              bottom: 96 + MediaQuery.of(context).viewInsets.bottom,
             ),
-            const Gap(12),
-            TextField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(labelText: 'Description'),
-            ),
-            const Gap(12),
-            DropdownButtonFormField<String>(
-              key: ValueKey(_scheduleType),
-              initialValue: _scheduleType,
-              items: [
-                for (final t in _scheduleTypes)
-                  DropdownMenuItem(value: t, child: Text(t)),
-              ],
-              onChanged: (v) {
-                if (v == null) return;
-                setState(() => _scheduleType = v);
-              },
-              decoration: const InputDecoration(labelText: 'Schedule type'),
-            ),
-            const Gap(12),
-            if (_scheduleType == 'Weekly')
-              TextField(
-                controller: _dayOfWeekController,
-                decoration: const InputDecoration(
-                  labelText: 'Day of week (e.g. Mon)',
-                ),
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      isEditing
+                          ? 'Edit maintenance window'
+                          : 'Add maintenance window',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    icon: const Icon(AppIcons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
               ),
-            if (_scheduleType == 'OneTime') ...[
               const Gap(12),
               TextField(
-                controller: _dateController,
-                decoration: const InputDecoration(
-                  labelText: 'Date (YYYY-MM-DD)',
-                ),
+                controller: _nameController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: 'Name'),
               ),
-            ],
-            const Gap(12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _hourController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Hour'),
+              const Gap(12),
+              TextField(
+                controller: _descriptionController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: 'Description'),
+              ),
+              const Gap(12),
+              DropdownButtonFormField<String>(
+                key: ValueKey(_scheduleType),
+                initialValue: _scheduleType,
+                items: [
+                  for (final t in _scheduleTypes)
+                    DropdownMenuItem(value: t, child: Text(t)),
+                ],
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _scheduleType = v);
+                },
+                decoration: const InputDecoration(labelText: 'Schedule type'),
+              ),
+              const Gap(12),
+              if (_scheduleType == 'Weekly')
+                TextField(
+                  controller: _dayOfWeekController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Day of week (e.g. Mon)',
                   ),
                 ),
+              if (_scheduleType == 'OneTime') ...[
                 const Gap(12),
-                Expanded(
-                  child: TextField(
-                    controller: _minuteController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Minute'),
+                TextField(
+                  controller: _dateController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Date (YYYY-MM-DD)',
                   ),
                 ),
               ],
-            ),
-            const Gap(12),
-            TextField(
-              controller: _durationController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Duration (minutes)',
+              const Gap(12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _hourController,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(labelText: 'Hour'),
+                    ),
+                  ),
+                  const Gap(12),
+                  Expanded(
+                    child: TextField(
+                      controller: _minuteController,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(labelText: 'Minute'),
+                    ),
+                  ),
+                ],
+              ),
+              const Gap(12),
+              TextField(
+                controller: _durationController,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Duration (minutes)',
+                ),
+              ),
+              const Gap(12),
+              TextField(
+                controller: _timezoneController,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(labelText: 'Timezone'),
+              ),
+              const Gap(8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Enabled'),
+                value: _enabled,
+                onChanged: (v) => setState(() => _enabled = v),
+              ),
+            ],
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 8,
+            child: AnimatedPadding(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    const Spacer(),
+                    FilledButton(
+                      onPressed: () {
+                        final name = _nameController.text.trim();
+                        if (name.isEmpty) return;
+
+                        Navigator.of(context).pop(<String, dynamic>{
+                          'name': name,
+                          'description': _descriptionController.text.trim(),
+                          'schedule_type': _scheduleType,
+                          'day_of_week': _scheduleType == 'Weekly'
+                              ? _dayOfWeekController.text.trim()
+                              : '',
+                          'date': _scheduleType == 'OneTime'
+                              ? _dateController.text.trim()
+                              : '',
+                          'hour': int.tryParse(_hourController.text.trim()) ??
+                              0,
+                          'minute':
+                              int.tryParse(_minuteController.text.trim()) ??
+                                  0,
+                          'duration_minutes':
+                              int.tryParse(_durationController.text.trim()) ??
+                                  60,
+                          'timezone': _timezoneController.text.trim().isEmpty
+                              ? 'UTC'
+                              : _timezoneController.text.trim(),
+                          'enabled': _enabled,
+                        });
+                      },
+                      child: const Text('Save'),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const Gap(12),
-            TextField(
-              controller: _timezoneController,
-              decoration: const InputDecoration(labelText: 'Timezone'),
-            ),
-            const Gap(8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Enabled'),
-              value: _enabled,
-              onChanged: (v) => setState(() => _enabled = v),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final name = _nameController.text.trim();
-            if (name.isEmpty) return;
-
-            Navigator.of(context).pop(<String, dynamic>{
-              'name': name,
-              'description': _descriptionController.text.trim(),
-              'schedule_type': _scheduleType,
-              'day_of_week': _scheduleType == 'Weekly'
-                  ? _dayOfWeekController.text.trim()
-                  : '',
-              'date': _scheduleType == 'OneTime'
-                  ? _dateController.text.trim()
-                  : '',
-              'hour': int.tryParse(_hourController.text.trim()) ?? 0,
-              'minute': int.tryParse(_minuteController.text.trim()) ?? 0,
-              'duration_minutes':
-                  int.tryParse(_durationController.text.trim()) ?? 60,
-              'timezone': _timezoneController.text.trim().isEmpty
-                  ? 'UTC'
-                  : _timezoneController.text.trim(),
-              'enabled': _enabled,
-            });
-          },
-          child: const Text('Save'),
-        ),
-      ],
     );
   }
 }
