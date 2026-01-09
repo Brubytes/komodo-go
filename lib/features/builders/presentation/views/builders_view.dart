@@ -71,6 +71,11 @@ class _BuilderTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final info = item.info;
+    final instanceType = info.instanceType?.trim();
+    final showInstanceType =
+        instanceType != null &&
+        instanceType.isNotEmpty &&
+        !_looksLikeSensitiveId(instanceType);
 
     return DetailSurface(
       padding: const EdgeInsets.all(14),
@@ -104,7 +109,9 @@ class _BuilderTile extends ConsumerWidget {
                     const Gap(2),
                     Text(
                       info.instanceType?.trim().isNotEmpty ?? false
-                          ? '${info.builderType} • ${info.instanceType}'
+                          ? (showInstanceType
+                                ? '${info.builderType} • $instanceType'
+                                : info.builderType)
                           : info.builderType,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: scheme.onSurfaceVariant,
@@ -167,8 +174,8 @@ class _BuilderTile extends ConsumerWidget {
               if (item.template) const TextPill(label: 'Template'),
               if (info.builderType.trim().isNotEmpty)
                 TextPill(label: info.builderType),
-              if (info.instanceType?.trim().isNotEmpty ?? false)
-                ValuePill(label: 'Instance', value: info.instanceType!.trim()),
+              if (showInstanceType)
+                ValuePill(label: 'Instance', value: instanceType),
             ],
           ),
           if (item.tags.isNotEmpty) ...[
@@ -290,6 +297,27 @@ class _BuilderTile extends ConsumerWidget {
       ok ? 'Builder deleted' : 'Failed to delete builder',
       tone: ok ? AppSnackBarTone.success : AppSnackBarTone.error,
     );
+  }
+
+  bool _looksLikeSensitiveId(String value) {
+    final v = value.trim();
+    if (v.length < 12) return false;
+
+    // UUID
+    final uuid = RegExp(
+      r'^[0-9a-fA-F]{8}-'
+      r'[0-9a-fA-F]{4}-'
+      r'[0-9a-fA-F]{4}-'
+      r'[0-9a-fA-F]{4}-'
+      r'[0-9a-fA-F]{12}$',
+    );
+    if (uuid.hasMatch(v)) return true;
+
+    // Long hex string (typical for internal IDs)
+    final hex = RegExp(r'^[0-9a-fA-F]+$');
+    if (hex.hasMatch(v) && v.length >= 16) return true;
+
+    return false;
   }
 }
 
