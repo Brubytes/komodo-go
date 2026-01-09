@@ -88,6 +88,36 @@ class BuildRepository {
     return _executeAction('CancelBuild', {'build': buildIdOrName});
   }
 
+  /// Resolves a builder id/name to its display name.
+  Future<Either<Failure, String?>> getBuilderName(
+    String builderIdOrName,
+  ) async {
+    try {
+      final response = await _client.read(
+        RpcRequest(type: 'GetBuilder', params: {'builder': builderIdOrName}),
+      );
+
+      if (response is Map) {
+        final name = response['name'];
+        if (name is String && name.trim().isNotEmpty) {
+          return Right(name.trim());
+        }
+      }
+
+      return const Right(null);
+    } on ApiException catch (e) {
+      if (e.isUnauthorized) {
+        return const Left(Failure.auth());
+      }
+      if (e.isNotFound) {
+        return const Right(null);
+      }
+      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
+    } catch (e) {
+      return Left(Failure.unknown(message: e.toString()));
+    }
+  }
+
   Future<Either<Failure, void>> _executeAction(
     String actionType,
     Map<String, dynamic> params,
@@ -114,4 +144,3 @@ BuildRepository? buildRepository(Ref ref) {
   }
   return BuildRepository(client);
 }
-

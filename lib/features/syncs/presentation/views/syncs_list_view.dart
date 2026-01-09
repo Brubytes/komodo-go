@@ -93,8 +93,8 @@ class SyncsListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const MainAppBar(
+    return const Scaffold(
+      appBar: MainAppBar(
         title: 'Syncs',
         icon: AppIcons.syncs,
         markColor: Colors.blueGrey,

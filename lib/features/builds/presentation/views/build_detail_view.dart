@@ -23,6 +23,7 @@ class BuildDetailView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final buildAsync = ref.watch(buildDetailProvider(buildId));
+    final buildsListAsync = ref.watch(buildsProvider);
     final actionsState = ref.watch(buildActionsProvider);
     final scheme = Theme.of(context).colorScheme;
 
@@ -30,7 +31,7 @@ class BuildDetailView extends ConsumerWidget {
       appBar: MainAppBar(
         title: buildName,
         icon: AppIcons.builds,
-        markColor: scheme.primary,
+        markColor: Colors.teal,
         markUseGradient: true,
         centerTitle: true,
         actions: [
@@ -68,52 +69,85 @@ class BuildDetailView extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               children: [
                 buildAsync.when(
-                  data: (build) => build != null
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _BuildHeroPanel(buildResource: build),
-                            const Gap(16),
-                            DetailSection(
-                              title: 'Build Configuration',
-                              icon: AppIcons.settings,
-                              child: _BuildConfigContent(buildResource: build),
-                            ),
-                            if (build.info.latestHash != null ||
-                                build.info.builtHash != null)
-                              const Gap(16),
-                            if (build.info.latestHash != null ||
-                                build.info.builtHash != null)
-                              DetailSection(
-                                title: 'Commit Hashes',
-                                icon: AppIcons.repos,
-                                child: _BuildHashesContent(buildResource: build),
-                              ),
-                            if ((build.info.remoteError != null &&
-                                    build.info.remoteError!
-                                        .trim()
-                                        .isNotEmpty) ||
-                                (build.info.builtContents != null &&
-                                    build.info.builtContents!
-                                        .trim()
-                                        .isNotEmpty))
-                              const Gap(16),
-                            if ((build.info.remoteError != null &&
-                                    build.info.remoteError!
-                                        .trim()
-                                        .isNotEmpty) ||
-                                (build.info.builtContents != null &&
-                                    build.info.builtContents!
-                                        .trim()
-                                        .isNotEmpty))
-                              DetailSection(
-                                title: 'Logs',
-                                icon: AppIcons.package,
-                                child: _BuildLogsContent(buildResource: build),
-                              ),
-                          ],
-                        )
-                      : const _MessageSurface(message: 'Build not found'),
+                  data: (build) {
+                    if (build == null) {
+                      return const _MessageSurface(message: 'Build not found');
+                    }
+
+                    BuildListItem? listItem;
+                    final list = buildsListAsync.asData?.value;
+                    if (list != null) {
+                      for (final item in list) {
+                        if (item.id == build.id) {
+                          listItem = item;
+                          break;
+                        }
+                      }
+                    }
+
+                    final builderId = build.config.builderId;
+                    final builderNameAsync = builderId.isEmpty
+                        ? const AsyncValue<String?>.data(null)
+                        : ref.watch(builderNameProvider(builderId));
+
+                    final builderLabel = builderNameAsync.when(
+                      data: (name) => (name != null && name.trim().isNotEmpty)
+                          ? name.trim()
+                          : (builderId.isNotEmpty ? builderId : null),
+                      loading: () => 'Loading…',
+                      error: (_, __) => builderId.isNotEmpty ? builderId : null,
+                    );
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _BuildHeroPanel(
+                          buildResource: build,
+                          listItem: listItem,
+                          builderLabel: builderLabel,
+                        ),
+                        const Gap(16),
+                        DetailSection(
+                          title: 'Build Configuration',
+                          icon: AppIcons.settings,
+                          child: _BuildConfigContent(
+                            buildResource: build,
+                            builderLabel: builderLabel,
+                          ),
+                        ),
+                        const Gap(16),
+                        DetailSection(
+                          title: 'Source',
+                          icon: AppIcons.repos,
+                          child: _BuildSourceContent(buildResource: build),
+                        ),
+                        if (build.info.latestHash != null ||
+                            build.info.builtHash != null) ...[
+                          const Gap(16),
+                          DetailSection(
+                            title: 'Commit Hashes',
+                            icon: AppIcons.tag,
+                            child: _BuildHashesContent(buildResource: build),
+                          ),
+                        ],
+                        if ((build.info.remoteError != null &&
+                                build.info.remoteError!.trim().isNotEmpty) ||
+                            (build.info.remoteContents != null &&
+                                build.info.remoteContents!.trim().isNotEmpty) ||
+                            (build.info.builtContents != null &&
+                                build.info.builtContents!
+                                    .trim()
+                                    .isNotEmpty)) ...[
+                          const Gap(16),
+                          DetailSection(
+                            title: 'Logs',
+                            icon: AppIcons.package,
+                            child: _BuildLogsContent(buildResource: build),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
                   loading: () => const _LoadingSurface(),
                   error: (error, _) => _ErrorSurface(error: error.toString()),
                 ),
@@ -162,8 +196,9 @@ class BuildDetailView extends ConsumerWidget {
                 ? 'Action completed successfully'
                 : 'Action failed. Please try again.',
           ),
-          backgroundColor:
-              success ? scheme.secondaryContainer : scheme.errorContainer,
+          backgroundColor: success
+              ? scheme.secondaryContainer
+              : scheme.errorContainer,
         ),
       );
     }
@@ -172,19 +207,41 @@ class BuildDetailView extends ConsumerWidget {
 
 // Hero Panel
 class _BuildHeroPanel extends StatelessWidget {
-  const _BuildHeroPanel({required this.buildResource});
+  const _BuildHeroPanel({
+    required this.buildResource,
+    required this.listItem,
+    required this.builderLabel,
+  });
 
   final KomodoBuild buildResource;
+  final BuildListItem? listItem;
+  final String? builderLabel;
 
   @override
   Widget build(BuildContext context) {
     return DetailHeroPanel(
       header: _BuildHeader(buildResource: buildResource),
       metrics: [
-        if (buildResource.config.builderId.isNotEmpty)
+        if (listItem != null)
+          DetailMetricTileData(
+            label: 'Status',
+            value: listItem!.info.state.displayName,
+            icon: listItem!.info.state == BuildState.ok
+                ? AppIcons.ok
+                : (listItem!.info.state == BuildState.failed
+                      ? AppIcons.error
+                      : AppIcons.loading),
+            tone: switch (listItem!.info.state) {
+              BuildState.ok => DetailMetricTone.success,
+              BuildState.failed => DetailMetricTone.alert,
+              BuildState.building => DetailMetricTone.neutral,
+              BuildState.unknown => DetailMetricTone.neutral,
+            },
+          ),
+        if ((builderLabel ?? '').trim().isNotEmpty)
           DetailMetricTileData(
             label: 'Builder',
-            value: buildResource.config.builderId,
+            value: builderLabel!,
             icon: AppIcons.factory,
             tone: DetailMetricTone.neutral,
           ),
@@ -200,6 +257,20 @@ class _BuildHeroPanel extends StatelessWidget {
             value: _formatTimestamp(buildResource.info.lastBuiltAt),
             icon: AppIcons.clock,
             tone: DetailMetricTone.neutral,
+          ),
+        if (buildResource.info.latestHash != null &&
+            buildResource.info.builtHash != null)
+          DetailMetricTileData(
+            label: 'Source',
+            value: buildResource.info.latestHash == buildResource.info.builtHash
+                ? 'Up to date'
+                : 'Out of date',
+            icon: buildResource.info.latestHash == buildResource.info.builtHash
+                ? AppIcons.ok
+                : AppIcons.warning,
+            tone: buildResource.info.latestHash == buildResource.info.builtHash
+                ? DetailMetricTone.success
+                : DetailMetricTone.tertiary,
           ),
       ],
     );
@@ -236,8 +307,9 @@ class _BuildHeader extends StatelessWidget {
       children: [
         Text(
           buildResource.name,
-          style: theme.textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.w600),
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
         if (buildResource.description.isNotEmpty) ...[
           const Gap(4),
@@ -255,7 +327,134 @@ class _BuildHeader extends StatelessWidget {
 
 // Configuration Content
 class _BuildConfigContent extends StatelessWidget {
-  const _BuildConfigContent({required this.buildResource});
+  const _BuildConfigContent({
+    required this.buildResource,
+    required this.builderLabel,
+  });
+
+  final KomodoBuild buildResource;
+  final String? builderLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final config = buildResource.config;
+
+    final builder = (builderLabel ?? '').trim();
+    final extraArgs = config.extraArgs
+        .where((e) => e.trim().isNotEmpty)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            StatusPill.onOff(
+              isOn: config.webhookEnabled,
+              onLabel: 'Webhook on',
+              offLabel: 'Webhook off',
+              onIcon: AppIcons.ok,
+              offIcon: AppIcons.pause,
+            ),
+            StatusPill.onOff(
+              isOn: config.autoIncrementVersion,
+              onLabel: 'Auto version',
+              offLabel: 'Manual version',
+              onIcon: AppIcons.ok,
+              offIcon: AppIcons.pause,
+            ),
+            StatusPill.onOff(
+              isOn: config.useBuildx,
+              onLabel: 'Buildx on',
+              offLabel: 'Buildx off',
+              onIcon: AppIcons.ok,
+              offIcon: AppIcons.pause,
+            ),
+            StatusPill.onOff(
+              isOn: config.filesOnHost,
+              onLabel: 'Files on host',
+              offLabel: 'Files in builder',
+              onIcon: AppIcons.ok,
+              offIcon: AppIcons.package,
+            ),
+            StatusPill.onOff(
+              isOn: config.skipSecretInterp,
+              onLabel: 'Skip secret interp',
+              offLabel: 'Secret interp on',
+              onIcon: AppIcons.warning,
+              offIcon: AppIcons.ok,
+            ),
+          ],
+        ),
+        const Gap(14),
+        DetailSubCard(
+          title: 'Builder & Version',
+          icon: AppIcons.factory,
+          child: Column(
+            children: [
+              if (builder.isNotEmpty)
+                DetailKeyValueRow(label: 'Builder', value: builder),
+              DetailKeyValueRow(
+                label: 'Version',
+                value: config.version.label,
+                bottomPadding: 0,
+              ),
+            ],
+          ),
+        ),
+        if (config.imageName.isNotEmpty ||
+            config.imageTag.isNotEmpty ||
+            extraArgs.isNotEmpty) ...[
+          const Gap(12),
+          DetailSubCard(
+            title: 'Image',
+            icon: AppIcons.builds,
+            child: Column(
+              children: [
+                if (config.imageName.isNotEmpty)
+                  DetailKeyValueRow(label: 'Name', value: config.imageName),
+                if (config.imageTag.isNotEmpty)
+                  DetailKeyValueRow(label: 'Tag', value: config.imageTag),
+                if (extraArgs.isNotEmpty) ...[
+                  const Gap(6),
+                  DetailCodeBlock(code: extraArgs.join('\n'), maxHeight: 200),
+                ],
+              ],
+            ),
+          ),
+        ],
+        if (config.buildPath.isNotEmpty ||
+            config.dockerfilePath.isNotEmpty) ...[
+          const Gap(12),
+          DetailSubCard(
+            title: 'Paths',
+            icon: AppIcons.package,
+            child: Column(
+              children: [
+                if (config.buildPath.isNotEmpty)
+                  DetailKeyValueRow(
+                    label: 'Build path',
+                    value: config.buildPath,
+                  ),
+                if (config.dockerfilePath.isNotEmpty)
+                  DetailKeyValueRow(
+                    label: 'Dockerfile',
+                    value: config.dockerfilePath,
+                    bottomPadding: 0,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _BuildSourceContent extends StatelessWidget {
+  const _BuildSourceContent({required this.buildResource});
 
   final KomodoBuild buildResource;
 
@@ -263,23 +462,34 @@ class _BuildConfigContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final config = buildResource.config;
 
+    String? repoLabel() {
+      final repo = config.repo.trim();
+      final branch = config.branch.trim();
+      if (repo.isEmpty) return null;
+      return branch.isEmpty ? repo : '$repo · $branch';
+    }
+
+    final linkedRepo = config.linkedRepo.trim();
+    final commit = config.commit.trim();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (config.repo.isNotEmpty)
-          DetailKeyValueRow(
-            label: 'Repository',
-            value: config.branch.isNotEmpty
-                ? '${config.repo} (${config.branch})'
-                : config.repo,
+        DetailSubCard(
+          title: 'Repository',
+          icon: AppIcons.repos,
+          child: Column(
+            children: [
+              DetailKeyValueRow(label: 'Repo', value: repoLabel() ?? '—'),
+              if (linkedRepo.isNotEmpty)
+                DetailKeyValueRow(label: 'Linked repo', value: linkedRepo),
+              DetailKeyValueRow(
+                label: 'Commit',
+                value: commit.isNotEmpty ? commit : '—',
+                bottomPadding: 0,
+              ),
+            ],
           ),
-        if (config.imageName.isNotEmpty)
-          DetailKeyValueRow(label: 'Image Name', value: config.imageName),
-        if (config.imageTag.isNotEmpty)
-          DetailKeyValueRow(label: 'Image Tag', value: config.imageTag),
-        DetailKeyValueRow(
-          label: 'Webhook',
-          value: config.webhookEnabled ? 'Enabled' : 'Disabled',
         ),
       ],
     );
@@ -304,7 +514,10 @@ class _BuildHashesContent extends StatelessWidget {
         if (info.builtHash != null)
           DetailKeyValueRow(label: 'Built Hash', value: info.builtHash!),
         if (info.latestMessage != null && info.latestMessage!.isNotEmpty)
-          DetailKeyValueRow(label: 'Latest Message', value: info.latestMessage!),
+          DetailKeyValueRow(
+            label: 'Latest Message',
+            value: info.latestMessage!,
+          ),
         if (info.builtMessage != null && info.builtMessage!.isNotEmpty)
           DetailKeyValueRow(label: 'Built Message', value: info.builtMessage!),
       ],
@@ -326,11 +539,13 @@ class _BuildLogsContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (info.remoteError != null && info.remoteError!.trim().isNotEmpty) ...[
+        if (info.remoteError != null &&
+            info.remoteError!.trim().isNotEmpty) ...[
           Text(
             'Remote Error',
-            style: theme.textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const Gap(8),
           Container(
@@ -342,13 +557,32 @@ class _BuildLogsContent extends StatelessWidget {
             ),
             child: SelectableText(
               info.remoteError!.trim(),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(fontFamily: 'monospace'),
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontFamily: 'monospace',
+              ),
             ),
           ),
         ],
         if (info.remoteError != null &&
             info.remoteError!.trim().isNotEmpty &&
+            ((info.remoteContents != null &&
+                    info.remoteContents!.trim().isNotEmpty) ||
+                (info.builtContents != null &&
+                    info.builtContents!.trim().isNotEmpty)))
+          const Gap(16),
+        if (info.remoteContents != null &&
+            info.remoteContents!.trim().isNotEmpty) ...[
+          Text(
+            'Remote Contents',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Gap(8),
+          DetailCodeBlock(code: info.remoteContents!.trim()),
+        ],
+        if (info.remoteContents != null &&
+            info.remoteContents!.trim().isNotEmpty &&
             info.builtContents != null &&
             info.builtContents!.trim().isNotEmpty)
           const Gap(16),
@@ -356,23 +590,12 @@ class _BuildLogsContent extends StatelessWidget {
             info.builtContents!.trim().isNotEmpty) ...[
           Text(
             'Built Contents',
-            style: theme.textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const Gap(8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: SelectableText(
-              info.builtContents!.trim(),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(fontFamily: 'monospace'),
-            ),
-          ),
+          DetailCodeBlock(code: info.builtContents!.trim()),
         ],
       ],
     );

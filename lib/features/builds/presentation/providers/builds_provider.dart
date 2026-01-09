@@ -87,3 +87,18 @@ class BuildActions extends _$BuildActions {
   }
 }
 
+@riverpod
+Future<String?> builderName(Ref ref, String builderIdOrName) async {
+  final target = builderIdOrName.trim();
+  if (target.isEmpty) {
+    return null;
+  }
+
+  final repository = ref.watch(buildRepositoryProvider);
+  if (repository == null) {
+    return null;
+  }
+
+  final result = await repository.getBuilderName(target);
+  return result.fold((_) => null, (name) => name);
+}
