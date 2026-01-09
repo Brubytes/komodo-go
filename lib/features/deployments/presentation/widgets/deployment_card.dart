@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-
-import '../../data/models/deployment.dart';
+import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 
 /// Card widget displaying deployment information.
 class DeploymentCard extends StatelessWidget {
@@ -67,7 +66,7 @@ class DeploymentCard extends StatelessWidget {
                     PopupMenuButton<DeploymentAction>(
                       icon: const Icon(AppIcons.moreVertical),
                       onSelected: onAction,
-                      itemBuilder: (context) => _buildMenuItems(state),
+                      itemBuilder: (context) => _buildMenuItems(context, state),
                     ),
                 ],
               ),
@@ -95,60 +94,62 @@ class DeploymentCard extends StatelessWidget {
   }
 
   List<PopupMenuEntry<DeploymentAction>> _buildMenuItems(
+    BuildContext context,
     DeploymentState state,
   ) {
+    final scheme = Theme.of(context).colorScheme;
     return [
       if (state.isStopped || state == DeploymentState.notDeployed)
-        const PopupMenuItem(
+        PopupMenuItem(
           value: DeploymentAction.start,
           child: ListTile(
-            leading: Icon(AppIcons.play, color: Colors.green),
-            title: Text('Start'),
+            leading: Icon(AppIcons.play, color: scheme.secondary),
+            title: const Text('Start'),
             contentPadding: EdgeInsets.zero,
           ),
         ),
       if (state.isRunning)
-        const PopupMenuItem(
+        PopupMenuItem(
           value: DeploymentAction.stop,
           child: ListTile(
-            leading: Icon(AppIcons.stop, color: Colors.orange),
-            title: Text('Stop'),
+            leading: Icon(AppIcons.stop, color: scheme.tertiary),
+            title: const Text('Stop'),
             contentPadding: EdgeInsets.zero,
           ),
         ),
       if (state.isRunning || state.isPaused)
-        const PopupMenuItem(
+        PopupMenuItem(
           value: DeploymentAction.restart,
           child: ListTile(
-            leading: Icon(AppIcons.refresh, color: Colors.blue),
-            title: Text('Restart'),
+            leading: Icon(AppIcons.refresh, color: scheme.primary),
+            title: const Text('Restart'),
             contentPadding: EdgeInsets.zero,
           ),
         ),
       if (state.isRunning)
-        const PopupMenuItem(
+        PopupMenuItem(
           value: DeploymentAction.pause,
           child: ListTile(
-            leading: Icon(AppIcons.pause, color: Colors.grey),
-            title: Text('Pause'),
+            leading: Icon(AppIcons.pause, color: scheme.tertiary),
+            title: const Text('Pause'),
             contentPadding: EdgeInsets.zero,
           ),
         ),
       if (state.isPaused)
-        const PopupMenuItem(
+        PopupMenuItem(
           value: DeploymentAction.unpause,
           child: ListTile(
-            leading: Icon(AppIcons.play, color: Colors.blue),
-            title: Text('Unpause'),
+            leading: Icon(AppIcons.play, color: scheme.primary),
+            title: const Text('Unpause'),
             contentPadding: EdgeInsets.zero,
           ),
         ),
       const PopupMenuDivider(),
-      const PopupMenuItem(
+      PopupMenuItem(
         value: DeploymentAction.destroy,
         child: ListTile(
-          leading: Icon(AppIcons.delete, color: Colors.red),
-          title: Text('Destroy'),
+          leading: Icon(AppIcons.delete, color: scheme.error),
+          title: const Text('Destroy'),
           contentPadding: EdgeInsets.zero,
         ),
       ),
@@ -163,17 +164,18 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final (color, icon) = switch (state) {
-      DeploymentState.deploying => (Colors.blue, AppIcons.loading),
-      DeploymentState.running => (Colors.green, AppIcons.ok),
-      DeploymentState.created => (Colors.grey, AppIcons.pending),
-      DeploymentState.restarting => (Colors.blue, AppIcons.loading),
-      DeploymentState.removing => (Colors.grey, AppIcons.waiting),
-      DeploymentState.exited => (Colors.orange, AppIcons.stopped),
-      DeploymentState.dead => (Colors.red, AppIcons.canceled),
-      DeploymentState.paused => (Colors.grey, AppIcons.paused),
-      DeploymentState.notDeployed => (Colors.grey, AppIcons.pending),
-      DeploymentState.unknown => (Colors.orange, AppIcons.unknown),
+      DeploymentState.deploying => (scheme.primary, AppIcons.loading),
+      DeploymentState.running => (scheme.secondary, AppIcons.ok),
+      DeploymentState.created => (scheme.onSurfaceVariant, AppIcons.pending),
+      DeploymentState.restarting => (scheme.primary, AppIcons.loading),
+      DeploymentState.removing => (scheme.onSurfaceVariant, AppIcons.waiting),
+      DeploymentState.exited => (scheme.tertiary, AppIcons.stopped),
+      DeploymentState.dead => (scheme.error, AppIcons.canceled),
+      DeploymentState.paused => (scheme.onSurfaceVariant, AppIcons.paused),
+      DeploymentState.notDeployed => (scheme.onSurfaceVariant, AppIcons.pending),
+      DeploymentState.unknown => (scheme.tertiary, AppIcons.unknown),
     };
 
     return Container(

@@ -9,6 +9,7 @@ import '../../features/auth/data/models/auth_state.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/views/auth_loading_view.dart';
 import '../../features/auth/presentation/views/login_view.dart';
+import '../../features/deployments/presentation/views/deployment_detail_view.dart';
 import '../../features/deployments/presentation/views/deployments_list_view.dart';
 import '../../features/home/presentation/views/home_view.dart';
 import '../../features/builds/presentation/views/build_detail_view.dart';
@@ -284,6 +285,19 @@ GoRouter appRouter(Ref ref) {
                       context,
                       const DeploymentsListView(),
                     ),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        pageBuilder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          final name = state.uri.queryParameters['name'] ?? 'Deployment';
+                          return _adaptiveStackPage(
+                            context,
+                            DeploymentDetailView(deploymentId: id, deploymentName: name),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'stacks',

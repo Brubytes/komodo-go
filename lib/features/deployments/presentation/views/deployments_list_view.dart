@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
-import '../providers/deployments_provider.dart';
-import '../widgets/deployment_card.dart';
+import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
+import 'package:komodo_go/features/deployments/presentation/widgets/deployment_card.dart';
 
 class DeploymentsListContent extends ConsumerWidget {
   const DeploymentsListContent({super.key});
@@ -32,6 +34,9 @@ class DeploymentsListContent extends ConsumerWidget {
                   final deployment = deployments[index];
                   return DeploymentCard(
                     deployment: deployment,
+                    onTap: () => context.go(
+                      '${AppRoutes.deployments}/${deployment.id}?name=${Uri.encodeComponent(deployment.name)}',
+                    ),
                     onAction: (action) =>
                         _handleAction(context, ref, deployment.id, action),
                   );
@@ -48,8 +53,8 @@ class DeploymentsListContent extends ConsumerWidget {
 
         // Loading overlay for actions
         if (actionsState.isLoading)
-          Container(
-            color: Colors.black26,
+          ColoredBox(
+            color: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
             child: const Center(
               child: Card(
                 child: Padding(
@@ -86,7 +91,6 @@ class DeploymentsListContent extends ConsumerWidget {
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
               child: const Text('Destroy'),
             ),
           ],
@@ -115,7 +119,9 @@ class DeploymentsListContent extends ConsumerWidget {
                 ? 'Action completed successfully'
                 : 'Action failed. Please try again.',
           ),
-          backgroundColor: success ? Colors.green : Colors.red,
+          backgroundColor: success
+              ? Theme.of(context).colorScheme.secondaryContainer
+              : Theme.of(context).colorScheme.errorContainer,
         ),
       );
     }
