@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-
-import '../../../../core/router/app_router.dart';
-import '../providers/stacks_provider.dart';
-import '../widgets/stack_card.dart';
+import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
+import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
 
 class StacksListContent extends ConsumerWidget {
   const StacksListContent({super.key});
@@ -32,14 +31,14 @@ class StacksListContent extends ConsumerWidget {
                 separatorBuilder: (context, index) => const Gap(12),
                 itemBuilder: (context, index) {
                   final stackItem = stacks[index];
-                    return StackCard(
-                      stack: stackItem,
-                      onTap: () => context.push(
-                        '${AppRoutes.stacks}/${stackItem.id}?name=${Uri.encodeComponent(stackItem.name)}',
-                      ),
-                      onAction: (action) =>
-                          _handleAction(context, ref, stackItem.id, action),
-                    );
+                  return StackCard(
+                    stack: stackItem,
+                    onTap: () => context.push(
+                      '${AppRoutes.stacks}/${stackItem.id}?name=${Uri.encodeComponent(stackItem.name)}',
+                    ),
+                    onAction: (action) =>
+                        _handleAction(context, ref, stackItem.id, action),
+                  );
                 },
               );
             },
@@ -51,9 +50,9 @@ class StacksListContent extends ConsumerWidget {
           ),
         ),
         if (actionsState.isLoading)
-          Container(
+          const ColoredBox(
             color: Colors.black26,
-            child: const Center(
+            child: Center(
               child: Card(
                 child: Padding(
                   padding: EdgeInsets.all(24),
@@ -73,10 +72,37 @@ class StacksListContent extends ConsumerWidget {
     StackAction action,
   ) async {
     final actions = ref.read(stackActionsProvider.notifier);
+    if (action == StackAction.destroy) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Destroy stack?'),
+          content: const Text(
+            'This will run docker compose down and remove the stack containers. Continue?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Destroy'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
     final success = await switch (action) {
-      StackAction.deploy => actions.deploy(stackId),
+      StackAction.redeploy => actions.deploy(stackId),
+      StackAction.pullImages => actions.pullImages(stackId),
+      StackAction.restart => actions.restart(stackId),
+      StackAction.pause => actions.pause(stackId),
       StackAction.start => actions.start(stackId),
       StackAction.stop => actions.stop(stackId),
+      StackAction.destroy => actions.destroy(stackId),
     };
 
     if (context.mounted) {
@@ -87,7 +113,9 @@ class StacksListContent extends ConsumerWidget {
                 ? 'Action completed successfully'
                 : 'Action failed. Please try again.',
           ),
-          backgroundColor: success ? Colors.green : Colors.red,
+          backgroundColor: success
+              ? Theme.of(context).colorScheme.secondaryContainer
+              : Theme.of(context).colorScheme.errorContainer,
         ),
       );
     }
@@ -122,7 +150,10 @@ class _EmptyState extends StatelessWidget {
             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
           ),
           const Gap(16),
-          Text('No stacks found', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'No stacks found',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const Gap(8),
           Text(
             'Create stacks in the Komodo web interface',

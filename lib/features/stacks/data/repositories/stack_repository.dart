@@ -1,11 +1,10 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_exception.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/providers/dio_provider.dart';
-import '../models/stack.dart';
 
 part 'stack_repository.g.dart';
 
@@ -49,10 +48,10 @@ class StackRepository {
         return const Left(Failure.auth());
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e, stackTrace) {
-      // ignore: avoid_print
+    } on Object catch (e, stackTrace) {
+      // ignore: avoid_print -- Useful for debugging unexpected backend responses in development.
       print('Error parsing stacks: $e');
-      // ignore: avoid_print
+      // ignore: avoid_print -- Useful for debugging unexpected backend responses in development.
       print('Stack trace: $stackTrace');
       return Left(Failure.unknown(message: e.toString()));
     }
@@ -74,7 +73,7 @@ class StackRepository {
         return const Left(Failure.server(message: 'Stack not found'));
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
+    } on Object catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }
   }
@@ -99,7 +98,7 @@ class StackRepository {
         return const Left(Failure.auth());
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
+    } on Object catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }
   }
@@ -130,7 +129,7 @@ class StackRepository {
         return const Left(Failure.auth());
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
+    } on Object catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }
   }
@@ -140,24 +139,51 @@ class StackRepository {
     List<String> services = const [],
     int? stopTime,
   }) async {
-    return _executeAction(
-      'DeployStack',
-      <String, dynamic>{
-        'stack': stackIdOrName,
-        'services': services,
-        'stop_time': stopTime,
-      },
-    );
+    return _executeAction('DeployStack', <String, dynamic>{
+      'stack': stackIdOrName,
+      'services': services,
+      'stop_time': stopTime,
+    });
+  }
+
+  Future<Either<Failure, void>> pullStackImages(
+    String stackIdOrName, {
+    List<String> services = const [],
+  }) async {
+    return _executeAction('PullStack', <String, dynamic>{
+      'stack': stackIdOrName,
+      'services': services,
+    });
+  }
+
+  Future<Either<Failure, void>> restartStack(
+    String stackIdOrName, {
+    List<String> services = const [],
+  }) async {
+    return _executeAction('RestartStack', <String, dynamic>{
+      'stack': stackIdOrName,
+      'services': services,
+    });
+  }
+
+  Future<Either<Failure, void>> pauseStack(
+    String stackIdOrName, {
+    List<String> services = const [],
+  }) async {
+    return _executeAction('PauseStack', <String, dynamic>{
+      'stack': stackIdOrName,
+      'services': services,
+    });
   }
 
   Future<Either<Failure, void>> startStack(
     String stackIdOrName, {
     List<String> services = const [],
   }) async {
-    return _executeAction(
-      'StartStack',
-      <String, dynamic>{'stack': stackIdOrName, 'services': services},
-    );
+    return _executeAction('StartStack', <String, dynamic>{
+      'stack': stackIdOrName,
+      'services': services,
+    });
   }
 
   Future<Either<Failure, void>> stopStack(
@@ -165,14 +191,21 @@ class StackRepository {
     List<String> services = const [],
     int? stopTime,
   }) async {
-    return _executeAction(
-      'StopStack',
-      <String, dynamic>{
-        'stack': stackIdOrName,
-        'services': services,
-        'stop_time': stopTime,
-      },
-    );
+    return _executeAction('StopStack', <String, dynamic>{
+      'stack': stackIdOrName,
+      'services': services,
+      'stop_time': stopTime,
+    });
+  }
+
+  Future<Either<Failure, void>> destroyStack(
+    String stackIdOrName, {
+    List<String> services = const [],
+  }) async {
+    return _executeAction('DestroyStack', <String, dynamic>{
+      'stack': stackIdOrName,
+      'services': services,
+    });
   }
 
   Future<Either<Failure, void>> _executeAction(
@@ -187,7 +220,7 @@ class StackRepository {
         return const Left(Failure.auth());
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
+    } on Object catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }
   }

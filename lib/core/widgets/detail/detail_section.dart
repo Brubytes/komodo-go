@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
-import 'detail_surface.dart';
+import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 
 class DetailSection extends StatelessWidget {
   const DetailSection({
@@ -10,12 +10,14 @@ class DetailSection extends StatelessWidget {
     required this.child,
     super.key,
     this.tintColor,
+    this.trailing,
   });
 
   final String title;
   final IconData icon;
   final Widget child;
   final Color? tintColor;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +50,7 @@ class DetailSection extends StatelessWidget {
                   letterSpacing: -0.2,
                 ),
               ),
+              if (trailing != null) ...[const Spacer(), trailing!],
             ],
           ),
           const Gap(14),

@@ -2,16 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
-import '../../data/models/stack.dart';
+import 'package:komodo_go/features/stacks/data/models/stack.dart';
 
 /// Card widget displaying stack information.
 class StackCard extends StatelessWidget {
-  const StackCard({
-    required this.stack,
-    this.onTap,
-    this.onAction,
-    super.key,
-  });
+  const StackCard({required this.stack, this.onTap, this.onAction, super.key});
 
   final StackListItem stack;
   final VoidCallback? onTap;
@@ -64,7 +59,7 @@ class StackCard extends StatelessWidget {
                     PopupMenuButton<StackAction>(
                       icon: const Icon(AppIcons.moreVertical),
                       onSelected: onAction,
-                      itemBuilder: (context) => _buildMenuItems(state),
+                      itemBuilder: (context) => _buildMenuItems(context, state),
                     ),
                 ],
               ),
@@ -88,34 +83,73 @@ class StackCard extends StatelessWidget {
     );
   }
 
-  List<PopupMenuEntry<StackAction>> _buildMenuItems(StackState state) {
+  List<PopupMenuEntry<StackAction>> _buildMenuItems(
+    BuildContext context,
+    StackState state,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
     return [
-      const PopupMenuItem(
-        value: StackAction.deploy,
+      PopupMenuItem(
+        value: StackAction.redeploy,
         child: ListTile(
-          leading: Icon(AppIcons.deployments, color: Colors.blue),
-          title: Text('Deploy'),
+          leading: Icon(AppIcons.deployments, color: scheme.primary),
+          title: const Text('Redeploy'),
           contentPadding: EdgeInsets.zero,
         ),
       ),
-      if (!state.isRunning)
-        const PopupMenuItem(
-          value: StackAction.start,
+      PopupMenuItem(
+        value: StackAction.pullImages,
+        child: ListTile(
+          leading: Icon(AppIcons.download, color: scheme.primary),
+          title: const Text('Pull images'),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      if (state.isRunning)
+        PopupMenuItem(
+          value: StackAction.restart,
           child: ListTile(
-            leading: Icon(AppIcons.play, color: Colors.green),
-            title: Text('Start'),
+            leading: Icon(AppIcons.refresh, color: scheme.primary),
+            title: const Text('Restart'),
             contentPadding: EdgeInsets.zero,
           ),
         ),
       if (state.isRunning)
-        const PopupMenuItem(
-          value: StackAction.stop,
+        PopupMenuItem(
+          value: StackAction.pause,
           child: ListTile(
-            leading: Icon(AppIcons.stop, color: Colors.orange),
-            title: Text('Stop'),
+            leading: Icon(AppIcons.pause, color: scheme.tertiary),
+            title: const Text('Pause'),
             contentPadding: EdgeInsets.zero,
           ),
         ),
+      const PopupMenuDivider(),
+      if (!state.isRunning)
+        PopupMenuItem(
+          value: StackAction.start,
+          child: ListTile(
+            leading: Icon(AppIcons.play, color: scheme.secondary),
+            title: const Text('Start'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      if (state.isRunning)
+        PopupMenuItem(
+          value: StackAction.stop,
+          child: ListTile(
+            leading: Icon(AppIcons.stop, color: scheme.tertiary),
+            title: const Text('Stop'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      PopupMenuItem(
+        value: StackAction.destroy,
+        child: ListTile(
+          leading: Icon(AppIcons.delete, color: scheme.error),
+          title: const Text('Destroy'),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
     ];
   }
 }
@@ -168,4 +202,4 @@ class _StatusBadge extends StatelessWidget {
 }
 
 /// Actions available for a stack.
-enum StackAction { deploy, start, stop }
+enum StackAction { redeploy, pullImages, restart, pause, start, stop, destroy }

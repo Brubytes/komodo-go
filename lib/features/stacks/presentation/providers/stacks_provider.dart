@@ -1,9 +1,8 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/features/stacks/data/models/stack.dart';
+import 'package:komodo_go/features/stacks/data/repositories/stack_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../data/models/stack.dart';
-import '../../data/repositories/stack_repository.dart';
 
 part 'stacks_provider.g.dart';
 
@@ -89,11 +88,23 @@ class StackActions extends _$StackActions {
   Future<bool> deploy(String stackIdOrName) =>
       _executeAction((repo) => repo.deployStack(stackIdOrName));
 
+  Future<bool> pullImages(String stackIdOrName) =>
+      _executeAction((repo) => repo.pullStackImages(stackIdOrName));
+
+  Future<bool> restart(String stackIdOrName) =>
+      _executeAction((repo) => repo.restartStack(stackIdOrName));
+
+  Future<bool> pause(String stackIdOrName) =>
+      _executeAction((repo) => repo.pauseStack(stackIdOrName));
+
   Future<bool> start(String stackIdOrName) =>
       _executeAction((repo) => repo.startStack(stackIdOrName));
 
   Future<bool> stop(String stackIdOrName) =>
       _executeAction((repo) => repo.stopStack(stackIdOrName));
+
+  Future<bool> destroy(String stackIdOrName) =>
+      _executeAction((repo) => repo.destroyStack(stackIdOrName));
 
   Future<bool> _executeAction(
     Future<Either<Failure, void>> Function(StackRepository repo) action,

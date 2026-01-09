@@ -28,13 +28,12 @@ class StackDetailView extends ConsumerStatefulWidget {
 
 class _StackDetailViewState extends ConsumerState<StackDetailView> {
   Timer? _logRefreshTimer;
+  var _autoRefreshLogs = true;
 
   @override
   void initState() {
     super.initState();
-    _logRefreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
-      ref.invalidate(stackLogProvider(widget.stackId));
-    });
+    _startLogPolling();
   }
 
   @override
@@ -42,6 +41,16 @@ class _StackDetailViewState extends ConsumerState<StackDetailView> {
     _logRefreshTimer?.cancel();
     _logRefreshTimer = null;
     super.dispose();
+  }
+
+  void _startLogPolling() {
+    _logRefreshTimer?.cancel();
+    _logRefreshTimer = null;
+    if (!_autoRefreshLogs) return;
+
+    _logRefreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
+      ref.invalidate(stackLogProvider(widget.stackId));
+    });
   }
 
   @override
@@ -89,13 +98,38 @@ class _StackDetailViewState extends ConsumerState<StackDetailView> {
                 _handleAction(context, widget.stackId, action),
             itemBuilder: (context) => [
               PopupMenuItem(
-                value: StackAction.deploy,
+                value: StackAction.redeploy,
                 child: ListTile(
                   leading: Icon(AppIcons.deployments, color: scheme.primary),
-                  title: const Text('Deploy'),
+                  title: const Text('Redeploy'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
+              PopupMenuItem(
+                value: StackAction.pullImages,
+                child: ListTile(
+                  leading: Icon(AppIcons.download, color: scheme.primary),
+                  title: const Text('Pull images'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: StackAction.restart,
+                child: ListTile(
+                  leading: Icon(AppIcons.refresh, color: scheme.primary),
+                  title: const Text('Restart'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: StackAction.pause,
+                child: ListTile(
+                  leading: Icon(AppIcons.pause, color: scheme.tertiary),
+                  title: const Text('Pause'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuDivider(),
               PopupMenuItem(
                 value: StackAction.start,
                 child: ListTile(
@@ -109,6 +143,14 @@ class _StackDetailViewState extends ConsumerState<StackDetailView> {
                 child: ListTile(
                   leading: Icon(AppIcons.stop, color: scheme.tertiary),
                   title: const Text('Stop'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: StackAction.destroy,
+                child: ListTile(
+                  leading: Icon(AppIcons.delete, color: scheme.error),
+                  title: const Text('Destroy'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -191,6 +233,24 @@ class _StackDetailViewState extends ConsumerState<StackDetailView> {
                   data: (log) => DetailSection(
                     title: 'Logs',
                     icon: AppIcons.activity,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          AppIcons.refresh,
+                          size: 16,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                        const Gap(6),
+                        Switch(
+                          value: _autoRefreshLogs,
+                          onChanged: (value) {
+                            setState(() => _autoRefreshLogs = value);
+                            _startLogPolling();
+                          },
+                        ),
+                      ],
+                    ),
                     child: _StackLogContent(log: log),
                   ),
                   loading: () => const _LoadingSurface(),
@@ -223,10 +283,37 @@ class _StackDetailViewState extends ConsumerState<StackDetailView> {
     StackAction action,
   ) async {
     final actions = ref.read(stackActionsProvider.notifier);
+    if (action == StackAction.destroy) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Destroy stack?'),
+          content: const Text(
+            'This will run docker compose down and remove the stack containers. Continue?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Destroy'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
     final success = await switch (action) {
-      StackAction.deploy => actions.deploy(stackId),
+      StackAction.redeploy => actions.deploy(stackId),
+      StackAction.pullImages => actions.pullImages(stackId),
+      StackAction.restart => actions.restart(stackId),
+      StackAction.pause => actions.pause(stackId),
       StackAction.start => actions.start(stackId),
       StackAction.stop => actions.stop(stackId),
+      StackAction.destroy => actions.destroy(stackId),
     };
 
     if (success) {
