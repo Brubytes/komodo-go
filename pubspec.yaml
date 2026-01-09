@@ -37,6 +37,7 @@ dependencies:
 
   # UI Utilities
   gap: ^3.0.1
+  syntax_highlight: ^0.5.0
 
   # Icons
   cupertino_icons: ^1.0.8
