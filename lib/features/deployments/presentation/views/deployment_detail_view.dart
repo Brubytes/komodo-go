@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
@@ -38,8 +39,12 @@ class DeploymentDetailView extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(deploymentName),
+      appBar: MainAppBar(
+        title: deploymentName,
+        icon: AppIcons.deployments,
+        markColor: Colors.green,
+        markUseGradient: true,
+        centerTitle: true,
         actions: [
           PopupMenuButton<DeploymentAction>(
             icon: const Icon(AppIcons.moreVertical),

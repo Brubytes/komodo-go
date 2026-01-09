@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../providers/actions_provider.dart';
@@ -93,7 +94,13 @@ class ActionsListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Actions')),
+      appBar: const MainAppBar(
+        title: 'Actions',
+        icon: AppIcons.actions,
+        markColor: Colors.cyan,
+        markUseGradient: true,
+        centerTitle: true,
+      ),
       body: const ActionsListContent(),
     );
   }

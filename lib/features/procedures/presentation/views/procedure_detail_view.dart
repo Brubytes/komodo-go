@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
 
 import '../../data/models/procedure.dart';
 import '../providers/procedures_provider.dart';
@@ -23,8 +24,12 @@ class ProcedureDetailView extends ConsumerWidget {
     final actionsState = ref.watch(procedureActionsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(procedureName),
+      appBar: MainAppBar(
+        title: procedureName,
+        icon: AppIcons.procedures,
+        markColor: Colors.indigo,
+        markUseGradient: true,
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(AppIcons.play),
@@ -101,9 +106,7 @@ class ProcedureDetailView extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            success
-                ? 'Procedure started'
-                : 'Action failed. Please try again.',
+            success ? 'Procedure started' : 'Action failed. Please try again.',
           ),
           backgroundColor: success ? Colors.green : Colors.red,
         ),
@@ -149,9 +152,9 @@ class _ProcedureInfoCard extends StatelessWidget {
             const Gap(12),
             Text(
               'Stages',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const Gap(8),
             if (config.stages.isEmpty)
@@ -176,8 +179,7 @@ class _StageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final enabledExecutions =
-        stage.executions.where((e) => e.enabled).length;
+    final enabledExecutions = stage.executions.where((e) => e.enabled).length;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -208,9 +210,9 @@ class _InfoRow extends StatelessWidget {
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface.withValues(
-                      alpha: 0.7,
-                    ),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ),

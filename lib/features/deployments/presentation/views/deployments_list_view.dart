@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
 
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
 import 'package:komodo_go/features/deployments/presentation/widgets/deployment_card.dart';
@@ -136,7 +137,13 @@ class DeploymentsListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Deployments')),
+      appBar: const MainAppBar(
+        title: 'Deployments',
+        icon: AppIcons.deployments,
+        markColor: Colors.green,
+        markUseGradient: true,
+        centerTitle: true,
+      ),
       body: const DeploymentsListContent(),
     );
   }

@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../providers/procedures_provider.dart';
@@ -32,13 +33,13 @@ class ProceduresListContent extends ConsumerWidget {
                 separatorBuilder: (context, index) => const Gap(12),
                 itemBuilder: (context, index) {
                   final procedure = procedures[index];
-                    return ProcedureCard(
-                      procedure: procedure,
-                      onTap: () => context.push(
-                        '${AppRoutes.procedures}/${procedure.id}?name=${Uri.encodeComponent(procedure.name)}',
-                      ),
-                      onRun: () => _runProcedure(context, ref, procedure.id),
-                    );
+                  return ProcedureCard(
+                    procedure: procedure,
+                    onTap: () => context.push(
+                      '${AppRoutes.procedures}/${procedure.id}?name=${Uri.encodeComponent(procedure.name)}',
+                    ),
+                    onRun: () => _runProcedure(context, ref, procedure.id),
+                  );
                 },
               );
             },
@@ -77,9 +78,7 @@ class ProceduresListContent extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            success
-                ? 'Procedure started'
-                : 'Action failed. Please try again.',
+            success ? 'Procedure started' : 'Action failed. Please try again.',
           ),
           backgroundColor: success ? Colors.green : Colors.red,
         ),
@@ -95,7 +94,13 @@ class ProceduresListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Procedures')),
+      appBar: const MainAppBar(
+        title: 'Procedures',
+        icon: AppIcons.procedures,
+        markColor: Colors.indigo,
+        markUseGradient: true,
+        centerTitle: true,
+      ),
       body: const ProceduresListContent(),
     );
   }

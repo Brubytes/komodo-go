@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../providers/builds_provider.dart';
@@ -32,14 +33,14 @@ class BuildsListContent extends ConsumerWidget {
                 separatorBuilder: (context, index) => const Gap(12),
                 itemBuilder: (context, index) {
                   final build = builds[index];
-                    return BuildCard(
-                      buildItem: build,
-                      onTap: () => context.push(
-                        '${AppRoutes.builds}/${build.id}?name=${Uri.encodeComponent(build.name)}',
-                      ),
-                      onAction: (action) =>
-                          _handleAction(context, ref, build.id, action),
-                    );
+                  return BuildCard(
+                    buildItem: build,
+                    onTap: () => context.push(
+                      '${AppRoutes.builds}/${build.id}?name=${Uri.encodeComponent(build.name)}',
+                    ),
+                    onAction: (action) =>
+                        _handleAction(context, ref, build.id, action),
+                  );
                 },
               );
             },
@@ -100,7 +101,13 @@ class BuildsListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Builds')),
+      appBar: const MainAppBar(
+        title: 'Builds',
+        icon: AppIcons.builds,
+        markColor: Colors.teal,
+        markUseGradient: true,
+        centerTitle: true,
+      ),
       body: const BuildsListContent(),
     );
   }
@@ -121,7 +128,10 @@ class _EmptyState extends StatelessWidget {
             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
           ),
           const Gap(16),
-          Text('No builds found', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'No builds found',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const Gap(8),
           Text(
             'Create builds in the Komodo web interface',

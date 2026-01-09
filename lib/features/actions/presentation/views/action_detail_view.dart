@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
 
 import '../../data/models/action.dart';
 import '../providers/actions_provider.dart';
@@ -23,8 +24,12 @@ class ActionDetailView extends ConsumerWidget {
     final actionsState = ref.watch(actionActionsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(actionName),
+      appBar: MainAppBar(
+        title: actionName,
+        icon: AppIcons.actions,
+        markColor: Colors.cyan,
+        markUseGradient: true,
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(AppIcons.play),

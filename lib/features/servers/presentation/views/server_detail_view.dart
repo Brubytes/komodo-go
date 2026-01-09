@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/utils/byte_format.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
 
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_information.dart';
@@ -143,7 +144,13 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.serverName)),
+      appBar: MainAppBar(
+        title: widget.serverName,
+        icon: AppIcons.server,
+        markColor: Colors.blue,
+        markUseGradient: true,
+        centerTitle: true,
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref

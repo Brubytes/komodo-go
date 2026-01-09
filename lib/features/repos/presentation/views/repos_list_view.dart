@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../providers/repos_provider.dart';
@@ -32,14 +33,14 @@ class ReposListContent extends ConsumerWidget {
                 separatorBuilder: (context, index) => const Gap(12),
                 itemBuilder: (context, index) {
                   final repo = repos[index];
-                    return RepoCard(
-                      repo: repo,
-                      onTap: () => context.push(
-                        '${AppRoutes.repos}/${repo.id}?name=${Uri.encodeComponent(repo.name)}',
-                      ),
-                      onAction: (action) =>
-                          _handleAction(context, ref, repo.id, action),
-                    );
+                  return RepoCard(
+                    repo: repo,
+                    onTap: () => context.push(
+                      '${AppRoutes.repos}/${repo.id}?name=${Uri.encodeComponent(repo.name)}',
+                    ),
+                    onAction: (action) =>
+                        _handleAction(context, ref, repo.id, action),
+                  );
                 },
               );
             },
@@ -101,7 +102,13 @@ class ReposListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Repos')),
+      appBar: const MainAppBar(
+        title: 'Repos',
+        icon: AppIcons.repos,
+        markColor: Colors.orange,
+        markUseGradient: true,
+        centerTitle: true,
+      ),
       body: const ReposListContent(),
     );
   }
@@ -122,7 +129,10 @@ class _EmptyState extends StatelessWidget {
             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
           ),
           const Gap(16),
-          Text('No repos found', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'No repos found',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const Gap(8),
           Text(
             'Create repos in the Komodo web interface',
