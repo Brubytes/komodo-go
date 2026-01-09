@@ -422,7 +422,11 @@ class _ActionScriptContent extends StatelessWidget {
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           const Gap(8),
-          DetailCodeBlock(code: file, maxHeight: 320),
+          DetailCodeBlock(
+            code: file,
+            language: DetailCodeLanguage.typescript,
+            maxHeight: 420,
+          ),
         ],
       ],
     );
