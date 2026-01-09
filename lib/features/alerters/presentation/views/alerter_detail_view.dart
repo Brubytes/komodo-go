@@ -285,8 +285,8 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                           const Gap(8),
                           _selectionPills(
                             context,
-                            labels: (_alertTypes.toList()..sort())
-                                .map(_humanizeEnum)
+                            items: (_alertTypes.toList()..sort())
+                                .map((label) => _PillData(_humanizeEnum(label)))
                                 .toList(),
                             emptyLabel: 'All alert types',
                           ),
@@ -324,11 +324,14 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                           const Gap(8),
                           _selectionPills(
                             context,
-                            labels: _resources
+                            items: _resources
                                 .map(
-                                  (entry) => _resourceLabel(
-                                    entry,
-                                    resourceNameLookup,
+                                  (entry) => _PillData(
+                                    _resourceLabel(
+                                      entry,
+                                      resourceNameLookup,
+                                    ),
+                                    _resourceIcon(entry.variant),
                                   ),
                                 )
                                 .toList(),
@@ -368,11 +371,14 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                           const Gap(8),
                           _selectionPills(
                             context,
-                            labels: _exceptResources
+                            items: _exceptResources
                                 .map(
-                                  (entry) => _resourceLabel(
-                                    entry,
-                                    resourceNameLookup,
+                                  (entry) => _PillData(
+                                    _resourceLabel(
+                                      entry,
+                                      resourceNameLookup,
+                                    ),
+                                    _resourceIcon(entry.variant),
                                   ),
                                 )
                                 .toList(),
@@ -804,16 +810,24 @@ bool _deepEquals(Object? a, Object? b) {
   return a == b;
 }
 
+class _PillData {
+  const _PillData(this.label, [this.icon]);
+
+  final String label;
+  final IconData? icon;
+}
+
 Widget _selectionPills(
   BuildContext context, {
-  required List<String> labels,
+  required List<_PillData> items,
   required String emptyLabel,
 }) {
-  if (labels.isEmpty) {
+  if (items.isEmpty) {
     return TextPill(label: emptyLabel);
   }
 
-  final sorted = List<String>.from(labels)..sort();
+  final sorted = List<_PillData>.from(items)
+    ..sort((a, b) => a.label.compareTo(b.label));
   final visible = sorted.take(6).toList();
   final remaining = sorted.length - visible.length;
 
@@ -821,7 +835,15 @@ Widget _selectionPills(
     spacing: 8,
     runSpacing: 8,
     children: [
-      for (final label in visible) TextPill(label: label),
+      for (final item in visible)
+        if (item.icon == null)
+          TextPill(label: item.label)
+        else
+          StatusPill(
+            label: item.label,
+            icon: item.icon!,
+            tone: PillTone.neutral,
+          ),
       if (remaining > 0)
         ValuePill(
           label: 'More',
@@ -941,6 +963,24 @@ String _resourceLabel(
     return lookupName.trim();
   }
   return '${entry.variant} ${_shortId(entry.value)}';
+}
+
+IconData _resourceIcon(String variant) {
+  final normalized = variant.trim().toLowerCase();
+  return switch (normalized) {
+    'system' => AppIcons.server,
+    'server' => AppIcons.server,
+    'stack' => AppIcons.stacks,
+    'deployment' => AppIcons.deployments,
+    'build' => AppIcons.builds,
+    'repo' => AppIcons.repos,
+    'procedure' => AppIcons.procedures,
+    'action' => AppIcons.actions,
+    'resourcesync' => AppIcons.syncs,
+    'builder' => AppIcons.factory,
+    'alerter' => AppIcons.notifications,
+    _ => AppIcons.widgets,
+  };
 }
 
 Map<String, String> _resourceNameLookup({
