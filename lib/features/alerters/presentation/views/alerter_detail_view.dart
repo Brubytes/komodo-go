@@ -264,51 +264,21 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('Select alert types'),
-                            subtitle: _alertTypes.isEmpty
-                                ? Text(
-                                    'All alert types (no filter)',
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          color: scheme.onSurfaceVariant,
-                                        ),
-                                  )
-                                : Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${_alertTypes.length} selected',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: scheme.onSurfaceVariant,
-                                            ),
-                                      ),
-                                      const Gap(6),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: [
-                                          for (final t
-                                              in (_alertTypes.toList()..sort())
-                                                  .take(6))
-                                            TextPill(label: _humanizeEnum(t)),
-                                          if (_alertTypes.length > 6)
-                                            ValuePill(
-                                              label: 'More',
-                                              value:
-                                                  '+${_alertTypes.length - 6}',
-                                            ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                            trailing: Icon(AppIcons.chevron, size: 18),
-                            onTap: _pickAlertTypes,
+                          _summaryRow(
+                            context,
+                            label: 'Selected',
+                            value: _alertTypes.isEmpty
+                                ? 'All'
+                                : _alertTypes.length.toString(),
+                          ),
+                          const Gap(10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _pickAlertTypes,
+                              icon: const Icon(AppIcons.edit, size: 18),
+                              label: const Text('Edit alert types'),
+                            ),
                           ),
                         ],
                       ),
@@ -887,16 +857,45 @@ class _AlertTypesPickerSheet extends StatefulWidget {
 
 class _AlertTypesPickerSheetState extends State<_AlertTypesPickerSheet> {
   late final Set<String> _selected;
+  late final TextEditingController _searchController;
 
   @override
   void initState() {
     super.initState();
     _selected = Set<String>.from(widget.initial);
+    _searchController = TextEditingController()..addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController
+      ..removeListener(_onSearchChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() => setState(() {});
+
+  void _toggleType(String type, bool next) {
+    setState(() {
+      if (next) {
+        _selected.add(type);
+      } else {
+        _selected.remove(type);
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final query = _searchController.text.trim().toLowerCase();
+    final filtered = query.isEmpty
+        ? _knownAlertTypes
+        : _knownAlertTypes
+            .where((t) => _humanizeEnum(t).toLowerCase().contains(query))
+            .toList();
 
     return DraggableScrollableSheet(
       expand: false,
@@ -909,22 +908,18 @@ class _AlertTypesPickerSheetState extends State<_AlertTypesPickerSheet> {
         children: [
           Row(
             children: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              const Spacer(),
               Text(
                 'Alert types',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.2,
                 ),
               ),
               const Spacer(),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(_selected),
-                child: const Text('Save'),
+              IconButton(
+                tooltip: 'Close',
+                icon: const Icon(AppIcons.close),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
@@ -936,30 +931,99 @@ class _AlertTypesPickerSheetState extends State<_AlertTypesPickerSheet> {
             ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
           const Gap(12),
-          for (final (index, type) in _knownAlertTypes.indexed) ...[
-            if (index > 0)
-              Divider(
-                height: 1,
-                color: scheme.outlineVariant.withValues(alpha: 0.35),
-              ),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _selected.contains(type),
-              title: Text(_humanizeEnum(type)),
-              controlAffinity: ListTileControlAffinity.trailing,
-              dense: true,
-              onChanged: (v) {
-                setState(() {
-                  final next = v ?? false;
-                  if (next) {
-                    _selected.add(type);
-                  } else {
-                    _selected.remove(type);
-                  }
-                });
-              },
+          TextField(
+            controller: _searchController,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              labelText: 'Search alert types',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchController.text.trim().isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Clear search',
+                      icon: const Icon(AppIcons.close),
+                      onPressed: () => _searchController.clear(),
+                    ),
             ),
-          ],
+          ),
+          const Gap(12),
+          Row(
+            children: [
+              Text(
+                '${_selected.length} selected',
+                style: textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${_knownAlertTypes.length} types',
+                style: textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const Gap(12),
+          DetailSurface(
+            padding: EdgeInsets.zero,
+            radius: 16,
+            enableGradientInDark: false,
+            child: Column(
+              children: [
+                if (filtered.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'No alert types match your search.',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                else
+                  for (final (index, type) in filtered.indexed) ...[
+                    if (index > 0)
+                      Divider(
+                        height: 1,
+                        color: scheme.outlineVariant.withValues(alpha: 0.35),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _humanizeEnum(type),
+                              style: textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Switch(
+                            value: _selected.contains(type),
+                            onChanged: (next) => _toggleType(type, next),
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+              ],
+            ),
+          ),
+          const Gap(12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.of(context).pop(_selected),
+              child: const Text('Confirm'),
+            ),
+          ),
           const Gap(12),
         ],
       ),
