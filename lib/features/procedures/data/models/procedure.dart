@@ -84,6 +84,7 @@ sealed class ProcedureConfig with _$ProcedureConfig {
     @JsonKey(name: 'schedule_alert') @Default(false) bool scheduleAlert,
     @JsonKey(name: 'failure_alert') @Default(false) bool failureAlert,
     @JsonKey(name: 'webhook_enabled') @Default(false) bool webhookEnabled,
+    @JsonKey(name: 'webhook_secret') @Default('') String webhookSecret,
   }) = _ProcedureConfig;
 
   factory ProcedureConfig.fromJson(Map<String, dynamic> json) =>
