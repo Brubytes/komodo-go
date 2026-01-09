@@ -88,7 +88,7 @@ class AppTheme {
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: isDark
-            ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.92)
+            ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.985)
             : colorScheme.surface,
         elevation: 0,
         shadowColor: Colors.black.withValues(alpha: 0.3),
