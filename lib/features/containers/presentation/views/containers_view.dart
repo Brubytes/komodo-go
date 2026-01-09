@@ -1,13 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../core/router/route_observer.dart';
+import '../../../../core/router/shell_state_provider.dart';
 import '../../../../core/widgets/main_app_bar.dart';
 import '../../../servers/data/models/server.dart';
 import '../../../servers/presentation/providers/servers_provider.dart';
@@ -15,37 +16,134 @@ import '../providers/containers_filters_provider.dart';
 import '../providers/containers_provider.dart';
 import '../widgets/container_card.dart';
 
-class ContainersView extends HookConsumerWidget {
+class ContainersView extends ConsumerStatefulWidget {
   const ContainersView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ContainersView> createState() => _ContainersViewState();
+}
+
+class _ContainersViewState extends ConsumerState<ContainersView>
+    with RouteAware, WidgetsBindingObserver {
+  Timer? _refreshTimer;
+  bool _isRouteVisible = true;
+  AppLifecycleState _lifecycleState = AppLifecycleState.resumed;
+  late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
+  ProviderSubscription<String>? _searchQuerySubscription;
+  bool _isSearchVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _searchController = TextEditingController(
+      text: ref.read(containersSearchQueryProvider),
+    );
+    _searchFocusNode = FocusNode();
+    _searchQuerySubscription = ref.listenManual<String>(
+      containersSearchQueryProvider,
+      (previous, next) {
+        if (_searchController.text == next) return;
+        final selection = _searchController.selection;
+        _searchController.text = next;
+        _searchController.selection = selection.copyWith(
+          baseOffset: _searchController.text.length,
+          extentOffset: _searchController.text.length,
+        );
+      },
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    appRouteObserver.unsubscribe(this);
+    WidgetsBinding.instance.removeObserver(this);
+    _stopRefreshTimer();
+    _searchQuerySubscription?.close();
+    _searchQuerySubscription = null;
+    _searchFocusNode.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didPush() {
+    _isRouteVisible = true;
+    setState(() {});
+  }
+
+  @override
+  void didPopNext() {
+    _isRouteVisible = true;
+    setState(() {});
+  }
+
+  @override
+  void didPushNext() {
+    _isRouteVisible = false;
+    setState(() {});
+  }
+
+  @override
+  void didPop() {
+    _isRouteVisible = false;
+    setState(() {});
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _lifecycleState = state;
+    setState(() {});
+  }
+
+  void _startRefreshTimer() {
+    if (_refreshTimer != null) return;
+    _refreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
+      ref.invalidate(containersProvider);
+    });
+    ref.invalidate(containersProvider);
+  }
+
+  void _stopRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  void _syncRefreshTimer({required bool isActiveTab}) {
+    final shouldRefresh =
+        isActiveTab &&
+        _isRouteVisible &&
+        _lifecycleState == AppLifecycleState.resumed;
+    if (shouldRefresh) {
+      _startRefreshTimer();
+    } else {
+      _stopRefreshTimer();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final containersAsync = ref.watch(containersProvider);
     final serversAsync = ref.watch(serversProvider);
     final selectedServerId = ref.watch(containersServerFilterProvider);
     final searchQuery = ref.watch(containersSearchQueryProvider);
     final sortState = ref.watch(containersSortProvider);
-    final isSearchVisible = useState(false);
-    final searchFocusNode = useFocusNode();
-    final searchController = useTextEditingController(text: searchQuery);
+    final isActiveTab = ref.watch(mainShellIndexProvider) == 2;
 
-    useEffect(() {
-      final timer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
-        ref.invalidate(containersProvider);
-      });
-      return timer.cancel;
-    }, const []);
-
-    useEffect(() {
-      if (searchController.text == searchQuery) return null;
-      final selection = searchController.selection;
-      searchController.text = searchQuery;
-      searchController.selection = selection.copyWith(
-        baseOffset: searchController.text.length,
-        extentOffset: searchController.text.length,
-      );
-      return null;
-    }, [searchQuery]);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _syncRefreshTimer(isActiveTab: isActiveTab);
+    });
 
     return Scaffold(
       appBar: MainAppBar(
@@ -53,13 +151,13 @@ class ContainersView extends HookConsumerWidget {
         icon: AppIcons.containers,
         actions: [
           IconButton(
-            tooltip: isSearchVisible.value ? 'Hide search' : 'Search',
-            icon: Icon(isSearchVisible.value ? Icons.close : Icons.search),
+            tooltip: _isSearchVisible ? 'Hide search' : 'Search',
+            icon: Icon(_isSearchVisible ? Icons.close : Icons.search),
             onPressed: () {
-              isSearchVisible.value = !isSearchVisible.value;
-              if (isSearchVisible.value) {
+              setState(() => _isSearchVisible = !_isSearchVisible);
+              if (_isSearchVisible) {
                 Future<void>.delayed(const Duration(milliseconds: 50), () {
-                  if (context.mounted) searchFocusNode.requestFocus();
+                  if (context.mounted) _searchFocusNode.requestFocus();
                 });
               } else {
                 FocusManager.instance.primaryFocus?.unfocus();
@@ -94,17 +192,17 @@ class ContainersView extends HookConsumerWidget {
               duration: const Duration(milliseconds: 180),
               switchInCurve: Curves.easeOut,
               switchOutCurve: Curves.easeIn,
-              child: isSearchVisible.value
+              child: _isSearchVisible
                   ? Padding(
                       padding: const EdgeInsets.only(top: 12),
                       child: _SearchField(
-                        focusNode: searchFocusNode,
-                        controller: searchController,
+                        focusNode: _searchFocusNode,
+                        controller: _searchController,
                         onChanged: (value) => ref
                             .read(containersSearchQueryProvider.notifier)
                             .setQuery(value),
                         onClear: () {
-                          searchController.clear();
+                          _searchController.clear();
                           ref
                               .read(containersSearchQueryProvider.notifier)
                               .setQuery('');

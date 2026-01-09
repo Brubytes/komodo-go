@@ -2,9 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
+import 'route_observer.dart';
+import 'shell_state_provider.dart';
 import '../../features/auth/data/models/auth_state.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/views/auth_loading_view.dart';
@@ -109,6 +112,7 @@ GoRouter appRouter(Ref ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
+    observers: [appRouteObserver],
     redirect: (context, state) {
       final isOnSplash = state.matchedLocation == AppRoutes.splash;
       final isOnLogin = state.matchedLocation == AppRoutes.login;
@@ -526,18 +530,26 @@ GoRouter appRouter(Ref ref) {
 }
 
 /// Main shell with bottom navigation.
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   const MainShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentIndex = navigationShell.currentIndex;
+    final storedIndex = ref.watch(mainShellIndexProvider);
+    if (storedIndex != currentIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(mainShellIndexProvider.notifier).setIndex(currentIndex);
+      });
+    }
+
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: AdaptiveBottomNavigationBar(
         selectedIndex: navigationShell.currentIndex,
-        onTap: _onItemTapped,
+        onTap: (index) => _onItemTapped(ref, index),
         items: const [
           AdaptiveNavigationItem(
             icon: Icon(AppIcons.home),
@@ -569,10 +581,11 @@ class MainShell extends StatelessWidget {
     );
   }
 
-  void _onItemTapped(int index) {
+  void _onItemTapped(WidgetRef ref, int index) {
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,
     );
+    ref.read(mainShellIndexProvider.notifier).setIndex(index);
   }
 }
