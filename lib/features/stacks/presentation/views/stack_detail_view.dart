@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 
+import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
@@ -25,6 +26,7 @@ class StackDetailView extends ConsumerWidget {
     final servicesAsync = ref.watch(stackServicesProvider(stackId));
     final logAsync = ref.watch(stackLogProvider(stackId));
     final stacksListAsync = ref.watch(stacksProvider);
+    final serversListAsync = ref.watch(serversProvider);
     final actionsState = ref.watch(stackActionsProvider);
 
     final scheme = Theme.of(context).colorScheme;
@@ -43,6 +45,15 @@ class StackDetailView extends ConsumerWidget {
     final services = servicesAsync.asData?.value;
     final serviceCount = services?.length;
     final updateCount = services?.where((e) => e.updateAvailable).length;
+
+    String? serverNameForId(String serverId) {
+      final servers = serversListAsync.asData?.value;
+      if (servers == null || serverId.isEmpty) return null;
+      for (final s in servers) {
+        if (s.id == serverId) return s.name;
+      }
+      return null;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -103,18 +114,32 @@ class StackDetailView extends ConsumerWidget {
                               listItem: listItem,
                               serviceCount: serviceCount,
                               updateCount: updateCount,
+                              serverName: serverNameForId(
+                                stack.config.serverId,
+                              ),
                             ),
                             const Gap(16),
                             DetailSection(
                               title: 'Config',
                               icon: AppIcons.settings,
-                              child: _StackConfigContent(config: stack.config),
+                              child: _StackConfigContent(
+                                config: stack.config,
+                                serverName: serverNameForId(
+                                  stack.config.serverId,
+                                ),
+                              ),
                             ),
                             const Gap(16),
                             DetailSection(
                               title: 'Deployment',
                               icon: AppIcons.deployments,
                               child: _StackDeploymentContent(info: stack.info),
+                            ),
+                            const Gap(16),
+                            DetailSection(
+                              title: 'Compose',
+                              icon: AppIcons.stacks,
+                              child: _StackComposeContent(config: stack.config),
                             ),
                           ],
                         )
@@ -217,12 +242,14 @@ class _StackHeroPanel extends StatelessWidget {
     required this.listItem,
     required this.serviceCount,
     required this.updateCount,
+    required this.serverName,
   });
 
   final KomodoStack stack;
   final StackListItem? listItem;
   final int? serviceCount;
   final int? updateCount;
+  final String? serverName;
 
   @override
   Widget build(BuildContext context) {
@@ -255,7 +282,15 @@ class _StackHeroPanel extends StatelessWidget {
             DetailIconInfoRow(
               icon: AppIcons.server,
               label: 'Server',
-              value: config.serverId,
+              value: serverName ?? config.serverId,
+            ),
+            const Gap(10),
+          ],
+          if (status?.trim().isNotEmpty ?? false) ...[
+            DetailIconInfoRow(
+              icon: AppIcons.activity,
+              label: 'Status',
+              value: status!.trim(),
             ),
             const Gap(10),
           ],
@@ -287,8 +322,8 @@ class _StackHeroPanel extends StatelessWidget {
         DetailMetricTileData(
           icon: AppIcons.dot,
           label: 'Status',
-          value: (status?.trim().isNotEmpty ?? false) ? status!.trim() : '—',
-          tone: DetailMetricTone.neutral,
+          value: _statusSummary(status),
+          tone: _statusTone(status),
         ),
         DetailMetricTileData(
           icon: AppIcons.widgets,
@@ -363,12 +398,32 @@ class _StackHeroPanel extends StatelessWidget {
       _ => DetailMetricTone.neutral,
     };
   }
+
+  String _statusSummary(String? value) {
+    final v = value?.trim();
+    if (v == null || v.isEmpty) return '—';
+    final head = v.split(',').first.trim();
+    return head.isNotEmpty ? head : '—';
+  }
+
+  DetailMetricTone _statusTone(String? value) {
+    final v = value?.trim().toLowerCase();
+    if (v == null || v.isEmpty) return DetailMetricTone.neutral;
+    if (v.contains('exit') || v.contains('dead') || v.contains('error')) {
+      return DetailMetricTone.tertiary;
+    }
+    if (v.contains('running') || v.contains('healthy')) {
+      return DetailMetricTone.success;
+    }
+    return DetailMetricTone.neutral;
+  }
 }
 
 class _StackConfigContent extends StatelessWidget {
-  const _StackConfigContent({required this.config});
+  const _StackConfigContent({required this.config, required this.serverName});
 
   final StackConfig config;
+  final String? serverName;
 
   @override
   Widget build(BuildContext context) {
@@ -500,8 +555,8 @@ class _StackConfigContent extends StatelessWidget {
             title: 'Server',
             icon: AppIcons.server,
             child: DetailKeyValueRow(
-              label: 'Server ID',
-              value: config.serverId,
+              label: 'Server',
+              value: serverName ?? config.serverId,
               bottomPadding: 0,
             ),
           ),
@@ -610,6 +665,86 @@ class _StackDeploymentContent extends StatelessWidget {
     final v = value.trim();
     if (v.isEmpty) return null;
     return v.length > 8 ? v.substring(0, 8) : v;
+  }
+}
+
+class _StackComposeContent extends StatelessWidget {
+  const _StackComposeContent({required this.config});
+
+  final StackConfig config;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final contents = config.fileContents.trim();
+    final environment = config.environment.trim();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (config.filePaths.isNotEmpty) ...[
+          DetailSubCard(
+            title: 'Files',
+            icon: AppIcons.package,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final path in config.filePaths) TextPill(label: path),
+              ],
+            ),
+          ),
+          const Gap(12),
+        ],
+        DetailSubCard(
+          title: 'Compose file',
+          icon: AppIcons.stacks,
+          child: contents.isEmpty
+              ? const Text('No compose contents available')
+              : DetailSurface(
+                  baseColor: scheme.surfaceContainerHighest,
+                  enableGradientInDark: false,
+                  radius: 16,
+                  padding: const EdgeInsets.all(12),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 360),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        contents,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+        if (environment.isNotEmpty) ...[
+          const Gap(12),
+          DetailSubCard(
+            title: 'Environment',
+            icon: AppIcons.factory,
+            child: DetailSurface(
+              baseColor: scheme.surfaceContainerHighest,
+              enableGradientInDark: false,
+              radius: 16,
+              padding: const EdgeInsets.all(12),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 220),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    environment,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 

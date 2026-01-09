@@ -9,9 +9,9 @@ sealed class StackListItem with _$StackListItem {
   const factory StackListItem({
     required String id,
     required String name,
+    required StackListItemInfo info,
     @Default(false) bool template,
     @Default([]) List<String> tags,
-    required StackListItemInfo info,
   }) = _StackListItem;
 
   factory StackListItem.fromJson(Map<String, dynamic> json) =>
@@ -43,11 +43,11 @@ sealed class KomodoStack with _$KomodoStack {
   const factory KomodoStack({
     @JsonKey(readValue: _readId) required String id,
     required String name,
+    required StackConfig config,
+    required StackInfo info,
     @Default('') String description,
     @Default(false) bool template,
     @Default([]) List<String> tags,
-    required StackConfig config,
-    required StackInfo info,
   }) = _KomodoStack;
 
   factory KomodoStack.fromJson(Map<String, dynamic> json) =>
@@ -92,6 +92,8 @@ sealed class StackConfig with _$StackConfig {
     @Default([])
     List<String> additionalEnvFiles,
     @JsonKey(name: 'ignore_services') @Default([]) List<String> ignoreServices,
+    @JsonKey(name: 'file_contents') @Default('') String fileContents,
+    @Default('') String environment,
   }) = _StackConfig;
 
   factory StackConfig.fromJson(Map<String, dynamic> json) =>
