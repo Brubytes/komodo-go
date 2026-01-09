@@ -51,6 +51,21 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
     super.dispose();
   }
 
+  Future<void> _pickColor(BuildContext context) async {
+    final selected =
+        await Navigator.of(context, rootNavigator: true).push<TagColor?>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _TagColorPickerPage(initial: _color),
+      ),
+    );
+
+    if (!mounted) return;
+    if (selected != null) {
+      setState(() => _color = selected);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.initial != null;
@@ -92,33 +107,30 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
             ),
           ),
           const Gap(12),
-          DropdownButtonFormField<TagColor>(
-            value: _color,
-            decoration: const InputDecoration(
-              labelText: 'Color',
-              prefixIcon: Icon(Icons.palette_outlined),
-            ),
-            items: [
-              for (final c in TagColor.values)
-                DropdownMenuItem(
-                  value: c,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: c.swatch,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const Gap(10),
-                      Text(c.label),
-                    ],
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _pickColor(context),
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Color',
+                prefixIcon: Icon(Icons.palette_outlined),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: _color.swatch,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
-                ),
-            ],
-            onChanged: (value) => setState(() => _color = value ?? _color),
+                  const Gap(10),
+                  Expanded(child: Text(_color.label)),
+                  const Icon(Icons.expand_more, size: 20),
+                ],
+              ),
+            ),
           ),
           const Gap(16),
           SizedBox(
@@ -134,6 +146,62 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
           ),
           const Gap(12),
         ],
+      ),
+    );
+  }
+}
+
+class _TagColorPickerPage extends StatelessWidget {
+  const _TagColorPickerPage({required this.initial});
+
+  final TagColor initial;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      extendBody: true,
+      appBar: AppBar(
+        title: const Text('Select color'),
+        centerTitle: false,
+        automaticallyImplyLeading: false,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(null),
+            child: const Text('Cancel'),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: ListView.separated(
+          padding: const EdgeInsets.only(bottom: 24),
+          itemCount: TagColor.values.length,
+          separatorBuilder: (_, __) => Divider(
+            height: 1,
+            color: scheme.outlineVariant.withValues(alpha: 0.4),
+          ),
+          itemBuilder: (context, index) {
+            final c = TagColor.values[index];
+            final isSelected = c == initial;
+            return ListTile(
+              leading: Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: c.swatch,
+                  borderRadius: BorderRadius.circular(5),
+                ),
+              ),
+              title: Text(c.label),
+              trailing: isSelected ? const Icon(Icons.check, size: 20) : null,
+              onTap: () => Navigator.of(context).pop(c),
+            );
+          },
+        ),
       ),
     );
   }
