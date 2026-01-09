@@ -858,8 +858,6 @@ class _StackLogContent extends StatelessWidget {
       return const Text('No logs available');
     }
 
-    final scheme = Theme.of(context).colorScheme;
-
     final output = [
       if (log.stdout.trim().isNotEmpty) log.stdout.trim(),
       if (log.stderr.trim().isNotEmpty) log.stderr.trim(),
@@ -886,29 +884,11 @@ class _StackLogContent extends StatelessWidget {
           ],
         ),
         const Gap(14),
-        DetailSubCard(
-          title: log.stage.isNotEmpty ? log.stage : 'Log',
-          icon: log.success ? AppIcons.ok : AppIcons.error,
-          child: Column(
-            children: [
-              if (log.command.isNotEmpty) ...[
-                DetailKeyValueRow(label: 'Command', value: log.command),
-              ],
-              DetailSurface(
-                baseColor: scheme.surfaceContainerHighest,
-                enableGradientInDark: false,
-                radius: 16,
-                padding: const EdgeInsets.all(12),
-                child: SelectableText(
-                  output.isNotEmpty ? output : 'No output',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
-                ),
-              ),
-            ],
-          ),
-        ),
+        if (log.command.isNotEmpty) ...[
+          DetailKeyValueRow(label: 'Command', value: log.command),
+          const Gap(10),
+        ],
+        DetailCodeBlock(code: output.isNotEmpty ? output : 'No output'),
       ],
     );
   }
