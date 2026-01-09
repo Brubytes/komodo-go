@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 
 /// Card widget displaying deployment information.
@@ -107,26 +108,22 @@ class DeploymentCard extends StatelessWidget {
         : 'Redeploy';
 
     items.add(
-      PopupMenuItem(
+      komodoPopupMenuItem(
         value: DeploymentAction.deploy,
-        child: ListTile(
-          leading: Icon(AppIcons.deployments, color: scheme.primary),
-          title: Text(deployLabel),
-          contentPadding: EdgeInsets.zero,
-        ),
+        icon: AppIcons.deployments,
+        label: deployLabel,
+        iconColor: scheme.primary,
       ),
     );
 
     final hasImage = deployment.info?.image.isNotEmpty ?? false;
     if (hasImage) {
       items.add(
-        PopupMenuItem(
+        komodoPopupMenuItem(
           value: DeploymentAction.pullImages,
-          child: ListTile(
-            leading: Icon(AppIcons.download, color: scheme.primary),
-            title: const Text('Pull image'),
-            contentPadding: EdgeInsets.zero,
-          ),
+          icon: AppIcons.download,
+          label: 'Pull image',
+          iconColor: scheme.primary,
         ),
       );
     }
@@ -141,64 +138,54 @@ class DeploymentCard extends StatelessWidget {
     final hasLifecycle =
         showStart || showStop || showRestart || showPause || showUnpause;
     if (hasLifecycle) {
-      items.add(const PopupMenuDivider());
+      items.add(komodoPopupMenuDivider());
       if (showStart) {
         items.add(
-          PopupMenuItem(
+          komodoPopupMenuItem(
             value: DeploymentAction.start,
-            child: ListTile(
-              leading: Icon(AppIcons.play, color: scheme.secondary),
-              title: const Text('Start'),
-              contentPadding: EdgeInsets.zero,
-            ),
+            icon: AppIcons.play,
+            label: 'Start',
+            iconColor: scheme.secondary,
           ),
         );
       }
       if (showStop) {
         items.add(
-          PopupMenuItem(
+          komodoPopupMenuItem(
             value: DeploymentAction.stop,
-            child: ListTile(
-              leading: Icon(AppIcons.stop, color: scheme.tertiary),
-              title: const Text('Stop'),
-              contentPadding: EdgeInsets.zero,
-            ),
+            icon: AppIcons.stop,
+            label: 'Stop',
+            iconColor: scheme.tertiary,
           ),
         );
       }
       if (showRestart) {
         items.add(
-          PopupMenuItem(
+          komodoPopupMenuItem(
             value: DeploymentAction.restart,
-            child: ListTile(
-              leading: Icon(AppIcons.refresh, color: scheme.primary),
-              title: const Text('Restart'),
-              contentPadding: EdgeInsets.zero,
-            ),
+            icon: AppIcons.refresh,
+            label: 'Restart',
+            iconColor: scheme.primary,
           ),
         );
       }
       if (showPause) {
         items.add(
-          PopupMenuItem(
+          komodoPopupMenuItem(
             value: DeploymentAction.pause,
-            child: ListTile(
-              leading: Icon(AppIcons.pause, color: scheme.tertiary),
-              title: const Text('Pause'),
-              contentPadding: EdgeInsets.zero,
-            ),
+            icon: AppIcons.pause,
+            label: 'Pause',
+            iconColor: scheme.tertiary,
           ),
         );
       }
       if (showUnpause) {
         items.add(
-          PopupMenuItem(
+          komodoPopupMenuItem(
             value: DeploymentAction.unpause,
-            child: ListTile(
-              leading: Icon(AppIcons.play, color: scheme.primary),
-              title: const Text('Unpause'),
-              contentPadding: EdgeInsets.zero,
-            ),
+            icon: AppIcons.play,
+            label: 'Unpause',
+            iconColor: scheme.primary,
           ),
         );
       }
@@ -207,15 +194,13 @@ class DeploymentCard extends StatelessWidget {
     final showDestroy = state != DeploymentState.notDeployed;
     if (showDestroy) {
       items
-        ..add(const PopupMenuDivider())
+        ..add(komodoPopupMenuDivider())
         ..add(
-          PopupMenuItem(
+          komodoPopupMenuItem(
             value: DeploymentAction.destroy,
-            child: ListTile(
-              leading: Icon(AppIcons.delete, color: scheme.error),
-              title: const Text('Destroy'),
-              contentPadding: EdgeInsets.zero,
-            ),
+            icon: AppIcons.delete,
+            label: 'Destroy',
+            destructive: true,
           ),
         );
     }

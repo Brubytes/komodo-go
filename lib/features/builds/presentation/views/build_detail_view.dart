@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 
 import '../../data/models/build.dart';
 import '../providers/builds_provider.dart';
@@ -29,25 +30,25 @@ class BuildDetailView extends ConsumerWidget {
         actions: [
           PopupMenuButton<BuildAction>(
             icon: const Icon(AppIcons.moreVertical),
-            onSelected: (action) => _handleAction(context, ref, buildId, action),
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: BuildAction.run,
-                child: ListTile(
-                  leading: Icon(AppIcons.play, color: Colors.green),
-                  title: Text('Run build'),
-                  contentPadding: EdgeInsets.zero,
+            onSelected: (action) =>
+                _handleAction(context, ref, buildId, action),
+            itemBuilder: (context) {
+              final scheme = Theme.of(context).colorScheme;
+              return [
+                komodoPopupMenuItem(
+                  value: BuildAction.run,
+                  icon: AppIcons.play,
+                  label: 'Run build',
+                  iconColor: scheme.secondary,
                 ),
-              ),
-              PopupMenuItem(
-                value: BuildAction.cancel,
-                child: ListTile(
-                  leading: Icon(AppIcons.stop, color: Colors.orange),
-                  title: Text('Cancel'),
-                  contentPadding: EdgeInsets.zero,
+                komodoPopupMenuItem(
+                  value: BuildAction.cancel,
+                  icon: AppIcons.stop,
+                  label: 'Cancel',
+                  destructive: true,
                 ),
-              ),
-            ],
+              ];
+            },
           ),
         ],
       ),
@@ -177,9 +178,9 @@ class _BuildInfoCard extends StatelessWidget {
             const Gap(12),
             Text(
               'Hashes',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const Gap(8),
             if (info.latestHash != null)
@@ -192,16 +193,10 @@ class _BuildInfoCard extends StatelessWidget {
               _InfoRow(label: 'Built msg', value: info.builtMessage!),
             const Gap(12),
             if (info.remoteError != null && info.remoteError!.trim().isNotEmpty)
-              _LogCard(
-                title: 'Remote error',
-                content: info.remoteError!,
-              ),
+              _LogCard(title: 'Remote error', content: info.remoteError!),
             if (info.builtContents != null &&
                 info.builtContents!.trim().isNotEmpty)
-              _LogCard(
-                title: 'Built contents',
-                content: info.builtContents!,
-              ),
+              _LogCard(title: 'Built contents', content: info.builtContents!),
           ],
         ),
       ),
@@ -228,9 +223,9 @@ class _InfoRow extends StatelessWidget {
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface.withValues(
-                      alpha: 0.7,
-                    ),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -261,9 +256,9 @@ class _LogCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           const Gap(8),
           Container(
@@ -275,9 +270,9 @@ class _LogCard extends StatelessWidget {
             ),
             child: SelectableText(
               content.trim(),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontFamily: 'monospace',
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
             ),
           ),
         ],

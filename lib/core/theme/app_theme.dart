@@ -86,6 +86,26 @@ class AppTheme {
         shape: controlShape,
         elevation: 0,
       ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: isDark
+            ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.92)
+            : colorScheme.surface,
+        elevation: 0,
+        shadowColor: Colors.black.withValues(alpha: 0.3),
+        surfaceTintColor: _surfaceTint,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd + 4),
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(
+              alpha: isDark ? 0.6 : 1,
+            ),
+          ),
+        ),
+        textStyle: TextStyle(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: colorScheme.inverseSurface,

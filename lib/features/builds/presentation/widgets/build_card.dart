@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 
 import '../../data/models/build.dart';
 
@@ -52,9 +53,9 @@ class BuildCard extends StatelessWidget {
                         if (version != '0.0.0') 'v$version',
                       ].where((s) => s.isNotEmpty).join(' · '),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(
-                              alpha: 0.7,
-                            ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -64,25 +65,24 @@ class BuildCard extends StatelessWidget {
                 PopupMenuButton<BuildAction>(
                   icon: const Icon(AppIcons.moreVertical),
                   onSelected: onAction,
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: BuildAction.run,
-                      child: ListTile(
-                        leading: Icon(AppIcons.play, color: Colors.green),
-                        title: Text('Run build'),
-                        contentPadding: EdgeInsets.zero,
+                  itemBuilder: (context) {
+                    final scheme = Theme.of(context).colorScheme;
+                    return [
+                      komodoPopupMenuItem(
+                        value: BuildAction.run,
+                        icon: AppIcons.play,
+                        label: 'Run build',
+                        iconColor: scheme.secondary,
                       ),
-                    ),
-                    if (state == BuildState.building)
-                      const PopupMenuItem(
-                        value: BuildAction.cancel,
-                        child: ListTile(
-                          leading: Icon(AppIcons.stop, color: Colors.orange),
-                          title: Text('Cancel'),
-                          contentPadding: EdgeInsets.zero,
+                      if (state == BuildState.building)
+                        komodoPopupMenuItem(
+                          value: BuildAction.cancel,
+                          icon: AppIcons.stop,
+                          label: 'Cancel',
+                          destructive: true,
                         ),
-                      ),
-                  ],
+                    ];
+                  },
                 ),
             ],
           ),

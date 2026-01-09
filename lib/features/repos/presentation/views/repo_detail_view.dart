@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
 import 'package:komodo_go/features/repos/presentation/widgets/repo_card.dart';
@@ -44,29 +45,23 @@ class RepoDetailView extends ConsumerWidget {
             icon: const Icon(AppIcons.moreVertical),
             onSelected: (action) => _handleAction(context, ref, repoId, action),
             itemBuilder: (context) => [
-              PopupMenuItem(
+              komodoPopupMenuItem(
                 value: RepoAction.clone,
-                child: ListTile(
-                  leading: Icon(AppIcons.download, color: scheme.primary),
-                  title: const Text('Clone'),
-                  contentPadding: EdgeInsets.zero,
-                ),
+                icon: AppIcons.download,
+                label: 'Clone',
+                iconColor: scheme.primary,
               ),
-              PopupMenuItem(
+              komodoPopupMenuItem(
                 value: RepoAction.pull,
-                child: ListTile(
-                  leading: Icon(AppIcons.refresh, color: scheme.secondary),
-                  title: const Text('Pull'),
-                  contentPadding: EdgeInsets.zero,
-                ),
+                icon: AppIcons.refresh,
+                label: 'Pull',
+                iconColor: scheme.secondary,
               ),
-              PopupMenuItem(
+              komodoPopupMenuItem(
                 value: RepoAction.build,
-                child: ListTile(
-                  leading: Icon(AppIcons.builds, color: scheme.tertiary),
-                  title: const Text('Build'),
-                  contentPadding: EdgeInsets.zero,
-                ),
+                icon: AppIcons.builds,
+                label: 'Build',
+                iconColor: scheme.tertiary,
               ),
             ],
           ),
@@ -96,7 +91,9 @@ class RepoDetailView extends ConsumerWidget {
                               icon: AppIcons.settings,
                               child: _RepoConfigContent(
                                 config: repo.config,
-                                serverName: serverNameForId(repo.config.serverId),
+                                serverName: serverNameForId(
+                                  repo.config.serverId,
+                                ),
                               ),
                             ),
                             const Gap(16),
@@ -109,7 +106,8 @@ class RepoDetailView extends ConsumerWidget {
                         )
                       : const _MessageSurface(message: 'Repo not found'),
                   loading: () => const _LoadingSurface(),
-                  error: (error, _) => _MessageSurface(message: 'Error: $error'),
+                  error: (error, _) =>
+                      _MessageSurface(message: 'Error: $error'),
                 ),
               ],
             ),
@@ -166,10 +164,7 @@ class RepoDetailView extends ConsumerWidget {
 }
 
 class _RepoHeroPanel extends StatelessWidget {
-  const _RepoHeroPanel({
-    required this.repo,
-    required this.serverName,
-  });
+  const _RepoHeroPanel({required this.repo, required this.serverName});
 
   final KomodoRepo repo;
   final String? serverName;
@@ -246,9 +241,7 @@ class _RepoHeroPanel extends StatelessWidget {
       footer: Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: [
-          for (final tag in repo.tags) TextPill(label: tag),
-        ],
+        children: [for (final tag in repo.tags) TextPill(label: tag)],
       ),
     );
   }
@@ -256,7 +249,9 @@ class _RepoHeroPanel extends StatelessWidget {
   IconData _stateIcon(RepoState state) {
     return switch (state) {
       RepoState.ok => AppIcons.ok,
-      RepoState.cloning || RepoState.pulling || RepoState.building => AppIcons.loading,
+      RepoState.cloning ||
+      RepoState.pulling ||
+      RepoState.building => AppIcons.loading,
       RepoState.failed => AppIcons.error,
       _ => AppIcons.unknown,
     };

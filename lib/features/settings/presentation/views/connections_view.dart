@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 
 import '../../../../core/connections/connection_profile.dart';
 import '../../../../core/providers/connections_provider.dart';
@@ -110,16 +111,23 @@ class ConnectionsView extends ConsumerWidget {
                           await _deleteConnection(context, ref, connection);
                       }
                     },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(
-                        value: _ConnectionAction.rename,
-                        child: Text('Rename'),
-                      ),
-                      PopupMenuItem(
-                        value: _ConnectionAction.delete,
-                        child: Text('Delete'),
-                      ),
-                    ],
+                    itemBuilder: (context) {
+                      final scheme = Theme.of(context).colorScheme;
+                      return [
+                        komodoPopupMenuItem(
+                          value: _ConnectionAction.rename,
+                          icon: AppIcons.edit,
+                          label: 'Rename',
+                          iconColor: scheme.primary,
+                        ),
+                        komodoPopupMenuItem(
+                          value: _ConnectionAction.delete,
+                          icon: AppIcons.delete,
+                          label: 'Delete',
+                          destructive: true,
+                        ),
+                      ];
+                    },
                   ),
                 ),
               );

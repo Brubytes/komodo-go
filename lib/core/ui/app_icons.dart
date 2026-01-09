@@ -18,6 +18,7 @@ abstract class AppIcons {
   static const IconData close = LucideIcons.x;
   static const IconData moreVertical = LucideIcons.ellipsisVertical;
   static const IconData logout = LucideIcons.logOut;
+  static const IconData edit = LucideIcons.pencil;
   static const IconData delete = LucideIcons.trash2;
   static const IconData download = LucideIcons.download;
   static const IconData refresh = LucideIcons.refreshCw;

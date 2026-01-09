@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 
@@ -89,66 +90,52 @@ class StackCard extends StatelessWidget {
   ) {
     final scheme = Theme.of(context).colorScheme;
     return [
-      PopupMenuItem(
+      komodoPopupMenuItem(
         value: StackAction.redeploy,
-        child: ListTile(
-          leading: Icon(AppIcons.deployments, color: scheme.primary),
-          title: const Text('Redeploy'),
-          contentPadding: EdgeInsets.zero,
-        ),
+        icon: AppIcons.deployments,
+        label: 'Redeploy',
+        iconColor: scheme.primary,
       ),
-      PopupMenuItem(
+      komodoPopupMenuItem(
         value: StackAction.pullImages,
-        child: ListTile(
-          leading: Icon(AppIcons.download, color: scheme.primary),
-          title: const Text('Pull images'),
-          contentPadding: EdgeInsets.zero,
-        ),
+        icon: AppIcons.download,
+        label: 'Pull images',
+        iconColor: scheme.primary,
       ),
       if (state.isRunning)
-        PopupMenuItem(
+        komodoPopupMenuItem(
           value: StackAction.restart,
-          child: ListTile(
-            leading: Icon(AppIcons.refresh, color: scheme.primary),
-            title: const Text('Restart'),
-            contentPadding: EdgeInsets.zero,
-          ),
+          icon: AppIcons.refresh,
+          label: 'Restart',
+          iconColor: scheme.primary,
         ),
       if (state.isRunning)
-        PopupMenuItem(
+        komodoPopupMenuItem(
           value: StackAction.pause,
-          child: ListTile(
-            leading: Icon(AppIcons.pause, color: scheme.tertiary),
-            title: const Text('Pause'),
-            contentPadding: EdgeInsets.zero,
-          ),
+          icon: AppIcons.pause,
+          label: 'Pause',
+          iconColor: scheme.tertiary,
         ),
-      const PopupMenuDivider(),
+      komodoPopupMenuDivider(),
       if (!state.isRunning)
-        PopupMenuItem(
+        komodoPopupMenuItem(
           value: StackAction.start,
-          child: ListTile(
-            leading: Icon(AppIcons.play, color: scheme.secondary),
-            title: const Text('Start'),
-            contentPadding: EdgeInsets.zero,
-          ),
+          icon: AppIcons.play,
+          label: 'Start',
+          iconColor: scheme.secondary,
         ),
       if (state.isRunning)
-        PopupMenuItem(
+        komodoPopupMenuItem(
           value: StackAction.stop,
-          child: ListTile(
-            leading: Icon(AppIcons.stop, color: scheme.tertiary),
-            title: const Text('Stop'),
-            contentPadding: EdgeInsets.zero,
-          ),
+          icon: AppIcons.stop,
+          label: 'Stop',
+          iconColor: scheme.tertiary,
         ),
-      PopupMenuItem(
+      komodoPopupMenuItem(
         value: StackAction.destroy,
-        child: ListTile(
-          leading: Icon(AppIcons.delete, color: scheme.error),
-          title: const Text('Destroy'),
-          contentPadding: EdgeInsets.zero,
-        ),
+        icon: AppIcons.delete,
+        label: 'Destroy',
+        destructive: true,
       ),
     ];
   }
