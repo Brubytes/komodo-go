@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 
@@ -97,7 +98,7 @@ class ProceduresListView extends StatelessWidget {
       appBar: const MainAppBar(
         title: 'Procedures',
         icon: AppIcons.procedures,
-        markColor: Colors.indigo,
+        markColor: AppTokens.resourceProcedures,
         markUseGradient: true,
         centerTitle: true,
       ),

@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/main_app_bar.dart';
@@ -54,10 +55,7 @@ class HomeView extends ConsumerWidget {
     final actionsAsync = ref.watch(actionsProvider);
 
     return Scaffold(
-      appBar: const MainAppBar(
-        title: 'Dashboard',
-        icon: AppIcons.home,
-      ),
+      appBar: const MainAppBar(title: 'Dashboard', icon: AppIcons.home),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(serversProvider);
@@ -84,7 +82,7 @@ class HomeView extends ConsumerWidget {
                 _StatCard(
                   title: 'Servers',
                   icon: AppIcons.server,
-                  color: Colors.blue,
+                  color: AppTokens.resourceServers,
                   asyncValue: serversAsync,
                   valueBuilder: (servers) => servers.length.toString(),
                   subtitleBuilder: (servers) {
@@ -98,7 +96,7 @@ class HomeView extends ConsumerWidget {
                 _StatCard(
                   title: 'Deployments',
                   icon: AppIcons.deployments,
-                  color: Colors.green,
+                  color: AppTokens.resourceDeployments,
                   asyncValue: deploymentsAsync,
                   valueBuilder: (deployments) => deployments.length.toString(),
                   subtitleBuilder: (deployments) {
@@ -113,7 +111,7 @@ class HomeView extends ConsumerWidget {
                 _StatCard(
                   title: 'Stacks',
                   icon: AppIcons.stacks,
-                  color: Colors.purple,
+                  color: AppTokens.resourceStacks,
                   asyncValue: stacksAsync,
                   valueBuilder: (stacks) => stacks.length.toString(),
                   subtitleBuilder: (stacks) {
@@ -127,7 +125,7 @@ class HomeView extends ConsumerWidget {
                 _StatCard(
                   title: 'Repos',
                   icon: AppIcons.repos,
-                  color: Colors.orange,
+                  color: AppTokens.resourceRepos,
                   asyncValue: reposAsync,
                   valueBuilder: (repos) => repos.length.toString(),
                   subtitleBuilder: (repos) {
@@ -139,7 +137,7 @@ class HomeView extends ConsumerWidget {
                 _StatCard(
                   title: 'Syncs',
                   icon: AppIcons.syncs,
-                  color: Colors.blueGrey,
+                  color: AppTokens.resourceSyncs,
                   asyncValue: syncsAsync,
                   valueBuilder: (syncs) => syncs.length.toString(),
                   subtitleBuilder: (syncs) {
@@ -153,7 +151,7 @@ class HomeView extends ConsumerWidget {
                 _StatCard(
                   title: 'Builds',
                   icon: AppIcons.builds,
-                  color: Colors.teal,
+                  color: AppTokens.resourceBuilds,
                   asyncValue: buildsAsync,
                   valueBuilder: (builds) => builds.length.toString(),
                   subtitleBuilder: (builds) {
@@ -167,7 +165,7 @@ class HomeView extends ConsumerWidget {
                 _StatCard(
                   title: 'Procedures',
                   icon: AppIcons.procedures,
-                  color: Colors.indigo,
+                  color: AppTokens.resourceProcedures,
                   asyncValue: proceduresAsync,
                   valueBuilder: (procedures) => procedures.length.toString(),
                   subtitleBuilder: (procedures) {
@@ -181,7 +179,7 @@ class HomeView extends ConsumerWidget {
                 _StatCard(
                   title: 'Actions',
                   icon: AppIcons.actions,
-                  color: Colors.cyan,
+                  color: AppTokens.resourceActions,
                   asyncValue: actionsAsync,
                   valueBuilder: (actions) => actions.length.toString(),
                   subtitleBuilder: (actions) {

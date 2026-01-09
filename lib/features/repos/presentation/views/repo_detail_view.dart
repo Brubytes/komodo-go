@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -42,7 +43,7 @@ class RepoDetailView extends ConsumerWidget {
       appBar: MainAppBar(
         title: repoName,
         icon: AppIcons.repos,
-        markColor: Colors.orange,
+        markColor: AppTokens.resourceRepos,
         markUseGradient: true,
         centerTitle: true,
         actions: [

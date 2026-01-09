@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -28,7 +29,7 @@ class SyncDetailView extends ConsumerWidget {
       appBar: MainAppBar(
         title: syncName,
         icon: AppIcons.syncs,
-        markColor: Colors.blueGrey,
+        markColor: AppTokens.resourceSyncs,
         markUseGradient: true,
         centerTitle: true,
         actions: [
@@ -122,8 +123,9 @@ class SyncDetailView extends ConsumerWidget {
           content: Text(
             success ? 'Sync started' : 'Action failed. Please try again.',
           ),
-          backgroundColor:
-              success ? scheme.secondaryContainer : scheme.errorContainer,
+          backgroundColor: success
+              ? scheme.secondaryContainer
+              : scheme.errorContainer,
         ),
       );
     }
@@ -199,8 +201,9 @@ class _SyncHeader extends StatelessWidget {
       children: [
         Text(
           syncResource.name,
-          style: theme.textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.w600),
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
         if (syncResource.description.isNotEmpty) ...[
           const Gap(4),
@@ -233,19 +236,13 @@ class _SyncConfigContent extends StatelessWidget {
           label: 'Managed',
           value: config.managed ? 'Yes' : 'No',
         ),
-        DetailKeyValueRow(
-          label: 'Delete',
-          value: config.delete ? 'Yes' : 'No',
-        ),
+        DetailKeyValueRow(label: 'Delete', value: config.delete ? 'Yes' : 'No'),
         DetailKeyValueRow(
           label: 'Webhook',
           value: config.webhookEnabled ? 'Enabled' : 'Disabled',
         ),
         if (config.webhookSecret.isNotEmpty)
-          const DetailKeyValueRow(
-            label: 'Webhook Secret',
-            value: 'Configured',
-          ),
+          const DetailKeyValueRow(label: 'Webhook Secret', value: 'Configured'),
       ],
     );
   }

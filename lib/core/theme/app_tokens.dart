@@ -8,9 +8,20 @@ abstract final class AppTokens {
   AppTokens._();
 
   static const Color brandPrimary = Color(0xFF014226);
+
   /// Slightly brighter variant of [brandPrimary] for dark mode accents (labels/icons).
   static const Color brandPrimaryDark = Color(0xFF1E7A52);
   static const Color brandSecondary = Color(0xFF4EB333);
+
+  // Resource accent colors (used consistently across resources, lists, detail pages, and dashboard).
+  static const Color resourceServers = Colors.blue;
+  static const Color resourceDeployments = Colors.green;
+  static const Color resourceStacks = Colors.purple;
+  static const Color resourceRepos = Colors.orange;
+  static const Color resourceSyncs = Colors.blueGrey;
+  static const Color resourceBuilds = Colors.teal;
+  static const Color resourceProcedures = Colors.indigo;
+  static const Color resourceActions = Colors.cyan;
 
   /// Status colors used for alerts/updates chips.
   ///

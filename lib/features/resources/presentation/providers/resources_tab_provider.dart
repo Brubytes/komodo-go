@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 
 part 'resources_tab_provider.g.dart';
 
 enum ResourceType {
-  servers('Servers', AppIcons.server, Colors.blue),
-  deployments('Deployments', AppIcons.deployments, Colors.green),
-  stacks('Stacks', AppIcons.stacks, Colors.purple),
-  repos('Repos', AppIcons.repos, Colors.orange),
-  syncs('Syncs', AppIcons.syncs, Colors.blueGrey),
-  builds('Builds', AppIcons.builds, Colors.teal),
-  procedures('Procedures', AppIcons.procedures, Colors.indigo),
-  actions('Actions', AppIcons.actions, Colors.cyan);
+  servers('Servers', AppIcons.server, AppTokens.resourceServers),
+  deployments(
+    'Deployments',
+    AppIcons.deployments,
+    AppTokens.resourceDeployments,
+  ),
+  stacks('Stacks', AppIcons.stacks, AppTokens.resourceStacks),
+  repos('Repos', AppIcons.repos, AppTokens.resourceRepos),
+  syncs('Syncs', AppIcons.syncs, AppTokens.resourceSyncs),
+  builds('Builds', AppIcons.builds, AppTokens.resourceBuilds),
+  procedures('Procedures', AppIcons.procedures, AppTokens.resourceProcedures),
+  actions('Actions', AppIcons.actions, AppTokens.resourceActions);
 
   const ResourceType(this.label, this.icon, this.color);
 
