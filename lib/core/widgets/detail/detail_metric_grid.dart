@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
-enum DetailMetricTone { primary, secondary, tertiary, success, neutral }
+enum DetailMetricTone { primary, secondary, tertiary, success, neutral, alert }
 
 class DetailMetricTileData {
   const DetailMetricTileData({
@@ -69,6 +69,7 @@ class _DetailMetricTile extends StatelessWidget {
         scheme.onSurfaceVariant,
         scheme.surfaceContainerHigh,
       ),
+      DetailMetricTone.alert => (scheme.error, scheme.errorContainer),
     };
 
     return Container(

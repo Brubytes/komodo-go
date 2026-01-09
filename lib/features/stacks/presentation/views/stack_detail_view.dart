@@ -424,10 +424,10 @@ class _StackHeroPanel extends StatelessWidget {
           tone: _stateTone(state),
         ),
         DetailMetricTileData(
-          icon: AppIcons.dot,
-          label: 'Status',
-          value: _statusSummary(status),
-          tone: _statusTone(status),
+          icon: AppIcons.repos,
+          label: 'Branch',
+          value: config.branch.isNotEmpty ? config.branch : '—',
+          tone: DetailMetricTone.neutral,
         ),
         DetailMetricTileData(
           icon: AppIcons.widgets,
@@ -493,7 +493,7 @@ class _StackHeroPanel extends StatelessWidget {
     return switch (state) {
       StackState.running => DetailMetricTone.success,
       StackState.deploying || StackState.restarting => DetailMetricTone.primary,
-      StackState.unhealthy => DetailMetricTone.tertiary,
+      StackState.unhealthy => DetailMetricTone.alert,
       StackState.stopped ||
       StackState.created ||
       StackState.down ||
@@ -501,25 +501,6 @@ class _StackHeroPanel extends StatelessWidget {
       StackState.paused => DetailMetricTone.secondary,
       _ => DetailMetricTone.neutral,
     };
-  }
-
-  String _statusSummary(String? value) {
-    final v = value?.trim();
-    if (v == null || v.isEmpty) return '—';
-    final head = v.split(',').first.trim();
-    return head.isNotEmpty ? head : '—';
-  }
-
-  DetailMetricTone _statusTone(String? value) {
-    final v = value?.trim().toLowerCase();
-    if (v == null || v.isEmpty) return DetailMetricTone.neutral;
-    if (v.contains('exit') || v.contains('dead') || v.contains('error')) {
-      return DetailMetricTone.tertiary;
-    }
-    if (v.contains('running') || v.contains('healthy')) {
-      return DetailMetricTone.success;
-    }
-    return DetailMetricTone.neutral;
   }
 }
 
