@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-
-import '../../data/models/repo.dart';
+import 'package:komodo_go/features/repos/data/models/repo.dart';
 
 /// Card widget displaying repo information.
 class RepoCard extends StatelessWidget {
@@ -61,32 +60,35 @@ class RepoCard extends StatelessWidget {
                 PopupMenuButton<RepoAction>(
                   icon: const Icon(AppIcons.moreVertical),
                   onSelected: onAction,
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(
-                      value: RepoAction.clone,
-                      child: ListTile(
-                        leading: Icon(AppIcons.download, color: Colors.blue),
-                        title: Text('Clone'),
-                        contentPadding: EdgeInsets.zero,
+                  itemBuilder: (context) {
+                    final scheme = Theme.of(context).colorScheme;
+                    return [
+                      PopupMenuItem(
+                        value: RepoAction.clone,
+                        child: ListTile(
+                          leading: Icon(AppIcons.download, color: scheme.primary),
+                          title: const Text('Clone'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: RepoAction.pull,
-                      child: ListTile(
-                        leading: Icon(AppIcons.refresh, color: Colors.green),
-                        title: Text('Pull'),
-                        contentPadding: EdgeInsets.zero,
+                      PopupMenuItem(
+                        value: RepoAction.pull,
+                        child: ListTile(
+                          leading: Icon(AppIcons.refresh, color: scheme.secondary),
+                          title: const Text('Pull'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: RepoAction.build,
-                      child: ListTile(
-                        leading: Icon(AppIcons.builds, color: Colors.orange),
-                        title: Text('Build'),
-                        contentPadding: EdgeInsets.zero,
+                      PopupMenuItem(
+                        value: RepoAction.build,
+                        child: ListTile(
+                          leading: Icon(AppIcons.builds, color: scheme.tertiary),
+                          title: const Text('Build'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
                       ),
-                    ),
-                  ],
+                    ];
+                  },
                 ),
             ],
           ),
@@ -103,13 +105,14 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final (color, icon) = switch (state) {
-      RepoState.ok => (Colors.green, AppIcons.ok),
-      RepoState.failed => (Colors.red, AppIcons.error),
-      RepoState.cloning => (Colors.blue, AppIcons.loading),
-      RepoState.pulling => (Colors.blue, AppIcons.loading),
-      RepoState.building => (Colors.orange, AppIcons.loading),
-      RepoState.unknown => (Colors.orange, AppIcons.unknown),
+      RepoState.ok => (scheme.secondary, AppIcons.ok),
+      RepoState.failed => (scheme.error, AppIcons.error),
+      RepoState.cloning => (scheme.primary, AppIcons.loading),
+      RepoState.pulling => (scheme.primary, AppIcons.loading),
+      RepoState.building => (scheme.tertiary, AppIcons.loading),
+      RepoState.unknown => (scheme.tertiary, AppIcons.unknown),
     };
 
     return Container(
