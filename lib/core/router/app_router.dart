@@ -491,7 +491,7 @@ class MainShell extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: AdaptiveBottomNavigationBar(
         selectedIndex: navigationShell.currentIndex,
-        onTap: (index) => _onItemTapped(index),
+        onTap: _onItemTapped,
         items: const [
           AdaptiveNavigationItem(
             icon: Icon(AppIcons.home),
@@ -524,6 +524,9 @@ class MainShell extends StatelessWidget {
   }
 
   void _onItemTapped(int index) {
-    navigationShell.goBranch(index);
+    navigationShell.goBranch(
+      index,
+      initialLocation: index == navigationShell.currentIndex,
+    );
   }
 }

@@ -87,5 +87,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.widgetWithText(AppBar, 'Stacks'), findsOneWidget);
     expect(find.widgetWithText(AppBar, 'Resources'), findsNothing);
+
+    // Re-tapping the active tab should pop its stack back to the branch root.
+    await tester.tap(find.text('Resources'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(AppBar, 'Resources'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Stacks'), findsNothing);
   });
 }
