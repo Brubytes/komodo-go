@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
@@ -22,9 +24,17 @@ class ContainersView extends HookConsumerWidget {
     final serversAsync = ref.watch(serversProvider);
     final selectedServerId = ref.watch(containersServerFilterProvider);
     final searchQuery = ref.watch(containersSearchQueryProvider);
+    final sortState = ref.watch(containersSortProvider);
     final isSearchVisible = useState(false);
     final searchFocusNode = useFocusNode();
     final searchController = useTextEditingController(text: searchQuery);
+
+    useEffect(() {
+      final timer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
+        ref.invalidate(containersProvider);
+      });
+      return timer.cancel;
+    }, const []);
 
     useEffect(() {
       if (searchController.text == searchQuery) return null;
@@ -70,6 +80,16 @@ class ContainersView extends HookConsumerWidget {
                   .read(containersServerFilterProvider.notifier)
                   .setServerId(value),
             ),
+            const Gap(12),
+            _SortRow(
+              sortState: sortState,
+              onFieldChanged: (value) => ref
+                  .read(containersSortProvider.notifier)
+                  .setField(value),
+              onToggleDirection: () => ref
+                  .read(containersSortProvider.notifier)
+                  .toggleDirection(),
+            ),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 180),
               switchInCurve: Curves.easeOut,
@@ -100,6 +120,7 @@ class ContainersView extends HookConsumerWidget {
                   result.items,
                   serverId: selectedServerId,
                   query: searchQuery,
+                  sort: sortState,
                 );
 
                 if (filtered.isEmpty) {
@@ -226,14 +247,91 @@ class _SearchField extends StatelessWidget {
   }
 }
 
+class _SortRow extends StatelessWidget {
+  const _SortRow({
+    required this.sortState,
+    required this.onFieldChanged,
+    required this.onToggleDirection,
+  });
+
+  final ContainersSortState sortState;
+  final ValueChanged<ContainersSortField> onFieldChanged;
+  final VoidCallback onToggleDirection;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final directionIcon = sortState.descending
+        ? Icons.arrow_downward_rounded
+        : Icons.arrow_upward_rounded;
+    final directionLabel =
+        sortState.descending ? 'Descending' : 'Ascending';
+
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<ContainersSortField>(
+            value: sortState.field,
+            decoration: const InputDecoration(
+              labelText: 'Sort by',
+              prefixIcon: Icon(Icons.sort),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: ContainersSortField.name,
+                child: Text('Name'),
+              ),
+              DropdownMenuItem(
+                value: ContainersSortField.cpu,
+                child: Text('CPU'),
+              ),
+              DropdownMenuItem(
+                value: ContainersSortField.memory,
+                child: Text('Memory'),
+              ),
+              DropdownMenuItem(
+                value: ContainersSortField.network,
+                child: Text('Network I/O'),
+              ),
+              DropdownMenuItem(
+                value: ContainersSortField.blockIo,
+                child: Text('Drive I/O'),
+              ),
+              DropdownMenuItem(
+                value: ContainersSortField.pids,
+                child: Text('PIDs'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              onFieldChanged(value);
+            },
+          ),
+        ),
+        const Gap(8),
+        Material(
+          color: scheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(12),
+          child: IconButton(
+            tooltip: directionLabel,
+            icon: Icon(directionIcon),
+            onPressed: onToggleDirection,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 List<ContainerOverviewItem> _applyFilters(
   List<ContainerOverviewItem> items, {
   required String? serverId,
   required String query,
+  required ContainersSortState sort,
 }) {
   final normalizedQuery = query.trim().toLowerCase();
 
-  return items.where((item) {
+  final filtered = items.where((item) {
     if (serverId != null && item.serverId != serverId) return false;
     if (normalizedQuery.isEmpty) return true;
 
@@ -244,6 +342,9 @@ List<ContainerOverviewItem> _applyFilters(
         image.contains(normalizedQuery) ||
         serverName.contains(normalizedQuery);
   }).toList();
+
+  filtered.sort((a, b) => _compareBySort(a, b, sort));
+  return filtered;
 }
 
 class _PartialErrorBanner extends StatelessWidget {
@@ -280,6 +381,56 @@ class _PartialErrorBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+int _compareBySort(
+  ContainerOverviewItem a,
+  ContainerOverviewItem b,
+  ContainersSortState sort,
+) {
+  final nameA = a.container.name.toLowerCase();
+  final nameB = b.container.name.toLowerCase();
+
+  final result = switch (sort.field) {
+    ContainersSortField.name =>
+      sort.descending ? -nameA.compareTo(nameB) : nameA.compareTo(nameB),
+    ContainersSortField.cpu => _compareMetric(
+      a.container.stats?.cpuPercentValue,
+      b.container.stats?.cpuPercentValue,
+      sort.descending,
+    ),
+    ContainersSortField.memory => _compareMetric(
+      a.container.stats?.memPercentValue,
+      b.container.stats?.memPercentValue,
+      sort.descending,
+    ),
+    ContainersSortField.network => _compareMetric(
+      a.container.stats?.netIoTotalBytes,
+      b.container.stats?.netIoTotalBytes,
+      sort.descending,
+    ),
+    ContainersSortField.blockIo => _compareMetric(
+      a.container.stats?.blockIoTotalBytes,
+      b.container.stats?.blockIoTotalBytes,
+      sort.descending,
+    ),
+    ContainersSortField.pids => _compareMetric(
+      a.container.stats?.pidsValue?.toDouble(),
+      b.container.stats?.pidsValue?.toDouble(),
+      sort.descending,
+    ),
+  };
+
+  if (result != 0) return result;
+  return nameA.compareTo(nameB);
+}
+
+int _compareMetric(double? a, double? b, bool descending) {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  final cmp = a.compareTo(b);
+  return descending ? -cmp : cmp;
 }
 
 class _EmptyState extends StatelessWidget {

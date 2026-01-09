@@ -22,6 +22,7 @@ class ContainerCard extends StatelessWidget {
     final name = item.container.name.isEmpty ? 'Unnamed' : item.container.name;
     final image = item.container.image ?? '';
     final networks = item.container.networks;
+    final stats = item.container.stats;
 
     final stateColor = _stateColor(item.container.state, scheme);
     final portsLabel = _formatPorts(item.container.ports);
@@ -99,6 +100,36 @@ class ContainerCard extends StatelessWidget {
                       ),
                   ],
                 ),
+                if (stats != null) ...[
+                  const Gap(14),
+                  _UsageRow(
+                    icon: AppIcons.cpu,
+                    label: 'CPU',
+                    value: stats.cpuPerc.trim().isNotEmpty
+                        ? stats.cpuPerc
+                        : '-',
+                    progress: stats.cpuPercentValue != null
+                        ? stats.cpuPercentValue! / 100.0
+                        : null,
+                    accent: scheme.primary,
+                  ),
+                  const Gap(10),
+                  _UsageRow(
+                    icon: AppIcons.memory,
+                    label: 'Memory',
+                    value: stats.memUsage.trim().isNotEmpty
+                        ? stats.memUsage
+                        : (stats.memPerc.trim().isNotEmpty
+                            ? stats.memPerc
+                            : '-'),
+                    progress: stats.memPercentValue != null
+                        ? stats.memPercentValue! / 100.0
+                        : null,
+                    accent: scheme.secondary,
+                  ),
+                  const Gap(10),
+                  _StatsChips(stats: stats),
+                ],
               ],
             ),
           ),
@@ -219,6 +250,120 @@ class _InfoPill extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _UsageRow extends StatelessWidget {
+  const _UsageRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.progress,
+    required this.accent,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final double? progress;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: scheme.onSurfaceVariant),
+            const Gap(8),
+            Expanded(
+              child: Text(
+                label,
+                style: textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Text(
+              value,
+              style: textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        if (progress != null) ...[
+          const Gap(6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress!.clamp(0, 1),
+              minHeight: 6,
+              backgroundColor: scheme.onSurfaceVariant.withValues(alpha: 0.12),
+              valueColor: AlwaysStoppedAnimation(accent),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _StatsChips extends StatelessWidget {
+  const _StatsChips({required this.stats});
+
+  final ContainerStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pillBg = scheme.surfaceContainerHigh.withValues(
+      alpha: isDark ? 0.7 : 0.9,
+    );
+    final pillFg = scheme.onSurface;
+
+    final netLabel = stats.netIo.trim();
+    final blockLabel = stats.blockIo.trim();
+    final pidsLabel = stats.pids.trim();
+
+    final chips = <Widget>[
+      if (netLabel.isNotEmpty)
+        _InfoPill(
+          icon: AppIcons.network,
+          label: 'Net I/O: $netLabel',
+          backgroundColor: pillBg,
+          foregroundColor: pillFg,
+        ),
+      if (blockLabel.isNotEmpty)
+        _InfoPill(
+          icon: AppIcons.hardDrive,
+          label: 'Drive I/O: $blockLabel',
+          backgroundColor: pillBg,
+          foregroundColor: pillFg,
+        ),
+      if (pidsLabel.isNotEmpty)
+        _InfoPill(
+          icon: AppIcons.activity,
+          label: 'PIDs: $pidsLabel',
+          backgroundColor: pillBg,
+          foregroundColor: pillFg,
+        ),
+    ];
+
+    if (chips.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: chips,
     );
   }
 }
