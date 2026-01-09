@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -10,7 +12,7 @@ import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
 
 /// View displaying detailed stack information.
-class StackDetailView extends ConsumerWidget {
+class StackDetailView extends ConsumerStatefulWidget {
   const StackDetailView({
     required this.stackId,
     required this.stackName,
@@ -21,10 +23,32 @@ class StackDetailView extends ConsumerWidget {
   final String stackName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final stackAsync = ref.watch(stackDetailProvider(stackId));
-    final servicesAsync = ref.watch(stackServicesProvider(stackId));
-    final logAsync = ref.watch(stackLogProvider(stackId));
+  ConsumerState<StackDetailView> createState() => _StackDetailViewState();
+}
+
+class _StackDetailViewState extends ConsumerState<StackDetailView> {
+  Timer? _logRefreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _logRefreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
+      ref.invalidate(stackLogProvider(widget.stackId));
+    });
+  }
+
+  @override
+  void dispose() {
+    _logRefreshTimer?.cancel();
+    _logRefreshTimer = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stackAsync = ref.watch(stackDetailProvider(widget.stackId));
+    final servicesAsync = ref.watch(stackServicesProvider(widget.stackId));
+    final logAsync = ref.watch(stackLogProvider(widget.stackId));
     final stacksListAsync = ref.watch(stacksProvider);
     final serversListAsync = ref.watch(serversProvider);
     final actionsState = ref.watch(stackActionsProvider);
@@ -35,7 +59,7 @@ class StackDetailView extends ConsumerWidget {
     final stacks = stacksListAsync.asData?.value;
     if (stacks != null) {
       for (final s in stacks) {
-        if (s.id == stackId) {
+        if (s.id == widget.stackId) {
           listItem = s;
           break;
         }
@@ -57,12 +81,12 @@ class StackDetailView extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(stackName),
+        title: Text(widget.stackName),
         actions: [
           PopupMenuButton<StackAction>(
             icon: const Icon(AppIcons.moreVertical),
             onSelected: (action) =>
-                _handleAction(context, ref, stackId, action),
+                _handleAction(context, widget.stackId, action),
             itemBuilder: (context) => [
               PopupMenuItem(
                 value: StackAction.deploy,
@@ -97,9 +121,9 @@ class StackDetailView extends ConsumerWidget {
           RefreshIndicator(
             onRefresh: () async {
               ref
-                ..invalidate(stackDetailProvider(stackId))
-                ..invalidate(stackServicesProvider(stackId))
-                ..invalidate(stackLogProvider(stackId));
+                ..invalidate(stackDetailProvider(widget.stackId))
+                ..invalidate(stackServicesProvider(widget.stackId))
+                ..invalidate(stackLogProvider(widget.stackId));
             },
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -195,7 +219,6 @@ class StackDetailView extends ConsumerWidget {
 
   Future<void> _handleAction(
     BuildContext context,
-    WidgetRef ref,
     String stackId,
     StackAction action,
   ) async {
@@ -596,10 +619,19 @@ class _StackConfigContent extends StatelessWidget {
                   )
                 else
                   const Text('No compose contents available'),
-                if (environment.isNotEmpty) ...[
-                  const Gap(12),
-                  DetailCodeBlock(code: environment),
-                ],
+                const Gap(12),
+                Text(
+                  'Environment variables',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Gap(8),
+                if (environment.isNotEmpty)
+                  DetailCodeBlock(code: environment)
+                else
+                  const Text('No environment variables available'),
               ],
             ),
           ),
