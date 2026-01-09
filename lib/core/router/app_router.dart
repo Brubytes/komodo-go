@@ -34,6 +34,7 @@ import '../../features/stacks/presentation/views/stacks_list_view.dart';
 import '../../features/settings/presentation/views/connections_view.dart';
 import '../../features/settings/presentation/views/settings_view.dart';
 import '../../features/builders/presentation/views/builders_view.dart';
+import '../../features/alerters/presentation/views/alerter_detail_view.dart';
 import '../../features/alerters/presentation/views/alerters_view.dart';
 import '../../features/tags/presentation/views/tags_view.dart';
 import '../../features/variables/presentation/views/variables_view.dart';
@@ -81,6 +82,7 @@ abstract class AppRoutes {
   static const komodoTags = '$settings/komodo/tags';
   static const komodoBuilders = '$settings/komodo/builders';
   static const komodoAlerters = '$settings/komodo/alerters';
+  static const komodoAlerterDetail = '$komodoAlerters/:id';
 
   /// Legacy paths.
   static const legacyConnections = '/connections';
@@ -298,10 +300,14 @@ GoRouter appRouter(Ref ref) {
                         path: ':id',
                         pageBuilder: (context, state) {
                           final id = state.pathParameters['id']!;
-                          final name = state.uri.queryParameters['name'] ?? 'Deployment';
+                          final name =
+                              state.uri.queryParameters['name'] ?? 'Deployment';
                           return _adaptiveStackPage(
                             context,
-                            DeploymentDetailView(deploymentId: id, deploymentName: name),
+                            DeploymentDetailView(
+                              deploymentId: id,
+                              deploymentName: name,
+                            ),
                           );
                         },
                       ),
@@ -496,6 +502,18 @@ GoRouter appRouter(Ref ref) {
                     path: 'komodo/alerters',
                     pageBuilder: (context, state) =>
                         _adaptiveStackPage(context, const AlertersView()),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        pageBuilder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          return _adaptiveStackPage(
+                            context,
+                            AlerterDetailView(alerterIdOrName: id),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
