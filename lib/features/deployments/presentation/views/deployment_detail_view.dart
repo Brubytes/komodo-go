@@ -42,9 +42,12 @@ class DeploymentDetailView extends ConsumerWidget {
         actions: [
           PopupMenuButton<DeploymentAction>(
             icon: const Icon(AppIcons.moreVertical),
-            onSelected: (action) => _handleAction(context, ref, deploymentId, action),
+            onSelected: (action) =>
+                _handleAction(context, ref, deploymentId, action),
             itemBuilder: (context) {
-              final state = deploymentAsync.asData?.value?.info?.state ?? DeploymentState.unknown;
+              final state =
+                  deploymentAsync.asData?.value?.info?.state ??
+                  DeploymentState.unknown;
               return _buildMenuItems(scheme, state);
             },
           ),
@@ -66,7 +69,11 @@ class DeploymentDetailView extends ConsumerWidget {
                           children: [
                             _DeploymentHeroPanel(
                               deployment: deployment,
-                              serverName: serverNameForId(deployment.config?.serverId ?? deployment.info?.serverId ?? ''),
+                              serverName: serverNameForId(
+                                deployment.config?.serverId ??
+                                    deployment.info?.serverId ??
+                                    '',
+                              ),
                             ),
                             const Gap(16),
                             DetailSection(
@@ -74,14 +81,19 @@ class DeploymentDetailView extends ConsumerWidget {
                               icon: AppIcons.settings,
                               child: _DeploymentConfigContent(
                                 deployment: deployment,
-                                serverName: serverNameForId(deployment.config?.serverId ?? deployment.info?.serverId ?? ''),
+                                serverName: serverNameForId(
+                                  deployment.config?.serverId ??
+                                      deployment.info?.serverId ??
+                                      '',
+                                ),
                               ),
                             ),
                           ],
                         )
                       : const _MessageSurface(message: 'Deployment not found'),
                   loading: () => const _LoadingSurface(),
-                  error: (error, _) => _MessageSurface(message: 'Error: $error'),
+                  error: (error, _) =>
+                      _MessageSurface(message: 'Error: $error'),
                 ),
               ],
             ),
@@ -108,6 +120,23 @@ class DeploymentDetailView extends ConsumerWidget {
     DeploymentState state,
   ) {
     return [
+      PopupMenuItem(
+        value: DeploymentAction.deploy,
+        child: ListTile(
+          leading: Icon(AppIcons.deployments, color: scheme.primary),
+          title: const Text('Redeploy'),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      PopupMenuItem(
+        value: DeploymentAction.pullImages,
+        child: ListTile(
+          leading: Icon(AppIcons.download, color: scheme.primary),
+          title: const Text('Pull image'),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      const PopupMenuDivider(),
       if (state.isStopped || state == DeploymentState.notDeployed)
         PopupMenuItem(
           value: DeploymentAction.start,
@@ -204,6 +233,7 @@ class DeploymentDetailView extends ConsumerWidget {
       DeploymentAction.unpause => actions.unpause(deploymentId),
       DeploymentAction.destroy => actions.destroy(deploymentId),
       DeploymentAction.deploy => actions.deploy(deploymentId),
+      DeploymentAction.pullImages => actions.pullImages(deploymentId),
     };
 
     if (success) {
@@ -243,7 +273,8 @@ class _DeploymentHeroPanel extends StatelessWidget {
     final status = deployment.info?.status;
     final updateAvailable = deployment.info?.updateAvailable ?? false;
     final image = deployment.imageLabel;
-    final serverId = deployment.config?.serverId ?? deployment.info?.serverId ?? '';
+    final serverId =
+        deployment.config?.serverId ?? deployment.info?.serverId ?? '';
 
     return DetailHeroPanel(
       tintColor: scheme.primary,
@@ -292,15 +323,15 @@ class _DeploymentHeroPanel extends StatelessWidget {
           icon: updateAvailable ? AppIcons.updateAvailable : AppIcons.ok,
           label: 'Updates',
           value: updateAvailable ? 'Available' : 'Up to date',
-          tone: updateAvailable ? DetailMetricTone.tertiary : DetailMetricTone.success,
+          tone: updateAvailable
+              ? DetailMetricTone.tertiary
+              : DetailMetricTone.success,
         ),
       ],
       footer: Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: [
-          for (final tag in deployment.tags) TextPill(label: tag),
-        ],
+        children: [for (final tag in deployment.tags) TextPill(label: tag)],
       ),
     );
   }
@@ -308,7 +339,8 @@ class _DeploymentHeroPanel extends StatelessWidget {
   IconData _stateIcon(DeploymentState state) {
     return switch (state) {
       DeploymentState.running => AppIcons.ok,
-      DeploymentState.deploying || DeploymentState.restarting => AppIcons.loading,
+      DeploymentState.deploying ||
+      DeploymentState.restarting => AppIcons.loading,
       DeploymentState.paused => AppIcons.paused,
       DeploymentState.exited || DeploymentState.created => AppIcons.stopped,
       DeploymentState.dead || DeploymentState.removing => AppIcons.error,
@@ -320,9 +352,11 @@ class _DeploymentHeroPanel extends StatelessWidget {
   DetailMetricTone _stateTone(DeploymentState state) {
     return switch (state) {
       DeploymentState.running => DetailMetricTone.success,
-      DeploymentState.deploying || DeploymentState.restarting => DetailMetricTone.primary,
+      DeploymentState.deploying ||
+      DeploymentState.restarting => DetailMetricTone.primary,
       DeploymentState.paused => DetailMetricTone.secondary,
-      DeploymentState.exited || DeploymentState.created => DetailMetricTone.neutral,
+      DeploymentState.exited ||
+      DeploymentState.created => DetailMetricTone.neutral,
       DeploymentState.dead => DetailMetricTone.alert,
       _ => DetailMetricTone.neutral,
     };
@@ -396,7 +430,9 @@ class _DeploymentConfigContent extends StatelessWidget {
             children: [
               DetailKeyValueRow(
                 label: 'Image',
-                value: deployment.imageLabel.isNotEmpty ? deployment.imageLabel : '—',
+                value: deployment.imageLabel.isNotEmpty
+                    ? deployment.imageLabel
+                    : '—',
               ),
               DetailKeyValueRow(
                 label: 'Registry',
@@ -430,10 +466,7 @@ class _DeploymentConfigContent extends StatelessWidget {
             child: Column(
               children: [
                 if (config.network.isNotEmpty)
-                  DetailKeyValueRow(
-                    label: 'Network',
-                    value: config.network,
-                  ),
+                  DetailKeyValueRow(label: 'Network', value: config.network),
                 if (config.restart != null)
                   DetailKeyValueRow(
                     label: 'Restart',

@@ -99,6 +99,23 @@ class DeploymentCard extends StatelessWidget {
   ) {
     final scheme = Theme.of(context).colorScheme;
     return [
+      PopupMenuItem(
+        value: DeploymentAction.deploy,
+        child: ListTile(
+          leading: Icon(AppIcons.deployments, color: scheme.primary),
+          title: const Text('Redeploy'),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      PopupMenuItem(
+        value: DeploymentAction.pullImages,
+        child: ListTile(
+          leading: Icon(AppIcons.download, color: scheme.primary),
+          title: const Text('Pull image'),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      const PopupMenuDivider(),
       if (state.isStopped || state == DeploymentState.notDeployed)
         PopupMenuItem(
           value: DeploymentAction.start,
@@ -174,7 +191,10 @@ class _StatusBadge extends StatelessWidget {
       DeploymentState.exited => (scheme.tertiary, AppIcons.stopped),
       DeploymentState.dead => (scheme.error, AppIcons.canceled),
       DeploymentState.paused => (scheme.onSurfaceVariant, AppIcons.paused),
-      DeploymentState.notDeployed => (scheme.onSurfaceVariant, AppIcons.pending),
+      DeploymentState.notDeployed => (
+        scheme.onSurfaceVariant,
+        AppIcons.pending,
+      ),
       DeploymentState.unknown => (scheme.tertiary, AppIcons.unknown),
     };
 
@@ -205,4 +225,13 @@ class _StatusBadge extends StatelessWidget {
 }
 
 /// Actions available for a deployment.
-enum DeploymentAction { start, stop, restart, pause, unpause, destroy, deploy }
+enum DeploymentAction {
+  deploy,
+  pullImages,
+  restart,
+  pause,
+  unpause,
+  start,
+  stop,
+  destroy,
+}

@@ -1,8 +1,8 @@
+import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/features/deployments/data/models/deployment.dart';
+import 'package:komodo_go/features/deployments/data/repositories/deployment_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../data/models/deployment.dart';
-import '../../data/repositories/deployment_repository.dart';
 
 part 'deployments_provider.g.dart';
 
@@ -70,6 +70,9 @@ class DeploymentActions extends _$DeploymentActions {
   Future<bool> deploy(String deploymentId) =>
       _executeAction((repo) => repo.deploy(deploymentId));
 
+  Future<bool> pullImages(String deploymentId) =>
+      _executeAction((repo) => repo.pullDeployment(deploymentId));
+
   Future<bool> pause(String deploymentId) =>
       _executeAction((repo) => repo.pauseDeployment(deploymentId));
 
@@ -77,7 +80,7 @@ class DeploymentActions extends _$DeploymentActions {
       _executeAction((repo) => repo.unpauseDeployment(deploymentId));
 
   Future<bool> _executeAction(
-    Future<dynamic> Function(DeploymentRepository repo) action,
+    Future<Either<Failure, void>> Function(DeploymentRepository repo) action,
   ) async {
     final repository = ref.read(deploymentRepositoryProvider);
     if (repository == null) {
@@ -89,21 +92,16 @@ class DeploymentActions extends _$DeploymentActions {
 
     final result = await action(repository);
 
-    // ignore: avoid_dynamic_calls
-    final isSuccess = result.isRight() as bool;
-    if (isSuccess) {
-      state = const AsyncValue.data(null);
-      // Refresh the deployments list
-      ref.invalidate(deploymentsProvider);
-    } else {
-      // ignore: avoid_dynamic_calls
-      final failure = result.getLeft().toNullable() as Failure?;
-      state = AsyncValue.error(
-        failure?.displayMessage ?? 'Action failed',
-        StackTrace.current,
-      );
-    }
-
-    return isSuccess;
+    return result.fold(
+      (failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return false;
+      },
+      (_) {
+        state = const AsyncValue.data(null);
+        ref.invalidate(deploymentsProvider);
+        return true;
+      },
+    );
   }
 }

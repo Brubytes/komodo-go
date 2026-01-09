@@ -102,13 +102,14 @@ class DeploymentsListContent extends ConsumerWidget {
 
     final actions = ref.read(deploymentActionsProvider.notifier);
     final success = await switch (action) {
+      DeploymentAction.deploy => actions.deploy(deploymentId),
+      DeploymentAction.pullImages => actions.pullImages(deploymentId),
       DeploymentAction.start => actions.start(deploymentId),
       DeploymentAction.stop => actions.stop(deploymentId),
       DeploymentAction.restart => actions.restart(deploymentId),
       DeploymentAction.pause => actions.pause(deploymentId),
       DeploymentAction.unpause => actions.unpause(deploymentId),
       DeploymentAction.destroy => actions.destroy(deploymentId),
-      DeploymentAction.deploy => actions.deploy(deploymentId),
     };
 
     if (context.mounted) {
