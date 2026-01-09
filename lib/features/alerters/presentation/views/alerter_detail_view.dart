@@ -72,11 +72,17 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     final actionsState = ref.watch(alerterActionsProvider);
     final alerterAsync = ref.watch(alerterJsonProvider(widget.alerterIdOrName));
 
+    final title = alerterAsync.maybeWhen(
+      data: (json) {
+        if (json == null) return 'Alerter';
+        final name = _alerterNameFromJson(json).trim();
+        return name.isEmpty ? 'Alerter' : name;
+      },
+      orElse: () => _name.isEmpty ? 'Alerter' : _name,
+    );
+
     return Scaffold(
-      appBar: MainAppBar(
-        title: _name.isEmpty ? 'Alerter' : _name,
-        icon: AppIcons.notifications,
-      ),
+      appBar: MainAppBar(title: title, icon: AppIcons.notifications),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: FilledButton(
@@ -98,7 +104,12 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
               ref.invalidate(alerterJsonProvider(widget.alerterIdOrName)),
         ),
         data: (json) {
-          if (json != null) _maybeLoadFromJson(json);
+          if (json != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              _maybeLoadFromJson(json);
+            });
+          }
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
@@ -402,12 +413,7 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     if (_loadedMarker == marker) return;
     _loadedMarker = marker;
 
-    final nested = json['alerter'];
-    _name = switch (nested) {
-      Map<String, dynamic>() =>
-        (nested['name'] ?? json['name'] ?? '').toString(),
-      _ => (json['name'] ?? '').toString(),
-    };
+    _name = _alerterNameFromJson(json);
 
     final config = json['config'];
     if (config is! Map<String, dynamic>) return;
@@ -433,6 +439,15 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     );
 
     if (mounted) setState(() {});
+  }
+
+  String _alerterNameFromJson(Map<String, dynamic> json) {
+    final nested = json['alerter'];
+    return switch (nested) {
+      Map<String, dynamic>() =>
+        (nested['name'] ?? json['name'] ?? '').toString(),
+      _ => (json['name'] ?? '').toString(),
+    };
   }
 
   Future<void> _pickAlertTypes() async {
