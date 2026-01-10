@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/detail/detail_pill_list.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
@@ -128,14 +129,10 @@ class BuilderTile extends ConsumerWidget {
           ),
           if (item.tags.isNotEmpty) ...[
             const Gap(10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final t in item.tags.take(6)) TextPill(label: t),
-                if (item.tags.length > 6)
-                  ValuePill(label: 'More', value: '+${item.tags.length - 6}'),
-              ],
+            DetailPillList(
+              items: item.tags,
+              maxItems: 6,
+              moreLabel: 'More',
             ),
           ],
         ],
