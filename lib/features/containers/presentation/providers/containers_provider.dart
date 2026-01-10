@@ -1,10 +1,9 @@
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/features/containers/data/models/container.dart';
+import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
+import 'package:komodo_go/features/servers/data/models/server.dart';
+import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../../servers/data/models/server.dart';
-import '../../../servers/presentation/providers/servers_provider.dart';
-import '../../data/models/container.dart';
-import '../../data/repositories/container_repository.dart';
 
 part 'containers_provider.g.dart';
 

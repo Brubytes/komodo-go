@@ -1,12 +1,11 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_call.dart';
-import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/query_templates.dart';
+import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'builder_repository.g.dart';
 
@@ -57,7 +56,7 @@ class BuilderRepository {
           params: <String, dynamic>{'id': id, 'name': name},
         ),
       );
-      return null;
+      return;
     });
   }
 
@@ -66,7 +65,7 @@ class BuilderRepository {
       await _client.write(
         RpcRequest(type: 'DeleteBuilder', params: <String, dynamic>{'id': id}),
       );
-      return null;
+      return;
     });
   }
 
@@ -81,7 +80,7 @@ class BuilderRepository {
           params: <String, dynamic>{'id': id, 'config': config},
         ),
       );
-      return null;
+      return;
     });
   }
 }

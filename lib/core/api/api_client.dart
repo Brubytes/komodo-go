@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import 'api_exception.dart';
+import 'package:komodo_go/core/api/api_exception.dart';
 
 /// RPC request structure for Komodo API.
 class RpcRequest<T> {

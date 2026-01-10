@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
-import '../../data/models/action.dart';
+import 'package:komodo_go/features/actions/data/models/action.dart';
 
 /// Card widget displaying action information.
 class ActionCard extends StatelessWidget {

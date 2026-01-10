@@ -138,7 +138,7 @@ class DeploymentRepository {
           params: {'deployment': deploymentIdOrName},
         ),
       );
-      return null;
+      return;
     });
   }
 }

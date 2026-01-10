@@ -5,12 +5,7 @@ import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 
 class StackHeroPanel extends StatelessWidget {
-  const StackHeroPanel({
-    required this.stack,
-    required this.listItem,
-    required this.serviceCount,
-    required this.updateCount,
-    required this.serverName,
+  const StackHeroPanel({required this.stack, required this.listItem, required this.serviceCount, required this.updateCount, required this.serverName, super.key,
   });
 
   final KomodoStack stack;
@@ -168,7 +163,7 @@ class StackHeroPanel extends StatelessWidget {
 }
 
 class StackConfigContent extends StatelessWidget {
-  const StackConfigContent({required this.config, required this.serverName});
+  const StackConfigContent({required this.config, required this.serverName, super.key});
 
   final StackConfig config;
   final String? serverName;
@@ -366,7 +361,7 @@ class StackConfigContent extends StatelessWidget {
 }
 
 class StackDeploymentContent extends StatelessWidget {
-  const StackDeploymentContent({required this.info});
+  const StackDeploymentContent({required this.info, super.key});
 
   final StackInfo info;
 
@@ -455,7 +450,7 @@ class StackDeploymentContent extends StatelessWidget {
 }
 
 class StackServiceCard extends StatelessWidget {
-  const StackServiceCard({required this.service});
+  const StackServiceCard({required this.service, super.key});
 
   final StackService service;
 
@@ -513,7 +508,7 @@ class StackServiceCard extends StatelessWidget {
 }
 
 class StackLogContent extends StatelessWidget {
-  const StackLogContent({required this.log});
+  const StackLogContent({required this.log, super.key});
 
   final StackLog? log;
 
@@ -561,7 +556,7 @@ class StackLogContent extends StatelessWidget {
 }
 
 class StackLoadingSurface extends StatelessWidget {
-  const StackLoadingSurface();
+  const StackLoadingSurface({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -572,7 +567,7 @@ class StackLoadingSurface extends StatelessWidget {
 }
 
 class StackMessageSurface extends StatelessWidget {
-  const StackMessageSurface({required this.message});
+  const StackMessageSurface({required this.message, super.key});
 
   final String message;
 

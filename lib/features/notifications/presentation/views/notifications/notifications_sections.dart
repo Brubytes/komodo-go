@@ -5,8 +5,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
-import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
@@ -73,7 +71,7 @@ class AlertsTab extends ConsumerWidget {
 }
 
 class UpdatesTab extends ConsumerWidget {
-  const UpdatesTab();
+  const UpdatesTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -131,7 +129,7 @@ class UpdatesTab extends ConsumerWidget {
 }
 
 class AlertTile extends ConsumerWidget {
-  const AlertTile({required this.alert});
+  const AlertTile({required this.alert, super.key});
 
   final Alert alert;
 
@@ -210,7 +208,7 @@ class AlertTile extends ConsumerWidget {
 }
 
 class UpdateTile extends ConsumerWidget {
-  const UpdateTile({required this.update});
+  const UpdateTile({required this.update, super.key});
 
   final UpdateListItem update;
 
@@ -295,7 +293,7 @@ class UpdateTile extends ConsumerWidget {
 }
 
 class PaginationFooter extends StatelessWidget {
-  const PaginationFooter({required this.isLoading, required this.onLoadMore});
+  const PaginationFooter({required this.isLoading, required this.onLoadMore, super.key});
 
   final bool isLoading;
   final VoidCallback onLoadMore;
@@ -319,10 +317,7 @@ class PaginationFooter extends StatelessWidget {
 }
 
 class NotificationsEmptyState extends StatelessWidget {
-  const NotificationsEmptyState({
-    required this.icon,
-    required this.title,
-    required this.description,
+  const NotificationsEmptyState({required this.icon, required this.title, required this.description, super.key,
   });
 
   final IconData icon;
@@ -362,10 +357,7 @@ class NotificationsEmptyState extends StatelessWidget {
 }
 
 class NotificationsErrorState extends StatelessWidget {
-  const NotificationsErrorState({
-    required this.title,
-    required this.message,
-    required this.onRetry,
+  const NotificationsErrorState({required this.title, required this.message, required this.onRetry, super.key,
   });
 
   final String title;
@@ -414,7 +406,7 @@ class NotificationsErrorState extends StatelessWidget {
 enum _ChipKind { success, warning, error, neutral }
 
 class NotificationsStatusChip extends StatelessWidget {
-  const NotificationsStatusChip({required this.label, required this.kind});
+  const NotificationsStatusChip({required this.label, required this.kind, super.key});
 
   final String label;
   final _ChipKind kind;
@@ -489,7 +481,7 @@ String _formatTimestamp(DateTime dateTime) {
 
 String _humanizeVariant(String value) {
   final withSpaces = value.replaceAllMapped(
-    RegExp(r'(?<=[a-z0-9])(?=[A-Z])'),
+    RegExp('(?<=[a-z0-9])(?=[A-Z])'),
     (_) => ' ',
   );
   if (withSpaces.isEmpty) return value;

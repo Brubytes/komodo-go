@@ -93,7 +93,7 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
               IconButton(
                 tooltip: 'Close',
                 icon: const Icon(AppIcons.close),
-                onPressed: () => Navigator.of(context).pop(null),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
@@ -168,7 +168,7 @@ class _TagColorPickerPage extends StatelessWidget {
         automaticallyImplyLeading: false,
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(null),
+            onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
           const SizedBox(width: 8),

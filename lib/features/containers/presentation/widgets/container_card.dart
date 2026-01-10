@@ -5,8 +5,8 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 
-import '../../data/models/container.dart';
-import '../providers/containers_provider.dart';
+import 'package:komodo_go/features/containers/data/models/container.dart';
+import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 
 class ContainerCard extends StatelessWidget {
   const ContainerCard({required this.item, this.onTap, super.key});

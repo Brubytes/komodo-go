@@ -9,10 +9,10 @@ class NotificationsView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return DefaultTabController(
+    return const DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: const MainAppBar(
+        appBar: MainAppBar(
           title: 'Notifications',
           icon: AppIcons.notifications,
           bottom: TabBar(
@@ -22,7 +22,7 @@ class NotificationsView extends ConsumerWidget {
             ],
           ),
         ),
-        body: const TabBarView(children: [AlertsTab(), UpdatesTab()]),
+        body: TabBarView(children: [AlertsTab(), UpdatesTab()]),
       ),
     );
   }

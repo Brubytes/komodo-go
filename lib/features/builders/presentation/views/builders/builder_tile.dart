@@ -9,7 +9,7 @@ import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
 
-import 'builder_config_editor_sheet.dart';
+import 'package:komodo_go/features/builders/presentation/views/builders/builder_config_editor_sheet.dart';
 
 class BuilderTile extends ConsumerWidget {
   const BuilderTile({required this.item, super.key});
@@ -132,7 +132,6 @@ class BuilderTile extends ConsumerWidget {
             DetailPillList(
               items: item.tags,
               maxItems: 6,
-              moreLabel: 'More',
             ),
           ],
         ],
@@ -250,10 +249,10 @@ class BuilderTile extends ConsumerWidget {
 
     // UUID
     final uuid = RegExp(
-      r'^[0-9a-fA-F]{8}-'
-      r'[0-9a-fA-F]{4}-'
-      r'[0-9a-fA-F]{4}-'
-      r'[0-9a-fA-F]{4}-'
+      '^[0-9a-fA-F]{8}-'
+      '[0-9a-fA-F]{4}-'
+      '[0-9a-fA-F]{4}-'
+      '[0-9a-fA-F]{4}-'
       r'[0-9a-fA-F]{12}$',
     );
     if (uuid.hasMatch(v)) return true;

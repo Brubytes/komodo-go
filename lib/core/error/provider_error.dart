@@ -1,6 +1,6 @@
 import 'package:fpdart/fpdart.dart';
 
-import 'failures.dart';
+import 'package:komodo_go/core/error/failures.dart';
 
 T unwrapOrThrow<T>(Either<Failure, T> result) {
   return result.fold(

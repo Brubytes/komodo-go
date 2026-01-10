@@ -1,10 +1,9 @@
+import 'package:komodo_go/core/connections/connection_profile.dart';
+import 'package:komodo_go/core/connections/connections_store.dart';
+import 'package:komodo_go/core/providers/shared_preferences_provider.dart';
+import 'package:komodo_go/core/providers/storage_provider.dart';
+import 'package:komodo_go/core/storage/secure_storage_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../connections/connection_profile.dart';
-import '../connections/connections_store.dart';
-import '../storage/secure_storage_service.dart';
-import 'shared_preferences_provider.dart';
-import 'storage_provider.dart';
 
 part 'connections_provider.g.dart';
 

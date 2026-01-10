@@ -1,12 +1,11 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_call.dart';
-import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/query_templates.dart';
+import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'tag_repository.g.dart';
 
@@ -41,7 +40,7 @@ class TagRepository {
           type: 'CreateTag',
           params: <String, dynamic>{
             'name': name,
-            'color': color == null ? null : color.token,
+            'color': color?.token,
           },
         ),
       );

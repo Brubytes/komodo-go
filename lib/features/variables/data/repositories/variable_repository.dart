@@ -1,11 +1,10 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_call.dart';
+import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/variables/data/models/variable.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'variable_repository.g.dart';
 

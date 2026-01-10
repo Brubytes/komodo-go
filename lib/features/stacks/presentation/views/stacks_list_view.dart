@@ -126,15 +126,15 @@ class StacksListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const MainAppBar(
+    return const Scaffold(
+      appBar: MainAppBar(
         title: 'Stacks',
         icon: AppIcons.stacks,
         markColor: AppTokens.resourceStacks,
         markUseGradient: true,
         centerTitle: true,
       ),
-      body: const StacksListContent(),
+      body: StacksListContent(),
     );
   }
 }

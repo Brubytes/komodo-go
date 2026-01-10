@@ -8,11 +8,10 @@ import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
 import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
-import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/alerter_detail_sections.dart';
-import 'package:komodo_go/shared/resources/resource_helpers.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/alert_types_picker_sheet.dart';
-import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/resource_targets_editor_sheet.dart';
+import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/alerter_detail_sections.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/maintenance_windows_editor_sheet.dart';
+import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/resource_targets_editor_sheet.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
 import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
@@ -21,6 +20,7 @@ import 'package:komodo_go/features/repos/presentation/providers/repos_provider.d
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
 import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
+import 'package:komodo_go/shared/resources/resource_helpers.dart';
 
 class AlerterDetailView extends ConsumerStatefulWidget {
   const AlerterDetailView({required this.alerterIdOrName, super.key});
@@ -352,7 +352,6 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
       AppSnackBar.show(
         context,
         'No changes to save',
-        tone: AppSnackBarTone.neutral,
       );
       return;
     }

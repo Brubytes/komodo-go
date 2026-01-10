@@ -30,17 +30,6 @@ class UpdateListItem {
     this.target,
   });
 
-  final String id;
-  final String operation;
-  final int startTs;
-  final bool success;
-  final String username;
-  final String operatorName;
-  final ResourceTarget? target;
-  final UpdateStatus status;
-  final SemanticVersion version;
-  final String otherData;
-
   factory UpdateListItem.fromJson(Map<String, dynamic> json) {
     return UpdateListItem(
       id: (json['id'] as String?) ?? '',
@@ -55,6 +44,17 @@ class UpdateListItem {
       otherData: (json['other_data'] as String?) ?? '',
     );
   }
+
+  final String id;
+  final String operation;
+  final int startTs;
+  final bool success;
+  final String username;
+  final String operatorName;
+  final ResourceTarget? target;
+  final UpdateStatus status;
+  final SemanticVersion version;
+  final String otherData;
 
   DateTime get timestamp => _unixToDateTime(startTs);
 }

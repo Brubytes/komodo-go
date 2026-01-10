@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
-import 'detail_surface.dart';
+import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 
 class DetailSubCard extends StatelessWidget {
   const DetailSubCard({

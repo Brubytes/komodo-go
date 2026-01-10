@@ -1,10 +1,9 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builders/data/repositories/builder_repository.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'builders_provider.g.dart';
 

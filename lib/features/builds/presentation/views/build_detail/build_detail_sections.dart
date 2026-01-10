@@ -5,10 +5,7 @@ import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
 
 class BuildHeroPanel extends StatelessWidget {
-  const BuildHeroPanel({
-    required this.buildResource,
-    required this.listItem,
-    required this.builderLabel,
+  const BuildHeroPanel({required this.buildResource, required this.listItem, required this.builderLabel, super.key,
   });
 
   final KomodoBuild buildResource;
@@ -92,7 +89,7 @@ class BuildHeroPanel extends StatelessWidget {
 }
 
 class BuildHeader extends StatelessWidget {
-  const BuildHeader({required this.buildResource});
+  const BuildHeader({required this.buildResource, super.key});
 
   final KomodoBuild buildResource;
 
@@ -125,9 +122,7 @@ class BuildHeader extends StatelessWidget {
 
 // Configuration Content
 class BuildConfigContent extends StatelessWidget {
-  const BuildConfigContent({
-    required this.buildResource,
-    required this.builderLabel,
+  const BuildConfigContent({required this.buildResource, required this.builderLabel, super.key,
   });
 
   final KomodoBuild buildResource;
@@ -252,7 +247,7 @@ class BuildConfigContent extends StatelessWidget {
 }
 
 class BuildSourceContent extends StatelessWidget {
-  const BuildSourceContent({required this.buildResource});
+  const BuildSourceContent({required this.buildResource, super.key});
 
   final KomodoBuild buildResource;
 
@@ -296,7 +291,7 @@ class BuildSourceContent extends StatelessWidget {
 
 // Hashes Content
 class BuildHashesContent extends StatelessWidget {
-  const BuildHashesContent({required this.buildResource});
+  const BuildHashesContent({required this.buildResource, super.key});
 
   final KomodoBuild buildResource;
 
@@ -325,7 +320,7 @@ class BuildHashesContent extends StatelessWidget {
 
 // Logs Content
 class BuildLogsContent extends StatelessWidget {
-  const BuildLogsContent({required this.buildResource});
+  const BuildLogsContent({required this.buildResource, super.key});
 
   final KomodoBuild buildResource;
 
@@ -402,7 +397,7 @@ class BuildLogsContent extends StatelessWidget {
 
 // Helper Surfaces
 class BuildMessageSurface extends StatelessWidget {
-  const BuildMessageSurface({required this.message});
+  const BuildMessageSurface({required this.message, super.key});
 
   final String message;
 
@@ -418,7 +413,7 @@ class BuildMessageSurface extends StatelessWidget {
 }
 
 class BuildLoadingSurface extends StatelessWidget {
-  const BuildLoadingSurface();
+  const BuildLoadingSurface({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -432,7 +427,7 @@ class BuildLoadingSurface extends StatelessWidget {
 }
 
 class BuildErrorSurface extends StatelessWidget {
-  const BuildErrorSurface({required this.error});
+  const BuildErrorSurface({required this.error, super.key});
 
   final String error;
 

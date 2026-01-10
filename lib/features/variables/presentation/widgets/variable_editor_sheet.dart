@@ -96,7 +96,7 @@ class _VariableEditorSheetState extends State<VariableEditorSheet> {
               IconButton(
                 tooltip: 'Close',
                 icon: const Icon(AppIcons.close),
-                onPressed: () => Navigator.of(context).pop(null),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),

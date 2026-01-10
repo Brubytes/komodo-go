@@ -1,8 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
-
-import '../error/failures.dart';
-import 'api_exception.dart';
+import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/error/failures.dart';
 
 typedef ApiAction<T> = Future<T> Function();
 typedef ApiExceptionMapper = Failure Function(ApiException error);

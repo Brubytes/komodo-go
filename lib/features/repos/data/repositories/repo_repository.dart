@@ -1,13 +1,12 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/api/api_call.dart';
+import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/query_templates.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:komodo_go/core/utils/debug_log.dart';
+import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/api/api_call.dart';
-import '../../../../core/api/api_client.dart';
-import '../../../../core/api/query_templates.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/providers/dio_provider.dart';
-import '../../../../core/utils/debug_log.dart';
-import '../models/repo.dart';
 
 part 'repo_repository.g.dart';
 
@@ -84,7 +83,7 @@ class RepoRepository {
     return apiCall(
       () async {
         await _client.execute(RpcRequest(type: actionType, params: params));
-        return null;
+        return;
       },
     );
   }

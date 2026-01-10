@@ -9,8 +9,8 @@ import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 
-import '../../data/models/procedure.dart';
-import '../providers/procedures_provider.dart';
+import 'package:komodo_go/features/procedures/data/models/procedure.dart';
+import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
 
 /// View displaying detailed procedure information.
 class ProcedureDetailView extends ConsumerWidget {
@@ -416,7 +416,6 @@ class _StageCard extends StatelessWidget {
               ),
               TextPill(
                 label: '$enabledExecutions/$totalExecutions executions',
-                tone: PillTone.neutral,
               ),
             ],
           ),

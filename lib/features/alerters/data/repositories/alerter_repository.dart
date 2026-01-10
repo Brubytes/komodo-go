@@ -1,6 +1,4 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/query_templates.dart';
@@ -8,6 +6,7 @@ import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'alerter_repository.g.dart';
 
@@ -69,7 +68,7 @@ class AlerterRepository {
             params: <String, dynamic>{'id': id, 'name': name},
           ),
         );
-        return null;
+        return;
       },
     );
   }
@@ -83,7 +82,7 @@ class AlerterRepository {
             params: <String, dynamic>{'id': id},
           ),
         );
-        return null;
+        return;
       },
     );
   }
@@ -110,7 +109,7 @@ class AlerterRepository {
             params: <String, dynamic>{'id': id, 'config': config},
           ),
         );
-        return null;
+        return;
       },
     );
   }
@@ -124,7 +123,7 @@ class AlerterRepository {
             params: <String, dynamic>{'alerter': idOrName},
           ),
         );
-        return null;
+        return;
       },
     );
   }

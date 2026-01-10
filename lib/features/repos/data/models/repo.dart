@@ -9,9 +9,8 @@ sealed class RepoListItem with _$RepoListItem {
   const factory RepoListItem({
     required String id,
     required String name,
-    @Default(false) bool template,
+    required RepoListItemInfo info, @Default(false) bool template,
     @Default([]) List<String> tags,
-    required RepoListItemInfo info,
   }) = _RepoListItem;
 
   factory RepoListItem.fromJson(Map<String, dynamic> json) =>
@@ -49,11 +48,9 @@ sealed class KomodoRepo with _$KomodoRepo {
   const factory KomodoRepo({
     @JsonKey(readValue: _readId) required String id,
     required String name,
-    @Default('') String description,
+    required RepoConfig config, required RepoInfo info, @Default('') String description,
     @Default(false) bool template,
     @Default([]) List<String> tags,
-    required RepoConfig config,
-    required RepoInfo info,
   }) = _KomodoRepo;
 
   factory KomodoRepo.fromJson(Map<String, dynamic> json) =>

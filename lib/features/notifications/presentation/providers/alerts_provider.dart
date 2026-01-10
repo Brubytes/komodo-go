@@ -70,7 +70,6 @@ class Alerts extends _$Alerts {
           AlertsState(
             items: [...current.items, ...page.alerts],
             nextPage: page.nextPage,
-            isLoadingMore: false,
           ),
         );
       },

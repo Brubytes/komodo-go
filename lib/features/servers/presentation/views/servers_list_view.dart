@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
-
-import '../../../../core/router/app_router.dart';
-import '../providers/servers_provider.dart';
-import '../widgets/server_card.dart';
+import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/features/servers/presentation/widgets/server_card.dart';
 
 class ServersListContent extends ConsumerWidget {
   const ServersListContent({super.key});
@@ -56,15 +55,15 @@ class ServersListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const MainAppBar(
+    return const Scaffold(
+      appBar: MainAppBar(
         title: 'Servers',
         icon: AppIcons.server,
         markColor: AppTokens.resourceServers,
         markUseGradient: true,
         centerTitle: true,
       ),
-      body: const ServersListContent(),
+      body: ServersListContent(),
     );
   }
 }

@@ -6,11 +6,6 @@ class AlerterDetail {
     required this.config,
   });
 
-  final String id;
-  final String name;
-  final String updatedAt;
-  final AlerterConfig config;
-
   factory AlerterDetail.fromApiJson(Map<String, dynamic> json) {
     final nested = json['alerter'];
     final nestedMap =
@@ -32,6 +27,11 @@ class AlerterDetail {
       config: AlerterConfig.fromApiMap(configMap),
     );
   }
+
+  final String id;
+  final String name;
+  final String updatedAt;
+  final AlerterConfig config;
 }
 
 class AlerterConfig {
@@ -43,13 +43,6 @@ class AlerterConfig {
     required this.exceptResources,
     required this.maintenanceWindows,
   });
-
-  final bool enabled;
-  final AlerterEndpoint? endpoint;
-  final List<String> alertTypes;
-  final List<AlerterResourceTarget> resources;
-  final List<AlerterResourceTarget> exceptResources;
-  final List<AlerterMaintenanceWindow> maintenanceWindows;
 
   factory AlerterConfig.fromApiMap(Map<String, dynamic> map) {
     final enabled = _toBool(map['enabled']) ?? false;
@@ -64,6 +57,13 @@ class AlerterConfig {
       ),
     );
   }
+
+  final bool enabled;
+  final AlerterEndpoint? endpoint;
+  final List<String> alertTypes;
+  final List<AlerterResourceTarget> resources;
+  final List<AlerterResourceTarget> exceptResources;
+  final List<AlerterMaintenanceWindow> maintenanceWindows;
 }
 
 class AlerterEndpoint {
@@ -182,17 +182,6 @@ class AlerterMaintenanceWindow {
     required this.enabled,
   });
 
-  final String name;
-  final String description;
-  final String scheduleType;
-  final String dayOfWeek;
-  final String date;
-  final int hour;
-  final int minute;
-  final int durationMinutes;
-  final String timezone;
-  final bool enabled;
-
   factory AlerterMaintenanceWindow.fromApiMap(Map<String, dynamic> map) {
     return AlerterMaintenanceWindow(
       name: (map['name'] ?? '').toString(),
@@ -207,6 +196,17 @@ class AlerterMaintenanceWindow {
       enabled: _toBool(map['enabled']) ?? true,
     );
   }
+
+  final String name;
+  final String description;
+  final String scheduleType;
+  final String dayOfWeek;
+  final String date;
+  final int hour;
+  final int minute;
+  final int durationMinutes;
+  final String timezone;
+  final bool enabled;
 
   Map<String, dynamic> toApiMap() => <String, dynamic>{
         'name': name,

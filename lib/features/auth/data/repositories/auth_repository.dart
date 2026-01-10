@@ -1,11 +1,10 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/api/api_call.dart';
+import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:komodo_go/core/storage/secure_storage_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/api/api_call.dart';
-import '../../../../core/api/api_client.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/providers/dio_provider.dart';
-import '../../../../core/storage/secure_storage_service.dart';
 
 part 'auth_repository.g.dart';
 
@@ -46,7 +45,7 @@ class AuthRepository {
           const RpcRequest(type: 'GetVersion', params: <String, dynamic>{}),
         );
 
-        return null;
+        return;
       },
       onApiException: (e) {
         if (e.isUnauthorized || e.isForbidden) {

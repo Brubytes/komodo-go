@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../../../core/providers/connections_provider.dart';
-import '../../../../core/widgets/always_paste_context_menu.dart';
-import '../../data/models/auth_state.dart';
-import '../providers/auth_provider.dart';
+import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
+import 'package:komodo_go/features/auth/data/models/auth_state.dart';
+import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 
 /// Login screen for entering Komodo API credentials.
 class LoginView extends HookConsumerWidget {
@@ -166,7 +165,7 @@ class LoginView extends HookConsumerWidget {
                                             ),
                                           );
 
-                                          if (confirmed == true) {
+                                          if (confirmed ?? false) {
                                             await ref
                                                 .read(
                                                   connectionsProvider.notifier,

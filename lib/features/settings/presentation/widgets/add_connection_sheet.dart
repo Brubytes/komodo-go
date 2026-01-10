@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:komodo_go/core/ui/app_icons.dart';
-
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';

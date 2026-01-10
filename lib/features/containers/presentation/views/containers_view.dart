@@ -4,17 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/router/polling_route_aware_state.dart';
+import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-
-import '../../../../core/router/app_router.dart';
-import '../../../../core/router/polling_route_aware_state.dart';
-import '../../../../core/router/shell_state_provider.dart';
-import '../../../../core/widgets/main_app_bar.dart';
-import '../../../servers/data/models/server.dart';
-import '../../../servers/presentation/providers/servers_provider.dart';
-import '../providers/containers_filters_provider.dart';
-import '../providers/containers_provider.dart';
-import '../widgets/container_card.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/features/containers/presentation/providers/containers_filters_provider.dart';
+import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
+import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
+import 'package:komodo_go/features/servers/data/models/server.dart';
+import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 
 class ContainersView extends ConsumerStatefulWidget {
   const ContainersView({super.key});
@@ -239,26 +238,25 @@ class _FiltersRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final serverField = serversAsync.maybeWhen(
       data: (servers) => DropdownButtonFormField<String?>(
-        value: selectedServerId,
+        initialValue: selectedServerId,
         decoration: const InputDecoration(
           labelText: 'Server',
           prefixIcon: Icon(AppIcons.server),
         ),
         items: [
-          const DropdownMenuItem(value: null, child: Text('All servers')),
+          const DropdownMenuItem(child: Text('All servers')),
           for (final server in servers)
             DropdownMenuItem(value: server.id, child: Text(server.name)),
         ],
         onChanged: onServerChanged,
       ),
       orElse: () => DropdownButtonFormField<String?>(
-        value: null,
         decoration: const InputDecoration(
           labelText: 'Server',
           prefixIcon: Icon(AppIcons.server),
         ),
         items: const [
-          DropdownMenuItem(value: null, child: Text('All servers')),
+          DropdownMenuItem(child: Text('All servers')),
         ],
         onChanged: null,
       ),
@@ -328,7 +326,7 @@ class _SortRow extends StatelessWidget {
       children: [
         Expanded(
           child: DropdownButtonFormField<ContainersSortField>(
-            value: sortState.field,
+            initialValue: sortState.field,
             decoration: const InputDecoration(
               labelText: 'Sort by',
               prefixIcon: Icon(Icons.sort),

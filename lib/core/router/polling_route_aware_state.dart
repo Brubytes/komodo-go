@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import 'route_observer.dart';
+import 'package:komodo_go/core/router/route_observer.dart';
 
 abstract class PollingRouteAwareState<T extends ConsumerStatefulWidget>
     extends ConsumerState<T> with RouteAware, WidgetsBindingObserver {

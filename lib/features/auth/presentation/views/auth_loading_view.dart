@@ -7,11 +7,11 @@ class AuthLoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       body: SafeArea(
         child: Center(
           key: loadingKey,
-          child: const SizedBox(
+          child: SizedBox(
             height: 28,
             width: 28,
             child: CircularProgressIndicator(strokeWidth: 2.5),

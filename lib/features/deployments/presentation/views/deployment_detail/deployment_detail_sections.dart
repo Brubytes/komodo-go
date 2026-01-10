@@ -5,9 +5,7 @@ import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 
 class DeploymentHeroPanel extends StatelessWidget {
-  const DeploymentHeroPanel({
-    required this.deployment,
-    required this.serverName,
+  const DeploymentHeroPanel({required this.deployment, required this.serverName, super.key,
   });
 
   final Deployment deployment;
@@ -110,9 +108,7 @@ class DeploymentHeroPanel extends StatelessWidget {
 }
 
 class DeploymentConfigContent extends StatelessWidget {
-  const DeploymentConfigContent({
-    required this.deployment,
-    required this.serverName,
+  const DeploymentConfigContent({required this.deployment, required this.serverName, super.key,
   });
 
   final Deployment deployment;
@@ -300,7 +296,7 @@ class DeploymentConfigContent extends StatelessWidget {
 }
 
 class DeploymentLoadingSurface extends StatelessWidget {
-  const DeploymentLoadingSurface();
+  const DeploymentLoadingSurface({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -311,7 +307,7 @@ class DeploymentLoadingSurface extends StatelessWidget {
 }
 
 class DeploymentMessageSurface extends StatelessWidget {
-  const DeploymentMessageSurface({required this.message});
+  const DeploymentMessageSurface({required this.message, super.key});
 
   final String message;
 

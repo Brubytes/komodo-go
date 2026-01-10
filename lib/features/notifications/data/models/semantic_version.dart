@@ -5,10 +5,6 @@ class SemanticVersion {
     required this.patch,
   });
 
-  final int major;
-  final int minor;
-  final int patch;
-
   factory SemanticVersion.fromJson(Object? json) {
     if (json is Map<String, dynamic>) {
       return SemanticVersion(
@@ -26,6 +22,10 @@ class SemanticVersion {
     }
     return const SemanticVersion(major: 0, minor: 0, patch: 0);
   }
+
+  final int major;
+  final int minor;
+  final int patch;
 
   String get label => '$major.$minor.$patch';
 }

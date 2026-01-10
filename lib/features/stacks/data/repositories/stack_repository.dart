@@ -195,7 +195,7 @@ class StackRepository {
     return apiCall(
       () async {
         await _client.execute(RpcRequest(type: actionType, params: params));
-        return null;
+        return;
       },
     );
   }

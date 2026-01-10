@@ -106,10 +106,12 @@ class _SparklinePainter extends CustomPainter {
       paddedMax += 1;
     }
 
-    if (capMinY != null)
+    if (capMinY != null) {
       paddedMin = paddedMin < capMinY! ? capMinY! : paddedMin;
-    if (capMaxY != null)
+    }
+    if (capMaxY != null) {
       paddedMax = paddedMax > capMaxY! ? capMaxY! : paddedMax;
+    }
 
     if (paddedMax - paddedMin < 1e-9) {
       paddedMax = paddedMin + 1;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
-import '../../data/models/procedure.dart';
+import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 
 /// Card widget displaying procedure information.
 class ProcedureCard extends StatelessWidget {

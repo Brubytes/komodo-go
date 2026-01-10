@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
-import '../theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 
 class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   const MainAppBar({
@@ -145,7 +145,7 @@ class _Mark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final shouldUseGradient = color == null ? true : (useGradient ?? false);
+    final shouldUseGradient = color == null || (useGradient ?? false);
 
     BoxDecoration decoration;
     if (color == null) {
@@ -160,7 +160,7 @@ class _Mark extends StatelessWidget {
     } else if (shouldUseGradient) {
       Color tone(Color base, {required double lightnessDelta}) {
         final hsl = HSLColor.fromColor(base);
-        final next = (hsl.lightness + lightnessDelta).clamp(0.0, 1.0) as double;
+        final next = (hsl.lightness + lightnessDelta).clamp(0.0, 1.0);
         return hsl.withLightness(next).toColor();
       }
 

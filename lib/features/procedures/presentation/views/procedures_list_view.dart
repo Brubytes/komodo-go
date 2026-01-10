@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
-
-import '../../../../core/router/app_router.dart';
-import '../providers/procedures_provider.dart';
-import '../widgets/procedure_card.dart';
+import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
+import 'package:komodo_go/features/procedures/presentation/widgets/procedure_card.dart';
 
 class ProceduresListContent extends ConsumerWidget {
   const ProceduresListContent({super.key});
@@ -53,9 +52,9 @@ class ProceduresListContent extends ConsumerWidget {
           ),
         ),
         if (actionsState.isLoading)
-          Container(
+          const ColoredBox(
             color: Colors.black26,
-            child: const Center(
+            child: Center(
               child: Card(
                 child: Padding(
                   padding: EdgeInsets.all(24),
@@ -92,15 +91,15 @@ class ProceduresListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const MainAppBar(
+    return const Scaffold(
+      appBar: MainAppBar(
         title: 'Procedures',
         icon: AppIcons.procedures,
         markColor: AppTokens.resourceProcedures,
         markUseGradient: true,
         centerTitle: true,
       ),
-      body: const ProceduresListContent(),
+      body: ProceduresListContent(),
     );
   }
 }

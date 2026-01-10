@@ -16,9 +16,6 @@ SeverityLevel severityLevelFromJson(Object? value) {
 class AlertPayload {
   const AlertPayload({required this.variant, required this.data});
 
-  final String variant;
-  final Map<String, dynamic> data;
-
   factory AlertPayload.fromJson(Object? json) {
     if (json is Map) {
       final entries = json.entries.toList();
@@ -42,6 +39,9 @@ class AlertPayload {
 
     return const AlertPayload(variant: 'Unknown', data: <String, dynamic>{});
   }
+
+  final String variant;
+  final Map<String, dynamic> data;
 
   String get displayTitle {
     if (variant.isEmpty) return 'Alert';
@@ -73,14 +73,6 @@ class Alert {
     this.resolvedTs,
   });
 
-  final String id;
-  final int ts;
-  final bool resolved;
-  final SeverityLevel level;
-  final ResourceTarget? target;
-  final AlertPayload payload;
-  final int? resolvedTs;
-
   factory Alert.fromJson(Map<String, dynamic> json) {
     return Alert(
       id: _readId(json),
@@ -92,6 +84,14 @@ class Alert {
       resolvedTs: _readNullableInt(json['resolved_ts']),
     );
   }
+
+  final String id;
+  final int ts;
+  final bool resolved;
+  final SeverityLevel level;
+  final ResourceTarget? target;
+  final AlertPayload payload;
+  final int? resolvedTs;
 
   DateTime get timestamp => _unixToDateTime(ts);
 }
@@ -135,7 +135,7 @@ DateTime _unixToDateTime(int unix) {
 String _humanizeVariant(String value) {
   // "ServerUnreachable" -> "Server unreachable"
   final withSpaces = value.replaceAllMapped(
-    RegExp(r'(?<=[a-z0-9])(?=[A-Z])'),
+    RegExp('(?<=[a-z0-9])(?=[A-Z])'),
     (_) => ' ',
   );
   if (withSpaces.isEmpty) return value;

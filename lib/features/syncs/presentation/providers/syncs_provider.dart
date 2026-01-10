@@ -1,10 +1,9 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
+import 'package:komodo_go/features/syncs/data/models/sync.dart';
+import 'package:komodo_go/features/syncs/data/repositories/sync_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../../../core/error/provider_error.dart';
-import '../../data/models/sync.dart';
-import '../../data/repositories/sync_repository.dart';
 
 part 'syncs_provider.g.dart';
 

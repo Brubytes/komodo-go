@@ -1,8 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../../../core/connections/connection_profile.dart';
-import '../../../../core/storage/secure_storage_service.dart';
+import 'package:komodo_go/core/connections/connection_profile.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/storage/secure_storage_service.dart';
 
 part 'auth_state.freezed.dart';
 

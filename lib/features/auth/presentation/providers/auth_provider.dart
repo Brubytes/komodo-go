@@ -1,10 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:komodo_go/core/providers/connections_provider.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:komodo_go/features/auth/data/models/auth_state.dart';
+import 'package:komodo_go/features/auth/data/repositories/auth_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/providers/dio_provider.dart';
-import '../../../../core/providers/connections_provider.dart';
-import '../../data/models/auth_state.dart';
-import '../../data/repositories/auth_repository.dart';
 
 part 'auth_provider.g.dart';
 
@@ -16,10 +15,9 @@ class Auth extends _$Auth {
     if (kDebugMode) {
       const delayMs = int.fromEnvironment(
         'AUTH_BOOT_DELAY_MS',
-        defaultValue: 0,
       );
       if (delayMs > 0) {
-        await Future<void>.delayed(Duration(milliseconds: delayMs));
+        await Future<void>.delayed(const Duration());
       }
     }
 
@@ -68,10 +66,7 @@ class Auth extends _$Auth {
 
   /// Attempts to log in with the provided credentials.
   Future<void> login({
-    String? name,
-    required String baseUrl,
-    required String apiKey,
-    required String apiSecret,
+    required String baseUrl, required String apiKey, required String apiSecret, String? name,
   }) async {
     state = const AsyncValue.loading();
 

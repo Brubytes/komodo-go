@@ -133,15 +133,15 @@ class DeploymentsListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const MainAppBar(
+    return const Scaffold(
+      appBar: MainAppBar(
         title: 'Deployments',
         icon: AppIcons.deployments,
         markColor: AppTokens.resourceDeployments,
         markUseGradient: true,
         centerTitle: true,
       ),
-      body: const DeploymentsListContent(),
+      body: DeploymentsListContent(),
     );
   }
 }

@@ -1,10 +1,9 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/variables/data/models/variable.dart';
 import 'package:komodo_go/features/variables/data/repositories/variable_repository.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'variables_provider.g.dart';
 

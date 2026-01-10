@@ -25,7 +25,6 @@ class AlerterSummaryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DetailSurface(
-      padding: const EdgeInsets.all(16),
       radius: 20,
       enableGradientInDark: false,
       child: Wrap(

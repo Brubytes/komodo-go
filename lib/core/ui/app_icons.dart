@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:komodo_go/core/extensions/icon_data_x.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 abstract class AppIcons {
   const AppIcons._();

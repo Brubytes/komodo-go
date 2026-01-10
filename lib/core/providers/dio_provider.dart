@@ -1,11 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/interceptors/auth_interceptor.dart';
+import 'package:komodo_go/core/api/interceptors/logging_interceptor.dart';
+import 'package:komodo_go/core/storage/secure_storage_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../api/api_client.dart';
-import '../api/interceptors/auth_interceptor.dart';
-import '../api/interceptors/logging_interceptor.dart';
-import '../storage/secure_storage_service.dart';
 
 part 'dio_provider.g.dart';
 

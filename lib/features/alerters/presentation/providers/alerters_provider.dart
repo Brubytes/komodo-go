@@ -1,11 +1,10 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/data/repositories/alerter_repository.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'alerters_provider.g.dart';
 

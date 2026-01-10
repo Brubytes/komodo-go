@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'detail_pills.dart';
+import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 
 class DetailPillList extends StatelessWidget {
   const DetailPillList({

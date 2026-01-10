@@ -1,9 +1,8 @@
 import 'dart:math';
 
+import 'package:komodo_go/core/connections/connection_profile.dart';
+import 'package:komodo_go/core/storage/secure_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../storage/secure_storage_service.dart';
-import 'connection_profile.dart';
 
 class ConnectionsStore {
   ConnectionsStore({

@@ -19,9 +19,8 @@ sealed class BuilderListItem with _$BuilderListItem {
   const factory BuilderListItem({
     required String id,
     required String name,
-    @Default(false) bool template,
+    required BuilderListItemInfo info, @Default(false) bool template,
     @Default(<String>[]) List<String> tags,
-    required BuilderListItemInfo info,
   }) = _BuilderListItem;
 
   factory BuilderListItem.fromJson(Map<String, dynamic> json) =>

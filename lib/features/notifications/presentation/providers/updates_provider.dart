@@ -70,7 +70,6 @@ class Updates extends _$Updates {
           UpdatesState(
             items: [...current.items, ...page.updates],
             nextPage: page.nextPage,
-            isLoadingMore: false,
           ),
         );
       },

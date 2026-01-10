@@ -233,7 +233,6 @@ class _AlerterTile extends ConsumerWidget {
                   DetailPillList(
                     items: item.tags,
                     maxItems: 6,
-                    moreLabel: 'More',
                   ),
                 ],
               ],

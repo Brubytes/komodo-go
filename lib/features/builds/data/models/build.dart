@@ -9,9 +9,8 @@ sealed class BuildListItem with _$BuildListItem {
   const factory BuildListItem({
     required String id,
     required String name,
-    @Default(false) bool template,
+    required BuildListItemInfo info, @Default(false) bool template,
     @Default([]) List<String> tags,
-    required BuildListItemInfo info,
   }) = _BuildListItem;
 
   factory BuildListItem.fromJson(Map<String, dynamic> json) =>
@@ -47,11 +46,9 @@ sealed class KomodoBuild with _$KomodoBuild {
   const factory KomodoBuild({
     @JsonKey(readValue: _readId) required String id,
     required String name,
-    @Default('') String description,
+    required BuildConfig config, required BuildInfo info, @Default('') String description,
     @Default(false) bool template,
     @Default([]) List<String> tags,
-    required BuildConfig config,
-    required BuildInfo info,
   }) = _KomodoBuild;
 
   factory KomodoBuild.fromJson(Map<String, dynamic> json) =>

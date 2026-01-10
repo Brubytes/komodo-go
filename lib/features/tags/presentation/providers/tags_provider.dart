@@ -1,10 +1,9 @@
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:fpdart/fpdart.dart';
-
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
 import 'package:komodo_go/features/tags/data/repositories/tag_repository.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'tags_provider.g.dart';
 

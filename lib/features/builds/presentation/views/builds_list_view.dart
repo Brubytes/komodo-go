@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
-
-import '../../../../core/router/app_router.dart';
-import '../providers/builds_provider.dart';
-import '../widgets/build_card.dart';
+import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
+import 'package:komodo_go/features/builds/presentation/widgets/build_card.dart';
 
 class BuildsListContent extends ConsumerWidget {
   const BuildsListContent({super.key});
@@ -54,9 +53,9 @@ class BuildsListContent extends ConsumerWidget {
           ),
         ),
         if (actionsState.isLoading)
-          Container(
+          const ColoredBox(
             color: Colors.black26,
-            child: const Center(
+            child: Center(
               child: Card(
                 child: Padding(
                   padding: EdgeInsets.all(24),
@@ -99,15 +98,15 @@ class BuildsListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const MainAppBar(
+    return const Scaffold(
+      appBar: MainAppBar(
         title: 'Builds',
         icon: AppIcons.builds,
         markColor: AppTokens.resourceBuilds,
         markUseGradient: true,
         centerTitle: true,
       ),
-      body: const BuildsListContent(),
+      body: BuildsListContent(),
     );
   }
 }
