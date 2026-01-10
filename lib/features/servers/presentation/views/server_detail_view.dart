@@ -13,7 +13,7 @@ import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_information.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
-import 'package:komodo_go/core/router/route_observer.dart';
+import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 
 /// View displaying detailed server information.
@@ -31,12 +31,10 @@ class ServerDetailView extends ConsumerStatefulWidget {
   ConsumerState<ServerDetailView> createState() => _ServerDetailViewState();
 }
 
-class _ServerDetailViewState extends ConsumerState<ServerDetailView>
-    with RouteAware, WidgetsBindingObserver {
+class _ServerDetailViewState
+    extends PollingRouteAwareState<ServerDetailView> {
   Timer? _statsRefreshTimer;
   ProviderSubscription<AsyncValue<SystemStats?>>? _statsSubscription;
-  bool _isRouteVisible = true;
-  AppLifecycleState _lifecycleState = AppLifecycleState.resumed;
 
   DateTime? _previousSampleTs;
   double? _previousIngressBytes;
@@ -49,7 +47,6 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
 
     _statsSubscription = ref.listenManual<AsyncValue<SystemStats?>>(
       serverStatsProvider(widget.serverId),
@@ -63,8 +60,6 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView>
 
   @override
   void dispose() {
-    appRouteObserver.unsubscribe(this);
-    WidgetsBinding.instance.removeObserver(this);
     _statsRefreshTimer?.cancel();
     _statsRefreshTimer = null;
     _statsSubscription?.close();
@@ -73,42 +68,10 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView>
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final route = ModalRoute.of(context);
-    if (route is PageRoute) {
-      appRouteObserver.subscribe(this, route);
-    }
-  }
-
-  @override
-  void didPush() {
-    _isRouteVisible = true;
-    setState(() {});
-  }
-
-  @override
-  void didPopNext() {
-    _isRouteVisible = true;
-    setState(() {});
-  }
-
-  @override
-  void didPushNext() {
-    _isRouteVisible = false;
-    setState(() {});
-  }
-
-  @override
-  void didPop() {
-    _isRouteVisible = false;
-    setState(() {});
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    _lifecycleState = state;
-    setState(() {});
+  void onVisibilityChanged() {
+    if (!mounted) return;
+    _syncStatsTimer(isActiveTab: ref.read(mainShellIndexProvider) == 1);
+    super.onVisibilityChanged();
   }
 
   void _startStatsTimer() {
@@ -127,11 +90,7 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView>
   }
 
   void _syncStatsTimer({required bool isActiveTab}) {
-    final shouldRefresh =
-        isActiveTab &&
-        _isRouteVisible &&
-        _lifecycleState == AppLifecycleState.resumed;
-    if (shouldRefresh) {
+    if (shouldPoll(isActiveTab: isActiveTab)) {
       _startStatsTimer();
     } else {
       _stopStatsTimer();

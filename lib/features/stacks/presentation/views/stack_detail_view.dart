@@ -9,7 +9,7 @@ import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
-import 'package:komodo_go/core/router/route_observer.dart';
+import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
@@ -32,65 +32,27 @@ class StackDetailView extends ConsumerStatefulWidget {
   ConsumerState<StackDetailView> createState() => _StackDetailViewState();
 }
 
-class _StackDetailViewState extends ConsumerState<StackDetailView>
-    with RouteAware, WidgetsBindingObserver {
+class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
   Timer? _logRefreshTimer;
   var _autoRefreshLogs = true;
-  bool _isRouteVisible = true;
-  AppLifecycleState _lifecycleState = AppLifecycleState.resumed;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
-    appRouteObserver.unsubscribe(this);
-    WidgetsBinding.instance.removeObserver(this);
     _logRefreshTimer?.cancel();
     _logRefreshTimer = null;
     super.dispose();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final route = ModalRoute.of(context);
-    if (route is PageRoute) {
-      appRouteObserver.subscribe(this, route);
-    }
-  }
-
-  @override
-  void didPush() {
-    _isRouteVisible = true;
-    setState(() {});
-  }
-
-  @override
-  void didPopNext() {
-    _isRouteVisible = true;
-    setState(() {});
-  }
-
-  @override
-  void didPushNext() {
-    _isRouteVisible = false;
-    setState(() {});
-  }
-
-  @override
-  void didPop() {
-    _isRouteVisible = false;
-    setState(() {});
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    _lifecycleState = state;
-    setState(() {});
+  void onVisibilityChanged() {
+    if (!mounted) return;
+    _syncLogPolling(isActiveTab: ref.read(mainShellIndexProvider) == 1);
+    super.onVisibilityChanged();
   }
 
   void _startLogPolling() {
@@ -109,12 +71,7 @@ class _StackDetailViewState extends ConsumerState<StackDetailView>
   }
 
   void _syncLogPolling({required bool isActiveTab}) {
-    final shouldRefresh =
-        isActiveTab &&
-        _isRouteVisible &&
-        _lifecycleState == AppLifecycleState.resumed &&
-        _autoRefreshLogs;
-    if (shouldRefresh) {
+    if (shouldPoll(isActiveTab: isActiveTab, enabled: _autoRefreshLogs)) {
       _startLogPolling();
     } else {
       _stopLogPolling();

@@ -7,7 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
 import '../../../../core/router/app_router.dart';
-import '../../../../core/router/route_observer.dart';
+import '../../../../core/router/polling_route_aware_state.dart';
 import '../../../../core/router/shell_state_provider.dart';
 import '../../../../core/widgets/main_app_bar.dart';
 import '../../../servers/data/models/server.dart';
@@ -23,11 +23,9 @@ class ContainersView extends ConsumerStatefulWidget {
   ConsumerState<ContainersView> createState() => _ContainersViewState();
 }
 
-class _ContainersViewState extends ConsumerState<ContainersView>
-    with RouteAware, WidgetsBindingObserver {
+class _ContainersViewState
+    extends PollingRouteAwareState<ContainersView> {
   Timer? _refreshTimer;
-  bool _isRouteVisible = true;
-  AppLifecycleState _lifecycleState = AppLifecycleState.resumed;
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
   ProviderSubscription<String>? _searchQuerySubscription;
@@ -36,7 +34,6 @@ class _ContainersViewState extends ConsumerState<ContainersView>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _searchController = TextEditingController(
       text: ref.read(containersSearchQueryProvider),
     );
@@ -56,18 +53,7 @@ class _ContainersViewState extends ConsumerState<ContainersView>
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final route = ModalRoute.of(context);
-    if (route is PageRoute) {
-      appRouteObserver.subscribe(this, route);
-    }
-  }
-
-  @override
   void dispose() {
-    appRouteObserver.unsubscribe(this);
-    WidgetsBinding.instance.removeObserver(this);
     _stopRefreshTimer();
     _searchQuerySubscription?.close();
     _searchQuerySubscription = null;
@@ -77,33 +63,10 @@ class _ContainersViewState extends ConsumerState<ContainersView>
   }
 
   @override
-  void didPush() {
-    _isRouteVisible = true;
-    setState(() {});
-  }
-
-  @override
-  void didPopNext() {
-    _isRouteVisible = true;
-    setState(() {});
-  }
-
-  @override
-  void didPushNext() {
-    _isRouteVisible = false;
-    setState(() {});
-  }
-
-  @override
-  void didPop() {
-    _isRouteVisible = false;
-    setState(() {});
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    _lifecycleState = state;
-    setState(() {});
+  void onVisibilityChanged() {
+    if (!mounted) return;
+    _syncRefreshTimer(isActiveTab: ref.read(mainShellIndexProvider) == 2);
+    super.onVisibilityChanged();
   }
 
   void _startRefreshTimer() {
@@ -120,11 +83,7 @@ class _ContainersViewState extends ConsumerState<ContainersView>
   }
 
   void _syncRefreshTimer({required bool isActiveTab}) {
-    final shouldRefresh =
-        isActiveTab &&
-        _isRouteVisible &&
-        _lifecycleState == AppLifecycleState.resumed;
-    if (shouldRefresh) {
+    if (shouldPoll(isActiveTab: isActiveTab)) {
       _startRefreshTimer();
     } else {
       _stopRefreshTimer();
