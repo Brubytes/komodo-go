@@ -8,6 +8,7 @@ import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
+import 'package:komodo_go/features/alerters/data/models/alerter.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
@@ -48,17 +49,16 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
   late final TextEditingController _endpointEmailController;
 
   final Set<String> _alertTypes = <String>{};
-  List<_ResourceTargetEntry> _resources = <_ResourceTargetEntry>[];
-  List<_ResourceTargetEntry> _exceptResources = <_ResourceTargetEntry>[];
+  List<AlerterResourceTarget> _resources = <AlerterResourceTarget>[];
+  List<AlerterResourceTarget> _exceptResources = <AlerterResourceTarget>[];
   List<Map<String, dynamic>> _maintenanceWindows = <Map<String, dynamic>>[];
 
   bool _initialEnabled = false;
-  String? _initialEndpointType;
-  String? _initialEndpointUrl;
-  String? _initialEndpointEmail;
+  AlerterEndpoint? _initialEndpoint;
   Set<String> _initialAlertTypes = <String>{};
-  List<_ResourceTargetEntry> _initialResources = <_ResourceTargetEntry>[];
-  List<_ResourceTargetEntry> _initialExceptResources = <_ResourceTargetEntry>[];
+  List<AlerterResourceTarget> _initialResources = <AlerterResourceTarget>[];
+  List<AlerterResourceTarget> _initialExceptResources =
+      <AlerterResourceTarget>[];
   List<Map<String, dynamic>> _initialMaintenanceWindows =
       <Map<String, dynamic>>[];
 
@@ -79,7 +79,9 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
   @override
   Widget build(BuildContext context) {
     final actionsState = ref.watch(alerterActionsProvider);
-    final alerterAsync = ref.watch(alerterJsonProvider(widget.alerterIdOrName));
+    final alerterAsync = ref.watch(
+      alerterDetailProvider(widget.alerterIdOrName),
+    );
     final resourceNameLookup = _resourceNameLookup(
       servers: _asyncListOrEmpty(ref.watch(serversProvider)),
       stacks: _asyncListOrEmpty(ref.watch(stacksProvider)),
@@ -94,9 +96,9 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     );
 
     final title = alerterAsync.maybeWhen(
-      data: (json) {
-        if (json == null) return 'Alerter';
-        final name = _alerterNameFromJson(json).trim();
+      data: (detail) {
+        if (detail == null) return 'Alerter';
+        final name = detail.name.trim();
         return name.isEmpty ? 'Alerter' : name;
       },
       orElse: () => _name.isEmpty ? 'Alerter' : _name,
@@ -122,13 +124,13 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
         error: (error, _) => _ErrorState(
           message: error.toString(),
           onRetry: () =>
-              ref.invalidate(alerterJsonProvider(widget.alerterIdOrName)),
+              ref.invalidate(alerterDetailProvider(widget.alerterIdOrName)),
         ),
-        data: (json) {
-          if (json != null) {
+        data: (detail) {
+          if (detail != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
-              _maybeLoadFromJson(json);
+              _maybeLoadFromDetail(detail);
             });
           }
 
@@ -452,58 +454,49 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     );
   }
 
-  void _maybeLoadFromJson(Map<String, dynamic> json) {
-    final updatedAt = json['updated_at']?.toString() ?? '';
-    final marker = '${widget.alerterIdOrName}::$updatedAt';
+  void _maybeLoadFromDetail(AlerterDetail detail) {
+    final marker = '${detail.id}::${detail.updatedAt}';
     if (_loadedMarker == marker) return;
     _loadedMarker = marker;
 
-    _name = _alerterNameFromJson(json);
+    _name = detail.name;
 
-    final config = json['config'];
-    if (config is! Map<String, dynamic>) return;
+    final config = detail.config;
 
-    _enabled = _toBool(config['enabled']) ?? false;
+    _enabled = config.enabled;
 
-    final endpoint = _parseEndpointConfig(config['endpoint']);
-    final nextType = endpoint.type ?? _endpointTypes.first;
+    final endpoint = config.endpoint;
+    final nextType = endpoint?.type ?? _endpointTypes.first;
     _endpointType = _endpointTypes.contains(nextType)
         ? nextType
         : _endpointTypes.first;
-    _endpointUrlController.text = endpoint.url ?? '';
-    _endpointEmailController.text = endpoint.email ?? '';
+    _endpointUrlController.text = endpoint?.url ?? '';
+    _endpointEmailController.text = endpoint?.email ?? '';
 
     _alertTypes
       ..clear()
-      ..addAll(_readStringList(config['alert_types']));
+      ..addAll(config.alertTypes);
 
-    _resources = _parseResourceTargets(config['resources']);
-    _exceptResources = _parseResourceTargets(config['except_resources']);
-    _maintenanceWindows = _parseMaintenanceWindows(
-      config['maintenance_windows'],
-    );
+    _resources = List<AlerterResourceTarget>.from(config.resources);
+    _exceptResources = List<AlerterResourceTarget>.from(config.exceptResources);
+    _maintenanceWindows =
+        config.maintenanceWindows.map(Map<String, dynamic>.from).toList();
 
     _initialEnabled = _enabled;
-    _initialEndpointType = _endpointType;
-    _initialEndpointUrl = _endpointUrlController.text;
-    _initialEndpointEmail = _endpointEmailController.text;
+    _initialEndpoint = AlerterEndpoint(
+      type: _endpointType,
+      url: _endpointUrlController.text,
+      email: _endpointEmailController.text,
+    );
     _initialAlertTypes = Set<String>.from(_alertTypes);
-    _initialResources = List<_ResourceTargetEntry>.from(_resources);
-    _initialExceptResources = List<_ResourceTargetEntry>.from(_exceptResources);
-    _initialMaintenanceWindows = _maintenanceWindows
-        .map((window) => Map<String, dynamic>.from(window))
-        .toList();
+    _initialResources = List<AlerterResourceTarget>.from(_resources);
+    _initialExceptResources = List<AlerterResourceTarget>.from(
+      _exceptResources,
+    );
+    _initialMaintenanceWindows =
+        _maintenanceWindows.map(Map<String, dynamic>.from).toList();
 
     if (mounted) setState(() {});
-  }
-
-  String _alerterNameFromJson(Map<String, dynamic> json) {
-    final nested = json['alerter'];
-    return switch (nested) {
-      Map<String, dynamic>() =>
-        (nested['name'] ?? json['name'] ?? '').toString(),
-      _ => (json['name'] ?? '').toString(),
-    };
   }
 
   Future<void> _pickAlertTypes() async {
@@ -559,22 +552,16 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
 
     final endpointUrl = _endpointUrlController.text.trim();
     final endpointEmail = _endpointEmailController.text.trim();
+    final currentEndpoint = AlerterEndpoint(
+      type: _endpointType,
+      url: endpointUrl,
+      email: endpointEmail,
+    );
 
     final config = <String, dynamic>{
       if (_enabled != _initialEnabled) 'enabled': _enabled,
-      if (_endpointChanged(
-        currentType: _endpointType,
-        initialType: _initialEndpointType,
-        currentUrl: endpointUrl,
-        initialUrl: _initialEndpointUrl,
-        currentEmail: endpointEmail,
-        initialEmail: _initialEndpointEmail,
-      ))
-        'endpoint': _buildEndpointPayload(
-          type: _endpointType,
-          url: endpointUrl,
-          email: endpointEmail,
-        ),
+      if (_endpointChanged(current: currentEndpoint, initial: _initialEndpoint))
+        'endpoint': currentEndpoint.toApiPayload(),
       if (!_setEquals(_alertTypes, _initialAlertTypes))
         'alert_types': _alertTypes.toList()..sort(),
       if (!_resourceSetsEqual(_resources, _initialResources))
@@ -606,7 +593,7 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     );
 
     if (ok) {
-      ref.invalidate(alerterJsonProvider(widget.alerterIdOrName));
+      ref.invalidate(alerterDetailProvider(widget.alerterIdOrName));
       ref.invalidate(alertersProvider);
     }
   }
@@ -704,91 +691,18 @@ const List<String> _endpointTypes = <String>[
   'Pushover',
 ];
 
-class _EndpointConfig {
-  const _EndpointConfig({
-    required this.type,
-    required this.url,
-    required this.email,
-  });
-
-  final String? type;
-  final String? url;
-  final String? email;
-}
-
-_EndpointConfig _parseEndpointConfig(Object? raw) {
-  if (raw is Map<String, dynamic>) {
-    // Expected server shape: { type: "Custom", params: { url: "..." } }
-    final type = raw['type']?.toString().trim();
-    final params = raw['params'];
-    if (params is Map) {
-      final map = Map<String, dynamic>.from(params);
-      return _EndpointConfig(
-        type: type,
-        url: map['url']?.toString(),
-        email: map['email']?.toString(),
-      );
-    }
-
-    // Alternate shape: { Custom: { url: "..." } }
-    if (raw.length == 1) {
-      final entry = raw.entries.first;
-      if (entry.value is Map) {
-        final inner = Map<String, dynamic>.from(entry.value as Map);
-        return _EndpointConfig(
-          type: entry.key,
-          url: inner['url']?.toString(),
-          email: inner['email']?.toString(),
-        );
-      }
-    }
-  }
-
-  return const _EndpointConfig(type: null, url: null, email: null);
-}
-
-class _ResourceTargetEntry {
-  const _ResourceTargetEntry({
-    required this.variant,
-    required this.value,
-    this.name,
-  });
-
-  final String variant;
-  final String value;
-  final String? name;
-
-  String get key => '${variant.toLowerCase()}:$value';
-
-  Map<String, dynamic> toJson() => <String, dynamic>{
-        'type': variant,
-        'id': value,
-      };
-}
+typedef _ResourceTargetEntry = AlerterResourceTarget;
 
 bool _endpointChanged({
-  required String currentType,
-  required String? initialType,
-  required String currentUrl,
-  required String? initialUrl,
-  required String currentEmail,
-  required String? initialEmail,
+  required AlerterEndpoint current,
+  required AlerterEndpoint? initial,
 }) {
-  return currentType != initialType ||
-      currentUrl != (initialUrl ?? '') ||
-      currentEmail != (initialEmail ?? '');
-}
-
-Map<String, dynamic> _buildEndpointPayload({
-  required String type,
-  required String url,
-  required String email,
-}) {
-  final params = <String, dynamic>{'url': url};
-  if (type == 'Ntfy' && email.isNotEmpty) {
-    params['email'] = email;
-  }
-  return <String, dynamic>{type: params};
+  final initialType = initial?.type ?? '';
+  final initialUrl = initial?.url ?? '';
+  final initialEmail = initial?.email ?? '';
+  return current.type != initialType ||
+      (current.url ?? '') != initialUrl ||
+      (current.email ?? '') != initialEmail;
 }
 
 bool _resourceSetsEqual(
@@ -879,54 +793,7 @@ class _ResourceOption {
   String get key => '${variant.toLowerCase()}:$id';
 
   _ResourceTargetEntry toEntry() =>
-      _ResourceTargetEntry(variant: variant, value: id, name: name);
-}
-
-List<_ResourceTargetEntry> _parseResourceTargets(Object? raw) {
-  if (raw is! List) return const <_ResourceTargetEntry>[];
-
-  final out = <_ResourceTargetEntry>[];
-  for (final e in raw) {
-    if (e is Map && e.length == 1) {
-      final entry = e.entries.first;
-      final k = entry.key?.toString();
-      final v = entry.value?.toString();
-      if (k != null &&
-          v != null &&
-          k.trim().isNotEmpty &&
-          v.trim().isNotEmpty) {
-        out.add(_ResourceTargetEntry(variant: k.trim(), value: v.trim()));
-      }
-      continue;
-    }
-    if (e is Map) {
-      final type = e['type']?.toString();
-      final id = e['id']?.toString();
-      if (type != null &&
-          id != null &&
-          type.trim().isNotEmpty &&
-          id.trim().isNotEmpty) {
-        out.add(_ResourceTargetEntry(variant: type.trim(), value: id.trim()));
-      }
-    }
-  }
-  return out;
-}
-
-List<Map<String, dynamic>> _parseMaintenanceWindows(Object? raw) {
-  if (raw is! List) return const <Map<String, dynamic>>[];
-  final out = <Map<String, dynamic>>[];
-  for (final e in raw) {
-    if (e is Map) out.add(Map<String, dynamic>.from(e));
-  }
-  return out;
-}
-
-List<String> _readStringList(Object? v) {
-  if (v is List) {
-    return v.map((e) => e?.toString()).whereType<String>().toList();
-  }
-  return const <String>[];
+      AlerterResourceTarget(variant: variant, value: id, name: name);
 }
 
 List<T> _asyncListOrEmpty<T>(AsyncValue<List<T>> async) {

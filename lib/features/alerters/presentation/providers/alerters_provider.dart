@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/features/alerters/data/models/alerter.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/data/repositories/alerter_repository.dart';
 
@@ -28,19 +29,19 @@ class Alerters extends _$Alerters {
 }
 
 @riverpod
-Future<Map<String, dynamic>?> alerterJson(
+Future<AlerterDetail?> alerterDetail(
   Ref ref,
   String alerterIdOrName,
 ) async {
   final repository = ref.watch(alerterRepositoryProvider);
   if (repository == null) return null;
 
-  final result = await repository.getAlerterJson(
+  final result = await repository.getAlerterDetail(
     alerterIdOrName: alerterIdOrName,
   );
   return result.fold(
     (failure) => throw Exception(failure.displayMessage),
-    (json) => json,
+    (detail) => detail,
   );
 }
 

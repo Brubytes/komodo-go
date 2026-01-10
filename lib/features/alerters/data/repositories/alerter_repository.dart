@@ -5,6 +5,7 @@ import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:komodo_go/features/alerters/data/models/alerter.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 
 part 'alerter_repository.g.dart';
@@ -45,7 +46,7 @@ class AlerterRepository {
     }
   }
 
-  Future<Either<Failure, Map<String, dynamic>>> getAlerterJson({
+  Future<Either<Failure, AlerterDetail>> getAlerterDetail({
     required String alerterIdOrName,
   }) async {
     try {
@@ -56,7 +57,9 @@ class AlerterRepository {
         ),
       );
 
-      return Right(response as Map<String, dynamic>);
+      return Right(
+        AlerterDetail.fromApiJson(response as Map<String, dynamic>),
+      );
     } on ApiException catch (e) {
       if (e.isUnauthorized) return const Left(Failure.auth());
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
