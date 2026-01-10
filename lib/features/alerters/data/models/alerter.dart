@@ -1,12 +1,17 @@
-import 'package:flutter/foundation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-class AlerterDetail {
-  const AlerterDetail({
-    required this.id,
-    required this.name,
-    required this.updatedAt,
-    required this.config,
-  });
+part 'alerter.freezed.dart';
+
+@freezed
+sealed class AlerterDetail with _$AlerterDetail {
+  const factory AlerterDetail({
+    required String id,
+    required String name,
+    required String updatedAt,
+    required AlerterConfig config,
+  }) = _AlerterDetail;
+
+  const AlerterDetail._();
 
   factory AlerterDetail.fromApiJson(Map<String, dynamic> json) {
     final nested = json['alerter'];
@@ -26,22 +31,20 @@ class AlerterDetail {
       config: AlerterConfig.fromApiMap(configMap),
     );
   }
-
-  final String id;
-  final String name;
-  final String updatedAt;
-  final AlerterConfig config;
 }
 
-class AlerterConfig {
-  const AlerterConfig({
-    required this.enabled,
-    required this.endpoint,
-    required this.alertTypes,
-    required this.resources,
-    required this.exceptResources,
-    required this.maintenanceWindows,
-  });
+@freezed
+sealed class AlerterConfig with _$AlerterConfig {
+  const factory AlerterConfig({
+    @Default(false) bool enabled,
+    AlerterEndpoint? endpoint,
+    @Default([]) List<String> alertTypes,
+    @Default([]) List<AlerterResourceTarget> resources,
+    @Default([]) List<AlerterResourceTarget> exceptResources,
+    @Default([]) List<AlerterMaintenanceWindow> maintenanceWindows,
+  }) = _AlerterConfig;
+
+  const AlerterConfig._();
 
   factory AlerterConfig.fromApiMap(Map<String, dynamic> map) {
     final enabled = _toBool(map['enabled']) ?? false;
@@ -56,21 +59,17 @@ class AlerterConfig {
       ),
     );
   }
-
-  final bool enabled;
-  final AlerterEndpoint? endpoint;
-  final List<String> alertTypes;
-  final List<AlerterResourceTarget> resources;
-  final List<AlerterResourceTarget> exceptResources;
-  final List<AlerterMaintenanceWindow> maintenanceWindows;
 }
 
-class AlerterEndpoint {
-  const AlerterEndpoint({required this.type, this.url, this.email});
+@freezed
+sealed class AlerterEndpoint with _$AlerterEndpoint {
+  const factory AlerterEndpoint({
+    required String type,
+    String? url,
+    String? email,
+  }) = _AlerterEndpoint;
 
-  final String type;
-  final String? url;
-  final String? email;
+  const AlerterEndpoint._();
 
   static AlerterEndpoint? fromApi(Object? raw) {
     if (raw is Map<String, dynamic>) {
@@ -109,16 +108,15 @@ class AlerterEndpoint {
   }
 }
 
-class AlerterResourceTarget {
-  const AlerterResourceTarget({
-    required this.variant,
-    required this.value,
-    this.name,
-  });
+@freezed
+sealed class AlerterResourceTarget with _$AlerterResourceTarget {
+  const factory AlerterResourceTarget({
+    required String variant,
+    required String value,
+    String? name,
+  }) = _AlerterResourceTarget;
 
-  final String variant;
-  final String value;
-  final String? name;
+  const AlerterResourceTarget._();
 
   String get key => '${variant.toLowerCase()}:$value';
 
@@ -126,14 +124,6 @@ class AlerterResourceTarget {
     'type': variant,
     'id': value,
   };
-
-  AlerterResourceTarget copyWith({String? name}) {
-    return AlerterResourceTarget(
-      variant: variant,
-      value: value,
-      name: name ?? this.name,
-    );
-  }
 
   static List<AlerterResourceTarget> parseList(Object? raw) {
     if (raw is! List) return const <AlerterResourceTarget>[];
@@ -169,20 +159,22 @@ class AlerterResourceTarget {
   }
 }
 
-@immutable
-class AlerterMaintenanceWindow {
-  const AlerterMaintenanceWindow({
-    required this.name,
-    required this.description,
-    required this.scheduleType,
-    required this.dayOfWeek,
-    required this.date,
-    required this.hour,
-    required this.minute,
-    required this.durationMinutes,
-    required this.timezone,
-    required this.enabled,
-  });
+@freezed
+sealed class AlerterMaintenanceWindow with _$AlerterMaintenanceWindow {
+  const factory AlerterMaintenanceWindow({
+    @Default('') String name,
+    @Default('') String description,
+    @Default('') String scheduleType,
+    @Default('') String dayOfWeek,
+    @Default('') String date,
+    @Default(0) int hour,
+    @Default(0) int minute,
+    @Default(60) int durationMinutes,
+    @Default('UTC') String timezone,
+    @Default(true) bool enabled,
+  }) = _AlerterMaintenanceWindow;
+
+  const AlerterMaintenanceWindow._();
 
   factory AlerterMaintenanceWindow.fromApiMap(Map<String, dynamic> map) {
     return AlerterMaintenanceWindow(
@@ -199,17 +191,6 @@ class AlerterMaintenanceWindow {
     );
   }
 
-  final String name;
-  final String description;
-  final String scheduleType;
-  final String dayOfWeek;
-  final String date;
-  final int hour;
-  final int minute;
-  final int durationMinutes;
-  final String timezone;
-  final bool enabled;
-
   Map<String, dynamic> toApiMap() => <String, dynamic>{
     'name': name,
     'description': description,
@@ -223,32 +204,6 @@ class AlerterMaintenanceWindow {
     'enabled': enabled,
   };
 
-  AlerterMaintenanceWindow copyWith({
-    String? name,
-    String? description,
-    String? scheduleType,
-    String? dayOfWeek,
-    String? date,
-    int? hour,
-    int? minute,
-    int? durationMinutes,
-    String? timezone,
-    bool? enabled,
-  }) {
-    return AlerterMaintenanceWindow(
-      name: name ?? this.name,
-      description: description ?? this.description,
-      scheduleType: scheduleType ?? this.scheduleType,
-      dayOfWeek: dayOfWeek ?? this.dayOfWeek,
-      date: date ?? this.date,
-      hour: hour ?? this.hour,
-      minute: minute ?? this.minute,
-      durationMinutes: durationMinutes ?? this.durationMinutes,
-      timezone: timezone ?? this.timezone,
-      enabled: enabled ?? this.enabled,
-    );
-  }
-
   static List<AlerterMaintenanceWindow> parseList(Object? raw) {
     if (raw is! List) return const <AlerterMaintenanceWindow>[];
     final out = <AlerterMaintenanceWindow>[];
@@ -261,35 +216,6 @@ class AlerterMaintenanceWindow {
     }
     return out;
   }
-
-  @override
-  bool operator ==(Object other) {
-    return other is AlerterMaintenanceWindow &&
-        other.name == name &&
-        other.description == description &&
-        other.scheduleType == scheduleType &&
-        other.dayOfWeek == dayOfWeek &&
-        other.date == date &&
-        other.hour == hour &&
-        other.minute == minute &&
-        other.durationMinutes == durationMinutes &&
-        other.timezone == timezone &&
-        other.enabled == enabled;
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    name,
-    description,
-    scheduleType,
-    dayOfWeek,
-    date,
-    hour,
-    minute,
-    durationMinutes,
-    timezone,
-    enabled,
-  );
 }
 
 List<String> _readStringList(Object? v) {
