@@ -71,6 +71,38 @@ class ContainerRepository {
       return ContainerLog.fromJson(response as Map<String, dynamic>);
     });
   }
+
+  /// Stops a docker container on the target server.
+  Future<Either<Failure, void>> stopContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) async {
+    return _executeAction(
+      'StopContainer',
+      {'server': serverIdOrName, 'container': containerIdOrName},
+    );
+  }
+
+  /// Restarts a docker container on the target server.
+  Future<Either<Failure, void>> restartContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) async {
+    return _executeAction(
+      'RestartContainer',
+      {'server': serverIdOrName, 'container': containerIdOrName},
+    );
+  }
+
+  Future<Either<Failure, void>> _executeAction(
+    String actionType,
+    Map<String, dynamic> params,
+  ) async {
+    return apiCall(() async {
+      await _client.execute(RpcRequest(type: actionType, params: params));
+      return;
+    });
+  }
 }
 
 @riverpod

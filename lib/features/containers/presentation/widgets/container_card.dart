@@ -4,15 +4,17 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 
 class ContainerCard extends StatelessWidget {
-  const ContainerCard({required this.item, this.onTap, super.key});
+  const ContainerCard({required this.item, this.onTap, this.onAction, super.key});
 
   final ContainerOverviewItem item;
   final VoidCallback? onTap;
+  final void Function(ContainerAction action)? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +35,8 @@ class ContainerCard extends StatelessWidget {
     final neutralPillBg = scheme.surfaceContainerHigh.withValues(
       alpha: isDark ? 0.70 : 0.90,
     );
+
+    final hasActions = _hasActions(item.container.state);
 
     return DetailSurface(
       padding: EdgeInsets.zero,
@@ -61,7 +65,14 @@ class ContainerCard extends StatelessWidget {
                       ),
                     ),
                     const Gap(12),
-                    _StateChip(state: item.container.state, color: stateColor),
+                    _StateChip(
+                      state: item.container.state,
+                      color: stateColor,
+                      showMenu: onAction != null && hasActions,
+                      onAction: onAction,
+                      itemsBuilder: (context) =>
+                          _buildMenuItems(context, item.container.state),
+                    ),
                   ],
                 ),
                 const Gap(12),
@@ -136,6 +147,62 @@ class ContainerCard extends StatelessWidget {
       ),
     );
   }
+
+  bool _hasActions(ContainerState state) {
+    final canStop =
+        state == ContainerState.running ||
+        state == ContainerState.paused ||
+        state == ContainerState.restarting;
+    final canRestart =
+        state == ContainerState.running ||
+        state == ContainerState.paused ||
+        state == ContainerState.restarting ||
+        state == ContainerState.exited ||
+        state == ContainerState.created;
+    return canStop || canRestart;
+  }
+
+  List<PopupMenuEntry<ContainerAction>> _buildMenuItems(
+    BuildContext context,
+    ContainerState state,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final items = <PopupMenuEntry<ContainerAction>>[];
+
+    final canStop =
+        state == ContainerState.running ||
+        state == ContainerState.paused ||
+        state == ContainerState.restarting;
+    final canRestart =
+        state == ContainerState.running ||
+        state == ContainerState.paused ||
+        state == ContainerState.restarting ||
+        state == ContainerState.exited ||
+        state == ContainerState.created;
+
+    if (canRestart) {
+      items.add(
+        komodoPopupMenuItem(
+          value: ContainerAction.restart,
+          icon: AppIcons.refresh,
+          label: 'Restart',
+          iconColor: scheme.primary,
+        ),
+      );
+    }
+    if (canStop) {
+      items.add(
+        komodoPopupMenuItem(
+          value: ContainerAction.stop,
+          icon: AppIcons.stop,
+          label: 'Stop',
+          iconColor: scheme.tertiary,
+        ),
+      );
+    }
+
+    return items;
+  }
 }
 
 class _LeadingIcon extends StatelessWidget {
@@ -161,10 +228,20 @@ class _LeadingIcon extends StatelessWidget {
 }
 
 class _StateChip extends StatelessWidget {
-  const _StateChip({required this.state, required this.color});
+  const _StateChip({
+    required this.state,
+    required this.color,
+    required this.showMenu,
+    this.onAction,
+    this.itemsBuilder,
+  });
 
   final ContainerState state;
   final Color color;
+  final bool showMenu;
+  final void Function(ContainerAction action)? onAction;
+  final List<PopupMenuEntry<ContainerAction>> Function(BuildContext context)?
+  itemsBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -179,22 +256,41 @@ class _StateChip extends StatelessWidget {
       ContainerState.unknown => 'UNKNOWN',
     };
 
-    return DecoratedBox(
+    final chip = DecoratedBox(
       decoration: ShapeDecoration(
         color: color.withValues(alpha: 0.18),
         shape: const StadiumBorder(),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.5,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+              ),
+            ),
+            if (showMenu) ...[
+              const Gap(6),
+              Icon(AppIcons.moreVertical, size: 14, color: color),
+            ],
+          ],
         ),
       ),
+    );
+
+    if (!showMenu || onAction == null || itemsBuilder == null) {
+      return chip;
+    }
+
+    return PopupMenuButton<ContainerAction>(
+      onSelected: onAction,
+      itemBuilder: itemsBuilder!,
+      child: chip,
     );
   }
 }
@@ -391,3 +487,6 @@ String _formatPorts(List<ContainerPort> ports) {
   if (values.isEmpty) return '';
   return values.take(6).join(' • ') + (values.length > 6 ? '…' : '');
 }
+
+/// Actions available for a container.
+enum ContainerAction { restart, stop }

@@ -1,3 +1,4 @@
+import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
@@ -147,5 +148,62 @@ class Containers extends _$Containers {
     try {
       await future;
     } catch (_) {}
+  }
+}
+
+/// Action state for container operations.
+@riverpod
+class ContainerActions extends _$ContainerActions {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  Future<bool> stop({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) {
+    return _executeAction(
+      (repo) => repo.stopContainer(
+        serverIdOrName: serverIdOrName,
+        containerIdOrName: containerIdOrName,
+      ),
+    );
+  }
+
+  Future<bool> restart({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) {
+    return _executeAction(
+      (repo) => repo.restartContainer(
+        serverIdOrName: serverIdOrName,
+        containerIdOrName: containerIdOrName,
+      ),
+    );
+  }
+
+  Future<bool> _executeAction(
+    Future<Either<Failure, void>> Function(ContainerRepository repo) action,
+  ) async {
+    final repository = ref.read(containerRepositoryProvider);
+    if (repository == null) {
+      state = AsyncValue.error('Not authenticated', StackTrace.current);
+      return false;
+    }
+
+    state = const AsyncValue.loading();
+
+    final result = await action(repository);
+
+    return result.fold(
+      (failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return false;
+      },
+      (_) {
+        state = const AsyncValue.data(null);
+        ref.invalidate(containersProvider);
+        return true;
+      },
+    );
   }
 }

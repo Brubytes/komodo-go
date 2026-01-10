@@ -66,3 +66,5 @@ coverage/
 *.ipa
 *.dSYM.zip
 *.dSYM
+
+opencode.json
