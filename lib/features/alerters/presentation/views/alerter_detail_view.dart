@@ -3,31 +3,23 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
-import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
-import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/alerter_detail_sections.dart';
+import 'package:komodo_go/shared/resources/resource_helpers.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/alert_types_picker_sheet.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/resource_targets_editor_sheet.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/maintenance_windows_editor_sheet.dart';
-import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
-import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
-import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
-import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
-import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
-import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
-import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
-import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
 
 class AlerterDetailView extends ConsumerStatefulWidget {
@@ -85,7 +77,7 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     final alerterAsync = ref.watch(
       alerterDetailProvider(widget.alerterIdOrName),
     );
-    final resourceNameLookup = _resourceNameLookup(
+    final resourceNameLookupMap = resourceNameLookup(
       servers: _asyncListOrEmpty(ref.watch(serversProvider)),
       stacks: _asyncListOrEmpty(ref.watch(stacksProvider)),
       deployments: _asyncListOrEmpty(ref.watch(deploymentsProvider)),
@@ -124,7 +116,8 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
       ),
       body: alerterAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _ErrorState(
+        error: (error, _) => ErrorStateView(
+          title: 'Failed to load alerter',
           message: error.toString(),
           onRetry: () =>
               ref.invalidate(alerterDetailProvider(widget.alerterIdOrName)),
@@ -143,16 +136,16 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
           final resourcePills = _resources
               .map(
                 (entry) => PillData(
-                  _resourceLabel(entry, resourceNameLookup),
-                  _resourceIcon(entry.variant),
+                  resourceLabel(entry, resourceNameLookupMap),
+                  resourceIcon(entry.variant),
                 ),
               )
               .toList();
           final exceptPills = _exceptResources
               .map(
                 (entry) => PillData(
-                  _resourceLabel(entry, resourceNameLookup),
-                  _resourceIcon(entry.variant),
+                  resourceLabel(entry, resourceNameLookupMap),
+                  resourceIcon(entry.variant),
                 ),
               )
               .toList();
@@ -382,41 +375,6 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
   }
 }
 
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Gap(48),
-        Icon(AppIcons.formError, size: 64, color: scheme.error),
-        const Gap(16),
-        Text(
-          'Failed to load alerter',
-          style: Theme.of(context).textTheme.titleMedium,
-          textAlign: TextAlign.center,
-        ),
-        const Gap(8),
-        Text(
-          message,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: scheme.onSurface.withValues(alpha: 0.7),
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const Gap(24),
-        FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
-      ],
-    );
-  }
-}
-
 const List<String> _endpointTypes = <String>[
   'Custom',
   'Slack',
@@ -476,135 +434,4 @@ String _humanizeEnum(String v) {
   return out.replaceAll('_', ' ').trim();
 }
 
-String _shortId(String value) {
-  final trimmed = value.trim();
-  if (trimmed.length <= 10) return trimmed;
-  final start = trimmed.substring(0, 6);
-  final end = trimmed.substring(trimmed.length - 4);
-  return '$start...$end';
-}
-
-String _resourceLabel(
-  _ResourceTargetEntry entry,
-  Map<String, String> lookup,
-) {
-  final directName = entry.name?.trim();
-  if (directName != null && directName.isNotEmpty) {
-    return directName;
-  }
-  final lookupName = lookup[entry.key];
-  if (lookupName != null && lookupName.trim().isNotEmpty) {
-    return lookupName.trim();
-  }
-  return '${entry.variant} ${_shortId(entry.value)}';
-}
-
-IconData _resourceIcon(String variant) {
-  final normalized = variant.trim().toLowerCase();
-  return switch (normalized) {
-    'system' => AppIcons.server,
-    'server' => AppIcons.server,
-    'stack' => AppIcons.stacks,
-    'deployment' => AppIcons.deployments,
-    'build' => AppIcons.builds,
-    'repo' => AppIcons.repos,
-    'procedure' => AppIcons.procedures,
-    'action' => AppIcons.actions,
-    'resourcesync' => AppIcons.syncs,
-    'builder' => AppIcons.factory,
-    'alerter' => AppIcons.notifications,
-    _ => AppIcons.widgets,
-  };
-}
-
-Map<String, String> _resourceNameLookup({
-  required List<Server> servers,
-  required List<StackListItem> stacks,
-  required List<Deployment> deployments,
-  required List<BuildListItem> builds,
-  required List<RepoListItem> repos,
-  required List<ProcedureListItem> procedures,
-  required List<ActionListItem> actions,
-  required List<ResourceSyncListItem> syncs,
-  required List<BuilderListItem> builders,
-  required List<AlerterListItem> alerters,
-}) {
-  final out = <String, String>{};
-
-  void addAll<T>({
-    required String variant,
-    required List<T> items,
-    required String Function(T item) getId,
-    required String Function(T item) getName,
-  }) {
-    for (final item in items) {
-      final id = getId(item).trim();
-      final name = getName(item).trim();
-      if (id.isEmpty || name.isEmpty) continue;
-      out['${variant.toLowerCase()}:$id'] = name;
-    }
-  }
-
-  addAll<Server>(
-    variant: 'Server',
-    items: servers,
-    getId: (item) => item.id,
-    getName: (item) => item.name,
-  );
-  addAll<StackListItem>(
-    variant: 'Stack',
-    items: stacks,
-    getId: (item) => item.id,
-    getName: (item) => item.name,
-  );
-  addAll<Deployment>(
-    variant: 'Deployment',
-    items: deployments,
-    getId: (item) => item.id,
-    getName: (item) => item.name,
-  );
-  addAll<BuildListItem>(
-    variant: 'Build',
-    items: builds,
-    getId: (item) => item.id,
-    getName: (item) => item.name,
-  );
-  addAll<RepoListItem>(
-    variant: 'Repo',
-    items: repos,
-    getId: (item) => item.id,
-    getName: (item) => item.name,
-  );
-  addAll<ProcedureListItem>(
-    variant: 'Procedure',
-    items: procedures,
-    getId: (item) => item.id,
-    getName: (item) => item.name,
-  );
-  addAll<ActionListItem>(
-    variant: 'Action',
-    items: actions,
-    getId: (item) => item.id,
-    getName: (item) => item.name,
-  );
-  addAll<ResourceSyncListItem>(
-    variant: 'ResourceSync',
-    items: syncs,
-    getId: (item) => item.id,
-    getName: (item) => item.name,
-  );
-  addAll<BuilderListItem>(
-    variant: 'Builder',
-    items: builders,
-    getId: (item) => item.id,
-    getName: (item) => item.name,
-  );
-  addAll<AlerterListItem>(
-    variant: 'Alerter',
-    items: alerters,
-    getId: (item) => item.id,
-    getName: (item) => item.name,
-  );
-
-  return out;
-}
+// resource helpers moved to alerter_detail_helpers.dart
