@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/error/failures.dart';
+import '../../../../core/error/provider_error.dart';
 import '../../data/models/procedure.dart';
 import '../../data/repositories/procedure_repository.dart';
 
@@ -19,10 +20,7 @@ class Procedures extends _$Procedures {
 
     final result = await repository.listProcedures();
 
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (procedures) => procedures,
-    );
+    return unwrapOrThrow(result);
   }
 
   /// Refreshes the procedures list.
@@ -42,10 +40,7 @@ Future<KomodoProcedure?> procedureDetail(Ref ref, String procedureIdOrName) asyn
 
   final result = await repository.getProcedure(procedureIdOrName);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (procedure) => procedure,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Action state for procedure operations.
@@ -83,4 +78,3 @@ class ProcedureActions extends _$ProcedureActions {
     );
   }
 }
-

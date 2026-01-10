@@ -1,4 +1,4 @@
-import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/repositories/notifications_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -39,10 +39,8 @@ class Alerts extends _$Alerts {
     }
 
     final result = await repository.listAlerts(page: 0);
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (page) => AlertsState(items: page.alerts, nextPage: page.nextPage),
-    );
+    final page = unwrapOrThrow(result);
+    return AlertsState(items: page.alerts, nextPage: page.nextPage);
   }
 
   Future<void> refresh() async {

@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/error/failures.dart';
+import '../../../../core/error/provider_error.dart';
 import '../../data/models/sync.dart';
 import '../../data/repositories/sync_repository.dart';
 
@@ -19,10 +20,7 @@ class Syncs extends _$Syncs {
 
     final result = await repository.listSyncs();
 
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (syncs) => syncs,
-    );
+    return unwrapOrThrow(result);
   }
 
   /// Refreshes the syncs list.
@@ -42,10 +40,7 @@ Future<KomodoResourceSync?> syncDetail(Ref ref, String syncIdOrName) async {
 
   final result = await repository.getSync(syncIdOrName);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (sync) => sync,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Action state for sync operations.

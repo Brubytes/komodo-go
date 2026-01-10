@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/variables/data/models/variable.dart';
 import 'package:komodo_go/features/variables/data/repositories/variable_repository.dart';
 
@@ -15,10 +16,7 @@ class Variables extends _$Variables {
     if (repository == null) return [];
 
     final result = await repository.listVariables();
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (variables) => variables,
-    );
+    return unwrapOrThrow(result);
   }
 
   Future<void> refresh() async {

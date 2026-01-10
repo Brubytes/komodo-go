@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/data/repositories/alerter_repository.dart';
@@ -16,10 +17,9 @@ class Alerters extends _$Alerters {
     if (repository == null) return [];
 
     final result = await repository.listAlerters();
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (items) => items..sort((a, b) => a.name.compareTo(b.name)),
-    );
+    final items = unwrapOrThrow(result);
+    items.sort((a, b) => a.name.compareTo(b.name));
+    return items;
   }
 
   Future<void> refresh() async {
@@ -39,10 +39,7 @@ Future<AlerterDetail?> alerterDetail(
   final result = await repository.getAlerterDetail(
     alerterIdOrName: alerterIdOrName,
   );
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (detail) => detail,
-  );
+  return unwrapOrThrow(result);
 }
 
 @riverpod

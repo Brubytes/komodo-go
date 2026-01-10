@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:fpdart/fpdart.dart';
 
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
 import 'package:komodo_go/features/tags/data/repositories/tag_repository.dart';
 
@@ -15,10 +16,9 @@ class Tags extends _$Tags {
     if (repository == null) return [];
 
     final result = await repository.listTags();
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (tags) => tags..sort((a, b) => a.name.compareTo(b.name)),
-    );
+    final tags = unwrapOrThrow(result);
+    tags.sort((a, b) => a.name.compareTo(b.name));
+    return tags;
   }
 
   Future<void> refresh() async {
@@ -113,4 +113,3 @@ class TagActions extends _$TagActions {
     );
   }
 }
-

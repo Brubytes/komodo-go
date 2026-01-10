@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../../core/error/failures.dart';
+import '../../../../core/error/provider_error.dart';
 import '../../data/models/container_log.dart';
 import '../../data/repositories/container_repository.dart';
 
@@ -20,8 +20,5 @@ Future<ContainerLog?> containerLog(
     containerIdOrName: containerIdOrName,
   );
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (log) => log,
-  );
+  return unwrapOrThrow(result);
 }

@@ -1,8 +1,9 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../core/api/api_call.dart';
 import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_exception.dart';
+import '../../../../core/api/query_templates.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/providers/dio_provider.dart';
 import '../../../../core/utils/debug_log.dart';
@@ -16,65 +17,49 @@ class RepoRepository {
 
   final KomodoApiClient _client;
 
-  static const Map<String, dynamic> _emptyRepoQuery = <String, dynamic>{
-    'names': <String>[],
-    'templates': 'Include',
-    'tags': <String>[],
-    'tag_behavior': 'All',
-    'specific': <String, dynamic>{'repos': <String>[]},
-  };
-
   /// Lists all repos.
   Future<Either<Failure, List<RepoListItem>>> listRepos() async {
-    try {
-      final response = await _client.read(
-        const RpcRequest(
-          type: 'ListRepos',
-          params: <String, dynamic>{'query': _emptyRepoQuery},
-        ),
-      );
+    return apiCall(
+      () async {
+        final response = await _client.read(
+          RpcRequest(
+            type: 'ListRepos',
+            params: <String, dynamic>{
+              'query': emptyQuery(specific: <String, dynamic>{'repos': <String>[]}),
+            },
+          ),
+        );
 
-      final reposJson = response as List<dynamic>? ?? [];
-      final repos = reposJson
-          .map((json) => RepoListItem.fromJson(json as Map<String, dynamic>))
-          .toList();
-
-      return Right(repos);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e, stackTrace) {
-      debugLog(
-        'Error parsing repos',
-        name: 'API',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      return Left(Failure.unknown(message: e.toString()));
-    }
+        final reposJson = response as List<dynamic>? ?? [];
+        return reposJson
+            .map((json) => RepoListItem.fromJson(json as Map<String, dynamic>))
+            .toList();
+      },
+      onUnknown: (error) {
+        debugLog('Error parsing repos', name: 'API', error: error);
+        return Failure.unknown(message: error.toString());
+      },
+    );
   }
 
   /// Gets a specific repo by ID or name.
   Future<Either<Failure, KomodoRepo>> getRepo(String repoIdOrName) async {
-    try {
-      final response = await _client.read(
-        RpcRequest(type: 'GetRepo', params: {'repo': repoIdOrName}),
-      );
+    return apiCall(
+      () async {
+        final response = await _client.read(
+          RpcRequest(type: 'GetRepo', params: {'repo': repoIdOrName}),
+        );
 
-      return Right(KomodoRepo.fromJson(response as Map<String, dynamic>));
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      if (e.isNotFound) {
-        return const Left(Failure.server(message: 'Repo not found'));
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+        return KomodoRepo.fromJson(response as Map<String, dynamic>);
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
+        if (e.isNotFound) {
+          return const Failure.server(message: 'Repo not found');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+    );
   }
 
   /// Clones the target repo on its server.
@@ -96,17 +81,12 @@ class RepoRepository {
     String actionType,
     Map<String, dynamic> params,
   ) async {
-    try {
-      await _client.execute(RpcRequest(type: actionType, params: params));
-      return const Right(null);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+    return apiCall(
+      () async {
+        await _client.execute(RpcRequest(type: actionType, params: params));
+        return null;
+      },
+    );
   }
 }
 

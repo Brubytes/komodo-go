@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/api/api_client.dart';
+import '../../../../core/api/api_call.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/providers/dio_provider.dart';
@@ -21,36 +22,32 @@ class ContainerRepository {
   Future<Either<Failure, List<ContainerListItem>>> listDockerContainers(
     String serverIdOrName,
   ) async {
-    try {
-      final response = await _client.read(
-        RpcRequest(
-          type: 'ListDockerContainers',
-          params: {'server': serverIdOrName},
-        ),
-      );
+    return apiCall(() async {
+      try {
+        final response = await _client.read(
+          RpcRequest(
+            type: 'ListDockerContainers',
+            params: {'server': serverIdOrName},
+          ),
+        );
 
-      final itemsJson = response as List<dynamic>? ?? [];
-      final items = itemsJson
-          .map(
-            (json) => ContainerListItem.fromJson(json as Map<String, dynamic>),
-          )
-          .toList();
-
-      return Right(items);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
+        final itemsJson = response as List<dynamic>? ?? [];
+        return itemsJson
+            .map(
+              (json) => ContainerListItem.fromJson(json as Map<String, dynamic>),
+            )
+            .toList();
+      } catch (e, stackTrace) {
+        if (e is ApiException) rethrow;
+        debugLog(
+          'Error parsing containers',
+          name: 'API',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        rethrow;
       }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e, stackTrace) {
-      debugLog(
-        'Error parsing containers',
-        name: 'API',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      return Left(Failure.unknown(message: e.toString()));
-    }
+    });
   }
 
   Future<Either<Failure, ContainerLog>> getContainerLog({
@@ -59,7 +56,7 @@ class ContainerRepository {
     int tail = 200,
     bool timestamps = false,
   }) async {
-    try {
+    return apiCall(() async {
       final response = await _client.read(
         RpcRequest(
           type: 'GetContainerLog',
@@ -72,15 +69,8 @@ class ContainerRepository {
         ),
       );
 
-      return Right(ContainerLog.fromJson(response as Map<String, dynamic>));
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+      return ContainerLog.fromJson(response as Map<String, dynamic>);
+    });
   }
 }
 

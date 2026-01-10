@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/error/failures.dart';
+import '../../../../core/error/provider_error.dart';
 import '../../data/models/build.dart';
 import '../../data/repositories/build_repository.dart';
 
@@ -19,10 +20,7 @@ class Builds extends _$Builds {
 
     final result = await repository.listBuilds();
 
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (builds) => builds,
-    );
+    return unwrapOrThrow(result);
   }
 
   /// Refreshes the builds list.
@@ -42,10 +40,7 @@ Future<KomodoBuild?> buildDetail(Ref ref, String buildIdOrName) async {
 
   final result = await repository.getBuild(buildIdOrName);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (build) => build,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Action state for build operations.

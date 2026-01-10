@@ -1,8 +1,9 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../core/api/api_call.dart';
 import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_exception.dart';
+import '../../../../core/api/query_templates.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/providers/dio_provider.dart';
 import '../../../../core/utils/debug_log.dart';
@@ -16,89 +17,70 @@ class ProcedureRepository {
 
   final KomodoApiClient _client;
 
-  static const Map<String, dynamic> _emptyProcedureQuery = <String, dynamic>{
-    'names': <String>[],
-    'templates': 'Include',
-    'tags': <String>[],
-    'tag_behavior': 'All',
-    'specific': <String, dynamic>{},
-  };
-
   /// Lists all procedures.
   Future<Either<Failure, List<ProcedureListItem>>> listProcedures() async {
-    try {
-      final response = await _client.read(
-        const RpcRequest(
-          type: 'ListProcedures',
-          params: <String, dynamic>{'query': _emptyProcedureQuery},
-        ),
-      );
+    return apiCall(
+      () async {
+        final response = await _client.read(
+          RpcRequest(
+            type: 'ListProcedures',
+            params: <String, dynamic>{'query': emptyQuery()},
+          ),
+        );
 
-      final proceduresJson = response as List<dynamic>? ?? [];
-      final procedures = proceduresJson
-          .map(
-            (json) => ProcedureListItem.fromJson(json as Map<String, dynamic>),
-          )
-          .toList();
-
-      return Right(procedures);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e, stackTrace) {
-      debugLog(
-        'Error parsing procedures',
-        name: 'API',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      return Left(Failure.unknown(message: e.toString()));
-    }
+        final proceduresJson = response as List<dynamic>? ?? [];
+        return proceduresJson
+            .map(
+              (json) =>
+                  ProcedureListItem.fromJson(json as Map<String, dynamic>),
+            )
+            .toList();
+      },
+      onUnknown: (error) {
+        debugLog('Error parsing procedures', name: 'API', error: error);
+        return Failure.unknown(message: error.toString());
+      },
+    );
   }
 
   /// Gets a specific procedure by ID or name.
   Future<Either<Failure, KomodoProcedure>> getProcedure(
     String procedureIdOrName,
   ) async {
-    try {
-      final response = await _client.read(
-        RpcRequest(
-          type: 'GetProcedure',
-          params: {'procedure': procedureIdOrName},
-        ),
-      );
+    return apiCall(
+      () async {
+        final response = await _client.read(
+          RpcRequest(
+            type: 'GetProcedure',
+            params: {'procedure': procedureIdOrName},
+          ),
+        );
 
-      return Right(KomodoProcedure.fromJson(response as Map<String, dynamic>));
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      if (e.isNotFound) {
-        return const Left(Failure.server(message: 'Procedure not found'));
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+        return KomodoProcedure.fromJson(response as Map<String, dynamic>);
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
+        if (e.isNotFound) {
+          return const Failure.server(message: 'Procedure not found');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+    );
   }
 
   /// Runs the target procedure.
   Future<Either<Failure, void>> runProcedure(String procedureIdOrName) async {
-    try {
-      await _client.execute(
-        RpcRequest(type: 'RunProcedure', params: {'procedure': procedureIdOrName}),
-      );
-      return const Right(null);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+    return apiCall(
+      () async {
+        await _client.execute(
+          RpcRequest(
+            type: 'RunProcedure',
+            params: {'procedure': procedureIdOrName},
+          ),
+        );
+        return null;
+      },
+    );
   }
 }
 

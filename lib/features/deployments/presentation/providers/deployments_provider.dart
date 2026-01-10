@@ -1,5 +1,6 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/data/repositories/deployment_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -20,10 +21,7 @@ class Deployments extends _$Deployments {
 
     final result = await repository.listDeployments();
 
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (deployments) => deployments,
-    );
+    return unwrapOrThrow(result);
   }
 
   /// Refreshes the deployment list.
@@ -43,10 +41,7 @@ Future<Deployment?> deploymentDetail(Ref ref, String deploymentId) async {
 
   final result = await repository.getDeployment(deploymentId);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (deployment) => deployment,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Action state for deployment operations.
