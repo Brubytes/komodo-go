@@ -25,7 +25,9 @@ class Stacks extends _$Stacks {
   /// Refreshes the stacks list.
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 

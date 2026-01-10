@@ -100,12 +100,13 @@ class Containers extends _$Containers {
       }
     }
 
-    final workers = <Future<void>>[
-      for (var i = 0; i < limit; i++) runNext(),
-    ];
+    final workers = <Future<void>>[for (var i = 0; i < limit; i++) runNext()];
 
     await Future.wait(workers);
-    return [for (final result in results) if (result != null) result];
+    return [
+      for (final result in results)
+        if (result != null) result,
+    ];
   }
 
   Future<ContainersResult> _fetchForServer(
@@ -143,6 +144,8 @@ class Containers extends _$Containers {
 
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
