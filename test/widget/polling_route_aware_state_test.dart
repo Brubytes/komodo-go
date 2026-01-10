@@ -32,7 +32,7 @@ void main() {
     expect(state.shouldPoll(isActiveTab: true), isTrue);
 
     state.isRouteVisible = false;
-    expect(state.shouldPoll(isActiveTab: true), isFalse);
+    expect(state.shouldPoll(isActiveTab: true)  , isFalse);
 
     state.isRouteVisible = true;
     state.lifecycleState = AppLifecycleState.paused;
