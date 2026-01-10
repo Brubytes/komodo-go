@@ -42,6 +42,8 @@ class ContainersResult {
 /// Provides all docker containers across all servers.
 @riverpod
 class Containers extends _$Containers {
+  static const int _maxConcurrentFetches = 4;
+
   @override
   Future<ContainersResult> build() async {
     final repository = ref.watch(containerRepositoryProvider);
@@ -54,8 +56,10 @@ class Containers extends _$Containers {
       return const ContainersResult(items: [], errors: []);
     }
 
-    final results = await Future.wait(
-      servers.map((server) async => _fetchForServer(repository, server)),
+    final results = await _fetchWithLimit(
+      repository,
+      servers,
+      _maxConcurrentFetches,
     );
 
     final items = <ContainerOverviewItem>[];
@@ -73,6 +77,36 @@ class Containers extends _$Containers {
     );
 
     return ContainersResult(items: items, errors: errors);
+  }
+
+  Future<List<ContainersResult>> _fetchWithLimit(
+    ContainerRepository repository,
+    List<Server> servers,
+    int concurrency,
+  ) async {
+    if (servers.isEmpty) return const <ContainersResult>[];
+    final limit = concurrency.clamp(1, servers.length);
+    final results = List<ContainersResult?>.filled(servers.length, null);
+    var index = 0;
+
+    Future<void> runNext() async {
+      final nextIndex = index++;
+      if (nextIndex >= servers.length) return;
+      results[nextIndex] = await _fetchForServer(
+        repository,
+        servers[nextIndex],
+      );
+      if (index < servers.length) {
+        await runNext();
+      }
+    }
+
+    final workers = <Future<void>>[
+      for (var i = 0; i < limit; i++) runNext(),
+    ];
+
+    await Future.wait(workers);
+    return [for (final result in results) if (result != null) result];
   }
 
   Future<ContainersResult> _fetchForServer(
