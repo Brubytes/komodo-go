@@ -5,6 +5,7 @@ import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/providers/dio_provider.dart';
+import '../../../../core/utils/debug_log.dart';
 import '../models/container.dart';
 import '../models/container_log.dart';
 
@@ -42,10 +43,12 @@ class ContainerRepository {
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
     } catch (e, stackTrace) {
-      // ignore: avoid_print
-      print('Error parsing containers: $e');
-      // ignore: avoid_print
-      print('Stack trace: $stackTrace');
+      debugLog(
+        'Error parsing containers',
+        name: 'API',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return Left(Failure.unknown(message: e.toString()));
     }
   }

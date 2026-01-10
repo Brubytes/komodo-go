@@ -5,6 +5,7 @@ import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/providers/dio_provider.dart';
+import '../../../../core/utils/debug_log.dart';
 import '../models/build.dart';
 
 part 'build_repository.g.dart';
@@ -49,10 +50,12 @@ class BuildRepository {
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
     } catch (e, stackTrace) {
-      // ignore: avoid_print
-      print('Error parsing builds: $e');
-      // ignore: avoid_print
-      print('Stack trace: $stackTrace');
+      debugLog(
+        'Error parsing builds',
+        name: 'API',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return Left(Failure.unknown(message: e.toString()));
     }
   }

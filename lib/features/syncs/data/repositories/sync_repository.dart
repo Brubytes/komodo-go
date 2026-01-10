@@ -5,6 +5,7 @@ import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/providers/dio_provider.dart';
+import '../../../../core/utils/debug_log.dart';
 import '../models/sync.dart';
 
 part 'sync_repository.g.dart';
@@ -48,10 +49,12 @@ class SyncRepository {
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
     } catch (e, stackTrace) {
-      // ignore: avoid_print
-      print('Error parsing syncs: $e');
-      // ignore: avoid_print
-      print('Stack trace: $stackTrace');
+      debugLog(
+        'Error parsing syncs',
+        name: 'API',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return Left(Failure.unknown(message: e.toString()));
     }
   }

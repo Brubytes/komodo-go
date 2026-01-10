@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../api/api_client.dart';
@@ -60,7 +61,7 @@ Dio? dio(Ref ref) {
       apiKey: credentials.apiKey,
       apiSecret: credentials.apiSecret,
     ),
-    LoggingInterceptor(),
+    if (kDebugMode) LoggingInterceptor(),
   ]);
 
   return dio;
@@ -91,5 +92,5 @@ Dio createValidationDio(String baseUrl, ApiCredentials credentials) {
         'X-Api-Secret': credentials.apiSecret,
       },
     ),
-  )..interceptors.add(LoggingInterceptor());
+  )..interceptors.addAll([if (kDebugMode) LoggingInterceptor()]);
 }

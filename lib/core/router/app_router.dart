@@ -111,7 +111,7 @@ GoRouter appRouter(Ref ref) {
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
-    debugLogDiagnostics: true,
+    debugLogDiagnostics: kDebugMode,
     observers: [appRouteObserver],
     redirect: (context, state) {
       final isOnSplash = state.matchedLocation == AppRoutes.splash;

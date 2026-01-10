@@ -3,6 +3,7 @@ import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:komodo_go/core/utils/debug_log.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -49,10 +50,12 @@ class StackRepository {
       }
       return Left(Failure.server(message: e.message, statusCode: e.statusCode));
     } on Object catch (e, stackTrace) {
-      // ignore: avoid_print -- Useful for debugging unexpected backend responses in development.
-      print('Error parsing stacks: $e');
-      // ignore: avoid_print -- Useful for debugging unexpected backend responses in development.
-      print('Stack trace: $stackTrace');
+      debugLog(
+        'Error parsing stacks',
+        name: 'API',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return Left(Failure.unknown(message: e.toString()));
     }
   }
