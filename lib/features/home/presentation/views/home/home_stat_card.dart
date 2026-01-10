@@ -47,32 +47,28 @@ class HomeStatCard<T> extends StatelessWidget {
           builder: (context, constraints) {
             // In tests and very compact layouts the grid can become quite short.
             // Keep this threshold generous to avoid overflows.
-            final isTight = constraints.maxHeight < 110;
-            final padding = isTight ? 7.0 : 10.0;
-            final iconSize = isTight ? 15.0 : 18.0;
-            final gap = isTight ? 2.0 : 6.0;
-            final showSubtitle = !isTight;
+            final isTight = constraints.maxHeight < 92;
+            final padding = isTight ? 8.0 : 11.0;
+            final iconSize = isTight ? 16.0 : 19.0;
+            final gap = isTight ? 4.0 : 6.0;
+            final showSubtitle = true;
 
             final valueStyle =
-                (isTight ? textTheme.titleMedium : textTheme.headlineSmall)
+                (isTight ? textTheme.titleLarge : textTheme.headlineSmall)
                     ?.copyWith(
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.2,
                     );
             final titleStyle =
-                (isTight ? textTheme.labelMedium : textTheme.titleSmall)
+                (isTight ? textTheme.titleSmall : textTheme.titleSmall)
                     ?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: scheme.onSurfaceVariant,
                       letterSpacing: -0.1,
                     );
-            final subtitleStyle = (isTight
-                    ? textTheme.labelSmall
-                    : textTheme.labelMedium)
-                ?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                );
+            final subtitleStyle =
+                (isTight ? textTheme.labelMedium : textTheme.labelMedium)
+                    ?.copyWith(color: color, fontWeight: FontWeight.w700);
 
             return Padding(
               padding: EdgeInsets.all(padding),

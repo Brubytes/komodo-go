@@ -50,8 +50,8 @@ class HomeView extends ConsumerWidget {
     final quickStatsColumns = width >= 720 ? 4 : (width >= 520 ? 3 : 2);
     final quickStatsAspectRatio = switch (quickStatsColumns) {
       4 => 1.85,
-      3 => 1.70,
-      _ => 1.55,
+      3 => 1.65,
+      _ => 1.35,
     };
 
     final serversAsync = ref.watch(serversProvider);
