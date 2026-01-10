@@ -78,8 +78,13 @@ class LoggingInterceptor extends Interceptor {
     return lower.contains('secret') ||
         lower.contains('token') ||
         lower.contains('password') ||
+        lower.contains('authorization') ||
+        lower.contains('cookie') ||
         lower.contains('api_key') ||
+        lower.contains('api-key') ||
         lower.contains('api-secret') ||
+        lower.contains('api_secret') ||
+        lower.contains('credential') ||
         lower == 'key' ||
         lower == 'value';
   }

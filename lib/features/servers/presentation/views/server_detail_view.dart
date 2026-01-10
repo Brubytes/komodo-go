@@ -13,6 +13,8 @@ import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_information.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/core/router/route_observer.dart';
+import 'package:komodo_go/core/router/shell_state_provider.dart';
 
 /// View displaying detailed server information.
 class ServerDetailView extends ConsumerStatefulWidget {
@@ -29,9 +31,12 @@ class ServerDetailView extends ConsumerStatefulWidget {
   ConsumerState<ServerDetailView> createState() => _ServerDetailViewState();
 }
 
-class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
+class _ServerDetailViewState extends ConsumerState<ServerDetailView>
+    with RouteAware, WidgetsBindingObserver {
   Timer? _statsRefreshTimer;
   ProviderSubscription<AsyncValue<SystemStats?>>? _statsSubscription;
+  bool _isRouteVisible = true;
+  AppLifecycleState _lifecycleState = AppLifecycleState.resumed;
 
   DateTime? _previousSampleTs;
   double? _previousIngressBytes;
@@ -44,12 +49,7 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
   @override
   void initState() {
     super.initState();
-
-    _statsRefreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (
-      _,
-    ) {
-      ref.invalidate(serverStatsProvider(widget.serverId));
-    });
+    WidgetsBinding.instance.addObserver(this);
 
     _statsSubscription = ref.listenManual<AsyncValue<SystemStats?>>(
       serverStatsProvider(widget.serverId),
@@ -63,11 +63,79 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
 
   @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
+    WidgetsBinding.instance.removeObserver(this);
     _statsRefreshTimer?.cancel();
     _statsRefreshTimer = null;
     _statsSubscription?.close();
     _statsSubscription = null;
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPush() {
+    _isRouteVisible = true;
+    setState(() {});
+  }
+
+  @override
+  void didPopNext() {
+    _isRouteVisible = true;
+    setState(() {});
+  }
+
+  @override
+  void didPushNext() {
+    _isRouteVisible = false;
+    setState(() {});
+  }
+
+  @override
+  void didPop() {
+    _isRouteVisible = false;
+    setState(() {});
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _lifecycleState = state;
+    setState(() {});
+  }
+
+  void _startStatsTimer() {
+    if (_statsRefreshTimer != null) return;
+    _statsRefreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (
+      _,
+    ) {
+      ref.invalidate(serverStatsProvider(widget.serverId));
+    });
+    ref.invalidate(serverStatsProvider(widget.serverId));
+  }
+
+  void _stopStatsTimer() {
+    _statsRefreshTimer?.cancel();
+    _statsRefreshTimer = null;
+  }
+
+  void _syncStatsTimer({required bool isActiveTab}) {
+    final shouldRefresh =
+        isActiveTab &&
+        _isRouteVisible &&
+        _lifecycleState == AppLifecycleState.resumed;
+    if (shouldRefresh) {
+      _startStatsTimer();
+    } else {
+      _stopStatsTimer();
+    }
   }
 
   void _recordSample(SystemStats stats) {
@@ -122,6 +190,13 @@ class _ServerDetailViewState extends ConsumerState<ServerDetailView> {
 
   @override
   Widget build(BuildContext context) {
+    final isActiveTab = ref.watch(mainShellIndexProvider) == 1;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _syncStatsTimer(isActiveTab: isActiveTab);
+    });
+
     final serverAsync = ref.watch(serverDetailProvider(widget.serverId));
     final statsAsync = ref.watch(serverStatsProvider(widget.serverId));
     final systemInfoAsync = ref.watch(
