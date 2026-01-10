@@ -29,7 +29,10 @@ Future<Either<Failure, T>> apiCall<T>(
       return Left(onDioException(e));
     }
     return const Left(
-      Failure.network(message: 'Could not connect to server'),
+      Failure.network(
+        message:
+            'Cannot reach the server. Check your connection and server address.',
+      ),
     );
   } on Object catch (e) {
     if (e is Failure) {

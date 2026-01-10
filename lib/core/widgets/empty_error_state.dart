@@ -17,11 +17,20 @@ class ErrorStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isNetworkIssue = _isNetworkMessage(message);
+    final helperText = isNetworkIssue
+        ? 'Check your internet connection and server address in Settings > Connections.'
+        : null;
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
         const Gap(48),
-        Icon(AppIcons.formError, size: 64, color: scheme.error),
+        Icon(
+          isNetworkIssue ? AppIcons.disconnect : AppIcons.formError,
+          size: 64,
+          color: scheme.error,
+        ),
         const Gap(16),
         Text(
           title,
@@ -36,9 +45,28 @@ class ErrorStateView extends StatelessWidget {
           ),
           textAlign: TextAlign.center,
         ),
+        if (helperText != null) ...[
+          const Gap(8),
+          Text(
+            helperText,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.6),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
         const Gap(24),
         FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
       ],
     );
+  }
+
+  bool _isNetworkMessage(String message) {
+    final normalized = message.toLowerCase();
+    return normalized.contains('network') ||
+        normalized.contains('connect') ||
+        normalized.contains('offline') ||
+        normalized.contains('unreachable') ||
+        normalized.contains('socket');
   }
 }

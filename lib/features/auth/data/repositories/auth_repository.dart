@@ -53,8 +53,10 @@ class AuthRepository {
         }
         return Failure.server(message: e.message, statusCode: e.statusCode);
       },
-      onDioException: (_) =>
-          const Failure.network(message: 'Could not connect to server'),
+      onDioException: (_) => const Failure.network(
+        message:
+            'Cannot reach the server. Check your connection and server address.',
+      ),
     );
   }
 

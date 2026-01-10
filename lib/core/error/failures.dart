@@ -24,12 +24,22 @@ sealed class Failure with _$Failure {
 
 extension FailureX on Failure {
   String get displayMessage => switch (this) {
-    NetworkFailure(:final message) =>
-      message ?? 'Network error. Please check your connection.',
+    NetworkFailure(:final message) => _networkMessage(message),
     ServerFailure(:final message) => message,
     AuthFailure(:final message) =>
       message ?? 'Authentication failed. Please log in again.',
     UnknownFailure(:final message) =>
       message ?? 'An unexpected error occurred.',
   };
+
+  String _networkMessage(String? message) {
+    final normalized = message?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return 'Cannot reach the server. Check your connection and server address.';
+    }
+    if (normalized.toLowerCase() == 'could not connect to server') {
+      return 'Cannot reach the server. Check your connection and server address.';
+    }
+    return normalized;
+  }
 }

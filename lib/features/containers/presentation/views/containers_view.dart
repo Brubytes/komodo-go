@@ -8,6 +8,7 @@ import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_filters_provider.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
@@ -213,7 +214,8 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                 padding: EdgeInsets.only(top: 48),
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (error, stack) => _ErrorState(
+              error: (error, stack) => ErrorStateView(
+                title: 'Failed to load containers',
                 message: error.toString(),
                 onRetry: () => ref.invalidate(containersProvider),
               ),
@@ -517,52 +519,6 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 72),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Icon(
-                AppIcons.formError,
-                size: 64,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const Gap(16),
-              Text(
-                'Failed to load containers',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const Gap(8),
-              Text(
-                message,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const Gap(24),
-              FilledButton.tonal(
-                onPressed: onRetry,
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
         ),
       ),
     );
