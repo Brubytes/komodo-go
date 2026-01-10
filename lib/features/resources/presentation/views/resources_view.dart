@@ -53,122 +53,136 @@ class ResourcesView extends ConsumerWidget {
 
     return Scaffold(
       appBar: const MainAppBar(title: 'Resources', icon: AppIcons.resources),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-        children: [
-          GridView.count(
-            crossAxisCount: quickStatsColumns,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: quickStatsAspectRatio,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              HomeStatCard(
-                title: 'Servers',
-                icon: AppIcons.server,
-                asyncValue: serversAsync,
-                valueBuilder: (servers) => servers.length.toString(),
-                subtitleBuilder: (servers) {
-                  final online = servers
-                      .where((s) => s.info?.state == ServerState.ok)
-                      .length;
-                  return '$online online';
-                },
-                onTap: () => context.push(_routeFor(ResourceType.servers)),
-              ),
-              HomeStatCard(
-                title: 'Deployments',
-                icon: AppIcons.deployments,
-                asyncValue: deploymentsAsync,
-                valueBuilder: (deployments) => deployments.length.toString(),
-                subtitleBuilder: (deployments) {
-                  final running = deployments
-                      .where((d) => d.info?.state == DeploymentState.running)
-                      .length;
-                  return '$running running';
-                },
-                onTap: () => context.push(_routeFor(ResourceType.deployments)),
-              ),
-              HomeStatCard(
-                title: 'Stacks',
-                icon: AppIcons.stacks,
-                asyncValue: stacksAsync,
-                valueBuilder: (stacks) => stacks.length.toString(),
-                subtitleBuilder: (stacks) {
-                  final running = stacks
-                      .where((s) => s.info.state == StackState.running)
-                      .length;
-                  return '$running running';
-                },
-                onTap: () => context.push(_routeFor(ResourceType.stacks)),
-              ),
-              HomeStatCard(
-                title: 'Repos',
-                icon: AppIcons.repos,
-                asyncValue: reposAsync,
-                valueBuilder: (repos) => repos.length.toString(),
-                subtitleBuilder: (repos) {
-                  final busy = repos.where((r) => r.info.state.isBusy).length;
-                  return '$busy busy';
-                },
-                onTap: () => context.push(_routeFor(ResourceType.repos)),
-              ),
-              HomeStatCard(
-                title: 'Syncs',
-                icon: AppIcons.syncs,
-                asyncValue: syncsAsync,
-                valueBuilder: (syncs) => syncs.length.toString(),
-                subtitleBuilder: (syncs) {
-                  final running = syncs
-                      .where((s) => s.info.state.isRunning)
-                      .length;
-                  return '$running running';
-                },
-                onTap: () => context.push(_routeFor(ResourceType.syncs)),
-              ),
-              HomeStatCard(
-                title: 'Builds',
-                icon: AppIcons.builds,
-                asyncValue: buildsAsync,
-                valueBuilder: (builds) => builds.length.toString(),
-                subtitleBuilder: (builds) {
-                  final running = builds
-                      .where((b) => b.info.state == BuildState.building)
-                      .length;
-                  return '$running running';
-                },
-                onTap: () => context.push(_routeFor(ResourceType.builds)),
-              ),
-              HomeStatCard(
-                title: 'Procedures',
-                icon: AppIcons.procedures,
-                asyncValue: proceduresAsync,
-                valueBuilder: (procedures) => procedures.length.toString(),
-                subtitleBuilder: (procedures) {
-                  final running = procedures
-                      .where((p) => p.info.state == ProcedureState.running)
-                      .length;
-                  return '$running running';
-                },
-                onTap: () => context.push(_routeFor(ResourceType.procedures)),
-              ),
-              HomeStatCard(
-                title: 'Actions',
-                icon: AppIcons.actions,
-                asyncValue: actionsAsync,
-                valueBuilder: (actions) => actions.length.toString(),
-                subtitleBuilder: (actions) {
-                  final running = actions
-                      .where((a) => a.info.state == ActionState.running)
-                      .length;
-                  return '$running running';
-                },
-                onTap: () => context.push(_routeFor(ResourceType.actions)),
-              ),
-            ],
-          ),
-        ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref
+            ..invalidate(serversProvider)
+            ..invalidate(deploymentsProvider)
+            ..invalidate(stacksProvider)
+            ..invalidate(reposProvider)
+            ..invalidate(syncsProvider)
+            ..invalidate(buildsProvider)
+            ..invalidate(proceduresProvider)
+            ..invalidate(actionsProvider);
+        },
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+          children: [
+            GridView.count(
+              crossAxisCount: quickStatsColumns,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: quickStatsAspectRatio,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                HomeStatCard(
+                  title: 'Servers',
+                  icon: AppIcons.server,
+                  asyncValue: serversAsync,
+                  valueBuilder: (servers) => servers.length.toString(),
+                  subtitleBuilder: (servers) {
+                    final online = servers
+                        .where((s) => s.info?.state == ServerState.ok)
+                        .length;
+                    return '$online online';
+                  },
+                  onTap: () => context.push(_routeFor(ResourceType.servers)),
+                ),
+                HomeStatCard(
+                  title: 'Deployments',
+                  icon: AppIcons.deployments,
+                  asyncValue: deploymentsAsync,
+                  valueBuilder: (deployments) => deployments.length.toString(),
+                  subtitleBuilder: (deployments) {
+                    final running = deployments
+                        .where((d) => d.info?.state == DeploymentState.running)
+                        .length;
+                    return '$running running';
+                  },
+                  onTap: () =>
+                      context.push(_routeFor(ResourceType.deployments)),
+                ),
+                HomeStatCard(
+                  title: 'Stacks',
+                  icon: AppIcons.stacks,
+                  asyncValue: stacksAsync,
+                  valueBuilder: (stacks) => stacks.length.toString(),
+                  subtitleBuilder: (stacks) {
+                    final running = stacks
+                        .where((s) => s.info.state == StackState.running)
+                        .length;
+                    return '$running running';
+                  },
+                  onTap: () => context.push(_routeFor(ResourceType.stacks)),
+                ),
+                HomeStatCard(
+                  title: 'Repos',
+                  icon: AppIcons.repos,
+                  asyncValue: reposAsync,
+                  valueBuilder: (repos) => repos.length.toString(),
+                  subtitleBuilder: (repos) {
+                    final busy = repos.where((r) => r.info.state.isBusy).length;
+                    return '$busy busy';
+                  },
+                  onTap: () => context.push(_routeFor(ResourceType.repos)),
+                ),
+                HomeStatCard(
+                  title: 'Syncs',
+                  icon: AppIcons.syncs,
+                  asyncValue: syncsAsync,
+                  valueBuilder: (syncs) => syncs.length.toString(),
+                  subtitleBuilder: (syncs) {
+                    final running = syncs
+                        .where((s) => s.info.state.isRunning)
+                        .length;
+                    return '$running running';
+                  },
+                  onTap: () => context.push(_routeFor(ResourceType.syncs)),
+                ),
+                HomeStatCard(
+                  title: 'Builds',
+                  icon: AppIcons.builds,
+                  asyncValue: buildsAsync,
+                  valueBuilder: (builds) => builds.length.toString(),
+                  subtitleBuilder: (builds) {
+                    final running = builds
+                        .where((b) => b.info.state == BuildState.building)
+                        .length;
+                    return '$running running';
+                  },
+                  onTap: () => context.push(_routeFor(ResourceType.builds)),
+                ),
+                HomeStatCard(
+                  title: 'Procedures',
+                  icon: AppIcons.procedures,
+                  asyncValue: proceduresAsync,
+                  valueBuilder: (procedures) => procedures.length.toString(),
+                  subtitleBuilder: (procedures) {
+                    final running = procedures
+                        .where((p) => p.info.state == ProcedureState.running)
+                        .length;
+                    return '$running running';
+                  },
+                  onTap: () => context.push(_routeFor(ResourceType.procedures)),
+                ),
+                HomeStatCard(
+                  title: 'Actions',
+                  icon: AppIcons.actions,
+                  asyncValue: actionsAsync,
+                  valueBuilder: (actions) => actions.length.toString(),
+                  subtitleBuilder: (actions) {
+                    final running = actions
+                        .where((a) => a.info.state == ActionState.running)
+                        .length;
+                    return '$running running';
+                  },
+                  onTap: () => context.push(_routeFor(ResourceType.actions)),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
