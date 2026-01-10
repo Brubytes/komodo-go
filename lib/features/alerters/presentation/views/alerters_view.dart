@@ -9,6 +9,7 @@ import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pill_list.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
@@ -44,7 +45,8 @@ class AlertersView extends ConsumerWidget {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => _ErrorState(
+              error: (error, _) => ErrorStateView(
+                title: 'Failed to load alerters',
                 message: error.toString(),
                 onRetry: () => ref.invalidate(alertersProvider),
               ),
@@ -230,10 +232,7 @@ class _AlerterTile extends ConsumerWidget {
                 ),
                 if (item.tags.isNotEmpty) ...[
                   const Gap(10),
-                  DetailPillList(
-                    items: item.tags,
-                    maxItems: 6,
-                  ),
+                  DetailPillList(items: item.tags, maxItems: 6),
                 ],
               ],
             ),
@@ -357,41 +356,6 @@ class _EmptyState extends StatelessWidget {
           ),
           textAlign: TextAlign.center,
         ),
-      ],
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Gap(48),
-        Icon(AppIcons.formError, size: 64, color: scheme.error),
-        const Gap(16),
-        Text(
-          'Failed to load alerters',
-          style: Theme.of(context).textTheme.titleMedium,
-          textAlign: TextAlign.center,
-        ),
-        const Gap(8),
-        Text(
-          message,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: scheme.onSurface.withValues(alpha: 0.7),
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const Gap(24),
-        FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
       ],
     );
   }

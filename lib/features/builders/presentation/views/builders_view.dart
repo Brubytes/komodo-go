@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
 import 'package:komodo_go/features/builders/presentation/views/builders/builder_tile.dart';
@@ -41,7 +42,8 @@ class BuildersView extends ConsumerWidget {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => BuildersErrorState(
+              error: (error, _) => ErrorStateView(
+                title: 'Failed to load builders',
                 message: error.toString(),
                 onRetry: () => ref.invalidate(buildersProvider),
               ),

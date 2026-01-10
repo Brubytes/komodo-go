@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
@@ -81,7 +82,9 @@ class TagsView extends ConsumerWidget {
                       AppSnackBar.show(
                         context,
                         ok ? 'Tag updated' : 'Failed to update tag',
-                        tone: ok ? AppSnackBarTone.success : AppSnackBarTone.error,
+                        tone: ok
+                            ? AppSnackBarTone.success
+                            : AppSnackBarTone.error,
                       );
                     },
                     onDelete: () async {
@@ -90,7 +93,9 @@ class TagsView extends ConsumerWidget {
                         context: context,
                         builder: (context) => AlertDialog(
                           title: const Text('Delete tag'),
-                          content: Text('Delete "${tag.name}"? This removes it from all resources.'),
+                          content: Text(
+                            'Delete "${tag.name}"? This removes it from all resources.',
+                          ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(false),
@@ -113,14 +118,17 @@ class TagsView extends ConsumerWidget {
                       AppSnackBar.show(
                         context,
                         ok ? 'Tag deleted' : 'Failed to delete tag',
-                        tone: ok ? AppSnackBarTone.success : AppSnackBarTone.error,
+                        tone: ok
+                            ? AppSnackBarTone.success
+                            : AppSnackBarTone.error,
                       );
                     },
                   ),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => _ErrorState(
+              error: (error, _) => ErrorStateView(
+                title: 'Failed to load tags',
                 message: error.toString(),
                 onRetry: () => ref.invalidate(tagsProvider),
               ),
@@ -128,7 +136,9 @@ class TagsView extends ConsumerWidget {
           ),
           if (actionsState.isLoading)
             ColoredBox(
-              color: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
+              color: Theme.of(
+                context,
+              ).colorScheme.scrim.withValues(alpha: 0.25),
               child: const Center(child: CircularProgressIndicator()),
             ),
         ],
@@ -138,7 +148,11 @@ class TagsView extends ConsumerWidget {
 }
 
 class _TagTile extends StatelessWidget {
-  const _TagTile({required this.tag, required this.onEdit, required this.onDelete});
+  const _TagTile({
+    required this.tag,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final KomodoTag tag;
   final VoidCallback onEdit;
@@ -154,7 +168,8 @@ class _TagTile extends StatelessWidget {
         builder: (context, ref, _) {
           final ownerNameAsync = ref.watch(usernameProvider(tag.owner));
           final ownerLabel = ownerNameAsync.maybeWhen(
-            data: (name) => (name == null || name.trim().isEmpty) ? tag.owner : name,
+            data: (name) =>
+                (name == null || name.trim().isEmpty) ? tag.owner : name,
             orElse: () => tag.owner,
           );
 
@@ -170,9 +185,9 @@ class _TagTile extends StatelessWidget {
             ),
             title: Text(
               tag.name,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             subtitle: Text(
               'Owner: $ownerLabel',
@@ -231,7 +246,11 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       children: [
         const Gap(48),
-        Icon(AppIcons.tag, size: 64, color: scheme.primary.withValues(alpha: 0.5)),
+        Icon(
+          AppIcons.tag,
+          size: 64,
+          color: scheme.primary.withValues(alpha: 0.5),
+        ),
         const Gap(16),
         Text(
           'No tags found',
@@ -246,41 +265,6 @@ class _EmptyState extends StatelessWidget {
           ),
           textAlign: TextAlign.center,
         ),
-      ],
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Gap(48),
-        Icon(AppIcons.formError, size: 64, color: scheme.error),
-        const Gap(16),
-        Text(
-          'Failed to load tags',
-          style: Theme.of(context).textTheme.titleMedium,
-          textAlign: TextAlign.center,
-        ),
-        const Gap(8),
-        Text(
-          message,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: scheme.onSurface.withValues(alpha: 0.7),
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const Gap(24),
-        FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
       ],
     );
   }
