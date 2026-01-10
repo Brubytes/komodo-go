@@ -49,7 +49,7 @@ class AlerterConfig {
   final List<String> alertTypes;
   final List<AlerterResourceTarget> resources;
   final List<AlerterResourceTarget> exceptResources;
-  final List<Map<String, dynamic>> maintenanceWindows;
+  final List<AlerterMaintenanceWindow> maintenanceWindows;
 
   factory AlerterConfig.fromApiMap(Map<String, dynamic> map) {
     final enabled = _toBool(map['enabled']) ?? false;
@@ -59,7 +59,7 @@ class AlerterConfig {
       alertTypes: _readStringList(map['alert_types']),
       resources: AlerterResourceTarget.parseList(map['resources']),
       exceptResources: AlerterResourceTarget.parseList(map['except_resources']),
-      maintenanceWindows: _parseMaintenanceWindows(
+      maintenanceWindows: AlerterMaintenanceWindow.parseList(
         map['maintenance_windows'],
       ),
     );
@@ -168,13 +168,124 @@ class AlerterResourceTarget {
   }
 }
 
-List<Map<String, dynamic>> _parseMaintenanceWindows(Object? raw) {
-  if (raw is! List) return const <Map<String, dynamic>>[];
-  final out = <Map<String, dynamic>>[];
-  for (final e in raw) {
-    if (e is Map) out.add(Map<String, dynamic>.from(e));
+class AlerterMaintenanceWindow {
+  const AlerterMaintenanceWindow({
+    required this.name,
+    required this.description,
+    required this.scheduleType,
+    required this.dayOfWeek,
+    required this.date,
+    required this.hour,
+    required this.minute,
+    required this.durationMinutes,
+    required this.timezone,
+    required this.enabled,
+  });
+
+  final String name;
+  final String description;
+  final String scheduleType;
+  final String dayOfWeek;
+  final String date;
+  final int hour;
+  final int minute;
+  final int durationMinutes;
+  final String timezone;
+  final bool enabled;
+
+  factory AlerterMaintenanceWindow.fromApiMap(Map<String, dynamic> map) {
+    return AlerterMaintenanceWindow(
+      name: (map['name'] ?? '').toString(),
+      description: (map['description'] ?? '').toString(),
+      scheduleType: (map['schedule_type'] ?? '').toString(),
+      dayOfWeek: (map['day_of_week'] ?? '').toString(),
+      date: (map['date'] ?? '').toString(),
+      hour: _readInt(map['hour']) ?? 0,
+      minute: _readInt(map['minute']) ?? 0,
+      durationMinutes: _readInt(map['duration_minutes']) ?? 60,
+      timezone: (map['timezone'] ?? 'UTC').toString(),
+      enabled: _toBool(map['enabled']) ?? true,
+    );
   }
-  return out;
+
+  Map<String, dynamic> toApiMap() => <String, dynamic>{
+        'name': name,
+        'description': description,
+        'schedule_type': scheduleType,
+        'day_of_week': dayOfWeek,
+        'date': date,
+        'hour': hour,
+        'minute': minute,
+        'duration_minutes': durationMinutes,
+        'timezone': timezone,
+        'enabled': enabled,
+      };
+
+  AlerterMaintenanceWindow copyWith({
+    String? name,
+    String? description,
+    String? scheduleType,
+    String? dayOfWeek,
+    String? date,
+    int? hour,
+    int? minute,
+    int? durationMinutes,
+    String? timezone,
+    bool? enabled,
+  }) {
+    return AlerterMaintenanceWindow(
+      name: name ?? this.name,
+      description: description ?? this.description,
+      scheduleType: scheduleType ?? this.scheduleType,
+      dayOfWeek: dayOfWeek ?? this.dayOfWeek,
+      date: date ?? this.date,
+      hour: hour ?? this.hour,
+      minute: minute ?? this.minute,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
+      timezone: timezone ?? this.timezone,
+      enabled: enabled ?? this.enabled,
+    );
+  }
+
+  static List<AlerterMaintenanceWindow> parseList(Object? raw) {
+    if (raw is! List) return const <AlerterMaintenanceWindow>[];
+    final out = <AlerterMaintenanceWindow>[];
+    for (final e in raw) {
+      if (e is Map) {
+        out.add(AlerterMaintenanceWindow.fromApiMap(Map<String, dynamic>.from(e)));
+      }
+    }
+    return out;
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AlerterMaintenanceWindow &&
+        other.name == name &&
+        other.description == description &&
+        other.scheduleType == scheduleType &&
+        other.dayOfWeek == dayOfWeek &&
+        other.date == date &&
+        other.hour == hour &&
+        other.minute == minute &&
+        other.durationMinutes == durationMinutes &&
+        other.timezone == timezone &&
+        other.enabled == enabled;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        name,
+        description,
+        scheduleType,
+        dayOfWeek,
+        date,
+        hour,
+        minute,
+        durationMinutes,
+        timezone,
+        enabled,
+      );
 }
 
 List<String> _readStringList(Object? v) {
@@ -192,5 +303,12 @@ bool? _toBool(Object? v) {
     if (s == 'true') return true;
     if (s == 'false') return false;
   }
+  return null;
+}
+
+int? _readInt(Object? v) {
+  if (v is int) return v;
+  if (v is double) return v.toInt();
+  if (v is String) return int.tryParse(v.trim());
   return null;
 }

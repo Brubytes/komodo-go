@@ -3,7 +3,6 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
-import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
@@ -11,6 +10,7 @@ import 'package:komodo_go/features/actions/presentation/providers/actions_provid
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
+import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/alerter_detail_sections.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
@@ -51,7 +51,8 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
   final Set<String> _alertTypes = <String>{};
   List<AlerterResourceTarget> _resources = <AlerterResourceTarget>[];
   List<AlerterResourceTarget> _exceptResources = <AlerterResourceTarget>[];
-  List<Map<String, dynamic>> _maintenanceWindows = <Map<String, dynamic>>[];
+  List<AlerterMaintenanceWindow> _maintenanceWindows =
+      <AlerterMaintenanceWindow>[];
 
   bool _initialEnabled = false;
   AlerterEndpoint? _initialEndpoint;
@@ -59,8 +60,8 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
   List<AlerterResourceTarget> _initialResources = <AlerterResourceTarget>[];
   List<AlerterResourceTarget> _initialExceptResources =
       <AlerterResourceTarget>[];
-  List<Map<String, dynamic>> _initialMaintenanceWindows =
-      <Map<String, dynamic>>[];
+  List<AlerterMaintenanceWindow> _initialMaintenanceWindows =
+      <AlerterMaintenanceWindow>[];
 
   @override
   void initState() {
@@ -134,46 +135,44 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
             });
           }
 
+          final alertTypeLabels = (_alertTypes.toList()..sort())
+              .map(_humanizeEnum)
+              .toList();
+          final resourcePills = _resources
+              .map(
+                (entry) => PillData(
+                  _resourceLabel(entry, resourceNameLookup),
+                  _resourceIcon(entry.variant),
+                ),
+              )
+              .toList();
+          final exceptPills = _exceptResources
+              .map(
+                (entry) => PillData(
+                  _resourceLabel(entry, resourceNameLookup),
+                  _resourceIcon(entry.variant),
+                ),
+              )
+              .toList();
+          final maintenancePills = _maintenanceWindows
+              .map(
+                (window) => PillData(
+                  window.name.isEmpty ? 'Maintenance' : window.name,
+                  AppIcons.maintenance,
+                ),
+              )
+              .toList();
+
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: [
-              DetailSurface(
-                padding: const EdgeInsets.all(16),
-                radius: 20,
-                enableGradientInDark: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        StatusPill.onOff(
-                          isOn: _enabled,
-                          onLabel: 'Enabled',
-                          offLabel: 'Disabled',
-                        ),
-                        TextPill(label: _endpointType),
-                        ValuePill(
-                          label: 'Types',
-                          value: _alertTypes.length.toString(),
-                        ),
-                        ValuePill(
-                          label: 'Targets',
-                          value: _resources.length.toString(),
-                        ),
-                        ValuePill(
-                          label: 'Except',
-                          value: _exceptResources.length.toString(),
-                        ),
-                        ValuePill(
-                          label: 'Maintenance',
-                          value: _maintenanceWindows.length.toString(),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              AlerterSummaryPanel(
+                enabled: _enabled,
+                endpointType: _endpointType,
+                alertTypeCount: _alertTypes.length,
+                resourceCount: _resources.length,
+                exceptCount: _exceptResources.length,
+                maintenanceCount: _maintenanceWindows.length,
               ),
               const Gap(12),
               Form(
@@ -181,268 +180,47 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _sectionHeader(
-                      context,
-                      title: 'Enabled',
-                      subtitle: 'Whether to send alerts to the endpoint.',
-                    ),
-                    const Gap(8),
-                    DetailSurface(
-                      padding: const EdgeInsets.all(8),
-                      radius: 16,
-                      enableGradientInDark: false,
-                      child: SwitchListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        title: const Text('Enabled'),
-                        value: _enabled,
-                        onChanged: (v) => setState(() => _enabled = v),
-                      ),
+                    AlerterEnabledSection(
+                      enabled: _enabled,
+                      onChanged: (v) => setState(() => _enabled = v),
                     ),
                     const Gap(16),
-                    _sectionHeader(
-                      context,
-                      title: 'Endpoint',
-                      subtitle: 'Configure the endpoint to send the alert to.',
-                    ),
-                    const Gap(8),
-                    DetailSurface(
-                      padding: const EdgeInsets.all(14),
-                      radius: 16,
-                      enableGradientInDark: false,
-                      child: Column(
-                        children: [
-                          DropdownButtonFormField<String>(
-                            key: ValueKey(_endpointType),
-                            initialValue: _endpointType,
-                            decoration: const InputDecoration(
-                              labelText: 'Endpoint',
-                              prefixIcon: Icon(AppIcons.plug),
-                            ),
-                            items: [
-                              for (final t in _endpointTypes)
-                                DropdownMenuItem(value: t, child: Text(t)),
-                            ],
-                            onChanged: (value) {
-                              if (value == null) return;
-                              setState(() => _endpointType = value);
-                            },
-                          ),
-                          const Gap(12),
-                          TextFormField(
-                            controller: _endpointUrlController,
-                            textInputAction: _endpointType == 'Ntfy'
-                                ? TextInputAction.next
-                                : TextInputAction.done,
-                            keyboardType: TextInputType.url,
-                            decoration: const InputDecoration(
-                              labelText: 'Endpoint URL',
-                              prefixIcon: Icon(AppIcons.network),
-                            ),
-                            validator: (v) {
-                              final url = (v ?? '').trim();
-                              if (url.isEmpty)
-                                return 'Endpoint URL is required';
-                              return null;
-                            },
-                          ),
-                          if (_endpointType == 'Ntfy') ...[
-                            const Gap(12),
-                            TextFormField(
-                              controller: _endpointEmailController,
-                              textInputAction: TextInputAction.done,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
-                                labelText: 'Email (optional)',
-                                prefixIcon: Icon(AppIcons.user),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                    AlerterEndpointSection(
+                      endpointType: _endpointType,
+                      endpointTypes: _endpointTypes,
+                      urlController: _endpointUrlController,
+                      emailController: _endpointEmailController,
+                      onTypeChanged: (value) =>
+                          setState(() => _endpointType = value),
                     ),
                     const Gap(16),
-                    _sectionHeader(
-                      context,
-                      title: 'Alert types',
-                      subtitle: 'Only send alerts of certain types.',
-                    ),
-                    const Gap(8),
-                    DetailSurface(
-                      padding: const EdgeInsets.all(14),
-                      radius: 16,
-                      enableGradientInDark: false,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _summaryRow(
-                            context,
-                            label: 'Selected',
-                            value: _alertTypes.isEmpty
-                                ? 'All'
-                                : _alertTypes.length.toString(),
-                          ),
-                          const Gap(8),
-                          _selectionPills(
-                            context,
-                            items: (_alertTypes.toList()..sort())
-                                .map((label) => _PillData(_humanizeEnum(label)))
-                                .toList(),
-                            emptyLabel: 'All alert types',
-                          ),
-                          const Gap(6),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: _pickAlertTypes,
-                              icon: const Icon(AppIcons.edit, size: 16),
-                              label: const Text('Edit'),
-                            ),
-                          ),
-                        ],
-                      ),
+                    AlerterAlertTypesSection(
+                      selectedLabels: alertTypeLabels,
+                      onEdit: _pickAlertTypes,
                     ),
                     const Gap(16),
-                    _sectionHeader(
-                      context,
+                    AlerterResourceSection(
                       title: 'Resource whitelist',
                       subtitle: 'Only send alerts for these resources.',
-                    ),
-                    const Gap(8),
-                    DetailSurface(
-                      padding: const EdgeInsets.all(14),
-                      radius: 16,
-                      enableGradientInDark: false,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _summaryRow(
-                            context,
-                            label: 'Selected',
-                            value: _resources.length.toString(),
-                          ),
-                          const Gap(8),
-                          _selectionPills(
-                            context,
-                            items: _resources
-                                .map(
-                                  (entry) => _PillData(
-                                    _resourceLabel(
-                                      entry,
-                                      resourceNameLookup,
-                                    ),
-                                    _resourceIcon(entry.variant),
-                                  ),
-                                )
-                                .toList(),
-                            emptyLabel: 'No resource filter',
-                          ),
-                          const Gap(6),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: _editWhitelist,
-                              icon: const Icon(AppIcons.edit, size: 16),
-                              label: const Text('Edit'),
-                            ),
-                          ),
-                        ],
-                      ),
+                      countLabel: _resources.length.toString(),
+                      pills: resourcePills,
+                      emptyLabel: 'No resource filter',
+                      onEdit: _editWhitelist,
                     ),
                     const Gap(16),
-                    _sectionHeader(
-                      context,
+                    AlerterResourceSection(
                       title: 'Resource blacklist',
                       subtitle: 'Suppress alerts for these resources.',
-                    ),
-                    const Gap(8),
-                    DetailSurface(
-                      padding: const EdgeInsets.all(14),
-                      radius: 16,
-                      enableGradientInDark: false,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _summaryRow(
-                            context,
-                            label: 'Selected',
-                            value: _exceptResources.length.toString(),
-                          ),
-                          const Gap(8),
-                          _selectionPills(
-                            context,
-                            items: _exceptResources
-                                .map(
-                                  (entry) => _PillData(
-                                    _resourceLabel(
-                                      entry,
-                                      resourceNameLookup,
-                                    ),
-                                    _resourceIcon(entry.variant),
-                                  ),
-                                )
-                                .toList(),
-                            emptyLabel: 'No exclusions',
-                          ),
-                          const Gap(6),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: _editBlacklist,
-                              icon: const Icon(AppIcons.edit, size: 16),
-                              label: const Text('Edit'),
-                            ),
-                          ),
-                        ],
-                      ),
+                      countLabel: _exceptResources.length.toString(),
+                      pills: exceptPills,
+                      emptyLabel: 'No exclusions',
+                      onEdit: _editBlacklist,
                     ),
                     const Gap(16),
-                    _sectionHeader(
-                      context,
-                      title: 'Maintenance',
-                      subtitle:
-                          'Temporarily suppress alerts during scheduled maintenance.',
-                    ),
-                    const Gap(8),
-                    DetailSurface(
-                      padding: const EdgeInsets.all(14),
-                      radius: 16,
-                      enableGradientInDark: false,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _summaryRow(
-                            context,
-                            label: 'Windows',
-                            value: _maintenanceWindows.length.toString(),
-                          ),
-                          const Gap(8),
-                          _selectionPills(
-                            context,
-                            items: _maintenanceWindows
-                                .map(
-                                  (window) => _PillData(
-                                    (window['name'] ?? 'Maintenance')
-                                        .toString(),
-                                    AppIcons.maintenance,
-                                  ),
-                                )
-                                .toList(),
-                            emptyLabel: 'No maintenance windows',
-                          ),
-                          const Gap(6),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: _editMaintenance,
-                              icon: const Icon(AppIcons.edit, size: 16),
-                              label: const Text('Edit'),
-                            ),
-                          ),
-                        ],
-                      ),
+                    AlerterMaintenanceSection(
+                      count: _maintenanceWindows.length,
+                      pills: maintenancePills,
+                      onEdit: _editMaintenance,
                     ),
                   ],
                 ),
@@ -479,8 +257,9 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
 
     _resources = List<AlerterResourceTarget>.from(config.resources);
     _exceptResources = List<AlerterResourceTarget>.from(config.exceptResources);
-    _maintenanceWindows =
-        config.maintenanceWindows.map(Map<String, dynamic>.from).toList();
+    _maintenanceWindows = List<AlerterMaintenanceWindow>.from(
+      config.maintenanceWindows,
+    );
 
     _initialEnabled = _enabled;
     _initialEndpoint = AlerterEndpoint(
@@ -494,7 +273,7 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
       _exceptResources,
     );
     _initialMaintenanceWindows =
-        _maintenanceWindows.map(Map<String, dynamic>.from).toList();
+        List<AlerterMaintenanceWindow>.from(_maintenanceWindows);
 
     if (mounted) setState(() {});
   }
@@ -568,8 +347,10 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
         'resources': _resources.map((e) => e.toJson()).toList(),
       if (!_resourceSetsEqual(_exceptResources, _initialExceptResources))
         'except_resources': _exceptResources.map((e) => e.toJson()).toList(),
-      if (!_deepEquals(_maintenanceWindows, _initialMaintenanceWindows))
-        'maintenance_windows': _maintenanceWindows,
+      if (!_maintenanceEquals(_maintenanceWindows, _initialMaintenanceWindows))
+        'maintenance_windows': _maintenanceWindows
+            .map((window) => window.toApiMap())
+            .toList(),
     };
 
     if (config.isEmpty) {
@@ -597,55 +378,6 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
       ref.invalidate(alertersProvider);
     }
   }
-}
-
-Widget _sectionHeader(
-  BuildContext context, {
-  required String title,
-  required String subtitle,
-}) {
-  final scheme = Theme.of(context).colorScheme;
-  final textTheme = Theme.of(context).textTheme;
-
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        title,
-        style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-      ),
-      const Gap(4),
-      Text(
-        subtitle,
-        style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-      ),
-    ],
-  );
-}
-
-Widget _summaryRow(
-  BuildContext context, {
-  required String label,
-  required String value,
-}) {
-  final scheme = Theme.of(context).colorScheme;
-  final textTheme = Theme.of(context).textTheme;
-  return Row(
-    children: [
-      Text(
-        label,
-        style: textTheme.bodyMedium?.copyWith(
-          color: scheme.onSurfaceVariant,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      const Spacer(),
-      Text(
-        value,
-        style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
-      ),
-    ],
-  );
 }
 
 class _ErrorState extends StatelessWidget {
@@ -719,62 +451,15 @@ bool _setEquals(Set<String> a, Set<String> b) {
   return a.containsAll(b);
 }
 
-bool _deepEquals(Object? a, Object? b) {
-  if (a is Map && b is Map) {
-    if (a.length != b.length) return false;
-    for (final entry in a.entries) {
-      if (!b.containsKey(entry.key)) return false;
-      if (!_deepEquals(entry.value, b[entry.key])) return false;
-    }
-    return true;
+bool _maintenanceEquals(
+  List<AlerterMaintenanceWindow> a,
+  List<AlerterMaintenanceWindow> b,
+) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i += 1) {
+    if (a[i] != b[i]) return false;
   }
-  if (a is List && b is List) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i += 1) {
-      if (!_deepEquals(a[i], b[i])) return false;
-    }
-    return true;
-  }
-  return a == b;
-}
-
-class _PillData {
-  const _PillData(this.label, [this.icon]);
-
-  final String label;
-  final IconData? icon;
-}
-
-Widget _selectionPills(
-  BuildContext context, {
-  required List<_PillData> items,
-  required String emptyLabel,
-}) {
-  if (items.isEmpty) {
-    return TextPill(label: emptyLabel);
-  }
-
-  final sorted = List<_PillData>.from(items)
-    ..sort((a, b) => a.label.compareTo(b.label));
-  final visible = sorted.take(6).toList();
-  final remaining = sorted.length - visible.length;
-
-  return Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: [
-      for (final item in visible)
-        TextPill(
-          label: item.label,
-          icon: item.icon,
-        ),
-      if (remaining > 0)
-        ValuePill(
-          label: 'More',
-          value: '+$remaining',
-        ),
-    ],
-  );
+  return true;
 }
 
 class _ResourceOption {
@@ -798,17 +483,6 @@ class _ResourceOption {
 
 List<T> _asyncListOrEmpty<T>(AsyncValue<List<T>> async) {
   return async.maybeWhen(data: (value) => value, orElse: () => <T>[]);
-}
-
-bool? _toBool(Object? v) {
-  if (v is bool) return v;
-  if (v is num) return v != 0;
-  if (v is String) {
-    final s = v.trim().toLowerCase();
-    if (s == 'true') return true;
-    if (s == 'false') return false;
-  }
-  return null;
 }
 
 String _humanizeEnum(String v) {
@@ -1697,13 +1371,13 @@ class _ResourceTargetsEditorSheetState
 class _MaintenanceWindowsEditorSheet extends StatefulWidget {
   const _MaintenanceWindowsEditorSheet({required this.initial});
 
-  final List<Map<String, dynamic>> initial;
+  final List<AlerterMaintenanceWindow> initial;
 
-  static Future<List<Map<String, dynamic>>?> show(
+  static Future<List<AlerterMaintenanceWindow>?> show(
     BuildContext context, {
-    required List<Map<String, dynamic>> initial,
+    required List<AlerterMaintenanceWindow> initial,
   }) {
-    return showModalBottomSheet<List<Map<String, dynamic>>>(
+    return showModalBottomSheet<List<AlerterMaintenanceWindow>>(
       context: context,
       useSafeArea: true,
       useRootNavigator: true,
@@ -1720,12 +1394,12 @@ class _MaintenanceWindowsEditorSheet extends StatefulWidget {
 
 class _MaintenanceWindowsEditorSheetState
     extends State<_MaintenanceWindowsEditorSheet> {
-  late List<Map<String, dynamic>> _items;
+  late List<AlerterMaintenanceWindow> _items;
 
   @override
   void initState() {
     super.initState();
-    _items = widget.initial.map(Map<String, dynamic>.from).toList();
+    _items = List<AlerterMaintenanceWindow>.from(widget.initial);
   }
 
   @override
@@ -1788,9 +1462,9 @@ class _MaintenanceWindowsEditorSheetState
                 ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text((w['name'] ?? 'Maintenance').toString()),
+                title: Text(w.name.isEmpty ? 'Maintenance' : w.name),
                 subtitle: Text(
-                  '${w['schedule_type']?.toString() ?? ''} • ${w['timezone']?.toString() ?? ''}',
+                  '${w.scheduleType} • ${w.timezone}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1845,13 +1519,13 @@ class _MaintenanceWindowsEditorSheetState
 class _MaintenanceWindowEditorSheet extends StatefulWidget {
   const _MaintenanceWindowEditorSheet({this.initial});
 
-  final Map<String, dynamic>? initial;
+  final AlerterMaintenanceWindow? initial;
 
-  static Future<Map<String, dynamic>?> show(
+  static Future<AlerterMaintenanceWindow?> show(
     BuildContext context, {
-    Map<String, dynamic>? initial,
+    AlerterMaintenanceWindow? initial,
   }) {
-    return showModalBottomSheet<Map<String, dynamic>>(
+    return showModalBottomSheet<AlerterMaintenanceWindow>(
       context: context,
       useSafeArea: true,
       useRootNavigator: true,
@@ -1888,30 +1562,30 @@ class _MaintenanceWindowEditorDialogState
   @override
   void initState() {
     super.initState();
-    final i = widget.initial ?? const <String, dynamic>{};
-    _nameController = TextEditingController(text: (i['name'] ?? '').toString());
+    final i = widget.initial;
+    _nameController = TextEditingController(text: i?.name ?? '');
     _descriptionController = TextEditingController(
-      text: (i['description'] ?? '').toString(),
+      text: i?.description ?? '',
     );
-    final st = (i['schedule_type'] ?? '').toString().trim();
+    final st = i?.scheduleType.trim() ?? '';
     _scheduleType = _scheduleTypes.contains(st) ? st : _scheduleTypes.first;
     _dayOfWeekController = TextEditingController(
-      text: (i['day_of_week'] ?? '').toString(),
+      text: i?.dayOfWeek ?? '',
     );
-    _dateController = TextEditingController(text: (i['date'] ?? '').toString());
+    _dateController = TextEditingController(text: i?.date ?? '');
     _hourController = TextEditingController(
-      text: (i['hour'] ?? '0').toString(),
+      text: (i?.hour ?? 0).toString(),
     );
     _minuteController = TextEditingController(
-      text: (i['minute'] ?? '0').toString(),
+      text: (i?.minute ?? 0).toString(),
     );
     _durationController = TextEditingController(
-      text: (i['duration_minutes'] ?? '60').toString(),
+      text: (i?.durationMinutes ?? 60).toString(),
     );
     _timezoneController = TextEditingController(
-      text: (i['timezone'] ?? 'UTC').toString(),
+      text: i?.timezone ?? 'UTC',
     );
-    _enabled = _toBool(i['enabled']) ?? true;
+    _enabled = i?.enabled ?? true;
   }
 
   @override
@@ -2082,29 +1756,33 @@ class _MaintenanceWindowEditorDialogState
                         final name = _nameController.text.trim();
                         if (name.isEmpty) return;
 
-                        Navigator.of(context).pop(<String, dynamic>{
-                          'name': name,
-                          'description': _descriptionController.text.trim(),
-                          'schedule_type': _scheduleType,
-                          'day_of_week': _scheduleType == 'Weekly'
-                              ? _dayOfWeekController.text.trim()
-                              : '',
-                          'date': _scheduleType == 'OneTime'
-                              ? _dateController.text.trim()
-                              : '',
-                          'hour': int.tryParse(_hourController.text.trim()) ??
-                              0,
-                          'minute':
-                              int.tryParse(_minuteController.text.trim()) ??
-                                  0,
-                          'duration_minutes':
-                              int.tryParse(_durationController.text.trim()) ??
-                                  60,
-                          'timezone': _timezoneController.text.trim().isEmpty
-                              ? 'UTC'
-                              : _timezoneController.text.trim(),
-                          'enabled': _enabled,
-                        });
+                        Navigator.of(context).pop(
+                          AlerterMaintenanceWindow(
+                            name: name,
+                            description: _descriptionController.text.trim(),
+                            scheduleType: _scheduleType,
+                            dayOfWeek: _scheduleType == 'Weekly'
+                                ? _dayOfWeekController.text.trim()
+                                : '',
+                            date: _scheduleType == 'OneTime'
+                                ? _dateController.text.trim()
+                                : '',
+                            hour: int.tryParse(_hourController.text.trim()) ??
+                                0,
+                            minute:
+                                int.tryParse(_minuteController.text.trim()) ??
+                                    0,
+                            durationMinutes: int.tryParse(
+                                  _durationController.text.trim(),
+                                ) ??
+                                60,
+                            timezone:
+                                _timezoneController.text.trim().isEmpty
+                                    ? 'UTC'
+                                    : _timezoneController.text.trim(),
+                            enabled: _enabled,
+                          ),
+                        );
                       },
                       child: const Text('Save'),
                     ),
