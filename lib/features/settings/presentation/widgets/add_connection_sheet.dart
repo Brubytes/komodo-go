@@ -7,6 +7,7 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
+import 'package:komodo_go/features/auth/presentation/providers/connection_draft_provider.dart';
 
 class AddConnectionSheet extends HookConsumerWidget {
   const AddConnectionSheet({super.key});
@@ -24,14 +25,54 @@ class AddConnectionSheet extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authAsync = ref.watch(authProvider);
+    final draft = ref.watch(connectionDraftProvider);
+    final draftNotifier = ref.read(connectionDraftProvider.notifier);
     final formKey = useMemoized(GlobalKey<FormState>.new);
 
-    final connectionNameController = useTextEditingController();
-    final baseUrlController = useTextEditingController();
-    final apiKeyController = useTextEditingController();
-    final apiSecretController = useTextEditingController();
+    final connectionNameController = useTextEditingController(text: draft.name);
+    final baseUrlController = useTextEditingController(text: draft.baseUrl);
+    final apiKeyController = useTextEditingController(text: draft.apiKey);
+    final apiSecretController = useTextEditingController(text: draft.apiSecret);
 
     final obscureSecret = useState(true);
+
+    ref.listen(authProvider, (previous, next) {
+      final nextState = next.value;
+      if (nextState is AuthStateAuthenticated) {
+        ref.read(connectionDraftProvider.notifier).reset();
+      }
+    });
+
+    useEffect(
+      () {
+        void syncDraft() {
+          draftNotifier.update(
+            name: connectionNameController.text,
+            baseUrl: baseUrlController.text,
+            apiKey: apiKeyController.text,
+            apiSecret: apiSecretController.text,
+          );
+        }
+
+        connectionNameController.addListener(syncDraft);
+        baseUrlController.addListener(syncDraft);
+        apiKeyController.addListener(syncDraft);
+        apiSecretController.addListener(syncDraft);
+
+        return () {
+          connectionNameController.removeListener(syncDraft);
+          baseUrlController.removeListener(syncDraft);
+          apiKeyController.removeListener(syncDraft);
+          apiSecretController.removeListener(syncDraft);
+        };
+      },
+      [
+        connectionNameController,
+        baseUrlController,
+        apiKeyController,
+        apiSecretController,
+      ],
+    );
 
     Future<void> handleSave() async {
       if (!(formKey.currentState?.validate() ?? false)) {
@@ -177,9 +218,7 @@ class AddConnectionSheet extends HookConsumerWidget {
                       prefixIcon: const Icon(AppIcons.lock),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          obscureSecret.value
-                              ? AppIcons.eye
-                              : AppIcons.eyeOff,
+                          obscureSecret.value ? AppIcons.eye : AppIcons.eyeOff,
                         ),
                         onPressed: () {
                           obscureSecret.value = !obscureSecret.value;
