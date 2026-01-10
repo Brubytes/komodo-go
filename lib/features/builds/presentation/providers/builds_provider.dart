@@ -25,7 +25,9 @@ class Builds extends _$Builds {
   /// Refreshes the builds list.
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 

@@ -27,7 +27,9 @@ class Deployments extends _$Deployments {
   /// Refreshes the deployment list.
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 

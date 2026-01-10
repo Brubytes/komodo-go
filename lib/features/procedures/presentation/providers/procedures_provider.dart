@@ -25,13 +25,18 @@ class Procedures extends _$Procedures {
   /// Refreshes the procedures list.
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
 /// Provides details for a specific procedure.
 @riverpod
-Future<KomodoProcedure?> procedureDetail(Ref ref, String procedureIdOrName) async {
+Future<KomodoProcedure?> procedureDetail(
+  Ref ref,
+  String procedureIdOrName,
+) async {
   final repository = ref.watch(procedureRepositoryProvider);
   if (repository == null) {
     return null;

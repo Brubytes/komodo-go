@@ -20,7 +20,9 @@ class Variables extends _$Variables {
 
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
@@ -68,13 +70,10 @@ class VariableActions extends _$VariableActions {
         name: original.name,
         description: description.trim(),
       );
-      final ok = result.fold(
-        (failure) {
-          state = AsyncValue.error(failure.displayMessage, StackTrace.current);
-          return false;
-        },
-        (_) => true,
-      );
+      final ok = result.fold((failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return false;
+      }, (_) => true);
       if (!ok) return false;
     }
 
@@ -83,13 +82,10 @@ class VariableActions extends _$VariableActions {
         name: original.name,
         isSecret: isSecret,
       );
-      final ok = result.fold(
-        (failure) {
-          state = AsyncValue.error(failure.displayMessage, StackTrace.current);
-          return false;
-        },
-        (_) => true,
-      );
+      final ok = result.fold((failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return false;
+      }, (_) => true);
       if (!ok) return false;
     }
 

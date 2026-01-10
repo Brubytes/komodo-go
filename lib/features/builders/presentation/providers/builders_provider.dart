@@ -21,7 +21,9 @@ class Builders extends _$Builders {
 
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 

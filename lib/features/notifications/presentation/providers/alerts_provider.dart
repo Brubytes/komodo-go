@@ -45,7 +45,9 @@ class Alerts extends _$Alerts {
 
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 
   Future<void> fetchNextPage() async {

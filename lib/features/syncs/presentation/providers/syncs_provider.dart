@@ -25,7 +25,9 @@ class Syncs extends _$Syncs {
   /// Refreshes the syncs list.
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 

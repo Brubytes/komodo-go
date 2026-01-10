@@ -22,7 +22,9 @@ class Alerters extends _$Alerters {
 
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
