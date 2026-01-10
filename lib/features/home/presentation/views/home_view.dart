@@ -3,27 +3,29 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-import 'package:komodo_go/core/theme/app_tokens.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/main_app_bar.dart';
-import '../../../deployments/data/models/deployment.dart';
-import '../../../deployments/presentation/providers/deployments_provider.dart';
-import '../../../servers/data/models/server.dart';
-import '../../../servers/presentation/providers/servers_provider.dart';
-import '../../../builds/data/models/build.dart';
-import '../../../builds/presentation/providers/builds_provider.dart';
-import '../../../procedures/data/models/procedure.dart';
-import '../../../procedures/presentation/providers/procedures_provider.dart';
 import '../../../actions/data/models/action.dart';
 import '../../../actions/presentation/providers/actions_provider.dart';
+import '../../../builds/data/models/build.dart';
+import '../../../builds/presentation/providers/builds_provider.dart';
+import '../../../deployments/data/models/deployment.dart';
+import '../../../deployments/presentation/providers/deployments_provider.dart';
+import '../../../procedures/data/models/procedure.dart';
+import '../../../procedures/presentation/providers/procedures_provider.dart';
 import '../../../repos/data/models/repo.dart';
 import '../../../repos/presentation/providers/repos_provider.dart';
-import '../../../syncs/data/models/sync.dart';
-import '../../../syncs/presentation/providers/syncs_provider.dart';
 import '../../../resources/presentation/providers/resources_tab_provider.dart';
+import '../../../servers/data/models/server.dart';
+import '../../../servers/presentation/providers/servers_provider.dart';
 import '../../../stacks/data/models/stack.dart';
 import '../../../stacks/presentation/providers/stacks_provider.dart';
+import '../../../syncs/data/models/sync.dart';
+import '../../../syncs/presentation/providers/syncs_provider.dart';
+import 'home/home_list_tiles.dart';
+import 'home/home_sections.dart';
+import 'home/home_stat_card.dart';
 
 /// Home dashboard view.
 class HomeView extends ConsumerWidget {
@@ -87,10 +89,9 @@ class HomeView extends ConsumerWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                _StatCard(
+                HomeStatCard(
                   title: 'Servers',
                   icon: AppIcons.server,
-                  color: AppTokens.resourceServers,
                   asyncValue: serversAsync,
                   valueBuilder: (servers) => servers.length.toString(),
                   subtitleBuilder: (servers) {
@@ -101,10 +102,9 @@ class HomeView extends ConsumerWidget {
                   },
                   onTap: () => _goToResources(context, ResourceType.servers),
                 ),
-                _StatCard(
+                HomeStatCard(
                   title: 'Deployments',
                   icon: AppIcons.deployments,
-                  color: AppTokens.resourceDeployments,
                   asyncValue: deploymentsAsync,
                   valueBuilder: (deployments) => deployments.length.toString(),
                   subtitleBuilder: (deployments) {
@@ -116,10 +116,9 @@ class HomeView extends ConsumerWidget {
                   onTap: () =>
                       _goToResources(context, ResourceType.deployments),
                 ),
-                _StatCard(
+                HomeStatCard(
                   title: 'Stacks',
                   icon: AppIcons.stacks,
-                  color: AppTokens.resourceStacks,
                   asyncValue: stacksAsync,
                   valueBuilder: (stacks) => stacks.length.toString(),
                   subtitleBuilder: (stacks) {
@@ -130,10 +129,9 @@ class HomeView extends ConsumerWidget {
                   },
                   onTap: () => _goToResources(context, ResourceType.stacks),
                 ),
-                _StatCard(
+                HomeStatCard(
                   title: 'Repos',
                   icon: AppIcons.repos,
-                  color: AppTokens.resourceRepos,
                   asyncValue: reposAsync,
                   valueBuilder: (repos) => repos.length.toString(),
                   subtitleBuilder: (repos) {
@@ -142,10 +140,9 @@ class HomeView extends ConsumerWidget {
                   },
                   onTap: () => _goToResources(context, ResourceType.repos),
                 ),
-                _StatCard(
+                HomeStatCard(
                   title: 'Syncs',
                   icon: AppIcons.syncs,
-                  color: AppTokens.resourceSyncs,
                   asyncValue: syncsAsync,
                   valueBuilder: (syncs) => syncs.length.toString(),
                   subtitleBuilder: (syncs) {
@@ -156,10 +153,9 @@ class HomeView extends ConsumerWidget {
                   },
                   onTap: () => _goToResources(context, ResourceType.syncs),
                 ),
-                _StatCard(
+                HomeStatCard(
                   title: 'Builds',
                   icon: AppIcons.builds,
-                  color: AppTokens.resourceBuilds,
                   asyncValue: buildsAsync,
                   valueBuilder: (builds) => builds.length.toString(),
                   subtitleBuilder: (builds) {
@@ -170,10 +166,9 @@ class HomeView extends ConsumerWidget {
                   },
                   onTap: () => _goToResources(context, ResourceType.builds),
                 ),
-                _StatCard(
+                HomeStatCard(
                   title: 'Procedures',
                   icon: AppIcons.procedures,
-                  color: AppTokens.resourceProcedures,
                   asyncValue: proceduresAsync,
                   valueBuilder: (procedures) => procedures.length.toString(),
                   subtitleBuilder: (procedures) {
@@ -184,10 +179,9 @@ class HomeView extends ConsumerWidget {
                   },
                   onTap: () => _goToResources(context, ResourceType.procedures),
                 ),
-                _StatCard(
+                HomeStatCard(
                   title: 'Actions',
                   icon: AppIcons.actions,
-                  color: AppTokens.resourceActions,
                   asyncValue: actionsAsync,
                   valueBuilder: (actions) => actions.length.toString(),
                   subtitleBuilder: (actions) {
@@ -203,7 +197,7 @@ class HomeView extends ConsumerWidget {
             const Gap(16),
 
             // Recent servers
-            _SectionHeader(
+            HomeSectionHeader(
               title: 'Servers',
               onSeeAll: () => _goToResources(context, ResourceType.servers),
             ),
@@ -211,7 +205,7 @@ class HomeView extends ConsumerWidget {
             serversAsync.when(
               data: (servers) {
                 if (servers.isEmpty) {
-                  return const _EmptyListTile(
+                  return const HomeEmptyListTile(
                     icon: AppIcons.server,
                     message: 'No servers',
                   );
@@ -219,17 +213,17 @@ class HomeView extends ConsumerWidget {
                 return Column(
                   children: servers
                       .take(3)
-                      .map((server) => _ServerListTile(server: server))
+                      .map((server) => HomeServerListTile(server: server))
                       .toList(),
                 );
               },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
+              loading: () => const HomeLoadingTile(),
+              error: (e, _) => HomeErrorTile(message: e.toString()),
             ),
             const Gap(16),
 
             // Recent deployments
-            _SectionHeader(
+            HomeSectionHeader(
               title: 'Deployments',
               onSeeAll: () => _goToResources(context, ResourceType.deployments),
             ),
@@ -237,7 +231,7 @@ class HomeView extends ConsumerWidget {
             deploymentsAsync.when(
               data: (deployments) {
                 if (deployments.isEmpty) {
-                  return const _EmptyListTile(
+                  return const HomeEmptyListTile(
                     icon: AppIcons.deployments,
                     message: 'No deployments',
                   );
@@ -247,18 +241,18 @@ class HomeView extends ConsumerWidget {
                       .take(5)
                       .map(
                         (deployment) =>
-                            _DeploymentListTile(deployment: deployment),
+                            HomeDeploymentListTile(deployment: deployment),
                       )
                       .toList(),
                 );
               },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
+              loading: () => const HomeLoadingTile(),
+              error: (e, _) => HomeErrorTile(message: e.toString()),
             ),
             const Gap(16),
 
             // Recent stacks
-            _SectionHeader(
+            HomeSectionHeader(
               title: 'Stacks',
               onSeeAll: () => _goToResources(context, ResourceType.stacks),
             ),
@@ -266,7 +260,7 @@ class HomeView extends ConsumerWidget {
             stacksAsync.when(
               data: (stacks) {
                 if (stacks.isEmpty) {
-                  return const _EmptyListTile(
+                  return const HomeEmptyListTile(
                     icon: AppIcons.stacks,
                     message: 'No stacks',
                   );
@@ -274,17 +268,17 @@ class HomeView extends ConsumerWidget {
                 return Column(
                   children: stacks
                       .take(5)
-                      .map((stack) => _StackListTile(stack: stack))
+                      .map((stack) => HomeStackListTile(stack: stack))
                       .toList(),
                 );
               },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
+              loading: () => const HomeLoadingTile(),
+              error: (e, _) => HomeErrorTile(message: e.toString()),
             ),
             const Gap(16),
 
             // Recent repos
-            _SectionHeader(
+            HomeSectionHeader(
               title: 'Repos',
               onSeeAll: () => _goToResources(context, ResourceType.repos),
             ),
@@ -292,7 +286,7 @@ class HomeView extends ConsumerWidget {
             reposAsync.when(
               data: (repos) {
                 if (repos.isEmpty) {
-                  return const _EmptyListTile(
+                  return const HomeEmptyListTile(
                     icon: AppIcons.repos,
                     message: 'No repos',
                   );
@@ -300,17 +294,17 @@ class HomeView extends ConsumerWidget {
                 return Column(
                   children: repos
                       .take(5)
-                      .map((repo) => _RepoListTile(repo: repo))
+                      .map((repo) => HomeRepoListTile(repo: repo))
                       .toList(),
                 );
               },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
+              loading: () => const HomeLoadingTile(),
+              error: (e, _) => HomeErrorTile(message: e.toString()),
             ),
             const Gap(16),
 
             // Recent syncs
-            _SectionHeader(
+            HomeSectionHeader(
               title: 'Syncs',
               onSeeAll: () => _goToResources(context, ResourceType.syncs),
             ),
@@ -318,7 +312,7 @@ class HomeView extends ConsumerWidget {
             syncsAsync.when(
               data: (syncs) {
                 if (syncs.isEmpty) {
-                  return const _EmptyListTile(
+                  return const HomeEmptyListTile(
                     icon: AppIcons.syncs,
                     message: 'No syncs',
                   );
@@ -326,17 +320,17 @@ class HomeView extends ConsumerWidget {
                 return Column(
                   children: syncs
                       .take(5)
-                      .map((sync) => _SyncListTile(sync: sync))
+                      .map((sync) => HomeSyncListTile(sync: sync))
                       .toList(),
                 );
               },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
+              loading: () => const HomeLoadingTile(),
+              error: (e, _) => HomeErrorTile(message: e.toString()),
             ),
             const Gap(16),
 
             // Recent builds
-            _SectionHeader(
+            HomeSectionHeader(
               title: 'Builds',
               onSeeAll: () => _goToResources(context, ResourceType.builds),
             ),
@@ -344,7 +338,7 @@ class HomeView extends ConsumerWidget {
             buildsAsync.when(
               data: (builds) {
                 if (builds.isEmpty) {
-                  return const _EmptyListTile(
+                  return const HomeEmptyListTile(
                     icon: AppIcons.builds,
                     message: 'No builds',
                   );
@@ -352,17 +346,17 @@ class HomeView extends ConsumerWidget {
                 return Column(
                   children: builds
                       .take(5)
-                      .map((build) => _BuildListTile(buildItem: build))
+                      .map((build) => HomeBuildListTile(buildItem: build))
                       .toList(),
                 );
               },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
+              loading: () => const HomeLoadingTile(),
+              error: (e, _) => HomeErrorTile(message: e.toString()),
             ),
             const Gap(16),
 
             // Recent procedures
-            _SectionHeader(
+            HomeSectionHeader(
               title: 'Procedures',
               onSeeAll: () => _goToResources(context, ResourceType.procedures),
             ),
@@ -370,7 +364,7 @@ class HomeView extends ConsumerWidget {
             proceduresAsync.when(
               data: (procedures) {
                 if (procedures.isEmpty) {
-                  return const _EmptyListTile(
+                  return const HomeEmptyListTile(
                     icon: AppIcons.procedures,
                     message: 'No procedures',
                   );
@@ -379,18 +373,18 @@ class HomeView extends ConsumerWidget {
                   children: procedures
                       .take(5)
                       .map(
-                        (procedure) => _ProcedureListTile(procedure: procedure),
+                        (procedure) => HomeProcedureListTile(procedure: procedure),
                       )
                       .toList(),
                 );
               },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
+              loading: () => const HomeLoadingTile(),
+              error: (e, _) => HomeErrorTile(message: e.toString()),
             ),
             const Gap(16),
 
             // Recent actions
-            _SectionHeader(
+            HomeSectionHeader(
               title: 'Actions',
               onSeeAll: () => _goToResources(context, ResourceType.actions),
             ),
@@ -398,7 +392,7 @@ class HomeView extends ConsumerWidget {
             actionsAsync.when(
               data: (actions) {
                 if (actions.isEmpty) {
-                  return const _EmptyListTile(
+                  return const HomeEmptyListTile(
                     icon: AppIcons.actions,
                     message: 'No actions',
                   );
@@ -406,581 +400,14 @@ class HomeView extends ConsumerWidget {
                 return Column(
                   children: actions
                       .take(5)
-                      .map((action) => _ActionListTile(action: action))
+                      .map((action) => HomeActionListTile(action: action))
                       .toList(),
                 );
               },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
+              loading: () => const HomeLoadingTile(),
+              error: (e, _) => HomeErrorTile(message: e.toString()),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatCard<T> extends StatelessWidget {
-  const _StatCard({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.asyncValue,
-    required this.valueBuilder,
-    required this.subtitleBuilder,
-    this.onTap,
-  });
-
-  final String title;
-  final IconData icon;
-  final Color color;
-  final AsyncValue<List<T>> asyncValue;
-  final String Function(List<T>) valueBuilder;
-  final String Function(List<T>) subtitleBuilder;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // In tests and very compact layouts the grid can become quite short.
-            // Keep this threshold generous to avoid overflows.
-            final isTight = constraints.maxHeight < 110;
-            final padding = isTight ? 7.0 : 10.0;
-            final iconSize = isTight ? 15.0 : 18.0;
-            final gap = isTight ? 2.0 : 6.0;
-            final showSubtitle = !isTight;
-
-            final valueStyle =
-                (isTight ? textTheme.titleMedium : textTheme.headlineSmall)
-                    ?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.2,
-                    );
-            final titleStyle =
-                (isTight ? textTheme.labelMedium : textTheme.titleSmall)
-                    ?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: scheme.onSurfaceVariant,
-                      letterSpacing: -0.1,
-                    );
-            final subtitleStyle = (isTight
-                    ? textTheme.labelSmall
-                    : textTheme.labelMedium)
-                ?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                );
-
-            return Padding(
-              padding: EdgeInsets.all(padding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(isTight ? 4 : 6),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(icon, color: color, size: iconSize),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        AppIcons.chevron,
-                        size: isTight ? 18 : 20,
-                        color: scheme.onSurfaceVariant.withValues(alpha: 0.55),
-                      ),
-                    ],
-                  ),
-                  Gap(gap),
-                  asyncValue.when(
-                    data: (data) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(valueBuilder(data), style: valueStyle),
-                            const Gap(8),
-                            Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.only(
-                                  bottom: isTight ? 0 : 2,
-                                ),
-                                child: Text(
-                                  title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: titleStyle,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (showSubtitle) ...[
-                          const Gap(2),
-                          Text(
-                            subtitleBuilder(data),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: subtitleStyle,
-                          ),
-                        ],
-                      ],
-                    ),
-                    loading: () => SizedBox(
-                      height: isTight ? 32 : 40,
-                      child: const Center(child: CircularProgressIndicator()),
-                    ),
-                    error: (_, __) => SizedBox(
-                      height: isTight ? 32 : 40,
-                      child: const Center(child: Icon(AppIcons.formError)),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, this.onSeeAll});
-
-  final String title;
-  final VoidCallback? onSeeAll;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        if (onSeeAll != null)
-          TextButton(onPressed: onSeeAll, child: const Text('See all')),
-      ],
-    );
-  }
-}
-
-class _ServerListTile extends StatelessWidget {
-  const _ServerListTile({required this.server});
-
-  final Server server;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = server.info?.state ?? ServerState.unknown;
-    final color = switch (state) {
-      ServerState.ok => Colors.green,
-      ServerState.notOk => Colors.red,
-      ServerState.disabled => Colors.grey,
-      ServerState.unknown => Colors.orange,
-    };
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(server.name),
-        subtitle: Text(server.address),
-        trailing: Icon(AppIcons.chevron),
-        onTap: () => context.go(
-          '${AppRoutes.servers}/${server.id}?name=${Uri.encodeComponent(server.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _DeploymentListTile extends StatelessWidget {
-  const _DeploymentListTile({required this.deployment});
-
-  final Deployment deployment;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = deployment.info?.state ?? DeploymentState.unknown;
-    final color = switch (state) {
-      DeploymentState.deploying => Colors.blue,
-      DeploymentState.running => Colors.green,
-      DeploymentState.created => Colors.grey,
-      DeploymentState.restarting => Colors.blue,
-      DeploymentState.removing => Colors.grey,
-      DeploymentState.exited => Colors.orange,
-      DeploymentState.dead => Colors.red,
-      DeploymentState.paused => Colors.grey,
-      DeploymentState.notDeployed => Colors.grey,
-      DeploymentState.unknown => Colors.orange,
-    };
-
-    final imageLabel = deployment.imageLabel;
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(deployment.name),
-        subtitle: Text(imageLabel.isNotEmpty ? imageLabel : 'No image'),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-      ),
-    );
-  }
-}
-
-class _StackListTile extends StatelessWidget {
-  const _StackListTile({required this.stack});
-
-  final StackListItem stack;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = stack.info.state;
-    final color = switch (state) {
-      StackState.deploying => Colors.blue,
-      StackState.running => Colors.green,
-      StackState.paused => Colors.grey,
-      StackState.stopped => Colors.orange,
-      StackState.created => Colors.grey,
-      StackState.restarting => Colors.blue,
-      StackState.removing => Colors.grey,
-      StackState.unhealthy => Colors.red,
-      StackState.down => Colors.grey,
-      StackState.dead => Colors.red,
-      StackState.unknown => Colors.orange,
-    };
-
-    final repo = stack.info.repo;
-    final branch = stack.info.branch;
-    final subtitle = repo.isNotEmpty
-        ? (branch.isNotEmpty ? '$repo · $branch' : repo)
-        : 'No repo';
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(stack.name),
-        subtitle: Text(subtitle),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-        onTap: () => context.go(
-          '${AppRoutes.stacks}/${stack.id}?name=${Uri.encodeComponent(stack.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _RepoListTile extends StatelessWidget {
-  const _RepoListTile({required this.repo});
-
-  final RepoListItem repo;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = repo.info.state;
-    final color = switch (state) {
-      RepoState.ok => Colors.green,
-      RepoState.failed => Colors.red,
-      RepoState.cloning => Colors.blue,
-      RepoState.pulling => Colors.blue,
-      RepoState.building => Colors.orange,
-      RepoState.unknown => Colors.orange,
-    };
-
-    final repoPath = repo.info.repo;
-    final branch = repo.info.branch;
-    final subtitle = repoPath.isNotEmpty
-        ? (branch.isNotEmpty ? '$repoPath · $branch' : repoPath)
-        : 'No repo';
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(repo.name),
-        subtitle: Text(subtitle),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-        onTap: () => context.go(
-          '${AppRoutes.repos}/${repo.id}?name=${Uri.encodeComponent(repo.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _SyncListTile extends StatelessWidget {
-  const _SyncListTile({required this.sync});
-
-  final ResourceSyncListItem sync;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = sync.info.state;
-    final color = switch (state) {
-      ResourceSyncState.syncing => Colors.blue,
-      ResourceSyncState.pending => Colors.orange,
-      ResourceSyncState.ok => Colors.green,
-      ResourceSyncState.failed => Colors.red,
-      ResourceSyncState.unknown => Colors.orange,
-    };
-
-    final repo = sync.info.repo;
-    final branch = sync.info.branch;
-    final subtitle = repo.isNotEmpty
-        ? (branch.isNotEmpty ? '$repo · $branch' : repo)
-        : 'No repo';
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(sync.name),
-        subtitle: Text(subtitle),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-        onTap: () => context.go(
-          '${AppRoutes.syncs}/${sync.id}?name=${Uri.encodeComponent(sync.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _BuildListTile extends StatelessWidget {
-  const _BuildListTile({required this.buildItem});
-
-  final BuildListItem buildItem;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = buildItem.info.state;
-    final color = switch (state) {
-      BuildState.building => Colors.blue,
-      BuildState.ok => Colors.green,
-      BuildState.failed => Colors.red,
-      BuildState.unknown => Colors.orange,
-    };
-
-    final repo = buildItem.info.repo;
-    final branch = buildItem.info.branch;
-    final versionLabel = buildItem.info.version.label;
-    final subtitleParts = <String>[
-      if (repo.isNotEmpty) branch.isNotEmpty ? '$repo · $branch' : repo,
-      if (versionLabel != '0.0.0') 'v$versionLabel',
-    ];
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(buildItem.name),
-        subtitle: subtitleParts.isEmpty
-            ? const Text('No repo')
-            : Text(subtitleParts.join(' · ')),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-        onTap: () => context.go(
-          '${AppRoutes.builds}/${buildItem.id}?name=${Uri.encodeComponent(buildItem.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _ProcedureListTile extends StatelessWidget {
-  const _ProcedureListTile({required this.procedure});
-
-  final ProcedureListItem procedure;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = procedure.info.state;
-    final color = switch (state) {
-      ProcedureState.running => Colors.blue,
-      ProcedureState.ok => Colors.green,
-      ProcedureState.failed => Colors.red,
-      ProcedureState.unknown => Colors.orange,
-    };
-
-    final stages = procedure.info.stages;
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(procedure.name),
-        subtitle: Text('$stages stages'),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-        onTap: () => context.go(
-          '${AppRoutes.procedures}/${procedure.id}?name=${Uri.encodeComponent(procedure.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionListTile extends StatelessWidget {
-  const _ActionListTile({required this.action});
-
-  final ActionListItem action;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = action.info.state;
-    final color = switch (state) {
-      ActionState.running => Colors.blue,
-      ActionState.ok => Colors.green,
-      ActionState.failed => Colors.red,
-      ActionState.unknown => Colors.orange,
-    };
-
-    final hasSchedule = action.info.nextScheduledRun != null;
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(action.name),
-        subtitle: Text(hasSchedule ? 'Scheduled' : 'No schedule'),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-        onTap: () => context.go(
-          '${AppRoutes.actions}/${action.id}?name=${Uri.encodeComponent(action.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _LoadingTile extends StatelessWidget {
-  const _LoadingTile();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Card(
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-    );
-  }
-}
-
-class _ErrorTile extends StatelessWidget {
-  const _ErrorTile({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            const Icon(AppIcons.formError, color: Colors.red),
-            const Gap(8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyListTile extends StatelessWidget {
-  const _EmptyListTile({required this.icon, required this.message});
-
-  final IconData icon;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                size: 32,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.3),
-              ),
-              const Gap(8),
-              Text(
-                message,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

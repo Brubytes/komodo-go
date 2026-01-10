@@ -3,7 +3,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/api/api_call.dart';
 import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_exception.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/providers/dio_provider.dart';
 import '../../../../core/storage/secure_storage_service.dart';
