@@ -22,42 +22,47 @@ class ErrorStateView extends StatelessWidget {
         ? 'Check your internet connection and server address in Settings > Connections.'
         : null;
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Gap(48),
-        Icon(
-          isNetworkIssue ? AppIcons.disconnect : AppIcons.formError,
-          size: 64,
-          color: scheme.error,
-        ),
-        const Gap(16),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium,
-          textAlign: TextAlign.center,
-        ),
-        const Gap(8),
-        Text(
-          message,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: scheme.onSurface.withValues(alpha: 0.7),
-          ),
-          textAlign: TextAlign.center,
-        ),
-        if (helperText != null) ...[
-          const Gap(8),
-          Text(
-            helperText,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.6),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Gap(48),
+            Icon(
+              isNetworkIssue ? AppIcons.disconnect : AppIcons.formError,
+              size: 64,
+              color: scheme.error,
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-        const Gap(24),
-        FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
-      ],
+            const Gap(16),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const Gap(8),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (helperText != null) ...[
+              const Gap(8),
+              Text(
+                helperText,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.6),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+            const Gap(24),
+            FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
+      ),
     );
   }
 
