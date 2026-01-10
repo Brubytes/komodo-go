@@ -136,7 +136,10 @@ extension TagColorX on TagColor {
 
   String get label {
     final t = token;
-    return t.replaceAllMapped(RegExp('([a-z])([A-Z])'), (m) => '${m[1]} ${m[2]}');
+    return t.replaceAllMapped(
+      RegExp('([a-z])([A-Z])'),
+      (m) => '${m[1]} ${m[2]}',
+    );
   }
 
   Color get swatch {
@@ -303,4 +306,3 @@ Object? _readId(Map<dynamic, dynamic> json, String key) {
   }
   return null;
 }
-

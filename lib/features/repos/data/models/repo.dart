@@ -9,7 +9,8 @@ sealed class RepoListItem with _$RepoListItem {
   const factory RepoListItem({
     required String id,
     required String name,
-    required RepoListItemInfo info, @Default(false) bool template,
+    required RepoListItemInfo info,
+    @Default(false) bool template,
     @Default([]) List<String> tags,
   }) = _RepoListItem;
 
@@ -48,7 +49,9 @@ sealed class KomodoRepo with _$KomodoRepo {
   const factory KomodoRepo({
     @JsonKey(readValue: _readId) required String id,
     required String name,
-    required RepoConfig config, required RepoInfo info, @Default('') String description,
+    required RepoConfig config,
+    required RepoInfo info,
+    @Default('') String description,
     @Default(false) bool template,
     @Default([]) List<String> tags,
   }) = _KomodoRepo;
@@ -105,7 +108,8 @@ sealed class RepoInfo with _$RepoInfo {
     @JsonKey(name: 'latest_message') String? latestMessage,
   }) = _RepoInfo;
 
-  factory RepoInfo.fromJson(Map<String, dynamic> json) => _$RepoInfoFromJson(json);
+  factory RepoInfo.fromJson(Map<String, dynamic> json) =>
+      _$RepoInfoFromJson(json);
 }
 
 /// The state of a repo.
@@ -138,7 +142,9 @@ String _repoStateToJson(RepoState value) {
 
 extension RepoStateX on RepoState {
   bool get isBusy =>
-      this == RepoState.cloning || this == RepoState.pulling || this == RepoState.building;
+      this == RepoState.cloning ||
+      this == RepoState.pulling ||
+      this == RepoState.building;
 
   String get displayName {
     return switch (this) {
@@ -151,4 +157,3 @@ extension RepoStateX on RepoState {
     };
   }
 }
-

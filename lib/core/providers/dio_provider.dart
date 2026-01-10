@@ -26,7 +26,9 @@ class ActiveConnection extends _$ActiveConnection {
   @override
   ActiveConnectionData? build() => null;
 
-  void setActive(ActiveConnectionData data) {
+  ActiveConnectionData? get active => state;
+
+  set active(ActiveConnectionData? data) {
     state = data;
   }
 

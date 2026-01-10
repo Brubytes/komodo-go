@@ -13,11 +13,9 @@ class Auth extends _$Auth {
   @override
   Future<AuthState> build() async {
     if (kDebugMode) {
-      const delayMs = int.fromEnvironment(
-        'AUTH_BOOT_DELAY_MS',
-      );
+      const delayMs = int.fromEnvironment('AUTH_BOOT_DELAY_MS');
       if (delayMs > 0) {
-        await Future<void>.delayed(const Duration());
+        await Future<void>.delayed(Duration.zero);
       }
     }
 
@@ -48,13 +46,11 @@ class Auth extends _$Auth {
       (_) async {
         ref
             .read(activeConnectionProvider.notifier)
-            .setActive(
-              ActiveConnectionData(
-                connectionId: activeProfile.id,
-                name: activeProfile.name,
-                credentials: credentials,
-              ),
-            );
+            .active = ActiveConnectionData(
+          connectionId: activeProfile.id,
+          name: activeProfile.name,
+          credentials: credentials,
+        );
         await store.touchLastUsed(activeProfile.id);
         return AuthState.authenticated(
           connection: activeProfile,
@@ -66,7 +62,10 @@ class Auth extends _$Auth {
 
   /// Attempts to log in with the provided credentials.
   Future<void> login({
-    required String baseUrl, required String apiKey, required String apiSecret, String? name,
+    required String baseUrl,
+    required String apiKey,
+    required String apiSecret,
+    String? name,
   }) async {
     state = const AsyncValue.loading();
 
@@ -90,13 +89,11 @@ class Auth extends _$Auth {
 
         ref
             .read(activeConnectionProvider.notifier)
-            .setActive(
-              ActiveConnectionData(
-                connectionId: profile.id,
-                name: profile.name,
-                credentials: credentials,
-              ),
-            );
+            .active = ActiveConnectionData(
+          connectionId: profile.id,
+          name: profile.name,
+          credentials: credentials,
+        );
         final store = await ref.read(connectionsStoreProvider.future);
         await store.touchLastUsed(profile.id);
 
@@ -139,13 +136,11 @@ class Auth extends _$Auth {
         if (profile != null) {
           ref
               .read(activeConnectionProvider.notifier)
-              .setActive(
-                ActiveConnectionData(
-                  connectionId: profile.id,
-                  name: profile.name,
-                  credentials: credentials,
-                ),
-              );
+              .active = ActiveConnectionData(
+            connectionId: profile.id,
+            name: profile.name,
+            credentials: credentials,
+          );
           await store.touchLastUsed(profile.id);
           return AsyncValue.data(
             AuthState.authenticated(

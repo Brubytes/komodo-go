@@ -17,8 +17,7 @@ class Alerters extends _$Alerters {
 
     final result = await repository.listAlerters();
     final items = unwrapOrThrow(result);
-    items.sort((a, b) => a.name.compareTo(b.name));
-    return items;
+    return items..sort((a, b) => a.name.compareTo(b.name));
   }
 
   Future<void> refresh() async {
@@ -28,10 +27,7 @@ class Alerters extends _$Alerters {
 }
 
 @riverpod
-Future<AlerterDetail?> alerterDetail(
-  Ref ref,
-  String alerterIdOrName,
-) async {
+Future<AlerterDetail?> alerterDetail(Ref ref, String alerterIdOrName) async {
   final repository = ref.watch(alerterRepositoryProvider);
   if (repository == null) return null;
 

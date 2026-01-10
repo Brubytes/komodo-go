@@ -7,5 +7,7 @@ class MainShellIndex extends _$MainShellIndex {
   @override
   int build() => 0;
 
-  void setIndex(int index) => state = index;
+  int get index => state;
+
+  set index(int value) => state = value;
 }

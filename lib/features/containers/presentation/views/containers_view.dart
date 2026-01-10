@@ -22,8 +22,7 @@ class ContainersView extends ConsumerStatefulWidget {
   ConsumerState<ContainersView> createState() => _ContainersViewState();
 }
 
-class _ContainersViewState
-    extends PollingRouteAwareState<ContainersView> {
+class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
   Timer? _refreshTimer;
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
@@ -132,19 +131,17 @@ class _ContainersViewState
             _FiltersRow(
               serversAsync: serversAsync,
               selectedServerId: selectedServerId,
-              onServerChanged: (value) => ref
-                  .read(containersServerFilterProvider.notifier)
-                  .setServerId(value),
+              onServerChanged: (value) =>
+                  ref.read(containersServerFilterProvider.notifier).serverId =
+                      value,
             ),
             const Gap(12),
             _SortRow(
               sortState: sortState,
-              onFieldChanged: (value) => ref
-                  .read(containersSortProvider.notifier)
-                  .setField(value),
-              onToggleDirection: () => ref
-                  .read(containersSortProvider.notifier)
-                  .toggleDirection(),
+              onFieldChanged: (value) =>
+                  ref.read(containersSortProvider.notifier).field = value,
+              onToggleDirection: () =>
+                  ref.read(containersSortProvider.notifier).toggleDirection(),
             ),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 180),
@@ -156,14 +153,19 @@ class _ContainersViewState
                       child: _SearchField(
                         focusNode: _searchFocusNode,
                         controller: _searchController,
-                        onChanged: (value) => ref
-                            .read(containersSearchQueryProvider.notifier)
-                            .setQuery(value),
+                        onChanged: (value) =>
+                            ref
+                                    .read(
+                                      containersSearchQueryProvider.notifier,
+                                    )
+                                    .query =
+                                value,
                         onClear: () {
                           _searchController.clear();
                           ref
-                              .read(containersSearchQueryProvider.notifier)
-                              .setQuery('');
+                                  .read(containersSearchQueryProvider.notifier)
+                                  .query =
+                              '';
                         },
                       ),
                     )
@@ -255,9 +257,7 @@ class _FiltersRow extends StatelessWidget {
           labelText: 'Server',
           prefixIcon: Icon(AppIcons.server),
         ),
-        items: const [
-          DropdownMenuItem(child: Text('All servers')),
-        ],
+        items: const [DropdownMenuItem(child: Text('All servers'))],
         onChanged: null,
       ),
     );
@@ -319,8 +319,7 @@ class _SortRow extends StatelessWidget {
     final directionIcon = sortState.descending
         ? Icons.arrow_downward_rounded
         : Icons.arrow_upward_rounded;
-    final directionLabel =
-        sortState.descending ? 'Descending' : 'Ascending';
+    final directionLabel = sortState.descending ? 'Descending' : 'Ascending';
 
     return Row(
       children: [
@@ -398,8 +397,7 @@ List<ContainerOverviewItem> _applyFilters(
         serverName.contains(normalizedQuery);
   }).toList();
 
-  filtered.sort((a, b) => _compareBySort(a, b, sort));
-  return filtered;
+  return filtered..sort((a, b) => _compareBySort(a, b, sort));
 }
 
 class _PartialErrorBanner extends StatelessWidget {

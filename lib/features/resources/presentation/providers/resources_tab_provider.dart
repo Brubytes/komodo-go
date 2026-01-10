@@ -31,8 +31,10 @@ class ResourcesTarget extends _$ResourcesTarget {
   @override
   ResourceType? build() => null;
 
-  void open(ResourceType target) {
-    state = target;
+  ResourceType? get target => state;
+
+  set target(ResourceType? value) {
+    state = value;
   }
 
   void clear() {

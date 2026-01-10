@@ -1,6 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/api_exception.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -24,7 +25,7 @@ class UserRepository {
       final json = response as Map<String, dynamic>;
       final username = (json['username'] as String?)?.trim() ?? '';
       if (username.isEmpty) {
-        throw const Failure.server(message: 'User not found');
+        throw const ApiException(message: 'User not found', statusCode: 404);
       }
       return username;
     });

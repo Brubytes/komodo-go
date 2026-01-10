@@ -11,4 +11,3 @@ extension IconDataX on IconData {
     );
   }
 }
-

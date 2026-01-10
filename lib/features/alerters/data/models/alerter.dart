@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class AlerterDetail {
   const AlerterDetail({
     required this.id,
@@ -8,14 +10,11 @@ class AlerterDetail {
 
   factory AlerterDetail.fromApiJson(Map<String, dynamic> json) {
     final nested = json['alerter'];
-    final nestedMap =
-        nested is Map ? Map<String, dynamic>.from(nested) : null;
-    final name =
-        (nestedMap?['name'] ?? json['name'] ?? '').toString().trim();
-    final id =
-        (nestedMap?['id'] ?? json['id'] ?? name).toString().trim();
-    final updatedAt =
-        (json['updated_at'] ?? nestedMap?['updated_at'] ?? '').toString();
+    final nestedMap = nested is Map ? Map<String, dynamic>.from(nested) : null;
+    final name = (nestedMap?['name'] ?? json['name'] ?? '').toString().trim();
+    final id = (nestedMap?['id'] ?? json['id'] ?? name).toString().trim();
+    final updatedAt = (json['updated_at'] ?? nestedMap?['updated_at'] ?? '')
+        .toString();
     final configRaw = json['config'];
     final configMap = configRaw is Map
         ? Map<String, dynamic>.from(configRaw)
@@ -124,9 +123,9 @@ class AlerterResourceTarget {
   String get key => '${variant.toLowerCase()}:$value';
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'type': variant,
-        'id': value,
-      };
+    'type': variant,
+    'id': value,
+  };
 
   AlerterResourceTarget copyWith({String? name}) {
     return AlerterResourceTarget(
@@ -160,7 +159,9 @@ class AlerterResourceTarget {
             id != null &&
             type.trim().isNotEmpty &&
             id.trim().isNotEmpty) {
-          out.add(AlerterResourceTarget(variant: type.trim(), value: id.trim()));
+          out.add(
+            AlerterResourceTarget(variant: type.trim(), value: id.trim()),
+          );
         }
       }
     }
@@ -168,6 +169,7 @@ class AlerterResourceTarget {
   }
 }
 
+@immutable
 class AlerterMaintenanceWindow {
   const AlerterMaintenanceWindow({
     required this.name,
@@ -209,17 +211,17 @@ class AlerterMaintenanceWindow {
   final bool enabled;
 
   Map<String, dynamic> toApiMap() => <String, dynamic>{
-        'name': name,
-        'description': description,
-        'schedule_type': scheduleType,
-        'day_of_week': dayOfWeek,
-        'date': date,
-        'hour': hour,
-        'minute': minute,
-        'duration_minutes': durationMinutes,
-        'timezone': timezone,
-        'enabled': enabled,
-      };
+    'name': name,
+    'description': description,
+    'schedule_type': scheduleType,
+    'day_of_week': dayOfWeek,
+    'date': date,
+    'hour': hour,
+    'minute': minute,
+    'duration_minutes': durationMinutes,
+    'timezone': timezone,
+    'enabled': enabled,
+  };
 
   AlerterMaintenanceWindow copyWith({
     String? name,
@@ -252,7 +254,9 @@ class AlerterMaintenanceWindow {
     final out = <AlerterMaintenanceWindow>[];
     for (final e in raw) {
       if (e is Map) {
-        out.add(AlerterMaintenanceWindow.fromApiMap(Map<String, dynamic>.from(e)));
+        out.add(
+          AlerterMaintenanceWindow.fromApiMap(Map<String, dynamic>.from(e)),
+        );
       }
     }
     return out;
@@ -275,17 +279,17 @@ class AlerterMaintenanceWindow {
 
   @override
   int get hashCode => Object.hash(
-        name,
-        description,
-        scheduleType,
-        dayOfWeek,
-        date,
-        hour,
-        minute,
-        durationMinutes,
-        timezone,
-        enabled,
-      );
+    name,
+    description,
+    scheduleType,
+    dayOfWeek,
+    date,
+    hour,
+    minute,
+    durationMinutes,
+    timezone,
+    enabled,
+  );
 }
 
 List<String> _readStringList(Object? v) {

@@ -16,8 +16,7 @@ class Builders extends _$Builders {
 
     final result = await repository.listBuilders();
     final items = unwrapOrThrow(result);
-    items.sort((a, b) => a.name.compareTo(b.name));
-    return items;
+    return items..sort((a, b) => a.name.compareTo(b.name));
   }
 
   Future<void> refresh() async {

@@ -191,7 +191,10 @@ class AlertTile extends ConsumerWidget {
           ],
         ),
         trailing: alert.resolved
-            ? const NotificationsStatusChip(label: 'RESOLVED', kind: _ChipKind.neutral)
+            ? const NotificationsStatusChip(
+                label: 'RESOLVED',
+                kind: NotificationsStatusChipKind.neutral,
+              )
             : NotificationsStatusChip(
                 label: _labelForSeverity(alert.level),
                 kind: _chipKindForAlertLevel(alert.level),
@@ -293,7 +296,11 @@ class UpdateTile extends ConsumerWidget {
 }
 
 class PaginationFooter extends StatelessWidget {
-  const PaginationFooter({required this.isLoading, required this.onLoadMore, super.key});
+  const PaginationFooter({
+    required this.isLoading,
+    required this.onLoadMore,
+    super.key,
+  });
 
   final bool isLoading;
   final VoidCallback onLoadMore;
@@ -317,7 +324,11 @@ class PaginationFooter extends StatelessWidget {
 }
 
 class NotificationsEmptyState extends StatelessWidget {
-  const NotificationsEmptyState({required this.icon, required this.title, required this.description, super.key,
+  const NotificationsEmptyState({
+    required this.icon,
+    required this.title,
+    required this.description,
+    super.key,
   });
 
   final IconData icon;
@@ -357,7 +368,11 @@ class NotificationsEmptyState extends StatelessWidget {
 }
 
 class NotificationsErrorState extends StatelessWidget {
-  const NotificationsErrorState({required this.title, required this.message, required this.onRetry, super.key,
+  const NotificationsErrorState({
+    required this.title,
+    required this.message,
+    required this.onRetry,
+    super.key,
   });
 
   final String title;
@@ -403,32 +418,36 @@ class NotificationsErrorState extends StatelessWidget {
   }
 }
 
-enum _ChipKind { success, warning, error, neutral }
+enum NotificationsStatusChipKind { success, warning, error, neutral }
 
 class NotificationsStatusChip extends StatelessWidget {
-  const NotificationsStatusChip({required this.label, required this.kind, super.key});
+  const NotificationsStatusChip({
+    required this.label,
+    required this.kind,
+    super.key,
+  });
 
   final String label;
-  final _ChipKind kind;
+  final NotificationsStatusChipKind kind;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
     final (bg, fg) = switch (kind) {
-      _ChipKind.success => (
+      NotificationsStatusChipKind.success => (
         AppTokens.statusGreen.withValues(alpha: 0.16),
         AppTokens.statusGreen,
       ),
-      _ChipKind.warning => (
+      NotificationsStatusChipKind.warning => (
         AppTokens.statusOrange.withValues(alpha: 0.18),
         AppTokens.statusOrange,
       ),
-      _ChipKind.error => (
+      NotificationsStatusChipKind.error => (
         AppTokens.statusRed.withValues(alpha: 0.16),
         AppTokens.statusRed,
       ),
-      _ChipKind.neutral => (
+      NotificationsStatusChipKind.neutral => (
         scheme.surfaceContainerHighest,
         scheme.onSurfaceVariant,
       ),
@@ -548,23 +567,26 @@ String _labelForUpdateStatus(UpdateListItem update) {
   };
 }
 
-_ChipKind _kindForUpdate(UpdateListItem update) {
+NotificationsStatusChipKind _kindForUpdate(UpdateListItem update) {
   return switch (update.status) {
-    UpdateStatus.success => _ChipKind.success,
-    UpdateStatus.failed => _ChipKind.error,
-    UpdateStatus.running || UpdateStatus.queued => _ChipKind.warning,
-    UpdateStatus.canceled => _ChipKind.neutral,
+    UpdateStatus.success => NotificationsStatusChipKind.success,
+    UpdateStatus.failed => NotificationsStatusChipKind.error,
+    UpdateStatus.running ||
+    UpdateStatus.queued => NotificationsStatusChipKind.warning,
+    UpdateStatus.canceled => NotificationsStatusChipKind.neutral,
     UpdateStatus.unknown =>
-      update.success ? _ChipKind.success : _ChipKind.neutral,
+      update.success
+          ? NotificationsStatusChipKind.success
+          : NotificationsStatusChipKind.neutral,
   };
 }
 
-_ChipKind _chipKindForAlertLevel(SeverityLevel level) {
+NotificationsStatusChipKind _chipKindForAlertLevel(SeverityLevel level) {
   return switch (level) {
-    SeverityLevel.ok => _ChipKind.success,
-    SeverityLevel.warning => _ChipKind.warning,
-    SeverityLevel.critical => _ChipKind.error,
-    SeverityLevel.unknown => _ChipKind.neutral,
+    SeverityLevel.ok => NotificationsStatusChipKind.success,
+    SeverityLevel.warning => NotificationsStatusChipKind.warning,
+    SeverityLevel.critical => NotificationsStatusChipKind.error,
+    SeverityLevel.unknown => NotificationsStatusChipKind.neutral,
   };
 }
 

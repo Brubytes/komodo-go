@@ -24,7 +24,7 @@ class ConnectionsStore {
     }
     try {
       return decodeConnectionProfiles(raw);
-    } catch (_) {
+    } on Exception {
       return <ConnectionProfile>[];
     }
   }

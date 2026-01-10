@@ -16,8 +16,7 @@ class Tags extends _$Tags {
 
     final result = await repository.listTags();
     final tags = unwrapOrThrow(result);
-    tags.sort((a, b) => a.name.compareTo(b.name));
-    return tags;
+    return tags..sort((a, b) => a.name.compareTo(b.name));
   }
 
   Future<void> refresh() async {
@@ -54,13 +53,10 @@ class TagActions extends _$TagActions {
 
     if (name.trim() != original.name.trim()) {
       final r = await repository.renameTag(id: original.id, name: name.trim());
-      final ok = r.fold(
-        (failure) {
-          state = AsyncValue.error(failure.displayMessage, StackTrace.current);
-          return false;
-        },
-        (_) => true,
-      );
+      final ok = r.fold((failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return false;
+      }, (_) => true);
       if (!ok) return false;
     }
 

@@ -414,9 +414,7 @@ class _StageCard extends StatelessWidget {
                 onIcon: AppIcons.ok,
                 offIcon: AppIcons.canceled,
               ),
-              TextPill(
-                label: '$enabledExecutions/$totalExecutions executions',
-              ),
+              TextPill(label: '$enabledExecutions/$totalExecutions executions'),
             ],
           ),
           if (totalExecutions > 0) ...[
@@ -476,7 +474,7 @@ String _pretty(Object? value) {
   if (value is String) return value.trim().isEmpty ? '""' : value.trim();
   try {
     return const JsonEncoder.withIndent('  ').convert(value);
-  } catch (_) {
+  } on Exception {
     return value.toString();
   }
 }

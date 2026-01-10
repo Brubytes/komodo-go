@@ -67,14 +67,15 @@ class HomeView extends ConsumerWidget {
       appBar: const MainAppBar(title: 'Dashboard', icon: AppIcons.home),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(serversProvider);
-          ref.invalidate(deploymentsProvider);
-          ref.invalidate(stacksProvider);
-          ref.invalidate(reposProvider);
-          ref.invalidate(syncsProvider);
-          ref.invalidate(buildsProvider);
-          ref.invalidate(proceduresProvider);
-          ref.invalidate(actionsProvider);
+          ref
+            ..invalidate(serversProvider)
+            ..invalidate(deploymentsProvider)
+            ..invalidate(stacksProvider)
+            ..invalidate(reposProvider)
+            ..invalidate(syncsProvider)
+            ..invalidate(buildsProvider)
+            ..invalidate(proceduresProvider)
+            ..invalidate(actionsProvider);
         },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
@@ -372,7 +373,8 @@ class HomeView extends ConsumerWidget {
                   children: procedures
                       .take(5)
                       .map(
-                        (procedure) => HomeProcedureListTile(procedure: procedure),
+                        (procedure) =>
+                            HomeProcedureListTile(procedure: procedure),
                       )
                       .toList(),
                 );

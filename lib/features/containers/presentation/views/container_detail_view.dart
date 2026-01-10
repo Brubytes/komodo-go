@@ -40,19 +40,17 @@ class ContainerDetailView extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: const MainAppBar(
-        title: 'Container',
-        icon: AppIcons.containers,
-      ),
+      appBar: const MainAppBar(title: 'Container', icon: AppIcons.containers),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(_containerItemProviderFamily);
-          ref.invalidate(
-            containerLogProvider(
-              serverIdOrName: serverId,
-              containerIdOrName: decodedContainerIdOrName,
-            ),
-          );
+          ref
+            ..invalidate(_containerItemProviderFamily)
+            ..invalidate(
+              containerLogProvider(
+                serverIdOrName: serverId,
+                containerIdOrName: decodedContainerIdOrName,
+              ),
+            );
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -134,6 +132,7 @@ final _containerItemProviderFamily = FutureProvider.family
       return null;
     });
 
+@immutable
 class _ContainerItemArgs {
   const _ContainerItemArgs({
     required this.serverId,

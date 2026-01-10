@@ -540,7 +540,7 @@ class MainShell extends ConsumerWidget {
     final storedIndex = ref.watch(mainShellIndexProvider);
     if (storedIndex != currentIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(mainShellIndexProvider.notifier).setIndex(currentIndex);
+        ref.read(mainShellIndexProvider.notifier).index = currentIndex;
       });
     }
 
@@ -585,6 +585,6 @@ class MainShell extends ConsumerWidget {
       index,
       initialLocation: index == navigationShell.currentIndex,
     );
-    ref.read(mainShellIndexProvider.notifier).setIndex(index);
+    ref.read(mainShellIndexProvider.notifier).index = index;
   }
 }

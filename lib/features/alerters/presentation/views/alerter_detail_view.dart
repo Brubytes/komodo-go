@@ -267,8 +267,9 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     _initialExceptResources = List<AlerterResourceTarget>.from(
       _exceptResources,
     );
-    _initialMaintenanceWindows =
-        List<AlerterMaintenanceWindow>.from(_maintenanceWindows);
+    _initialMaintenanceWindows = List<AlerterMaintenanceWindow>.from(
+      _maintenanceWindows,
+    );
 
     if (mounted) setState(() {});
   }
@@ -349,10 +350,7 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     };
 
     if (config.isEmpty) {
-      AppSnackBar.show(
-        context,
-        'No changes to save',
-      );
+      AppSnackBar.show(context, 'No changes to save');
       return;
     }
 
@@ -368,8 +366,9 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     );
 
     if (ok) {
-      ref.invalidate(alerterDetailProvider(widget.alerterIdOrName));
-      ref.invalidate(alertersProvider);
+      ref
+        ..invalidate(alerterDetailProvider(widget.alerterIdOrName))
+        ..invalidate(alertersProvider);
     }
   }
 }

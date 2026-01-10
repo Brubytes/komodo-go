@@ -9,7 +9,8 @@ sealed class BuildListItem with _$BuildListItem {
   const factory BuildListItem({
     required String id,
     required String name,
-    required BuildListItemInfo info, @Default(false) bool template,
+    required BuildListItemInfo info,
+    @Default(false) bool template,
     @Default([]) List<String> tags,
   }) = _BuildListItem;
 
@@ -46,7 +47,9 @@ sealed class KomodoBuild with _$KomodoBuild {
   const factory KomodoBuild({
     @JsonKey(readValue: _readId) required String id,
     required String name,
-    required BuildConfig config, required BuildInfo info, @Default('') String description,
+    required BuildConfig config,
+    required BuildInfo info,
+    @Default('') String description,
     @Default(false) bool template,
     @Default([]) List<String> tags,
   }) = _KomodoBuild;
@@ -169,4 +172,3 @@ extension BuildStateX on BuildState {
 extension BuildVersionX on BuildVersion {
   String get label => '$major.$minor.$patch';
 }
-
