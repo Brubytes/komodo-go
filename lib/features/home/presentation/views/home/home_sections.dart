@@ -135,6 +135,7 @@ class HomeMetricCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -161,7 +162,7 @@ class HomeMetricCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const Spacer(),
+              const Gap(12),
               Builder(
                 builder: (context) {
                   final parts = value.split('\n');
