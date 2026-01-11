@@ -23,91 +23,140 @@ class HomeServerStatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final statusColor = _serverStatusColor(server.state);
+    final statusIcon = _serverStatusIcon(server.state);
     final statsValue = stats.asData?.value;
     final isLoading = stats.isLoading && statsValue == null;
 
-    return Card(
-      child: Container(
-        width: 220,
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const Gap(8),
-                Expanded(
-                  child: Text(
-                    server.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const Gap(10),
-            if (isLoading)
-              Row(
+    return SizedBox(
+      width: 220,
+      child: Card(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // This tile is rendered inside a fixed-height horizontal list (currently 130).
+            // Use a compact layout to prevent vertical overflow.
+            final isCompact = constraints.maxHeight <= 132;
+            final padding = isCompact ? 8.0 : 12.0;
+            final headerGap = isCompact ? 4.0 : 10.0;
+
+            return Padding(
+              padding: EdgeInsets.all(padding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: scheme.primary,
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const Gap(8),
+                      Expanded(
+                        child: Text(
+                          server.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      Icon(statusIcon, size: 14, color: statusColor),
+                    ],
+                  ),
+                  Gap(headerGap),
+                  if (isLoading)
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: scheme.primary,
+                          ),
+                        ),
+                        const Gap(8),
+                        Text(
+                          'Loading stats',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    )
+                  else if (isCompact)
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _CompactStatLine(
+                            icon: AppIcons.cpu,
+                            label: 'CPU',
+                            value: _percentLabel(statsValue?.cpuPercent),
+                            color: AppTokens.statusGreen,
+                          ),
+                          _CompactStatLine(
+                            icon: AppIcons.memory,
+                            label: 'Memory',
+                            value: _compactPercentWithAbsolute(
+                              percent: statsValue?.memPercent,
+                              used: statsValue?.memUsedGb,
+                              total: statsValue?.memTotalGb,
+                            ),
+                            color: AppTokens.statusOrange,
+                          ),
+                          _CompactStatLine(
+                            icon: AppIcons.hardDrive,
+                            label: 'Disk',
+                            value: _compactPercentWithAbsolute(
+                              percent: statsValue?.diskPercent,
+                              used: statsValue?.diskUsedGb,
+                              total: statsValue?.diskTotalGb,
+                            ),
+                            color: AppTokens.statusRed,
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Column(
+                      children: [
+                        _StatRow(
+                          icon: AppIcons.cpu,
+                          label: 'CPU',
+                          percent: statsValue?.cpuPercent,
+                          color: AppTokens.statusGreen,
+                        ),
+                        const Gap(10),
+                        _StatRow(
+                          icon: AppIcons.memory,
+                          label: 'Memory',
+                          percent: statsValue?.memPercent,
+                          secondary: _absoluteLabel(
+                            statsValue?.memUsedGb,
+                            statsValue?.memTotalGb,
+                          ),
+                          color: AppTokens.statusOrange,
+                        ),
+                        const Gap(10),
+                        _StatRow(
+                          icon: AppIcons.hardDrive,
+                          label: 'Disk',
+                          percent: statsValue?.diskPercent,
+                          secondary: _absoluteLabel(
+                            statsValue?.diskUsedGb,
+                            statsValue?.diskTotalGb,
+                          ),
+                          color: AppTokens.statusRed,
+                        ),
+                      ],
                     ),
-                  ),
-                  const Gap(8),
-                  Text(
-                    'Loading stats',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              )
-            else
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  _StatPill(
-                    label: 'CPU',
-                    value: _percentLabel(statsValue?.cpuPercent),
-                    color: AppTokens.statusGreen,
-                  ),
-                  _StatPill(
-                    label: 'Mem',
-                    value: _percentWithAbsolute(
-                      statsValue?.memPercent,
-                      statsValue?.memUsedGb,
-                      statsValue?.memTotalGb,
-                    ),
-                    color: AppTokens.statusOrange,
-                  ),
-                  _StatPill(
-                    label: 'Disk',
-                    value: _percentWithAbsolute(
-                      statsValue?.diskPercent,
-                      statsValue?.diskUsedGb,
-                      statsValue?.diskTotalGb,
-                    ),
-                    color: AppTokens.statusRed,
-                  ),
                 ],
               ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -118,11 +167,15 @@ class HomeServerStatTile extends StatelessWidget {
     return '${value.toStringAsFixed(0)}%';
   }
 
-  String _percentWithAbsolute(double? percent, double? used, double? total) {
+  String _compactPercentWithAbsolute({
+    required double? percent,
+    required double? used,
+    required double? total,
+  }) {
     final percentLabel = _percentLabel(percent);
     final absoluteLabel = _absoluteLabel(used, total);
     if (absoluteLabel == '—') return percentLabel;
-    return '$percentLabel\n$absoluteLabel';
+    return '$percentLabel · $absoluteLabel';
   }
 
   String _absoluteLabel(double? used, double? total) {
@@ -151,6 +204,15 @@ class HomeServerStatTile extends StatelessWidget {
       ServerState.notOk => AppTokens.statusRed,
       ServerState.disabled => Colors.grey,
       ServerState.unknown => AppTokens.statusOrange,
+    };
+  }
+
+  IconData _serverStatusIcon(ServerState state) {
+    return switch (state) {
+      ServerState.ok => AppIcons.ok,
+      ServerState.notOk => AppIcons.error,
+      ServerState.disabled => AppIcons.paused,
+      ServerState.unknown => AppIcons.unknown,
     };
   }
 }
@@ -301,66 +363,168 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
-class _StatPill extends StatelessWidget {
-  const _StatPill({
+class _StatRow extends StatelessWidget {
+  const _StatRow({
+    required this.icon,
+    required this.label,
+    required this.percent,
+    required this.color,
+    this.secondary,
+  });
+
+  final IconData icon;
+  final String label;
+  final double? percent;
+  final String? secondary;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final percentValue = _percentValue(percent);
+    final percentLabel = _percentLabel(percent);
+    final showSecondary = secondary != null && secondary != '—';
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 16, color: color),
+            ),
+            const Gap(10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                    ),
+                  ),
+                  if (showSecondary) ...[
+                    const Gap(2),
+                    Text(
+                      secondary!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const Gap(8),
+            Text(
+              percentLabel,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        const Gap(6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: percentValue ?? 0,
+            minHeight: 6,
+            color: color,
+            backgroundColor: scheme.onSurface.withValues(alpha: 0.08),
+          ),
+        ),
+      ],
+    );
+  }
+
+  double? _percentValue(double? value) {
+    if (value == null || value.isNaN) return null;
+    return (value / 100).clamp(0.0, 1.0);
+  }
+
+  String _percentLabel(double? value) {
+    if (value == null || value.isNaN) return '—';
+    return '${value.toStringAsFixed(0)}%';
+  }
+}
+
+class _CompactStatLine extends StatelessWidget {
+  const _CompactStatLine({
+    required this.icon,
     required this.label,
     required this.value,
     required this.color,
   });
 
+  final IconData icon;
   final String label;
   final String value;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Builder(
-        builder: (context) {
-          final parts = value.split('\n');
-          final primaryStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w700,
-            fontSize: 11,
-            height: 1.1,
-          );
-          final secondaryStyle = Theme.of(context).textTheme.labelSmall
-              ?.copyWith(
-                color: color.withValues(alpha: 0.8),
-                fontWeight: FontWeight.w600,
-                fontSize: 10,
-                height: 1.1,
-              );
+    final scheme = Theme.of(context).colorScheme;
 
-          if (parts.length == 1) {
-            return Text(
-              '$label ${parts.first}',
+    final labelStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+      color: scheme.onSurface,
+      fontWeight: FontWeight.w700,
+      height: 1.0,
+    );
+    final valueStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+      color: scheme.onSurface,
+      fontWeight: FontWeight.w800,
+      height: 1.0,
+    );
+
+    return SizedBox(
+      height: 24,
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 14, color: color),
+          ),
+          const Gap(8),
+          Expanded(
+            child: Text(
+              label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: primaryStyle,
-            );
-          }
-
-          return Text.rich(
-            TextSpan(
-              text: '$label ${parts.first}',
-              style: primaryStyle,
-              children: [
-                TextSpan(
-                  text: '\n${parts.skip(1).join(' ')}',
-                  style: secondaryStyle,
-                ),
-              ],
+              style: labelStyle,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          );
-        },
+          ),
+          const Gap(8),
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: valueStyle,
+            ),
+          ),
+        ],
       ),
     );
   }

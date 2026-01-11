@@ -47,14 +47,15 @@ class HomeStatCard<T> extends StatelessWidget {
           builder: (context, constraints) {
             // In tests and very compact layouts the grid can become quite short.
             // Keep this threshold generous to avoid overflows.
-            final isTight = constraints.maxHeight < 92;
-            final padding = isTight ? 8.0 : 11.0;
-            final iconSize = isTight ? 16.0 : 19.0;
-            final gap = isTight ? 4.0 : 6.0;
-            const showSubtitle = true;
+            final isTight = constraints.maxHeight < 110;
+            final padding = isTight ? 6.0 : 11.0;
+            final iconSize = isTight ? 14.0 : 19.0;
+            final iconPadding = isTight ? 3.0 : 6.0;
+            final gap = isTight ? 2.0 : 6.0;
+            final showSubtitle = !isTight;
 
             final valueStyle =
-                (isTight ? textTheme.titleLarge : textTheme.headlineSmall)
+                (isTight ? textTheme.titleMedium : textTheme.headlineSmall)
                     ?.copyWith(
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.2,
@@ -78,7 +79,7 @@ class HomeStatCard<T> extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: EdgeInsets.all(isTight ? 4 : 6),
+                        padding: EdgeInsets.all(iconPadding),
                         decoration: BoxDecoration(
                           color: color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -86,49 +87,70 @@ class HomeStatCard<T> extends StatelessWidget {
                         child: Icon(icon, color: color, size: iconSize),
                       ),
                       const Spacer(),
-                      Icon(
-                        AppIcons.chevron,
-                        size: isTight ? 18 : 20,
-                        color: scheme.onSurfaceVariant.withValues(alpha: 0.55),
-                      ),
+                      if (!isTight)
+                        Icon(
+                          AppIcons.chevron,
+                          size: 20,
+                          color: scheme.onSurfaceVariant.withValues(
+                            alpha: 0.55,
+                          ),
+                        ),
                     ],
                   ),
                   Gap(gap),
                   asyncValue.when(
-                    data: (data) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                    data: (data) {
+                      if (isTight) {
+                        return Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(valueBuilder(data), style: valueStyle),
-                            const Gap(8),
+                            const Gap(6),
                             Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.only(
-                                  bottom: isTight ? 0 : 2,
-                                ),
-                                child: Text(
-                                  title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: titleStyle,
-                                ),
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: titleStyle,
                               ),
                             ),
                           ],
-                        ),
-                        if (showSubtitle) ...[
-                          const Gap(2),
-                          Text(
-                            subtitleBuilder(data),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: subtitleStyle,
+                        );
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(valueBuilder(data), style: valueStyle),
+                              const Gap(8),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: Text(
+                                    title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: titleStyle,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
+                          if (showSubtitle) ...[
+                            const Gap(2),
+                            Text(
+                              subtitleBuilder(data),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: subtitleStyle,
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
+                      );
+                    },
                     loading: () => SizedBox(
                       height: isTight ? 32 : 40,
                       child: const Center(child: CircularProgressIndicator()),

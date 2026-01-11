@@ -26,7 +26,7 @@ class Actions extends _$Actions {
   Future<void> refresh() async {
     ref.invalidateSelf();
     try {
-      await future;
+      await future; 
     } catch (_) {}
   }
 }
