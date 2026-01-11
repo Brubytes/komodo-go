@@ -14,7 +14,7 @@ import 'package:komodo_go/features/deployments/presentation/widgets/deployment_c
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 
 /// View displaying detailed deployment information.
-class DeploymentDetailView extends ConsumerWidget {
+class DeploymentDetailView extends ConsumerStatefulWidget {
   const DeploymentDetailView({
     required this.deploymentId,
     required this.deploymentName,
@@ -25,7 +25,18 @@ class DeploymentDetailView extends ConsumerWidget {
   final String deploymentName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DeploymentDetailView> createState() =>
+      _DeploymentDetailViewState();
+}
+
+class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
+  var _isEditingConfig = false;
+  DeploymentConfig? _configEditSnapshot;
+  final _configEditorKey = GlobalKey<DeploymentConfigEditorContentState>();
+
+  @override
+  Widget build(BuildContext context) {
+    final deploymentId = widget.deploymentId;
     final deploymentAsync = ref.watch(deploymentDetailProvider(deploymentId));
     final actionsState = ref.watch(deploymentActionsProvider);
     final serversListAsync = ref.watch(serversProvider);
@@ -43,7 +54,7 @@ class DeploymentDetailView extends ConsumerWidget {
 
     return Scaffold(
       appBar: MainAppBar(
-        title: deploymentName,
+        title: widget.deploymentName,
         icon: AppIcons.deployments,
         markColor: AppTokens.resourceDeployments,
         markUseGradient: true,
@@ -52,7 +63,7 @@ class DeploymentDetailView extends ConsumerWidget {
           PopupMenuButton<DeploymentAction>(
             icon: const Icon(AppIcons.moreVertical),
             onSelected: (action) =>
-                _handleAction(context, ref, deploymentId, action),
+                _handleAction(context, deploymentId, action),
             itemBuilder: (context) {
               final deployment = deploymentAsync.asData?.value;
               final state = deployment?.info?.state ?? DeploymentState.unknown;
@@ -88,18 +99,34 @@ class DeploymentDetailView extends ConsumerWidget {
                             DetailSection(
                               title: 'Config',
                               icon: AppIcons.settings,
-                              child: DeploymentConfigContent(
-                                deployment: deployment,
-                                serverName: serverNameForId(
-                                  deployment.config?.serverId ??
-                                      deployment.info?.serverId ??
-                                      '',
-                                ),
+                              trailing: _buildConfigTrailing(
+                                context,
+                                deployment,
                               ),
+                              child:
+                                  _isEditingConfig && deployment.config != null
+                                  ? DeploymentConfigEditorContent(
+                                      key: _configEditorKey,
+                                      initialConfig: deployment.config!,
+                                      imageLabel: deployment.imageLabel,
+                                      servers:
+                                          serversListAsync.asData?.value ??
+                                          const [],
+                                    )
+                                  : DeploymentConfigContent(
+                                      deployment: deployment,
+                                      serverName: serverNameForId(
+                                        deployment.config?.serverId ??
+                                            deployment.info?.serverId ??
+                                            '',
+                                      ),
+                                    ),
                             ),
                           ],
                         )
-                      : const DeploymentMessageSurface(message: 'Deployment not found'),
+                      : const DeploymentMessageSurface(
+                          message: 'Deployment not found',
+                        ),
                   loading: () => const DeploymentLoadingSurface(),
                   error: (error, _) =>
                       DeploymentMessageSurface(message: 'Error: $error'),
@@ -122,6 +149,109 @@ class DeploymentDetailView extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildConfigTrailing(BuildContext context, Deployment deployment) {
+    final scheme = Theme.of(context).colorScheme;
+    final config = deployment.config;
+    if (config == null) return const SizedBox.shrink();
+
+    if (!_isEditingConfig) {
+      return IconButton(
+        tooltip: 'Edit config',
+        icon: Icon(AppIcons.edit, color: scheme.onPrimary),
+        onPressed: () {
+          setState(() {
+            _isEditingConfig = true;
+            _configEditSnapshot = config;
+          });
+        },
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton(
+          onPressed: () {
+            if (_configEditSnapshot != null) {
+              _configEditorKey.currentState?.resetTo(_configEditSnapshot!);
+            }
+            setState(() {
+              _isEditingConfig = false;
+              _configEditSnapshot = null;
+            });
+          },
+          child: Text('Cancel', style: TextStyle(color: scheme.onPrimary)),
+        ),
+        const Gap(6),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: scheme.onPrimary,
+            foregroundColor: scheme.primary,
+          ),
+          onPressed: () =>
+              _saveConfig(context: context, deployment: deployment),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _saveConfig({
+    required BuildContext context,
+    required Deployment deployment,
+  }) async {
+    final draft = _configEditorKey.currentState;
+    if (draft == null) {
+      AppSnackBar.show(
+        context,
+        'Editor not ready. Please try again.',
+        tone: AppSnackBarTone.error,
+      );
+      return;
+    }
+
+    final validationError = draft.validateDraft();
+    if (validationError != null) {
+      AppSnackBar.show(context, validationError, tone: AppSnackBarTone.error);
+      return;
+    }
+
+    final partialConfig = draft.buildPartialConfigParams();
+    if (partialConfig.isEmpty) {
+      AppSnackBar.show(
+        context,
+        'No changes to save.',
+        tone: AppSnackBarTone.neutral,
+      );
+      return;
+    }
+
+    final actions = ref.read(deploymentActionsProvider.notifier);
+    final updated = await actions.updateDeploymentConfig(
+      deploymentId: deployment.id,
+      partialConfig: partialConfig,
+    );
+
+    final success = updated != null;
+    if (success) {
+      ref.invalidate(deploymentDetailProvider(deployment.id));
+      if (mounted) {
+        setState(() {
+          _isEditingConfig = false;
+          _configEditSnapshot = null;
+        });
+      }
+    }
+
+    if (context.mounted) {
+      AppSnackBar.show(
+        context,
+        success ? 'Config saved.' : 'Failed to save config.',
+        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
+      );
+    }
   }
 
   List<PopupMenuEntry<DeploymentAction>> _buildMenuItems(
@@ -239,7 +369,6 @@ class DeploymentDetailView extends ConsumerWidget {
 
   Future<void> _handleAction(
     BuildContext context,
-    WidgetRef ref,
     String deploymentId,
     DeploymentAction action,
   ) async {
