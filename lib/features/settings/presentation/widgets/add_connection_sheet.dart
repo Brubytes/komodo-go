@@ -26,6 +26,7 @@ class AddConnectionSheet extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authAsync = ref.watch(authProvider);
     final draft = ref.watch(connectionDraftProvider);
+    final authNotifier = ref.read(authProvider.notifier);
     final draftNotifier = ref.read(connectionDraftProvider.notifier);
     final formKey = useMemoized(GlobalKey<FormState>.new);
 
@@ -39,7 +40,7 @@ class AddConnectionSheet extends HookConsumerWidget {
     ref.listen(authProvider, (previous, next) {
       final nextState = next.value;
       if (nextState is AuthStateAuthenticated) {
-        ref.read(connectionDraftProvider.notifier).reset();
+        draftNotifier.reset();
       }
     });
 
@@ -79,17 +80,16 @@ class AddConnectionSheet extends HookConsumerWidget {
         return;
       }
 
-      await ref
-          .read(authProvider.notifier)
-          .login(
-            name: connectionNameController.text,
-            baseUrl: baseUrlController.text,
-            apiKey: apiKeyController.text,
-            apiSecret: apiSecretController.text,
-          );
+      await authNotifier.login(
+        name: connectionNameController.text,
+        baseUrl: baseUrlController.text,
+        apiKey: apiKeyController.text,
+        apiSecret: apiSecretController.text,
+      );
 
-      final nextState = ref.read(authProvider).value;
-      if (context.mounted && nextState is! AuthStateError) {
+      if (!context.mounted) return;
+      final nextState = authNotifier.state.asData?.value;
+      if (nextState is! AuthStateError) {
         Navigator.of(context).pop();
       }
     }
