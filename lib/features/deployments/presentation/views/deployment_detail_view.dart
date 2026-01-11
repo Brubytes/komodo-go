@@ -179,7 +179,7 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
         IconButton(
           tooltip: 'Cancel',
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.close_rounded),
+          icon: const Icon(AppIcons.close),
           onPressed: () {
             if (_configEditSnapshot != null) {
               _configEditorKey.currentState?.resetTo(_configEditSnapshot!);
@@ -193,7 +193,7 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
         IconButton(
           tooltip: 'Save',
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.check_rounded),
+          icon: const Icon(AppIcons.check),
           onPressed: () =>
               _saveConfig(context: context, deployment: deployment),
         ),

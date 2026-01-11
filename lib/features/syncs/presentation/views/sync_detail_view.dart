@@ -161,7 +161,7 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView> {
         IconButton(
           tooltip: 'Cancel',
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.close_rounded),
+          icon: const Icon(AppIcons.close),
           onPressed: () {
             if (_configEditSnapshot != null) {
               _configEditorKey.currentState?.resetTo(
@@ -177,7 +177,7 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView> {
         IconButton(
           tooltip: 'Save',
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.check_rounded),
+          icon: const Icon(AppIcons.check),
           onPressed: () => _saveConfig(context: context, syncId: sync.id),
         ),
       ],

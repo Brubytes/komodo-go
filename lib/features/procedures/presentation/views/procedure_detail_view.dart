@@ -188,7 +188,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
         IconButton(
           tooltip: 'Cancel',
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.close_rounded),
+          icon: const Icon(AppIcons.close),
           onPressed: () {
             if (_configEditSnapshot != null) {
               _configEditorKey.currentState?.resetTo(
@@ -204,7 +204,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
         IconButton(
           tooltip: 'Save',
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.check_rounded),
+          icon: const Icon(AppIcons.check),
           onPressed: () =>
               _saveConfig(context: context, procedureId: procedure.id),
         ),
