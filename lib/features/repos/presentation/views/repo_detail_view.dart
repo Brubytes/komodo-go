@@ -7,13 +7,19 @@ import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
+import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
+import 'package:komodo_go/features/repos/presentation/views/repo_detail/repo_detail_sections.dart';
 import 'package:komodo_go/features/repos/presentation/widgets/repo_card.dart';
+import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
+import 'package:komodo_go/features/providers/data/models/git_provider_account.dart';
+import 'package:komodo_go/features/providers/presentation/providers/git_providers_provider.dart';
+import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 
 /// View displaying detailed repo information.
-class RepoDetailView extends ConsumerWidget {
+class RepoDetailView extends ConsumerStatefulWidget {
   const RepoDetailView({
     required this.repoId,
     required this.repoName,
@@ -24,10 +30,21 @@ class RepoDetailView extends ConsumerWidget {
   final String repoName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final repoAsync = ref.watch(repoDetailProvider(repoId));
+  ConsumerState<RepoDetailView> createState() => _RepoDetailViewState();
+}
+
+class _RepoDetailViewState extends ConsumerState<RepoDetailView> {
+  var _isEditingConfig = false;
+  KomodoRepo? _configEditSnapshot;
+  final _configEditorKey = GlobalKey<RepoConfigEditorContentState>();
+
+  @override
+  Widget build(BuildContext context) {
+    final repoAsync = ref.watch(repoDetailProvider(widget.repoId));
     final actionsState = ref.watch(repoActionsProvider);
     final serversListAsync = ref.watch(serversProvider);
+    final buildersListAsync = ref.watch(buildersProvider);
+    final gitProvidersAsync = ref.watch(gitProvidersProvider);
 
     final scheme = Theme.of(context).colorScheme;
 
@@ -40,9 +57,15 @@ class RepoDetailView extends ConsumerWidget {
       return null;
     }
 
+    final servers = serversListAsync.asData?.value ?? const <Server>[];
+    final builders =
+        buildersListAsync.asData?.value ?? const <BuilderListItem>[];
+    final gitProviders =
+        gitProvidersAsync.asData?.value ?? const <GitProviderAccount>[];
+
     return Scaffold(
       appBar: MainAppBar(
-        title: repoName,
+        title: widget.repoName,
         icon: AppIcons.repos,
         markColor: AppTokens.resourceRepos,
         markUseGradient: true,
@@ -50,7 +73,8 @@ class RepoDetailView extends ConsumerWidget {
         actions: [
           PopupMenuButton<RepoAction>(
             icon: const Icon(AppIcons.moreVertical),
-            onSelected: (action) => _handleAction(context, ref, repoId, action),
+            onSelected: (action) =>
+                _handleAction(context, ref, widget.repoId, action),
             itemBuilder: (context) => [
               komodoPopupMenuItem(
                 value: RepoAction.clone,
@@ -78,7 +102,7 @@ class RepoDetailView extends ConsumerWidget {
         children: [
           RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(repoDetailProvider(repoId));
+              ref.invalidate(repoDetailProvider(widget.repoId));
             },
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -96,12 +120,27 @@ class RepoDetailView extends ConsumerWidget {
                             DetailSection(
                               title: 'Config',
                               icon: AppIcons.settings,
-                              child: _RepoConfigContent(
-                                config: repo.config,
-                                serverName: serverNameForId(
-                                  repo.config.serverId,
-                                ),
+                              trailing: _buildConfigTrailing(
+                                context: context,
+                                repo: repo,
                               ),
+                              child: _isEditingConfig
+                                  ? RepoConfigEditorContent(
+                                      key: _configEditorKey,
+                                      initialConfig:
+                                          (_configEditSnapshot?.id == repo.id)
+                                          ? _configEditSnapshot!.config
+                                          : repo.config,
+                                      servers: servers,
+                                      builders: builders,
+                                      gitProviders: gitProviders,
+                                    )
+                                  : _RepoConfigContent(
+                                      config: repo.config,
+                                      serverName: serverNameForId(
+                                        repo.config.serverId,
+                                      ),
+                                    ),
                             ),
                             const Gap(16),
                             DetailSection(
@@ -134,6 +173,105 @@ class RepoDetailView extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildConfigTrailing({
+    required BuildContext context,
+    required KomodoRepo repo,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+
+    if (!_isEditingConfig) {
+      return IconButton(
+        tooltip: 'Edit config',
+        icon: Icon(AppIcons.edit, color: scheme.onPrimary),
+        onPressed: () {
+          setState(() {
+            _isEditingConfig = true;
+            _configEditSnapshot = repo;
+          });
+        },
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton(
+          onPressed: () {
+            if (_configEditSnapshot != null) {
+              _configEditorKey.currentState?.resetTo(
+                _configEditSnapshot!.config,
+              );
+            }
+            setState(() {
+              _isEditingConfig = false;
+              _configEditSnapshot = null;
+            });
+          },
+          child: Text('Cancel', style: TextStyle(color: scheme.onPrimary)),
+        ),
+        const Gap(6),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: scheme.onPrimary,
+            foregroundColor: scheme.primary,
+          ),
+          onPressed: () => _saveConfig(context: context, repoId: repo.id),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _saveConfig({
+    required BuildContext context,
+    required String repoId,
+  }) async {
+    final draft = _configEditorKey.currentState;
+    if (draft == null) {
+      AppSnackBar.show(
+        context,
+        'Editor not ready. Please try again.',
+        tone: AppSnackBarTone.error,
+      );
+      return;
+    }
+
+    final partialConfig = draft.buildPartialConfigParams();
+    if (partialConfig.isEmpty) {
+      AppSnackBar.show(
+        context,
+        'No changes to save.',
+        tone: AppSnackBarTone.neutral,
+      );
+      return;
+    }
+
+    final actions = ref.read(repoActionsProvider.notifier);
+    final updated = await actions.updateRepoConfig(
+      repoId: repoId,
+      partialConfig: partialConfig,
+    );
+
+    final success = updated != null;
+    if (success) {
+      ref.invalidate(repoDetailProvider(repoId));
+      if (mounted) {
+        setState(() {
+          _isEditingConfig = false;
+          _configEditSnapshot = null;
+        });
+      }
+    }
+
+    if (context.mounted) {
+      AppSnackBar.show(
+        context,
+        success ? 'Config saved.' : 'Failed to save config.',
+        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
+      );
+    }
   }
 
   Future<void> _handleAction(
@@ -240,10 +378,7 @@ class _RepoHeroPanel extends StatelessWidget {
           tone: upToDate ? DetailMetricTone.success : DetailMetricTone.tertiary,
         ),
       ],
-      footer: DetailPillList(
-        items: repo.tags,
-        emptyLabel: 'No tags',
-      ),
+      footer: DetailPillList(items: repo.tags, emptyLabel: 'No tags'),
     );
   }
 

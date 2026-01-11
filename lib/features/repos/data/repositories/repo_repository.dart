@@ -24,7 +24,9 @@ class RepoRepository {
           RpcRequest(
             type: 'ListRepos',
             params: <String, dynamic>{
-              'query': emptyQuery(specific: <String, dynamic>{'repos': <String>[]}),
+              'query': emptyQuery(
+                specific: <String, dynamic>{'repos': <String>[]},
+              ),
             },
           ),
         );
@@ -76,16 +78,44 @@ class RepoRepository {
     return _executeAction('BuildRepo', {'repo': repoIdOrName});
   }
 
+  /// Updates a repo configuration and returns the updated repo.
+  ///
+  /// Uses the `/write` module `UpdateRepo` RPC.
+  ///
+  /// Note: Only fields included in [partialConfig] will be updated.
+  Future<Either<Failure, KomodoRepo>> updateRepoConfig({
+    required String repoId,
+    required Map<String, dynamic> partialConfig,
+  }) async {
+    return apiCall(
+      () async {
+        final response = await _client.write(
+          RpcRequest(
+            type: 'UpdateRepo',
+            params: <String, dynamic>{'id': repoId, 'config': partialConfig},
+          ),
+        );
+
+        return KomodoRepo.fromJson(response as Map<String, dynamic>);
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
+        if (e.isNotFound) {
+          return const Failure.server(message: 'Repo not found');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+    );
+  }
+
   Future<Either<Failure, void>> _executeAction(
     String actionType,
     Map<String, dynamic> params,
   ) async {
-    return apiCall(
-      () async {
-        await _client.execute(RpcRequest(type: actionType, params: params));
-        return;
-      },
-    );
+    return apiCall(() async {
+      await _client.execute(RpcRequest(type: actionType, params: params));
+      return;
+    });
   }
 }
 
