@@ -162,10 +162,16 @@ class HomeMetricCard extends StatelessWidget {
                 ],
               ),
               const Gap(10),
-              Text(
-                value,
-                style: textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               const Gap(4),

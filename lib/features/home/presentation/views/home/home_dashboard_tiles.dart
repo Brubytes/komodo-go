@@ -89,12 +89,20 @@ class HomeServerStatTile extends StatelessWidget {
                   ),
                   _StatPill(
                     label: 'Mem',
-                    value: _percentLabel(statsValue?.memPercent),
+                    value: _percentWithAbsolute(
+                      statsValue?.memPercent,
+                      statsValue?.memUsedGb,
+                      statsValue?.memTotalGb,
+                    ),
                     color: AppTokens.statusOrange,
                   ),
                   _StatPill(
                     label: 'Disk',
-                    value: _percentLabel(statsValue?.diskPercent),
+                    value: _percentWithAbsolute(
+                      statsValue?.diskPercent,
+                      statsValue?.diskUsedGb,
+                      statsValue?.diskTotalGb,
+                    ),
                     color: AppTokens.statusRed,
                   ),
                 ],
@@ -108,6 +116,22 @@ class HomeServerStatTile extends StatelessWidget {
   String _percentLabel(double? value) {
     if (value == null || value.isNaN) return '—';
     return '${value.toStringAsFixed(0)}%';
+  }
+
+  String _percentWithAbsolute(double? percent, double? used, double? total) {
+    final percentLabel = _percentLabel(percent);
+    final absoluteLabel = _absoluteLabel(used, total);
+    if (absoluteLabel == '—') return percentLabel;
+    return '$percentLabel · $absoluteLabel';
+  }
+
+  String _absoluteLabel(double? used, double? total) {
+    if (used == null || total == null || total <= 0) return '—';
+    return '${_formatGb(used)}/${_formatGb(total)} GB';
+  }
+
+  String _formatGb(double value) {
+    return value.toStringAsFixed(0);
   }
 
   Color _serverStatusColor(ServerState state) {
@@ -285,11 +309,17 @@ class _StatPill extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        '$label $value',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          '$label $value',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

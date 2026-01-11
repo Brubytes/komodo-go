@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -105,31 +103,49 @@ class HomeView extends ConsumerWidget {
                   for (final server in servers)
                     ref.watch(serverStatsProvider(server.id)),
                 ];
-                final statsList = [
-                  for (final stats in statsValues)
-                    if (stats.asData?.value != null) stats.asData!.value!,
+                final statsEntries = <_ServerStatsEntry>[
+                  for (var i = 0; i < servers.length; i++)
+                    if (statsValues[i].asData?.value != null)
+                      _ServerStatsEntry(
+                        server: servers[i],
+                        stats: statsValues[i].asData!.value!,
+                      ),
                 ];
-                final summary = _ServerStatsSummary.from(servers, statsList);
+                final summary = _ServerStatsSummary.from(servers, statsEntries);
                 final hasStats = summary.statsCount > 0;
                 final isStatsLoading = statsValues.any(
                   (value) => value.isLoading,
                 );
 
+                String avgWithTotals(double average, String totals) {
+                  final avgLabel = '${average.toStringAsFixed(0)}%';
+                  if (totals.isEmpty) return avgLabel;
+                  return '$avgLabel · $totals';
+                }
+
                 final cpuValue = hasStats
                     ? '${summary.avgCpu.toStringAsFixed(0)}%'
                     : '—';
                 final memValue = hasStats
-                    ? '${summary.avgMem.toStringAsFixed(0)}%'
+                    ? avgWithTotals(summary.avgMem, summary.memTotalsLabel)
                     : '—';
                 final diskValue = hasStats
-                    ? '${summary.avgDisk.toStringAsFixed(0)}%'
+                    ? avgWithTotals(summary.avgDisk, summary.diskTotalsLabel)
                     : '—';
 
-                String statsSubtitle(double value) {
+                String statsSubtitle({
+                  required double maxValue,
+                  required String? serverName,
+                }) {
                   if (!hasStats) {
                     return isStatsLoading ? 'Loading stats' : 'No stats yet';
                   }
-                  return 'max ${value.toStringAsFixed(0)}%';
+                  final label = 'max ${maxValue.toStringAsFixed(0)}%';
+                  final name = (serverName?.trim().isNotEmpty ?? false)
+                      ? serverName!.trim()
+                      : null;
+                  final parts = <String>[label, if (name != null) name];
+                  return parts.join(' · ');
                 }
 
                 final serverSubtitleParts = <String>[];
@@ -162,19 +178,28 @@ class HomeView extends ConsumerWidget {
                         HomeMetricCard(
                           title: 'CPU Avg',
                           value: cpuValue,
-                          subtitle: statsSubtitle(summary.maxCpu),
+                          subtitle: statsSubtitle(
+                            maxValue: summary.maxCpu,
+                            serverName: summary.maxCpuServerName,
+                          ),
                           icon: AppIcons.cpu,
                         ),
                         HomeMetricCard(
                           title: 'Memory Avg',
                           value: memValue,
-                          subtitle: statsSubtitle(summary.maxMem),
+                          subtitle: statsSubtitle(
+                            maxValue: summary.maxMem,
+                            serverName: summary.maxMemServerName,
+                          ),
                           icon: AppIcons.memory,
                         ),
                         HomeMetricCard(
                           title: 'Disk Avg',
                           value: diskValue,
-                          subtitle: statsSubtitle(summary.maxDisk),
+                          subtitle: statsSubtitle(
+                            maxValue: summary.maxDisk,
+                            serverName: summary.maxDiskServerName,
+                          ),
                           icon: AppIcons.hardDrive,
                         ),
                         HomeMetricCard(
@@ -533,6 +558,13 @@ class _OpsRowData {
   final ResourceType type;
 }
 
+class _ServerStatsEntry {
+  const _ServerStatsEntry({required this.server, required this.stats});
+
+  final Server server;
+  final SystemStats stats;
+}
+
 class _ServerStatsSummary {
   const _ServerStatsSummary({
     required this.total,
@@ -546,12 +578,19 @@ class _ServerStatsSummary {
     required this.maxCpu,
     required this.maxMem,
     required this.maxDisk,
+    required this.maxCpuServerName,
+    required this.maxMemServerName,
+    required this.maxDiskServerName,
+    required this.totalMemUsedGb,
+    required this.totalMemGb,
+    required this.totalDiskUsedGb,
+    required this.totalDiskGb,
     required this.statsCount,
   });
 
   factory _ServerStatsSummary.from(
     List<Server> servers,
-    List<SystemStats> stats,
+    List<_ServerStatsEntry> entries,
   ) {
     final total = servers.length;
     final online = servers
@@ -567,7 +606,7 @@ class _ServerStatsSummary {
         .where((server) => server.state == ServerState.unknown)
         .length;
 
-    if (stats.isEmpty) {
+    if (entries.isEmpty) {
       return _ServerStatsSummary(
         total: total,
         online: online,
@@ -580,23 +619,58 @@ class _ServerStatsSummary {
         maxCpu: 0,
         maxMem: 0,
         maxDisk: 0,
+        maxCpuServerName: null,
+        maxMemServerName: null,
+        maxDiskServerName: null,
+        totalMemUsedGb: 0,
+        totalMemGb: 0,
+        totalDiskUsedGb: 0,
+        totalDiskGb: 0,
         statsCount: 0,
       );
     }
 
-    final cpuValues = stats.map((item) => item.cpuPercent).toList();
-    final memValues = stats.map((item) => item.memPercent).toList();
-    final diskValues = stats.map((item) => item.diskPercent).toList();
+    var sumCpu = 0.0;
+    var sumMem = 0.0;
+    var sumDisk = 0.0;
+    var totalMemUsed = 0.0;
+    var totalMem = 0.0;
+    var totalDiskUsed = 0.0;
+    var totalDisk = 0.0;
 
-    double average(List<double> values) {
-      if (values.isEmpty) return 0;
-      return values.reduce((a, b) => a + b) / values.length;
+    var maxCpu = -1.0;
+    var maxMem = -1.0;
+    var maxDisk = -1.0;
+    String? maxCpuServerName;
+    String? maxMemServerName;
+    String? maxDiskServerName;
+
+    for (final entry in entries) {
+      final stats = entry.stats;
+      sumCpu += stats.cpuPercent;
+      sumMem += stats.memPercent;
+      sumDisk += stats.diskPercent;
+
+      totalMemUsed += stats.memUsedGb;
+      totalMem += stats.memTotalGb;
+      totalDiskUsed += stats.diskUsedGb;
+      totalDisk += stats.diskTotalGb;
+
+      if (stats.cpuPercent >= maxCpu) {
+        maxCpu = stats.cpuPercent;
+        maxCpuServerName = entry.server.name;
+      }
+      if (stats.memPercent >= maxMem) {
+        maxMem = stats.memPercent;
+        maxMemServerName = entry.server.name;
+      }
+      if (stats.diskPercent >= maxDisk) {
+        maxDisk = stats.diskPercent;
+        maxDiskServerName = entry.server.name;
+      }
     }
 
-    double maxValue(List<double> values) {
-      if (values.isEmpty) return 0;
-      return values.reduce(math.max);
-    }
+    final count = entries.length.toDouble();
 
     return _ServerStatsSummary(
       total: total,
@@ -604,13 +678,20 @@ class _ServerStatsSummary {
       offline: offline,
       disabled: disabled,
       unknown: unknown,
-      avgCpu: average(cpuValues),
-      avgMem: average(memValues),
-      avgDisk: average(diskValues),
-      maxCpu: maxValue(cpuValues),
-      maxMem: maxValue(memValues),
-      maxDisk: maxValue(diskValues),
-      statsCount: stats.length,
+      avgCpu: sumCpu / count,
+      avgMem: sumMem / count,
+      avgDisk: sumDisk / count,
+      maxCpu: maxCpu < 0 ? 0 : maxCpu,
+      maxMem: maxMem < 0 ? 0 : maxMem,
+      maxDisk: maxDisk < 0 ? 0 : maxDisk,
+      maxCpuServerName: maxCpuServerName,
+      maxMemServerName: maxMemServerName,
+      maxDiskServerName: maxDiskServerName,
+      totalMemUsedGb: totalMemUsed,
+      totalMemGb: totalMem,
+      totalDiskUsedGb: totalDiskUsed,
+      totalDiskGb: totalDisk,
+      statsCount: entries.length,
     );
   }
 
@@ -625,5 +706,24 @@ class _ServerStatsSummary {
   final double maxCpu;
   final double maxMem;
   final double maxDisk;
+  final String? maxCpuServerName;
+  final String? maxMemServerName;
+  final String? maxDiskServerName;
+  final double totalMemUsedGb;
+  final double totalMemGb;
+  final double totalDiskUsedGb;
+  final double totalDiskGb;
   final int statsCount;
+
+  String get memTotalsLabel => _totalsLabel(totalMemUsedGb, totalMemGb);
+  String get diskTotalsLabel => _totalsLabel(totalDiskUsedGb, totalDiskGb);
+
+  String _totalsLabel(double used, double total) {
+    if (total <= 0) return '';
+    return '${_formatGb(used)}/${_formatGb(total)} GB';
+  }
+
+  String _formatGb(double value) {
+    return value.toStringAsFixed(0);
+  }
 }
