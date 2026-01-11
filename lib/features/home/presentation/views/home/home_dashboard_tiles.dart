@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
+import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
@@ -187,7 +188,10 @@ class HomeUpdatePreviewTile extends StatelessWidget {
 
     return Card(
       child: ListTile(
-        leading: Icon(AppIcons.updateAvailable, color: statusColor),
+        leading: Icon(
+          _iconForTargetType(update.target?.type),
+          color: statusColor,
+        ),
         title: Text(label),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,6 +294,23 @@ class _StatPill extends StatelessWidget {
       ),
     );
   }
+}
+
+IconData _iconForTargetType(ResourceTargetType? type) {
+  return switch (type) {
+    ResourceTargetType.system => AppIcons.settings,
+    ResourceTargetType.server => AppIcons.server,
+    ResourceTargetType.stack => AppIcons.stacks,
+    ResourceTargetType.deployment => AppIcons.deployments,
+    ResourceTargetType.build => AppIcons.builds,
+    ResourceTargetType.repo => AppIcons.repos,
+    ResourceTargetType.procedure => AppIcons.procedures,
+    ResourceTargetType.action => AppIcons.actions,
+    ResourceTargetType.resourceSync => AppIcons.syncs,
+    ResourceTargetType.builder => AppIcons.factory,
+    ResourceTargetType.alerter => AppIcons.notifications,
+    ResourceTargetType.unknown || null => AppIcons.widgets,
+  };
 }
 
 String _humanizeVariant(String value) {
