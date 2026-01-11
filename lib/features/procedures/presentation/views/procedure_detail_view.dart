@@ -104,8 +104,8 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
                                   key: _configEditorKey,
                                   initialConfig:
                                       (_configEditSnapshot?.id == procedure.id)
-                                          ? _configEditSnapshot!.config
-                                          : procedure.config,
+                                      ? _configEditSnapshot!.config
+                                      : procedure.config,
                                 )
                               : _ProcedureConfigContent(
                                   procedure: procedure,
@@ -146,10 +146,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
     );
   }
 
-  Future<void> _runProcedure(
-    BuildContext context,
-    String procedureId,
-  ) async {
+  Future<void> _runProcedure(BuildContext context, String procedureId) async {
     final actions = ref.read(procedureActionsProvider.notifier);
     final success = await actions.run(procedureId);
 
@@ -177,7 +174,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
     if (!_isEditingConfig) {
       return IconButton(
         tooltip: 'Edit config',
-        icon: Icon(AppIcons.edit, color: scheme.onPrimary),
+        icon: const Icon(AppIcons.edit),
         onPressed: () {
           setState(() {
             _isEditingConfig = true;
@@ -210,7 +207,8 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
             backgroundColor: scheme.onPrimary,
             foregroundColor: scheme.primary,
           ),
-          onPressed: () => _saveConfig(context: context, procedureId: procedure.id),
+          onPressed: () =>
+              _saveConfig(context: context, procedureId: procedure.id),
           child: const Text('Save'),
         ),
       ],
@@ -239,7 +237,10 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
 
     final updated = await ref
         .read(procedureActionsProvider.notifier)
-        .updateProcedureConfig(procedureId: procedureId, partialConfig: partialConfig);
+        .updateProcedureConfig(
+          procedureId: procedureId,
+          partialConfig: partialConfig,
+        );
 
     if (!context.mounted) return;
 
@@ -271,10 +272,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
 }
 
 class ProcedureConfigEditorContent extends StatefulWidget {
-  const ProcedureConfigEditorContent({
-    required this.initialConfig,
-    super.key,
-  });
+  const ProcedureConfigEditorContent({required this.initialConfig, super.key});
 
   final ProcedureConfig initialConfig;
 
@@ -283,7 +281,8 @@ class ProcedureConfigEditorContent extends StatefulWidget {
       ProcedureConfigEditorContentState();
 }
 
-class ProcedureConfigEditorContentState extends State<ProcedureConfigEditorContent> {
+class ProcedureConfigEditorContentState
+    extends State<ProcedureConfigEditorContent> {
   late ProcedureConfig _initial;
 
   late final TextEditingController _schedule;
@@ -345,7 +344,11 @@ class ProcedureConfigEditorContentState extends State<ProcedureConfigEditorConte
       }
     }
 
-    setIfChanged('schedule_enabled', _scheduleEnabled, _initial.scheduleEnabled);
+    setIfChanged(
+      'schedule_enabled',
+      _scheduleEnabled,
+      _initial.scheduleEnabled,
+    );
     setIfChanged('webhook_enabled', _webhookEnabled, _initial.webhookEnabled);
     setIfChanged('schedule_alert', _scheduleAlert, _initial.scheduleAlert);
     setIfChanged('failure_alert', _failureAlert, _initial.failureAlert);
@@ -462,8 +465,7 @@ class ProcedureConfigEditorContentState extends State<ProcedureConfigEditorConte
                   prefixIcon: const Icon(AppIcons.tag),
                   helperText: _scheduleFormat == ScheduleFormat.cron
                       ? 'Cron (e.g. 0 0 * * *)'
-                      : 'English (e.g. every day at 01:00)'
-                      ,
+                      : 'English (e.g. every day at 01:00)',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                 ),
               ),

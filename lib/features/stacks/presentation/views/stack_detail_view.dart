@@ -222,8 +222,8 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
                                       key: _configEditorKey,
                                       initialConfig:
                                           (_configEditSnapshot?.id == stack.id)
-                                              ? _configEditSnapshot!.config
-                                              : stack.config,
+                                          ? _configEditSnapshot!.config
+                                          : stack.config,
                                       servers: servers,
                                       repos: repos,
                                     )
@@ -386,7 +386,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
     if (!_isEditingConfig) {
       return IconButton(
         tooltip: 'Edit config',
-        icon: Icon(AppIcons.edit, color: scheme.onPrimary),
+        icon: const Icon(AppIcons.edit),
         onPressed: () {
           setState(() {
             _isEditingConfig = true;
@@ -411,10 +411,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
               _configEditSnapshot = null;
             });
           },
-          child: Text(
-            'Cancel',
-            style: TextStyle(color: scheme.onPrimary),
-          ),
+          child: Text('Cancel', style: TextStyle(color: scheme.onPrimary)),
         ),
         const Gap(6),
         FilledButton(

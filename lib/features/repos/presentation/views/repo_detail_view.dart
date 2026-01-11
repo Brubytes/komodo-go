@@ -184,7 +184,7 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView> {
     if (!_isEditingConfig) {
       return IconButton(
         tooltip: 'Edit config',
-        icon: Icon(AppIcons.edit, color: scheme.onPrimary),
+        icon: const Icon(AppIcons.edit),
         onPressed: () {
           setState(() {
             _isEditingConfig = true;

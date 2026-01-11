@@ -54,8 +54,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
         actions: [
           PopupMenuButton<BuildAction>(
             icon: const Icon(AppIcons.moreVertical),
-            onSelected: (action) =>
-                _handleAction(context, buildId, action),
+            onSelected: (action) => _handleAction(context, buildId, action),
             itemBuilder: (context) {
               final scheme = Theme.of(context).colorScheme;
               return [
@@ -88,7 +87,9 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
                 buildAsync.when(
                   data: (build) {
                     if (build == null) {
-                      return const BuildMessageSurface(message: 'Build not found');
+                      return const BuildMessageSurface(
+                        message: 'Build not found',
+                      );
                     }
 
                     BuildListItem? listItem;
@@ -139,8 +140,8 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
                                   key: _configEditorKey,
                                   initialConfig:
                                       (_configEditSnapshot?.id == build.id)
-                                          ? _configEditSnapshot!.config
-                                          : build.config,
+                                      ? _configEditSnapshot!.config
+                                      : build.config,
                                   builders: builders,
                                   repos: repos,
                                 )
@@ -183,7 +184,8 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
                     );
                   },
                   loading: () => const BuildLoadingSurface(),
-                  error: (error, _) => BuildErrorSurface(error: error.toString()),
+                  error: (error, _) =>
+                      BuildErrorSurface(error: error.toString()),
                 ),
               ],
             ),
@@ -240,7 +242,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
     if (!_isEditingConfig) {
       return IconButton(
         tooltip: 'Edit config',
-        icon: Icon(AppIcons.edit, color: scheme.onPrimary),
+        icon: const Icon(AppIcons.edit),
         onPressed: () {
           setState(() {
             _isEditingConfig = true;
@@ -324,11 +326,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
       _configEditSnapshot = null;
     });
 
-    AppSnackBar.show(
-      context,
-      'Build updated',
-      tone: AppSnackBarTone.success,
-    );
+    AppSnackBar.show(context, 'Build updated', tone: AppSnackBarTone.success);
   }
 }
 

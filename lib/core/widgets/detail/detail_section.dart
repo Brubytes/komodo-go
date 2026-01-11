@@ -32,8 +32,18 @@ class DetailSection extends StatelessWidget {
     final tint = tintColor ?? scheme.primary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final titleColor = isDark ? scheme.onPrimary : scheme.onSurface;
-    // Make base color transparent if not provided 
+    // Make base color transparent if not provided
     final baseColor = this.baseColor ?? scheme.surface.withValues(alpha: 0);
+
+    final trailingWithHeaderColor = trailing == null
+        ? null
+        : IconTheme.merge(
+            data: IconThemeData(color: titleColor),
+            child: DefaultTextStyle.merge(
+              style: TextStyle(color: titleColor),
+              child: trailing!,
+            ),
+          );
 
     return DetailSurface(
       tintColor: tint,
@@ -71,7 +81,7 @@ class DetailSection extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (trailing != null) trailing!,
+                if (trailingWithHeaderColor != null) trailingWithHeaderColor,
               ],
             ),
           ),

@@ -172,7 +172,7 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView> {
     if (!_isEditingConfig) {
       return IconButton(
         tooltip: 'Edit config',
-        icon: Icon(AppIcons.edit, color: scheme.onPrimary),
+        icon: const Icon(AppIcons.edit),
         onPressed: () {
           setState(() {
             _isEditingConfig = true;
