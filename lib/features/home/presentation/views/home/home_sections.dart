@@ -175,7 +175,7 @@ class HomeMetricCard extends StatelessWidget {
                     color: scheme.onSurfaceVariant,
                     fontWeight: FontWeight.w700,
                     height: 1.1,
-                    fontSize: 12,
+                    fontSize: 10,
                   );
 
                   if (parts.length == 1) {

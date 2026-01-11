@@ -11,6 +11,7 @@ import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
 import 'package:komodo_go/features/deployments/presentation/views/deployment_detail/deployment_detail_sections.dart';
 import 'package:komodo_go/features/deployments/presentation/widgets/deployment_card.dart';
+import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 
 /// View displaying detailed deployment information.
@@ -40,6 +41,7 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
     final deploymentAsync = ref.watch(deploymentDetailProvider(deploymentId));
     final actionsState = ref.watch(deploymentActionsProvider);
     final serversListAsync = ref.watch(serversProvider);
+    final registryAccountsAsync = ref.watch(dockerRegistryAccountsProvider);
 
     final scheme = Theme.of(context).colorScheme;
 
@@ -111,6 +113,9 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
                                       imageLabel: deployment.imageLabel,
                                       servers:
                                           serversListAsync.asData?.value ??
+                                          const [],
+                                      registryAccounts:
+                                          registryAccountsAsync.asData?.value ??
                                           const [],
                                     )
                                   : DeploymentConfigContent(

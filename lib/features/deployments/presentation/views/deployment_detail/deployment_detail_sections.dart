@@ -4,6 +4,7 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
+import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
 
@@ -303,12 +304,14 @@ class DeploymentConfigEditorContent extends StatefulWidget {
     required this.initialConfig,
     required this.imageLabel,
     this.servers = const [],
+    this.registryAccounts = const [],
     super.key,
   });
 
   final DeploymentConfig initialConfig;
   final String imageLabel;
   final List<Server> servers;
+  final List<DockerRegistryAccount> registryAccounts;
 
   @override
   State<DeploymentConfigEditorContent> createState() =>
@@ -664,6 +667,16 @@ class DeploymentConfigEditorContentState
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final serverIdInList = sortedServers.any((s) => s.id == _serverId.text);
 
+    final sortedRegistries = [...widget.registryAccounts]
+      ..sort(
+        (a, b) => a.domain.toLowerCase().compareTo(b.domain.toLowerCase()) != 0
+            ? a.domain.toLowerCase().compareTo(b.domain.toLowerCase())
+            : a.username.toLowerCase().compareTo(b.username.toLowerCase()),
+      );
+    final registryInList = sortedRegistries.any(
+      (r) => r.id == _imageRegistryAccount.text,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -725,13 +738,62 @@ class DeploymentConfigEditorContentState
                 ),
               ),
               const Gap(12),
-              TextFormField(
-                controller: _imageRegistryAccount,
-                decoration: const InputDecoration(
+              DropdownButtonFormField<String>(
+                key: ValueKey(sortedRegistries.length),
+                value: sortedRegistries.isNotEmpty
+                    ? (registryInList
+                          ? _imageRegistryAccount.text
+                          : (_imageRegistryAccount.text.trim().isEmpty
+                                ? ''
+                                : null))
+                    : '',
+                decoration: InputDecoration(
                   labelText: 'Registry account',
-                  prefixIcon: Icon(AppIcons.package),
+                  prefixIcon: const Icon(AppIcons.package),
+                  helperStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  helperText: sortedRegistries.isNotEmpty
+                      ? 'Select a saved registry account.'
+                      : 'No registry accounts found. Add one under Providers.',
                 ),
+                items: sortedRegistries.isNotEmpty
+                    ? [
+                        const DropdownMenuItem(value: '', child: Text('—')),
+                        for (final registry in sortedRegistries)
+                          DropdownMenuItem(
+                            value: registry.id,
+                            child: Text(
+                              '${registry.username}@${registry.domain}',
+                            ),
+                          ),
+                      ]
+                    : const [
+                        DropdownMenuItem(
+                          value: '',
+                          child: Text('No registry accounts'),
+                        ),
+                      ],
+                onChanged: sortedRegistries.isNotEmpty
+                    ? (value) {
+                        if (value == null) return;
+                        setState(() => _imageRegistryAccount.text = value);
+                      }
+                    : null,
               ),
+              if ((sortedRegistries.isEmpty &&
+                      _imageRegistryAccount.text.trim().isNotEmpty) ||
+                  (sortedRegistries.isNotEmpty &&
+                      !registryInList &&
+                      _imageRegistryAccount.text.trim().isNotEmpty)) ...[
+                const Gap(8),
+                TextFormField(
+                  controller: _imageRegistryAccount,
+                  decoration: const InputDecoration(
+                    labelText: 'Registry account (manual)',
+                    prefixIcon: Icon(AppIcons.tag),
+                    helperText: 'Current value not found in registry accounts.',
+                  ),
+                ),
+              ],
             ],
           ),
         ),
