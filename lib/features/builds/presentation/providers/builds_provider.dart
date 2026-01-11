@@ -56,6 +56,13 @@ class BuildActions extends _$BuildActions {
   Future<bool> cancel(String buildIdOrName) =>
       _executeAction((repo) => repo.cancelBuild(buildIdOrName));
 
+  Future<KomodoBuild?> updateBuildConfig({
+    required String buildId,
+    required Map<String, dynamic> partialConfig,
+  }) => _executeRequest(
+    (repo) => repo.updateBuildConfig(buildId: buildId, partialConfig: partialConfig),
+  );
+
   Future<bool> _executeAction(
     Future<Either<Failure, void>> Function(BuildRepository repo) action,
   ) async {
@@ -78,6 +85,32 @@ class BuildActions extends _$BuildActions {
         state = const AsyncValue.data(null);
         ref.invalidate(buildsProvider);
         return true;
+      },
+    );
+  }
+
+  Future<T?> _executeRequest<T>(
+    Future<Either<Failure, T>> Function(BuildRepository repo) request,
+  ) async {
+    final repository = ref.read(buildRepositoryProvider);
+    if (repository == null) {
+      state = AsyncValue.error('Not authenticated', StackTrace.current);
+      return null;
+    }
+
+    state = const AsyncValue.loading();
+
+    final result = await request(repository);
+
+    return result.fold(
+      (failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return null;
+      },
+      (value) {
+        state = const AsyncValue.data(null);
+        ref.invalidate(buildsProvider);
+        return value;
       },
     );
   }
