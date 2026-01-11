@@ -56,6 +56,16 @@ class ProcedureActions extends _$ProcedureActions {
   Future<bool> run(String procedureIdOrName) =>
       _executeAction((repo) => repo.runProcedure(procedureIdOrName));
 
+  Future<KomodoProcedure?> updateProcedureConfig({
+    required String procedureId,
+    required Map<String, dynamic> partialConfig,
+  }) => _executeRequest(
+    (repo) => repo.updateProcedureConfig(
+      procedureId: procedureId,
+      partialConfig: partialConfig,
+    ),
+  );
+
   Future<bool> _executeAction(
     Future<Either<Failure, void>> Function(ProcedureRepository repo) action,
   ) async {
@@ -78,6 +88,32 @@ class ProcedureActions extends _$ProcedureActions {
         state = const AsyncValue.data(null);
         ref.invalidate(proceduresProvider);
         return true;
+      },
+    );
+  }
+
+  Future<T?> _executeRequest<T>(
+    Future<Either<Failure, T>> Function(ProcedureRepository repo) request,
+  ) async {
+    final repository = ref.read(procedureRepositoryProvider);
+    if (repository == null) {
+      state = AsyncValue.error('Not authenticated', StackTrace.current);
+      return null;
+    }
+
+    state = const AsyncValue.loading();
+
+    final result = await request(repository);
+
+    return result.fold(
+      (failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return null;
+      },
+      (value) {
+        state = const AsyncValue.data(null);
+        ref.invalidate(proceduresProvider);
+        return value;
       },
     );
   }

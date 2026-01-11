@@ -13,7 +13,7 @@ import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
 
 /// View displaying detailed procedure information.
-class ProcedureDetailView extends ConsumerWidget {
+class ProcedureDetailView extends ConsumerStatefulWidget {
   const ProcedureDetailView({
     required this.procedureId,
     required this.procedureName,
@@ -24,7 +24,18 @@ class ProcedureDetailView extends ConsumerWidget {
   final String procedureName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProcedureDetailView> createState() =>
+      _ProcedureDetailViewState();
+}
+
+class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
+  var _isEditingConfig = false;
+  KomodoProcedure? _configEditSnapshot;
+  final _configEditorKey = GlobalKey<ProcedureConfigEditorContentState>();
+
+  @override
+  Widget build(BuildContext context) {
+    final procedureId = widget.procedureId;
     final procedureAsync = ref.watch(procedureDetailProvider(procedureId));
     final proceduresListAsync = ref.watch(proceduresProvider);
     final actionsState = ref.watch(procedureActionsProvider);
@@ -43,7 +54,7 @@ class ProcedureDetailView extends ConsumerWidget {
 
     return Scaffold(
       appBar: MainAppBar(
-        title: procedureName,
+        title: widget.procedureName,
         icon: AppIcons.procedures,
         markColor: AppTokens.resourceProcedures,
         markUseGradient: true,
@@ -52,7 +63,7 @@ class ProcedureDetailView extends ConsumerWidget {
           IconButton(
             icon: const Icon(AppIcons.play),
             tooltip: 'Run',
-            onPressed: () => _runProcedure(context, ref, procedureId),
+            onPressed: () => _runProcedure(context, procedureId),
           ),
         ],
       ),
@@ -84,10 +95,22 @@ class ProcedureDetailView extends ConsumerWidget {
                         DetailSection(
                           title: 'Configuration',
                           icon: AppIcons.settings,
-                          child: _ProcedureConfigContent(
+                          trailing: _buildConfigTrailing(
+                            context: context,
                             procedure: procedure,
-                            listItem: listItem,
                           ),
+                          child: _isEditingConfig
+                              ? ProcedureConfigEditorContent(
+                                  key: _configEditorKey,
+                                  initialConfig:
+                                      (_configEditSnapshot?.id == procedure.id)
+                                          ? _configEditSnapshot!.config
+                                          : procedure.config,
+                                )
+                              : _ProcedureConfigContent(
+                                  procedure: procedure,
+                                  listItem: listItem,
+                                ),
                         ),
                         const Gap(16),
                         DetailSection(
@@ -125,7 +148,6 @@ class ProcedureDetailView extends ConsumerWidget {
 
   Future<void> _runProcedure(
     BuildContext context,
-    WidgetRef ref,
     String procedureId,
   ) async {
     final actions = ref.read(procedureActionsProvider.notifier);
@@ -144,6 +166,329 @@ class ProcedureDetailView extends ConsumerWidget {
         tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
       );
     }
+  }
+
+  Widget _buildConfigTrailing({
+    required BuildContext context,
+    required KomodoProcedure procedure,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+
+    if (!_isEditingConfig) {
+      return IconButton(
+        tooltip: 'Edit config',
+        icon: Icon(AppIcons.edit, color: scheme.onPrimary),
+        onPressed: () {
+          setState(() {
+            _isEditingConfig = true;
+            _configEditSnapshot = procedure;
+          });
+        },
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton(
+          onPressed: () {
+            if (_configEditSnapshot != null) {
+              _configEditorKey.currentState?.resetTo(
+                _configEditSnapshot!.config,
+              );
+            }
+            setState(() {
+              _isEditingConfig = false;
+              _configEditSnapshot = null;
+            });
+          },
+          child: Text('Cancel', style: TextStyle(color: scheme.onPrimary)),
+        ),
+        const Gap(6),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: scheme.onPrimary,
+            foregroundColor: scheme.primary,
+          ),
+          onPressed: () => _saveConfig(context: context, procedureId: procedure.id),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _saveConfig({
+    required BuildContext context,
+    required String procedureId,
+  }) async {
+    final draft = _configEditorKey.currentState;
+    if (draft == null) {
+      AppSnackBar.show(
+        context,
+        'Editor not ready',
+        tone: AppSnackBarTone.error,
+      );
+      return;
+    }
+
+    final partialConfig = draft.buildPartialConfigParams();
+    if (partialConfig.isEmpty) {
+      AppSnackBar.show(context, 'No changes to save');
+      return;
+    }
+
+    final updated = await ref
+        .read(procedureActionsProvider.notifier)
+        .updateProcedureConfig(procedureId: procedureId, partialConfig: partialConfig);
+
+    if (!context.mounted) return;
+
+    if (updated == null) {
+      final err = ref.read(procedureActionsProvider).asError?.error;
+      AppSnackBar.show(
+        context,
+        err != null ? 'Failed: $err' : 'Failed to update procedure',
+        tone: AppSnackBarTone.error,
+      );
+      return;
+    }
+
+    ref
+      ..invalidate(procedureDetailProvider(procedureId))
+      ..invalidate(proceduresProvider);
+
+    setState(() {
+      _isEditingConfig = false;
+      _configEditSnapshot = null;
+    });
+
+    AppSnackBar.show(
+      context,
+      'Procedure updated',
+      tone: AppSnackBarTone.success,
+    );
+  }
+}
+
+class ProcedureConfigEditorContent extends StatefulWidget {
+  const ProcedureConfigEditorContent({
+    required this.initialConfig,
+    super.key,
+  });
+
+  final ProcedureConfig initialConfig;
+
+  @override
+  State<ProcedureConfigEditorContent> createState() =>
+      ProcedureConfigEditorContentState();
+}
+
+class ProcedureConfigEditorContentState extends State<ProcedureConfigEditorContent> {
+  late ProcedureConfig _initial;
+
+  late final TextEditingController _schedule;
+  late final TextEditingController _scheduleTimezone;
+  late final TextEditingController _webhookSecret;
+
+  var _scheduleEnabled = false;
+  var _webhookEnabled = false;
+  var _scheduleAlert = false;
+  var _failureAlert = false;
+  var _scheduleFormat = ScheduleFormat.english;
+
+  @override
+  void initState() {
+    super.initState();
+    _initial = widget.initialConfig;
+
+    _schedule = TextEditingController(text: _initial.schedule);
+    _scheduleTimezone = TextEditingController(text: _initial.scheduleTimezone);
+    _webhookSecret = TextEditingController(text: _initial.webhookSecret);
+
+    _scheduleEnabled = _initial.scheduleEnabled;
+    _webhookEnabled = _initial.webhookEnabled;
+    _scheduleAlert = _initial.scheduleAlert;
+    _failureAlert = _initial.failureAlert;
+    _scheduleFormat = _initial.scheduleFormat;
+  }
+
+  @override
+  void dispose() {
+    _schedule.dispose();
+    _scheduleTimezone.dispose();
+    _webhookSecret.dispose();
+    super.dispose();
+  }
+
+  void resetTo(ProcedureConfig config) {
+    setState(() {
+      _initial = config;
+
+      _schedule.text = config.schedule;
+      _scheduleTimezone.text = config.scheduleTimezone;
+      _webhookSecret.text = config.webhookSecret;
+
+      _scheduleEnabled = config.scheduleEnabled;
+      _webhookEnabled = config.webhookEnabled;
+      _scheduleAlert = config.scheduleAlert;
+      _failureAlert = config.failureAlert;
+      _scheduleFormat = config.scheduleFormat;
+    });
+  }
+
+  Map<String, dynamic> buildPartialConfigParams() {
+    final params = <String, dynamic>{};
+
+    void setIfChanged(String key, Object value, Object initialValue) {
+      if (value != initialValue) {
+        params[key] = value;
+      }
+    }
+
+    setIfChanged('schedule_enabled', _scheduleEnabled, _initial.scheduleEnabled);
+    setIfChanged('webhook_enabled', _webhookEnabled, _initial.webhookEnabled);
+    setIfChanged('schedule_alert', _scheduleAlert, _initial.scheduleAlert);
+    setIfChanged('failure_alert', _failureAlert, _initial.failureAlert);
+
+    final schedule = _schedule.text;
+    setIfChanged('schedule', schedule, _initial.schedule);
+
+    final scheduleTimezone = _scheduleTimezone.text.trim();
+    setIfChanged(
+      'schedule_timezone',
+      scheduleTimezone,
+      _initial.scheduleTimezone,
+    );
+
+    final webhookSecret = _webhookSecret.text;
+    setIfChanged('webhook_secret', webhookSecret, _initial.webhookSecret);
+
+    if (_scheduleFormat != _initial.scheduleFormat) {
+      params['schedule_format'] = _scheduleFormat == ScheduleFormat.cron
+          ? 'Cron'
+          : 'English';
+    }
+
+    return params;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DetailSubCard(
+          title: 'Toggles',
+          icon: AppIcons.settings,
+          child: Column(
+            children: [
+              SwitchListTile.adaptive(
+                value: _scheduleEnabled,
+                onChanged: (v) => setState(() => _scheduleEnabled = v),
+                title: const Text('Schedule enabled'),
+                secondary: const Icon(AppIcons.clock),
+                contentPadding: EdgeInsets.zero,
+              ),
+              SwitchListTile.adaptive(
+                value: _webhookEnabled,
+                onChanged: (v) => setState(() => _webhookEnabled = v),
+                title: const Text('Webhook enabled'),
+                secondary: const Icon(AppIcons.network),
+                contentPadding: EdgeInsets.zero,
+              ),
+              SwitchListTile.adaptive(
+                value: _scheduleAlert,
+                onChanged: (v) => setState(() => _scheduleAlert = v),
+                title: const Text('Schedule alerts'),
+                secondary: const Icon(AppIcons.notifications),
+                contentPadding: EdgeInsets.zero,
+              ),
+              SwitchListTile.adaptive(
+                value: _failureAlert,
+                onChanged: (v) => setState(() => _failureAlert = v),
+                title: const Text('Failure alerts'),
+                secondary: const Icon(AppIcons.warning),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+        DetailSubCard(
+          title: 'Schedule',
+          icon: AppIcons.clock,
+          child: Column(
+            children: [
+              DropdownButtonFormField<ScheduleFormat>(
+                key: const ValueKey('procedure_schedule_format'),
+                value: _scheduleFormat,
+                items: const [
+                  DropdownMenuItem(
+                    value: ScheduleFormat.english,
+                    child: Text('English'),
+                  ),
+                  DropdownMenuItem(
+                    value: ScheduleFormat.cron,
+                    child: Text('Cron'),
+                  ),
+                ],
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _scheduleFormat = v);
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Schedule format',
+                  prefixIcon: Icon(AppIcons.clock),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _scheduleTimezone,
+                decoration: InputDecoration(
+                  labelText: 'Timezone',
+                  prefixIcon: const Icon(AppIcons.clock),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _schedule,
+                minLines: 1,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'Schedule expression',
+                  prefixIcon: const Icon(AppIcons.tag),
+                  helperText: _scheduleFormat == ScheduleFormat.cron
+                      ? 'Cron (e.g. 0 0 * * *)'
+                      : 'English (e.g. every day at 01:00)'
+                      ,
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+        DetailSubCard(
+          title: 'Webhook',
+          icon: AppIcons.network,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _webhookSecret,
+                decoration: InputDecoration(
+                  labelText: 'Webhook secret',
+                  prefixIcon: const Icon(AppIcons.key),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

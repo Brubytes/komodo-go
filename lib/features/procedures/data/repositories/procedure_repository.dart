@@ -81,6 +81,39 @@ class ProcedureRepository {
       },
     );
   }
+
+  /// Updates a procedure configuration and returns the updated procedure.
+  ///
+  /// Uses the `/write` module `UpdateProcedure` RPC.
+  ///
+  /// Note: Only fields included in [partialConfig] will be updated.
+  Future<Either<Failure, KomodoProcedure>> updateProcedureConfig({
+    required String procedureId,
+    required Map<String, dynamic> partialConfig,
+  }) async {
+    return apiCall(
+      () async {
+        final response = await _client.write(
+          RpcRequest(
+            type: 'UpdateProcedure',
+            params: <String, dynamic>{
+              'id': procedureId,
+              'config': partialConfig,
+            },
+          ),
+        );
+
+        return KomodoProcedure.fromJson(response as Map<String, dynamic>);
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
+        if (e.isNotFound) {
+          return const Failure.server(message: 'Procedure not found');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+    );
+  }
 }
 
 @riverpod
