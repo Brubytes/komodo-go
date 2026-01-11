@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 enum DetailMetricTone { primary, secondary, tertiary, success, neutral, alert }
 
@@ -56,9 +57,8 @@ class _DetailMetricTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final (Color accent, Color accentContainer) = switch (item.tone) {
+    final (Color accent, Color _) = switch (item.tone) {
       DetailMetricTone.primary => (scheme.primary, scheme.primaryContainer),
       DetailMetricTone.secondary => (
         scheme.secondary,
@@ -73,17 +73,10 @@ class _DetailMetricTile extends StatelessWidget {
       DetailMetricTone.alert => (scheme.error, scheme.errorContainer),
     };
 
-    final tileBorder = scheme.outlineVariant.withValues(
-      alpha: isDark ? 0.22 : 0.40,
-    );
-
-    return Container(
+    return AppCardSurface(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: accentContainer.withValues(alpha: isDark ? 0.26 : 0.34),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: tileBorder),
-      ),
+      radius: 18,
+      enableShadow: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -93,7 +86,7 @@ class _DetailMetricTile extends StatelessWidget {
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: scheme.surface.withValues(alpha: isDark ? 0.55 : 0.85),
+                  color: scheme.surface.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(item.icon, size: 18, color: accent),

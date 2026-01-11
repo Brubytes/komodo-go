@@ -5,7 +5,13 @@ import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 
 class StackHeroPanel extends StatelessWidget {
-  const StackHeroPanel({required this.stack, required this.listItem, required this.serviceCount, required this.updateCount, required this.serverName, super.key,
+  const StackHeroPanel({
+    required this.stack,
+    required this.listItem,
+    required this.serviceCount,
+    required this.updateCount,
+    required this.serverName,
+    super.key,
   });
 
   final KomodoStack stack;
@@ -29,7 +35,7 @@ class StackHeroPanel extends StatelessWidget {
         info.latestHash != null && info.deployedHash == info.latestHash;
 
     return DetailHeroPanel(
-      tintColor: scheme.primary,
+      tintColor: scheme.surface,
       header: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -163,7 +169,11 @@ class StackHeroPanel extends StatelessWidget {
 }
 
 class StackConfigContent extends StatelessWidget {
-  const StackConfigContent({required this.config, required this.serverName, super.key});
+  const StackConfigContent({
+    required this.config,
+    required this.serverName,
+    super.key,
+  });
 
   final StackConfig config;
   final String? serverName;
