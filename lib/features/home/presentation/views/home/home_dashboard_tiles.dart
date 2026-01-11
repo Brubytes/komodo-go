@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
@@ -31,87 +33,130 @@ class HomeServerStatTile extends StatelessWidget {
       width: 220,
       child: Card(
         margin: EdgeInsets.zero,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // This tile is rendered inside a fixed-height horizontal list (currently 130).
-            // Use a compact layout to prevent vertical overflow.
-            final isCompact = constraints.maxHeight <= 132;
-            final padding = isCompact ? 7.0 : 12.0;
-            final headerGap = isCompact ? 3.0 : 10.0;
+        child: InkWell(
+          onTap: () {
+            final id = server.id;
+            if (id.isEmpty) return;
+            context.go(
+              '${AppRoutes.servers}/$id?name=${Uri.encodeComponent(server.name)}',
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // This tile is rendered inside a fixed-height horizontal list (currently 130).
+              // Use a compact layout to prevent vertical overflow.
+              final isCompact = constraints.maxHeight <= 132;
+              final padding = isCompact ? 7.0 : 12.0;
+              final headerGap = isCompact ? 3.0 : 10.0;
 
-            return Padding(
-              padding: EdgeInsets.all(padding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: statusColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const Gap(8),
-                      Expanded(
-                        child: Text(
-                          server.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      Icon(statusIcon, size: 14, color: statusColor),
-                    ],
-                  ),
-                  Gap(headerGap),
-                  if (isLoading)
+              return Padding(
+                padding: EdgeInsets.all(padding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
                       children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: scheme.primary,
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            shape: BoxShape.circle,
                           ),
                         ),
                         const Gap(8),
-                        Text(
-                          'Loading stats',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        Expanded(
+                          child: Text(
+                            server.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
                         ),
+                        Icon(statusIcon, size: 14, color: statusColor),
                       ],
-                    )
-                  else if (isCompact)
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    ),
+                    Gap(headerGap),
+                    if (isLoading)
+                      Row(
                         children: [
-                          _CompactStatLine(
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: scheme.primary,
+                            ),
+                          ),
+                          const Gap(8),
+                          Text(
+                            'Loading stats',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      )
+                    else if (isCompact)
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _CompactStatLine(
+                              icon: AppIcons.cpu,
+                              label: 'CPU',
+                              primary: _percentLabel(statsValue?.cpuPercent),
+                              color: AppTokens.statusGreen,
+                            ),
+                            _CompactStatLine(
+                              icon: AppIcons.memory,
+                              label: 'Memory',
+                              primary: _percentLabel(statsValue?.memPercent),
+                              secondary: _absoluteLabel(
+                                statsValue?.memUsedGb,
+                                statsValue?.memTotalGb,
+                              ),
+                              color: AppTokens.statusOrange,
+                            ),
+                            _CompactStatLine(
+                              icon: AppIcons.hardDrive,
+                              label: 'Disk',
+                              primary: _percentLabel(statsValue?.diskPercent),
+                              secondary: _absoluteLabel(
+                                statsValue?.diskUsedGb,
+                                statsValue?.diskTotalGb,
+                              ),
+                              color: AppTokens.statusRed,
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Column(
+                        children: [
+                          _StatRow(
                             icon: AppIcons.cpu,
                             label: 'CPU',
-                            primary: _percentLabel(statsValue?.cpuPercent),
+                            percent: statsValue?.cpuPercent,
                             color: AppTokens.statusGreen,
                           ),
-                          _CompactStatLine(
+                          const Gap(10),
+                          _StatRow(
                             icon: AppIcons.memory,
                             label: 'Memory',
-                            primary: _percentLabel(statsValue?.memPercent),
+                            percent: statsValue?.memPercent,
                             secondary: _absoluteLabel(
                               statsValue?.memUsedGb,
                               statsValue?.memTotalGb,
                             ),
                             color: AppTokens.statusOrange,
                           ),
-                          _CompactStatLine(
+                          const Gap(10),
+                          _StatRow(
                             icon: AppIcons.hardDrive,
                             label: 'Disk',
-                            primary: _percentLabel(statsValue?.diskPercent),
+                            percent: statsValue?.diskPercent,
                             secondary: _absoluteLabel(
                               statsValue?.diskUsedGb,
                               statsValue?.diskTotalGb,
@@ -120,44 +165,11 @@ class HomeServerStatTile extends StatelessWidget {
                           ),
                         ],
                       ),
-                    )
-                  else
-                    Column(
-                      children: [
-                        _StatRow(
-                          icon: AppIcons.cpu,
-                          label: 'CPU',
-                          percent: statsValue?.cpuPercent,
-                          color: AppTokens.statusGreen,
-                        ),
-                        const Gap(10),
-                        _StatRow(
-                          icon: AppIcons.memory,
-                          label: 'Memory',
-                          percent: statsValue?.memPercent,
-                          secondary: _absoluteLabel(
-                            statsValue?.memUsedGb,
-                            statsValue?.memTotalGb,
-                          ),
-                          color: AppTokens.statusOrange,
-                        ),
-                        const Gap(10),
-                        _StatRow(
-                          icon: AppIcons.hardDrive,
-                          label: 'Disk',
-                          percent: statsValue?.diskPercent,
-                          secondary: _absoluteLabel(
-                            statsValue?.diskUsedGb,
-                            statsValue?.diskTotalGb,
-                          ),
-                          color: AppTokens.statusRed,
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            );
-          },
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
