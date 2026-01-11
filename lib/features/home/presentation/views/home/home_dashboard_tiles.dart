@@ -30,13 +30,14 @@ class HomeServerStatTile extends StatelessWidget {
     return SizedBox(
       width: 220,
       child: Card(
+        margin: EdgeInsets.zero,
         child: LayoutBuilder(
           builder: (context, constraints) {
             // This tile is rendered inside a fixed-height horizontal list (currently 130).
             // Use a compact layout to prevent vertical overflow.
             final isCompact = constraints.maxHeight <= 132;
-            final padding = isCompact ? 8.0 : 12.0;
-            final headerGap = isCompact ? 4.0 : 10.0;
+            final padding = isCompact ? 7.0 : 12.0;
+            final headerGap = isCompact ? 3.0 : 10.0;
 
             return Padding(
               padding: EdgeInsets.all(padding),
@@ -94,26 +95,26 @@ class HomeServerStatTile extends StatelessWidget {
                           _CompactStatLine(
                             icon: AppIcons.cpu,
                             label: 'CPU',
-                            value: _percentLabel(statsValue?.cpuPercent),
+                            primary: _percentLabel(statsValue?.cpuPercent),
                             color: AppTokens.statusGreen,
                           ),
                           _CompactStatLine(
                             icon: AppIcons.memory,
                             label: 'Memory',
-                            value: _compactPercentWithAbsolute(
-                              percent: statsValue?.memPercent,
-                              used: statsValue?.memUsedGb,
-                              total: statsValue?.memTotalGb,
+                            primary: _percentLabel(statsValue?.memPercent),
+                            secondary: _absoluteLabel(
+                              statsValue?.memUsedGb,
+                              statsValue?.memTotalGb,
                             ),
                             color: AppTokens.statusOrange,
                           ),
                           _CompactStatLine(
                             icon: AppIcons.hardDrive,
                             label: 'Disk',
-                            value: _compactPercentWithAbsolute(
-                              percent: statsValue?.diskPercent,
-                              used: statsValue?.diskUsedGb,
-                              total: statsValue?.diskTotalGb,
+                            primary: _percentLabel(statsValue?.diskPercent),
+                            secondary: _absoluteLabel(
+                              statsValue?.diskUsedGb,
+                              statsValue?.diskTotalGb,
                             ),
                             color: AppTokens.statusRed,
                           ),
@@ -165,17 +166,6 @@ class HomeServerStatTile extends StatelessWidget {
   String _percentLabel(double? value) {
     if (value == null || value.isNaN) return '—';
     return '${value.toStringAsFixed(0)}%';
-  }
-
-  String _compactPercentWithAbsolute({
-    required double? percent,
-    required double? used,
-    required double? total,
-  }) {
-    final percentLabel = _percentLabel(percent);
-    final absoluteLabel = _absoluteLabel(used, total);
-    if (absoluteLabel == '—') return percentLabel;
-    return '$percentLabel · $absoluteLabel';
   }
 
   String _absoluteLabel(double? used, double? total) {
@@ -468,13 +458,15 @@ class _CompactStatLine extends StatelessWidget {
   const _CompactStatLine({
     required this.icon,
     required this.label,
-    required this.value,
+    required this.primary,
     required this.color,
+    this.secondary,
   });
 
   final IconData icon;
   final String label;
-  final String value;
+  final String primary;
+  final String? secondary;
   final Color color;
 
   @override
@@ -486,26 +478,35 @@ class _CompactStatLine extends StatelessWidget {
       fontWeight: FontWeight.w700,
       height: 1.0,
     );
-    final valueStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+    final primaryStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
       color: scheme.onSurface,
       fontWeight: FontWeight.w800,
       height: 1.0,
     );
 
+    final secondaryValue = secondary;
+    final showSecondary = secondaryValue != null && secondaryValue != '—';
+    final secondaryStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: color.withValues(alpha: 0.9),
+      fontWeight: FontWeight.w700,
+      fontSize: 10,
+      height: 1.0,
+    );
+
     return SizedBox(
-      height: 24,
+      height: 26,
       child: Row(
         children: [
           Container(
-            width: 24,
-            height: 24,
+            width: 22,
+            height: 22,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, size: 14, color: color),
+            child: Icon(icon, size: 13, color: color),
           ),
-          const Gap(8),
+          const Gap(7),
           Expanded(
             child: Text(
               label,
@@ -514,15 +515,27 @@ class _CompactStatLine extends StatelessWidget {
               style: labelStyle,
             ),
           ),
-          const Gap(8),
-          Flexible(
-            child: Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: valueStyle,
-            ),
+          const Gap(7),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                primary,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: primaryStyle,
+              ),
+              if (showSecondary) ...[
+                const Gap(1),
+                Text(
+                  secondaryValue,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: secondaryStyle,
+                ),
+              ],
+            ],
           ),
         ],
       ),
