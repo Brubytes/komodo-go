@@ -53,6 +53,13 @@ class SyncActions extends _$SyncActions {
   Future<bool> run(String syncIdOrName) =>
       _executeAction((repo) => repo.runSync(syncIdOrName));
 
+  Future<KomodoResourceSync?> updateSyncConfig({
+    required String syncId,
+    required Map<String, dynamic> partialConfig,
+  }) => _executeRequest(
+    (repo) => repo.updateSyncConfig(syncId: syncId, partialConfig: partialConfig),
+  );
+
   Future<bool> _executeAction(
     Future<Either<Failure, void>> Function(SyncRepository repo) action,
   ) async {
@@ -75,6 +82,32 @@ class SyncActions extends _$SyncActions {
         state = const AsyncValue.data(null);
         ref.invalidate(syncsProvider);
         return true;
+      },
+    );
+  }
+
+  Future<T?> _executeRequest<T>(
+    Future<Either<Failure, T>> Function(SyncRepository repo) request,
+  ) async {
+    final repository = ref.read(syncRepositoryProvider);
+    if (repository == null) {
+      state = AsyncValue.error('Not authenticated', StackTrace.current);
+      return null;
+    }
+
+    state = const AsyncValue.loading();
+
+    final result = await request(repository);
+
+    return result.fold(
+      (failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return null;
+      },
+      (value) {
+        state = const AsyncValue.data(null);
+        ref.invalidate(syncsProvider);
+        return value;
       },
     );
   }

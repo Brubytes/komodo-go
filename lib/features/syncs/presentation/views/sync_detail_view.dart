@@ -6,12 +6,17 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/features/providers/data/models/git_provider_account.dart';
+import 'package:komodo_go/features/providers/presentation/providers/git_providers_provider.dart';
+import 'package:komodo_go/features/repos/data/models/repo.dart';
+import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+import 'package:komodo_go/features/syncs/presentation/views/sync_detail/sync_detail_sections.dart';
 
 /// View displaying detailed sync information.
-class SyncDetailView extends ConsumerWidget {
+class SyncDetailView extends ConsumerStatefulWidget {
   const SyncDetailView({
     required this.syncId,
     required this.syncName,
@@ -22,14 +27,29 @@ class SyncDetailView extends ConsumerWidget {
   final String syncName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final syncAsync = ref.watch(syncDetailProvider(syncId));
+  ConsumerState<SyncDetailView> createState() => _SyncDetailViewState();
+}
+
+class _SyncDetailViewState extends ConsumerState<SyncDetailView> {
+  var _isEditingConfig = false;
+  KomodoResourceSync? _configEditSnapshot;
+  final _configEditorKey = GlobalKey<SyncConfigEditorContentState>();
+
+  @override
+  Widget build(BuildContext context) {
+    final syncAsync = ref.watch(syncDetailProvider(widget.syncId));
     final actionsState = ref.watch(syncActionsProvider);
+    final reposAsync = ref.watch(reposProvider);
+    final gitProvidersAsync = ref.watch(gitProvidersProvider);
     final scheme = Theme.of(context).colorScheme;
+
+    final repos = reposAsync.asData?.value ?? const <RepoListItem>[];
+    final gitProviders =
+        gitProvidersAsync.asData?.value ?? const <GitProviderAccount>[];
 
     return Scaffold(
       appBar: MainAppBar(
-        title: syncName,
+        title: widget.syncName,
         icon: AppIcons.syncs,
         markColor: AppTokens.resourceSyncs,
         markUseGradient: true,
@@ -38,7 +58,7 @@ class SyncDetailView extends ConsumerWidget {
           IconButton(
             icon: const Icon(AppIcons.play),
             tooltip: 'Run',
-            onPressed: () => _runSync(context, ref, syncId),
+            onPressed: () => _runSync(context, widget.syncId),
           ),
         ],
       ),
@@ -46,7 +66,7 @@ class SyncDetailView extends ConsumerWidget {
         children: [
           RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(syncDetailProvider(syncId));
+              ref.invalidate(syncDetailProvider(widget.syncId));
             },
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -61,7 +81,21 @@ class SyncDetailView extends ConsumerWidget {
                             DetailSection(
                               title: 'Configuration',
                               icon: AppIcons.settings,
-                              child: _SyncConfigContent(syncResource: sync),
+                              trailing: _buildConfigTrailing(
+                                context: context,
+                                sync: sync,
+                              ),
+                              child: _isEditingConfig
+                                  ? SyncConfigEditorContent(
+                                      key: _configEditorKey,
+                                      initialConfig:
+                                          (_configEditSnapshot?.id == sync.id)
+                                          ? _configEditSnapshot!.config
+                                          : sync.config,
+                                      repos: repos,
+                                      gitProviders: gitProviders,
+                                    )
+                                  : _SyncConfigContent(syncResource: sync),
                             ),
                             const Gap(16),
                             DetailSection(
@@ -104,11 +138,108 @@ class SyncDetailView extends ConsumerWidget {
     );
   }
 
-  Future<void> _runSync(
-    BuildContext context,
-    WidgetRef ref,
-    String syncId,
-  ) async {
+  Widget _buildConfigTrailing({
+    required BuildContext context,
+    required KomodoResourceSync sync,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+
+    if (!_isEditingConfig) {
+      return IconButton(
+        tooltip: 'Edit config',
+        icon: Icon(AppIcons.edit, color: scheme.onPrimary),
+        onPressed: () {
+          setState(() {
+            _isEditingConfig = true;
+            _configEditSnapshot = sync;
+          });
+        },
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton(
+          onPressed: () {
+            if (_configEditSnapshot != null) {
+              _configEditorKey.currentState?.resetTo(
+                _configEditSnapshot!.config,
+              );
+            }
+            setState(() {
+              _isEditingConfig = false;
+              _configEditSnapshot = null;
+            });
+          },
+          child: Text('Cancel', style: TextStyle(color: scheme.onPrimary)),
+        ),
+        const Gap(6),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: scheme.onPrimary,
+            foregroundColor: scheme.primary,
+          ),
+          onPressed: () => _saveConfig(context: context, syncId: sync.id),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _saveConfig({
+    required BuildContext context,
+    required String syncId,
+  }) async {
+    final draft = _configEditorKey.currentState;
+    if (draft == null) {
+      AppSnackBar.show(
+        context,
+        'Editor not ready. Please try again.',
+        tone: AppSnackBarTone.error,
+      );
+      return;
+    }
+
+    final partialConfig = draft.buildPartialConfigParams();
+    if (partialConfig.isEmpty) {
+      AppSnackBar.show(
+        context,
+        'No changes to save.',
+        tone: AppSnackBarTone.neutral,
+      );
+      return;
+    }
+
+    final actions = ref.read(syncActionsProvider.notifier);
+    final updated = await actions.updateSyncConfig(
+      syncId: syncId,
+      partialConfig: partialConfig,
+    );
+
+    final success = updated != null;
+    if (success) {
+      ref
+        ..invalidate(syncDetailProvider(syncId))
+        ..invalidate(syncsProvider);
+      if (mounted) {
+        setState(() {
+          _isEditingConfig = false;
+          _configEditSnapshot = null;
+        });
+      }
+    }
+
+    if (context.mounted) {
+      AppSnackBar.show(
+        context,
+        success ? 'Config saved.' : 'Failed to save config.',
+        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
+      );
+    }
+  }
+
+  Future<void> _runSync(BuildContext context, String syncId) async {
     final actions = ref.read(syncActionsProvider.notifier);
     final success = await actions.run(syncId);
 
