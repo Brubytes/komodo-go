@@ -1,9 +1,9 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/variables/data/models/variable.dart';
 import 'package:komodo_go/features/variables/data/repositories/variable_repository.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'variables_provider.g.dart';
 
@@ -15,15 +15,14 @@ class Variables extends _$Variables {
     if (repository == null) return [];
 
     final result = await repository.listVariables();
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (variables) => variables,
-    );
+    return unwrapOrThrow(result);
   }
 
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
@@ -71,13 +70,10 @@ class VariableActions extends _$VariableActions {
         name: original.name,
         description: description.trim(),
       );
-      final ok = result.fold(
-        (failure) {
-          state = AsyncValue.error(failure.displayMessage, StackTrace.current);
-          return false;
-        },
-        (_) => true,
-      );
+      final ok = result.fold((failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return false;
+      }, (_) => true);
       if (!ok) return false;
     }
 
@@ -86,13 +82,10 @@ class VariableActions extends _$VariableActions {
         name: original.name,
         isSecret: isSecret,
       );
-      final ok = result.fold(
-        (failure) {
-          state = AsyncValue.error(failure.displayMessage, StackTrace.current);
-          return false;
-        },
-        (_) => true,
-      );
+      final ok = result.fold((failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return false;
+      }, (_) => true);
       if (!ok) return false;
     }
 

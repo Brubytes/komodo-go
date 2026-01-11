@@ -15,4 +15,3 @@ sealed class KomodoVariable with _$KomodoVariable {
   factory KomodoVariable.fromJson(Map<String, dynamic> json) =>
       _$KomodoVariableFromJson(json);
 }
-

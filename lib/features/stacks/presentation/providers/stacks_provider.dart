@@ -1,5 +1,6 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/data/repositories/stack_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -18,16 +19,15 @@ class Stacks extends _$Stacks {
 
     final result = await repository.listStacks();
 
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (stacks) => stacks,
-    );
+    return unwrapOrThrow(result);
   }
 
   /// Refreshes the stacks list.
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
@@ -41,10 +41,7 @@ Future<KomodoStack?> stackDetail(Ref ref, String stackIdOrName) async {
 
   final result = await repository.getStack(stackIdOrName);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (stack) => stack,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Provides services (containers) for a specific stack.
@@ -57,10 +54,7 @@ Future<List<StackService>> stackServices(Ref ref, String stackIdOrName) async {
 
   final result = await repository.listStackServices(stackIdOrName);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (services) => services,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Provides a recent log snapshot for a stack.
@@ -73,10 +67,7 @@ Future<StackLog?> stackLog(Ref ref, String stackIdOrName) async {
 
   final result = await repository.getStackLog(stackIdOrName: stackIdOrName);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (log) => log,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Action state for stack operations.

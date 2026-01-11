@@ -1,9 +1,9 @@
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:fpdart/fpdart.dart';
-
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
 import 'package:komodo_go/features/tags/data/repositories/tag_repository.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'tags_provider.g.dart';
 
@@ -15,15 +15,15 @@ class Tags extends _$Tags {
     if (repository == null) return [];
 
     final result = await repository.listTags();
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (tags) => tags..sort((a, b) => a.name.compareTo(b.name)),
-    );
+    final tags = unwrapOrThrow(result);
+    return tags..sort((a, b) => a.name.compareTo(b.name));
   }
 
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
@@ -55,13 +55,10 @@ class TagActions extends _$TagActions {
 
     if (name.trim() != original.name.trim()) {
       final r = await repository.renameTag(id: original.id, name: name.trim());
-      final ok = r.fold(
-        (failure) {
-          state = AsyncValue.error(failure.displayMessage, StackTrace.current);
-          return false;
-        },
-        (_) => true,
-      );
+      final ok = r.fold((failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return false;
+      }, (_) => true);
       if (!ok) return false;
     }
 
@@ -113,4 +110,3 @@ class TagActions extends _$TagActions {
     );
   }
 }
-

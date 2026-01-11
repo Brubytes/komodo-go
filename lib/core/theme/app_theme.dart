@@ -31,8 +31,8 @@ class AppTheme {
       brightness: Brightness.dark,
     );
 
-    final primary = AppTokens.brandPrimaryDark;
-    final secondary = AppTokens.brandSecondary;
+    const primary = AppTokens.brandPrimaryDark;
+    const secondary = AppTokens.brandSecondary;
 
     return base.copyWith(
       primary: primary,
@@ -117,9 +117,9 @@ class AppTheme {
         textColor: colorScheme.onSurface,
         selectedColor: colorScheme.primary,
       ),
-      chipTheme: ChipThemeData(
+      chipTheme: const ChipThemeData(
         side: BorderSide.none,
-        shape: const StadiumBorder(),
+        shape: StadiumBorder(),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: colorScheme.surface,

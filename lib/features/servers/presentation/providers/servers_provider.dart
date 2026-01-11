@@ -1,4 +1,4 @@
-import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_information.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
@@ -21,16 +21,15 @@ class Servers extends _$Servers {
 
     final result = await repository.listServers();
 
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (servers) => servers,
-    );
+    return unwrapOrThrow(result);
   }
 
   /// Refreshes the server list.
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
@@ -44,10 +43,7 @@ Future<Server?> serverDetail(Ref ref, String serverId) async {
 
   final result = await repository.getServer(serverId);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (server) => server,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Provides system stats for a specific server.
@@ -60,10 +56,7 @@ Future<SystemStats?> serverStats(Ref ref, String serverId) async {
 
   final result = await repository.getSystemStats(serverId);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (stats) => stats,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Provides system information for a specific server.
@@ -79,8 +72,5 @@ Future<SystemInformation?> serverSystemInformation(
 
   final result = await repository.getSystemInformation(serverId);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (info) => info,
-  );
+  return unwrapOrThrow(result);
 }

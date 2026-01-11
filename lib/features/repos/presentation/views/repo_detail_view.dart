@@ -240,10 +240,9 @@ class _RepoHeroPanel extends StatelessWidget {
           tone: upToDate ? DetailMetricTone.success : DetailMetricTone.tertiary,
         ),
       ],
-      footer: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [for (final tag in repo.tags) TextPill(label: tag)],
+      footer: DetailPillList(
+        items: repo.tags,
+        emptyLabel: 'No tags',
       ),
     );
   }

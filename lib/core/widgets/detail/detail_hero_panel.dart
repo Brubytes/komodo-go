@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'detail_metric_grid.dart';
-import 'detail_surface.dart';
+import 'package:komodo_go/core/widgets/detail/detail_metric_grid.dart';
+import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 
 /// Generic hero panel for detail pages: optional header/footer + metric grid.
 class DetailHeroPanel extends StatelessWidget {

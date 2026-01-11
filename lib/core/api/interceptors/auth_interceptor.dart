@@ -1,7 +1,7 @@
 import 'dart:developer' as developer;
-import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 /// Interceptor that adds API key authentication headers to requests.
 class AuthInterceptor extends Interceptor {
@@ -19,11 +19,9 @@ class AuthInterceptor extends Interceptor {
   ) async {
     options.headers['X-Api-Key'] = _apiKey;
     options.headers['X-Api-Secret'] = _apiSecret;
-    final previewLen = math.min(8, _apiKey.length);
-    developer.log(
-      '  Auth: API key present (${_apiKey.substring(0, previewLen)}...)',
-      name: 'HTTP',
-    );
+    if (kDebugMode) {
+      developer.log('  Auth: API key present', name: 'HTTP');
+    }
 
     handler.next(options);
   }

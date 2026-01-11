@@ -1,10 +1,10 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
+import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'user_repository.g.dart';
 
@@ -14,7 +14,7 @@ class UserRepository {
   final KomodoApiClient _client;
 
   Future<Either<Failure, String>> getUsername({required String userId}) async {
-    try {
+    return apiCall(() async {
       final response = await _client.read(
         RpcRequest(
           type: 'GetUsername',
@@ -25,15 +25,10 @@ class UserRepository {
       final json = response as Map<String, dynamic>;
       final username = (json['username'] as String?)?.trim() ?? '';
       if (username.isEmpty) {
-        return const Left(Failure.server(message: 'User not found'));
+        throw const ApiException(message: 'User not found', statusCode: 404);
       }
-      return Right(username);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) return const Left(Failure.auth());
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } on Object catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+      return username;
+    });
   }
 }
 
@@ -43,4 +38,3 @@ UserRepository? userRepository(Ref ref) {
   if (client == null) return null;
   return UserRepository(client);
 }
-

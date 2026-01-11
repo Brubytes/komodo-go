@@ -1,8 +1,7 @@
+import 'package:komodo_go/core/error/provider_error.dart';
+import 'package:komodo_go/features/containers/data/models/container_log.dart';
+import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../data/models/container_log.dart';
-import '../../data/repositories/container_repository.dart';
 
 part 'container_log_provider.g.dart';
 
@@ -20,8 +19,5 @@ Future<ContainerLog?> containerLog(
     containerIdOrName: containerIdOrName,
   );
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (log) => log,
-  );
+  return unwrapOrThrow(result);
 }

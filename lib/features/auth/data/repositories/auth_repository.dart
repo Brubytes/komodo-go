@@ -1,12 +1,10 @@
-import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/api/api_call.dart';
+import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:komodo_go/core/storage/secure_storage_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_exception.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/providers/dio_provider.dart';
-import '../../../../core/storage/secure_storage_service.dart';
 
 part 'auth_repository.g.dart';
 
@@ -37,28 +35,29 @@ class AuthRepository {
   Future<Either<Failure, void>> validateCredentials(
     ApiCredentials credentials,
   ) async {
-    try {
-      final dio = createValidationDio(credentials.baseUrl, credentials);
-      final client = KomodoApiClient(dio);
+    return apiCall(
+      () async {
+        final dio = createValidationDio(credentials.baseUrl, credentials);
+        final client = KomodoApiClient(dio);
 
-      // Try to get the API version to validate credentials
-      await client.read(
-        const RpcRequest(type: 'GetVersion', params: <String, dynamic>{}),
-      );
+        // Try to get the API version to validate credentials
+        await client.read(
+          const RpcRequest(type: 'GetVersion', params: <String, dynamic>{}),
+        );
 
-      return const Right(null);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized || e.isForbidden) {
-        return const Left(Failure.auth(message: 'Invalid API credentials'));
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } on DioException catch (_) {
-      return const Left(
-        Failure.network(message: 'Could not connect to server'),
-      );
-    } catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+        return;
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized || e.isForbidden) {
+          return const Failure.auth(message: 'Invalid API credentials');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+      onDioException: (_) => const Failure.network(
+        message:
+            'Cannot reach the server. Check your connection and server address.',
+      ),
+    );
   }
 
   /// Authenticates with the given credentials.

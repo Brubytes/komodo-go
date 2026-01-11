@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
-import '../../data/models/sync.dart';
+import 'package:komodo_go/features/syncs/data/models/sync.dart';
 
 /// Card widget displaying sync information.
 class SyncCard extends StatelessWidget {

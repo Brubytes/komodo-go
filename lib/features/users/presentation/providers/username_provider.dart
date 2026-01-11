@@ -1,6 +1,5 @@
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 import 'package:komodo_go/features/users/data/repositories/user_repository.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'username_provider.g.dart';
 

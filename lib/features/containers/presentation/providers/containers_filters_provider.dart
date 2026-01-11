@@ -5,18 +5,12 @@ part 'containers_filters_provider.g.dart';
 enum ContainersSortField { name, cpu, memory, network, blockIo, pids }
 
 class ContainersSortState {
-  const ContainersSortState({
-    required this.field,
-    required this.descending,
-  });
+  const ContainersSortState({required this.field, required this.descending});
 
   final ContainersSortField field;
   final bool descending;
 
-  ContainersSortState copyWith({
-    ContainersSortField? field,
-    bool? descending,
-  }) {
+  ContainersSortState copyWith({ContainersSortField? field, bool? descending}) {
     return ContainersSortState(
       field: field ?? this.field,
       descending: descending ?? this.descending,
@@ -29,7 +23,9 @@ class ContainersSearchQuery extends _$ContainersSearchQuery {
   @override
   String build() => '';
 
-  void setQuery(String value) => state = value;
+  String get query => state;
+
+  set query(String value) => state = value;
 }
 
 @riverpod
@@ -37,7 +33,9 @@ class ContainersServerFilter extends _$ContainersServerFilter {
   @override
   String? build() => null;
 
-  void setServerId(String? value) => state = value;
+  String? get serverId => state;
+
+  set serverId(String? value) => state = value;
 }
 
 @riverpod
@@ -50,11 +48,13 @@ class ContainersSort extends _$ContainersSort {
     );
   }
 
-  void setField(ContainersSortField field) {
-    if (state.field == field) return;
+  ContainersSortField get field => state.field;
+
+  set field(ContainersSortField value) {
+    if (state.field == value) return;
     state = state.copyWith(
-      field: field,
-      descending: switch (field) {
+      field: value,
+      descending: switch (value) {
         ContainersSortField.name => false,
         _ => true,
       },

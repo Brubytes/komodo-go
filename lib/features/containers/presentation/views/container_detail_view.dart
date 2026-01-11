@@ -3,10 +3,10 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
-import '../../../../core/widgets/main_app_bar.dart';
-import '../providers/container_log_provider.dart';
-import '../providers/containers_provider.dart';
-import '../widgets/container_card.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/features/containers/presentation/providers/container_log_provider.dart';
+import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
+import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
 
 class ContainerDetailView extends ConsumerWidget {
   const ContainerDetailView({
@@ -40,19 +40,17 @@ class ContainerDetailView extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: const MainAppBar(
-        title: 'Container',
-        icon: AppIcons.containers,
-      ),
+      appBar: const MainAppBar(title: 'Container', icon: AppIcons.containers),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(_containerItemProviderFamily);
-          ref.invalidate(
-            containerLogProvider(
-              serverIdOrName: serverId,
-              containerIdOrName: decodedContainerIdOrName,
-            ),
-          );
+          ref
+            ..invalidate(_containerItemProviderFamily)
+            ..invalidate(
+              containerLogProvider(
+                serverIdOrName: serverId,
+                containerIdOrName: decodedContainerIdOrName,
+              ),
+            );
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -134,6 +132,7 @@ final _containerItemProviderFamily = FutureProvider.family
       return null;
     });
 
+@immutable
 class _ContainerItemArgs {
   const _ContainerItemArgs({
     required this.serverId,

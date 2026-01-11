@@ -19,12 +19,11 @@ sealed class AlerterListItem with _$AlerterListItem {
   const factory AlerterListItem({
     required String id,
     required String name,
+    required AlerterListItemInfo info,
     @Default(false) bool template,
     @Default(<String>[]) List<String> tags,
-    required AlerterListItemInfo info,
   }) = _AlerterListItem;
 
   factory AlerterListItem.fromJson(Map<String, dynamic> json) =>
       _$AlerterListItemFromJson(json);
 }
-

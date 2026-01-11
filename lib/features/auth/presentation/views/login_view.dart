@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../../../core/providers/connections_provider.dart';
-import '../../../../core/widgets/always_paste_context_menu.dart';
-import '../../data/models/auth_state.dart';
-import '../providers/auth_provider.dart';
+import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
+import 'package:komodo_go/features/auth/data/models/auth_state.dart';
+import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
+import 'package:komodo_go/features/auth/presentation/providers/connection_draft_provider.dart';
 
 /// Login screen for entering Komodo API credentials.
 class LoginView extends HookConsumerWidget {
@@ -18,15 +18,24 @@ class LoginView extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final connectionsAsync = ref.watch(connectionsProvider);
+    final draft = ref.watch(connectionDraftProvider);
+    final draftNotifier = ref.read(connectionDraftProvider.notifier);
     final formKey = useMemoized(GlobalKey<FormState>.new);
 
-    final connectionNameController = useTextEditingController();
-    final baseUrlController = useTextEditingController();
-    final apiKeyController = useTextEditingController();
-    final apiSecretController = useTextEditingController();
+    final connectionNameController = useTextEditingController(text: draft.name);
+    final baseUrlController = useTextEditingController(text: draft.baseUrl);
+    final apiKeyController = useTextEditingController(text: draft.apiKey);
+    final apiSecretController = useTextEditingController(text: draft.apiSecret);
 
     final showAddForm = useState(false);
     final obscureSecret = useState(true);
+
+    ref.listen(authProvider, (previous, next) {
+      final nextState = next.value;
+      if (nextState is AuthStateAuthenticated) {
+        ref.read(connectionDraftProvider.notifier).reset();
+      }
+    });
 
     useEffect(() {
       final connections = connectionsAsync.asData?.value.connections;
@@ -35,6 +44,37 @@ class LoginView extends HookConsumerWidget {
       }
       return null;
     }, [connectionsAsync]);
+
+    useEffect(
+      () {
+        void syncDraft() {
+          draftNotifier.update(
+            name: connectionNameController.text,
+            baseUrl: baseUrlController.text,
+            apiKey: apiKeyController.text,
+            apiSecret: apiSecretController.text,
+          );
+        }
+
+        connectionNameController.addListener(syncDraft);
+        baseUrlController.addListener(syncDraft);
+        apiKeyController.addListener(syncDraft);
+        apiSecretController.addListener(syncDraft);
+
+        return () {
+          connectionNameController.removeListener(syncDraft);
+          baseUrlController.removeListener(syncDraft);
+          apiKeyController.removeListener(syncDraft);
+          apiSecretController.removeListener(syncDraft);
+        };
+      },
+      [
+        connectionNameController,
+        baseUrlController,
+        apiKeyController,
+        apiSecretController,
+      ],
+    );
 
     Future<void> handleLogin() async {
       if (formKey.currentState?.validate() ?? false) {
@@ -166,7 +206,7 @@ class LoginView extends HookConsumerWidget {
                                             ),
                                           );
 
-                                          if (confirmed == true) {
+                                          if (confirmed ?? false) {
                                             await ref
                                                 .read(
                                                   connectionsProvider.notifier,

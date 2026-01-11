@@ -2,28 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-import 'package:komodo_go/core/theme/app_tokens.dart';
-
-import '../../../../core/router/app_router.dart';
-import '../../../../core/widgets/main_app_bar.dart';
-import '../../../deployments/data/models/deployment.dart';
-import '../../../deployments/presentation/providers/deployments_provider.dart';
-import '../../../servers/data/models/server.dart';
-import '../../../servers/presentation/providers/servers_provider.dart';
-import '../../../builds/data/models/build.dart';
-import '../../../builds/presentation/providers/builds_provider.dart';
-import '../../../procedures/data/models/procedure.dart';
-import '../../../procedures/presentation/providers/procedures_provider.dart';
-import '../../../actions/data/models/action.dart';
-import '../../../actions/presentation/providers/actions_provider.dart';
-import '../../../repos/data/models/repo.dart';
-import '../../../repos/presentation/providers/repos_provider.dart';
-import '../../../syncs/data/models/sync.dart';
-import '../../../syncs/presentation/providers/syncs_provider.dart';
-import '../../../resources/presentation/providers/resources_tab_provider.dart';
-import '../../../stacks/data/models/stack.dart';
-import '../../../stacks/presentation/providers/stacks_provider.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/features/actions/data/models/action.dart';
+import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
+import 'package:komodo_go/features/builds/data/models/build.dart';
+import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
+import 'package:komodo_go/features/deployments/data/models/deployment.dart';
+import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
+import 'package:komodo_go/features/home/presentation/views/home/home_dashboard_tiles.dart';
+import 'package:komodo_go/features/home/presentation/views/home/home_sections.dart';
+import 'package:komodo_go/features/notifications/data/models/alert.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
+import 'package:komodo_go/features/procedures/data/models/procedure.dart';
+import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
+import 'package:komodo_go/features/repos/data/models/repo.dart';
+import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
+import 'package:komodo_go/features/resources/presentation/providers/resources_tab_provider.dart';
+import 'package:komodo_go/features/servers/data/models/server.dart';
+import 'package:komodo_go/features/servers/data/models/system_stats.dart';
+import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/features/stacks/data/models/stack.dart';
+import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
+import 'package:komodo_go/features/syncs/data/models/sync.dart';
+import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
 
 /// Home dashboard view.
 class HomeView extends ConsumerWidget {
@@ -46,11 +50,11 @@ class HomeView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final width = MediaQuery.sizeOf(context).width;
-    final quickStatsColumns = width >= 720 ? 4 : (width >= 520 ? 3 : 2);
-    final quickStatsAspectRatio = switch (quickStatsColumns) {
+    final overviewColumns = width >= 720 ? 4 : (width >= 520 ? 3 : 2);
+    final overviewAspectRatio = switch (overviewColumns) {
       4 => 1.85,
-      3 => 1.70,
-      _ => 1.55,
+      3 => 1.55,
+      _ => 1.4,
     };
 
     final serversAsync = ref.watch(serversProvider);
@@ -61,357 +65,284 @@ class HomeView extends ConsumerWidget {
     final buildsAsync = ref.watch(buildsProvider);
     final proceduresAsync = ref.watch(proceduresProvider);
     final actionsAsync = ref.watch(actionsProvider);
+    final alertsAsync = ref.watch(alertsProvider);
+    final updatesAsync = ref.watch(updatesProvider);
 
     return Scaffold(
       appBar: const MainAppBar(title: 'Dashboard', icon: AppIcons.home),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(serversProvider);
-          ref.invalidate(deploymentsProvider);
-          ref.invalidate(stacksProvider);
-          ref.invalidate(reposProvider);
-          ref.invalidate(syncsProvider);
-          ref.invalidate(buildsProvider);
-          ref.invalidate(proceduresProvider);
-          ref.invalidate(actionsProvider);
+          ref
+            ..invalidate(serversProvider)
+            ..invalidate(serverStatsProvider)
+            ..invalidate(deploymentsProvider)
+            ..invalidate(stacksProvider)
+            ..invalidate(reposProvider)
+            ..invalidate(syncsProvider)
+            ..invalidate(buildsProvider)
+            ..invalidate(proceduresProvider)
+            ..invalidate(actionsProvider)
+            ..invalidate(alertsProvider)
+            ..invalidate(updatesProvider);
         },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
           children: [
-            // Quick stats
-            GridView.count(
-              crossAxisCount: quickStatsColumns,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: quickStatsAspectRatio,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _StatCard(
-                  title: 'Servers',
-                  icon: AppIcons.server,
-                  color: AppTokens.resourceServers,
-                  asyncValue: serversAsync,
-                  valueBuilder: (servers) => servers.length.toString(),
-                  subtitleBuilder: (servers) {
-                    final online = servers
-                        .where((s) => s.info?.state == ServerState.ok)
-                        .length;
-                    return '$online online';
-                  },
-                  onTap: () => _goToResources(context, ResourceType.servers),
-                ),
-                _StatCard(
-                  title: 'Deployments',
-                  icon: AppIcons.deployments,
-                  color: AppTokens.resourceDeployments,
-                  asyncValue: deploymentsAsync,
-                  valueBuilder: (deployments) => deployments.length.toString(),
-                  subtitleBuilder: (deployments) {
-                    final running = deployments
-                        .where((d) => d.info?.state == DeploymentState.running)
-                        .length;
-                    return '$running running';
-                  },
-                  onTap: () =>
-                      _goToResources(context, ResourceType.deployments),
-                ),
-                _StatCard(
-                  title: 'Stacks',
-                  icon: AppIcons.stacks,
-                  color: AppTokens.resourceStacks,
-                  asyncValue: stacksAsync,
-                  valueBuilder: (stacks) => stacks.length.toString(),
-                  subtitleBuilder: (stacks) {
-                    final running = stacks
-                        .where((s) => s.info.state == StackState.running)
-                        .length;
-                    return '$running running';
-                  },
-                  onTap: () => _goToResources(context, ResourceType.stacks),
-                ),
-                _StatCard(
-                  title: 'Repos',
-                  icon: AppIcons.repos,
-                  color: AppTokens.resourceRepos,
-                  asyncValue: reposAsync,
-                  valueBuilder: (repos) => repos.length.toString(),
-                  subtitleBuilder: (repos) {
-                    final busy = repos.where((r) => r.info.state.isBusy).length;
-                    return '$busy busy';
-                  },
-                  onTap: () => _goToResources(context, ResourceType.repos),
-                ),
-                _StatCard(
-                  title: 'Syncs',
-                  icon: AppIcons.syncs,
-                  color: AppTokens.resourceSyncs,
-                  asyncValue: syncsAsync,
-                  valueBuilder: (syncs) => syncs.length.toString(),
-                  subtitleBuilder: (syncs) {
-                    final running = syncs
-                        .where((s) => s.info.state.isRunning)
-                        .length;
-                    return '$running running';
-                  },
-                  onTap: () => _goToResources(context, ResourceType.syncs),
-                ),
-                _StatCard(
-                  title: 'Builds',
-                  icon: AppIcons.builds,
-                  color: AppTokens.resourceBuilds,
-                  asyncValue: buildsAsync,
-                  valueBuilder: (builds) => builds.length.toString(),
-                  subtitleBuilder: (builds) {
-                    final running = builds
-                        .where((b) => b.info.state == BuildState.building)
-                        .length;
-                    return '$running running';
-                  },
-                  onTap: () => _goToResources(context, ResourceType.builds),
-                ),
-                _StatCard(
-                  title: 'Procedures',
-                  icon: AppIcons.procedures,
-                  color: AppTokens.resourceProcedures,
-                  asyncValue: proceduresAsync,
-                  valueBuilder: (procedures) => procedures.length.toString(),
-                  subtitleBuilder: (procedures) {
-                    final running = procedures
-                        .where((p) => p.info.state == ProcedureState.running)
-                        .length;
-                    return '$running running';
-                  },
-                  onTap: () => _goToResources(context, ResourceType.procedures),
-                ),
-                _StatCard(
-                  title: 'Actions',
-                  icon: AppIcons.actions,
-                  color: AppTokens.resourceActions,
-                  asyncValue: actionsAsync,
-                  valueBuilder: (actions) => actions.length.toString(),
-                  subtitleBuilder: (actions) {
-                    final running = actions
-                        .where((a) => a.info.state == ActionState.running)
-                        .length;
-                    return '$running running';
-                  },
-                  onTap: () => _goToResources(context, ResourceType.actions),
-                ),
-              ],
-            ),
-            const Gap(16),
-
-            // Recent servers
-            _SectionHeader(
-              title: 'Servers',
-              onSeeAll: () => _goToResources(context, ResourceType.servers),
-            ),
+            const HomeSectionHeader(title: 'Server overview'),
             const Gap(8),
             serversAsync.when(
               data: (servers) {
                 if (servers.isEmpty) {
-                  return const _EmptyListTile(
+                  return const HomeEmptyListTile(
                     icon: AppIcons.server,
-                    message: 'No servers',
+                    message: 'No servers yet',
                   );
                 }
+
+                final statsValues = [
+                  for (final server in servers)
+                    ref.watch(serverStatsProvider(server.id)),
+                ];
+                final statsEntries = <_ServerStatsEntry>[
+                  for (var i = 0; i < servers.length; i++)
+                    if (statsValues[i].asData?.value != null)
+                      _ServerStatsEntry(
+                        server: servers[i],
+                        stats: statsValues[i].asData!.value!,
+                      ),
+                ];
+                final summary = _ServerStatsSummary.from(servers, statsEntries);
+                final hasStats = summary.statsCount > 0;
+                final isStatsLoading = statsValues.any(
+                  (value) => value.isLoading,
+                );
+
+                String avgWithTotals(double average, String totals) {
+                  final avgLabel = '${average.toStringAsFixed(0)}%';
+                  if (totals.isEmpty) return avgLabel;
+                  return '$avgLabel\n$totals';
+                }
+
+                final cpuValue = hasStats
+                    ? '${summary.avgCpu.toStringAsFixed(0)}%'
+                    : '—';
+                final memValue = hasStats
+                    ? avgWithTotals(summary.avgMem, summary.memTotalsLabel)
+                    : '—';
+                final diskValue = hasStats
+                    ? avgWithTotals(summary.avgDisk, summary.diskTotalsLabel)
+                    : '—';
+
+                String statsSubtitle({
+                  required double maxValue,
+                  required String? serverName,
+                }) {
+                  if (!hasStats) {
+                    return isStatsLoading ? 'Loading stats' : 'No stats yet';
+                  }
+                  final label = 'max ${maxValue.toStringAsFixed(0)}%';
+                  final name = (serverName?.trim().isNotEmpty ?? false)
+                      ? serverName!.trim()
+                      : null;
+                  final parts = <String>[label, if (name != null) name];
+                  return parts.join(' · ');
+                }
+
+                final serverSubtitleParts = <String>[];
+                if (summary.online > 0) {
+                  serverSubtitleParts.add('${summary.online} online');
+                }
+                if (summary.offline > 0) {
+                  serverSubtitleParts.add('${summary.offline} down');
+                }
+                if (summary.disabled > 0) {
+                  serverSubtitleParts.add('${summary.disabled} disabled');
+                }
+                if (summary.unknown > 0) {
+                  serverSubtitleParts.add('${summary.unknown} unknown');
+                }
+                final serverSubtitle = serverSubtitleParts.isEmpty
+                    ? 'No status data'
+                    : serverSubtitleParts.join(' · ');
+
                 return Column(
-                  children: servers
-                      .take(3)
-                      .map((server) => _ServerListTile(server: server))
-                      .toList(),
+                  children: [
+                    GridView.count(
+                      crossAxisCount: overviewColumns,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      childAspectRatio: overviewAspectRatio,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        HomeMetricCard(
+                          title: 'CPU Avg',
+                          value: cpuValue,
+                          subtitle: statsSubtitle(
+                            maxValue: summary.maxCpu,
+                            serverName: summary.maxCpuServerName,
+                          ),
+                          icon: AppIcons.cpu,
+                        ),
+                        HomeMetricCard(
+                          title: 'Memory Avg',
+                          value: memValue,
+                          subtitle: statsSubtitle(
+                            maxValue: summary.maxMem,
+                            serverName: summary.maxMemServerName,
+                          ),
+                          icon: AppIcons.memory,
+                        ),
+                        HomeMetricCard(
+                          title: 'Disk Avg',
+                          value: diskValue,
+                          subtitle: statsSubtitle(
+                            maxValue: summary.maxDisk,
+                            serverName: summary.maxDiskServerName,
+                          ),
+                          icon: AppIcons.hardDrive,
+                        ),
+                        HomeMetricCard(
+                          title: 'Servers',
+                          value: summary.total.toString(),
+                          subtitle: serverSubtitle,
+                          icon: AppIcons.server,
+                          onTap: () =>
+                              _goToResources(context, ResourceType.servers),
+                        ),
+                      ],
+                    ),
+                    const Gap(16),
+                    HomeSectionHeader(
+                      title: 'Server stats',
+                      onSeeAll: () =>
+                          _goToResources(context, ResourceType.servers),
+                    ),
+                    const Gap(8),
+                    SizedBox(
+                      height: 130,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: servers.length,
+                        separatorBuilder: (_, __) => const Gap(8),
+                        itemBuilder: (context, index) {
+                          return HomeServerStatTile(
+                            server: servers[index],
+                            stats: statsValues[index],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 );
               },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
+              loading: () => const HomeLoadingTile(),
+              error: (e, _) => HomeErrorTile(message: e.toString()),
             ),
-            const Gap(16),
+            const Gap(20),
 
-            // Recent deployments
-            _SectionHeader(
-              title: 'Deployments',
+            HomeSectionHeader(
+              title: 'Alerts',
+              onSeeAll: () => context.go(AppRoutes.notifications),
+            ),
+            const Gap(8),
+            alertsAsync.when(
+              data: (state) {
+                final unresolved = state.items
+                    .where((alert) => !alert.resolved)
+                    .toList();
+                if (unresolved.isEmpty) {
+                  return const HomeEmptyListTile(
+                    icon: AppIcons.warning,
+                    message: 'No unresolved alerts',
+                  );
+                }
+
+                final criticalCount = unresolved
+                    .where((alert) => alert.level == SeverityLevel.critical)
+                    .length;
+                final warningCount = unresolved
+                    .where((alert) => alert.level == SeverityLevel.warning)
+                    .length;
+                final unknownCount = unresolved
+                    .where((alert) => alert.level == SeverityLevel.unknown)
+                    .length;
+                final summaryParts = <String>[];
+                if (criticalCount > 0) {
+                  summaryParts.add('$criticalCount critical');
+                }
+                if (warningCount > 0) {
+                  summaryParts.add('$warningCount warning');
+                }
+                if (unknownCount > 0) {
+                  summaryParts.add('$unknownCount unknown');
+                }
+                final summaryText = summaryParts.isEmpty
+                    ? 'No severity data'
+                    : summaryParts.join(' · ');
+
+                return Column(
+                  children: [
+                    HomeMetricCard(
+                      title: 'Unresolved alerts',
+                      value: unresolved.length.toString(),
+                      subtitle: summaryText,
+                      icon: AppIcons.warning,
+                      onTap: () => context.go(AppRoutes.notifications),
+                    ),
+                    const Gap(8),
+                    ...unresolved
+                        .take(3)
+                        .map((alert) => HomeAlertPreviewTile(alert: alert)),
+                  ],
+                );
+              },
+              loading: () => const HomeLoadingTile(),
+              error: (e, _) => HomeErrorTile(message: e.toString()),
+            ),
+            const Gap(20),
+
+            HomeSectionHeader(
+              title: 'Ops pulse',
               onSeeAll: () => _goToResources(context, ResourceType.deployments),
             ),
             const Gap(8),
-            deploymentsAsync.when(
-              data: (deployments) {
-                if (deployments.isEmpty) {
-                  return const _EmptyListTile(
-                    icon: AppIcons.deployments,
-                    message: 'No deployments',
-                  );
-                }
-                return Column(
-                  children: deployments
-                      .take(5)
-                      .map(
-                        (deployment) =>
-                            _DeploymentListTile(deployment: deployment),
-                      )
-                      .toList(),
-                );
-              },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
+            _buildOpsPulseCard(
+              context: context,
+              deploymentsAsync: deploymentsAsync,
+              stacksAsync: stacksAsync,
+              reposAsync: reposAsync,
+              syncsAsync: syncsAsync,
+              buildsAsync: buildsAsync,
+              proceduresAsync: proceduresAsync,
+              actionsAsync: actionsAsync,
+              onNavigate: (type) => _goToResources(context, type),
             ),
-            const Gap(16),
+            const Gap(20),
 
-            // Recent stacks
-            _SectionHeader(
-              title: 'Stacks',
-              onSeeAll: () => _goToResources(context, ResourceType.stacks),
+            HomeSectionHeader(
+              title: 'Recent updates',
+              onSeeAll: () => context.go(AppRoutes.notifications),
             ),
             const Gap(8),
-            stacksAsync.when(
-              data: (stacks) {
-                if (stacks.isEmpty) {
-                  return const _EmptyListTile(
-                    icon: AppIcons.stacks,
-                    message: 'No stacks',
+            updatesAsync.when(
+              data: (state) {
+                if (state.items.isEmpty) {
+                  return const HomeEmptyListTile(
+                    icon: AppIcons.updateAvailable,
+                    message: 'No recent updates',
                   );
                 }
-                return Column(
-                  children: stacks
-                      .take(5)
-                      .map((stack) => _StackListTile(stack: stack))
-                      .toList(),
-                );
-              },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
-            ),
-            const Gap(16),
 
-            // Recent repos
-            _SectionHeader(
-              title: 'Repos',
-              onSeeAll: () => _goToResources(context, ResourceType.repos),
-            ),
-            const Gap(8),
-            reposAsync.when(
-              data: (repos) {
-                if (repos.isEmpty) {
-                  return const _EmptyListTile(
-                    icon: AppIcons.repos,
-                    message: 'No repos',
-                  );
-                }
                 return Column(
-                  children: repos
-                      .take(5)
-                      .map((repo) => _RepoListTile(repo: repo))
+                  children: state.items
+                      .take(3)
+                      .map((update) => HomeUpdatePreviewTile(update: update))
                       .toList(),
                 );
               },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
-            ),
-            const Gap(16),
-
-            // Recent syncs
-            _SectionHeader(
-              title: 'Syncs',
-              onSeeAll: () => _goToResources(context, ResourceType.syncs),
-            ),
-            const Gap(8),
-            syncsAsync.when(
-              data: (syncs) {
-                if (syncs.isEmpty) {
-                  return const _EmptyListTile(
-                    icon: AppIcons.syncs,
-                    message: 'No syncs',
-                  );
-                }
-                return Column(
-                  children: syncs
-                      .take(5)
-                      .map((sync) => _SyncListTile(sync: sync))
-                      .toList(),
-                );
-              },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
-            ),
-            const Gap(16),
-
-            // Recent builds
-            _SectionHeader(
-              title: 'Builds',
-              onSeeAll: () => _goToResources(context, ResourceType.builds),
-            ),
-            const Gap(8),
-            buildsAsync.when(
-              data: (builds) {
-                if (builds.isEmpty) {
-                  return const _EmptyListTile(
-                    icon: AppIcons.builds,
-                    message: 'No builds',
-                  );
-                }
-                return Column(
-                  children: builds
-                      .take(5)
-                      .map((build) => _BuildListTile(buildItem: build))
-                      .toList(),
-                );
-              },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
-            ),
-            const Gap(16),
-
-            // Recent procedures
-            _SectionHeader(
-              title: 'Procedures',
-              onSeeAll: () => _goToResources(context, ResourceType.procedures),
-            ),
-            const Gap(8),
-            proceduresAsync.when(
-              data: (procedures) {
-                if (procedures.isEmpty) {
-                  return const _EmptyListTile(
-                    icon: AppIcons.procedures,
-                    message: 'No procedures',
-                  );
-                }
-                return Column(
-                  children: procedures
-                      .take(5)
-                      .map(
-                        (procedure) => _ProcedureListTile(procedure: procedure),
-                      )
-                      .toList(),
-                );
-              },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
-            ),
-            const Gap(16),
-
-            // Recent actions
-            _SectionHeader(
-              title: 'Actions',
-              onSeeAll: () => _goToResources(context, ResourceType.actions),
-            ),
-            const Gap(8),
-            actionsAsync.when(
-              data: (actions) {
-                if (actions.isEmpty) {
-                  return const _EmptyListTile(
-                    icon: AppIcons.actions,
-                    message: 'No actions',
-                  );
-                }
-                return Column(
-                  children: actions
-                      .take(5)
-                      .map((action) => _ActionListTile(action: action))
-                      .toList(),
-                );
-              },
-              loading: () => const _LoadingTile(),
-              error: (e, _) => _ErrorTile(message: e.toString()),
+              loading: () => const HomeLoadingTile(),
+              error: (e, _) => HomeErrorTile(message: e.toString()),
             ),
           ],
         ),
@@ -420,569 +351,390 @@ class HomeView extends ConsumerWidget {
   }
 }
 
-class _StatCard<T> extends StatelessWidget {
-  const _StatCard({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.asyncValue,
-    required this.valueBuilder,
-    required this.subtitleBuilder,
-    this.onTap,
-  });
+Widget _buildOpsPulseCard({
+  required BuildContext context,
+  required AsyncValue<List<Deployment>> deploymentsAsync,
+  required AsyncValue<List<StackListItem>> stacksAsync,
+  required AsyncValue<List<RepoListItem>> reposAsync,
+  required AsyncValue<List<ResourceSyncListItem>> syncsAsync,
+  required AsyncValue<List<BuildListItem>> buildsAsync,
+  required AsyncValue<List<ProcedureListItem>> proceduresAsync,
+  required AsyncValue<List<ActionListItem>> actionsAsync,
+  required void Function(ResourceType type) onNavigate,
+}) {
+  final asyncValues = <AsyncValue<dynamic>>[
+    deploymentsAsync,
+    stacksAsync,
+    reposAsync,
+    syncsAsync,
+    buildsAsync,
+    proceduresAsync,
+    actionsAsync,
+  ];
 
-  final String title;
-  final IconData icon;
-  final Color color;
-  final AsyncValue<List<T>> asyncValue;
-  final String Function(List<T>) valueBuilder;
-  final String Function(List<T>) subtitleBuilder;
-  final VoidCallback? onTap;
+  final errorValue = asyncValues.cast<AsyncValue<dynamic>>().firstWhere(
+    (value) => value.hasError,
+    orElse: () => const AsyncValue.data(null),
+  );
 
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+  final hasAnyValue = asyncValues.any((value) => value.hasValue);
+  final isLoading = asyncValues.any((value) => value.isLoading);
 
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // In tests and very compact layouts the grid can become quite short.
-            // Keep this threshold generous to avoid overflows.
-            final isTight = constraints.maxHeight < 110;
-            final padding = isTight ? 7.0 : 10.0;
-            final iconSize = isTight ? 15.0 : 18.0;
-            final gap = isTight ? 2.0 : 6.0;
-            final showSubtitle = !isTight;
-
-            final valueStyle =
-                (isTight ? textTheme.titleMedium : textTheme.headlineSmall)
-                    ?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.2,
-                    );
-            final titleStyle =
-                (isTight ? textTheme.labelMedium : textTheme.titleSmall)
-                    ?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: scheme.onSurfaceVariant,
-                      letterSpacing: -0.1,
-                    );
-            final subtitleStyle = (isTight
-                    ? textTheme.labelSmall
-                    : textTheme.labelMedium)
-                ?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                );
-
-            return Padding(
-              padding: EdgeInsets.all(padding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(isTight ? 4 : 6),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(icon, color: color, size: iconSize),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        AppIcons.chevron,
-                        size: isTight ? 18 : 20,
-                        color: scheme.onSurfaceVariant.withValues(alpha: 0.55),
-                      ),
-                    ],
-                  ),
-                  Gap(gap),
-                  asyncValue.when(
-                    data: (data) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(valueBuilder(data), style: valueStyle),
-                            const Gap(8),
-                            Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.only(
-                                  bottom: isTight ? 0 : 2,
-                                ),
-                                child: Text(
-                                  title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: titleStyle,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (showSubtitle) ...[
-                          const Gap(2),
-                          Text(
-                            subtitleBuilder(data),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: subtitleStyle,
-                          ),
-                        ],
-                      ],
-                    ),
-                    loading: () => SizedBox(
-                      height: isTight ? 32 : 40,
-                      child: const Center(child: CircularProgressIndicator()),
-                    ),
-                    error: (_, __) => SizedBox(
-                      height: isTight ? 32 : 40,
-                      child: const Center(child: Icon(AppIcons.formError)),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
+  if (!hasAnyValue && isLoading) {
+    return const HomeLoadingTile();
   }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, this.onSeeAll});
-
-  final String title;
-  final VoidCallback? onSeeAll;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        if (onSeeAll != null)
-          TextButton(onPressed: onSeeAll, child: const Text('See all')),
-      ],
-    );
+  if (errorValue.hasError) {
+    return HomeErrorTile(message: errorValue.error.toString());
   }
-}
 
-class _ServerListTile extends StatelessWidget {
-  const _ServerListTile({required this.server});
+  final deployments = deploymentsAsync.asData?.value ?? <Deployment>[];
+  final stacks = stacksAsync.asData?.value ?? <StackListItem>[];
+  final repos = reposAsync.asData?.value ?? <RepoListItem>[];
+  final syncs = syncsAsync.asData?.value ?? <ResourceSyncListItem>[];
+  final builds = buildsAsync.asData?.value ?? <BuildListItem>[];
+  final procedures = proceduresAsync.asData?.value ?? <ProcedureListItem>[];
+  final actions = actionsAsync.asData?.value ?? <ActionListItem>[];
 
-  final Server server;
+  final rows = <_OpsRowData>[
+    _OpsRowData(
+      title: 'Deployments',
+      active: deployments
+          .where(
+            (item) =>
+                item.info?.state == DeploymentState.deploying ||
+                item.info?.state == DeploymentState.restarting ||
+                item.info?.state == DeploymentState.removing,
+          )
+          .length,
+      failed: deployments
+          .where(
+            (item) =>
+                item.info?.state == DeploymentState.dead ||
+                item.info?.state == DeploymentState.exited,
+          )
+          .length,
+      type: ResourceType.deployments,
+    ),
+    _OpsRowData(
+      title: 'Stacks',
+      active: stacks
+          .where(
+            (item) =>
+                item.info.state == StackState.deploying ||
+                item.info.state == StackState.restarting,
+          )
+          .length,
+      failed: stacks
+          .where(
+            (item) =>
+                item.info.state == StackState.unhealthy ||
+                item.info.state == StackState.dead,
+          )
+          .length,
+      type: ResourceType.stacks,
+    ),
+    _OpsRowData(
+      title: 'Builds',
+      active: builds
+          .where((item) => item.info.state == BuildState.building)
+          .length,
+      failed: builds
+          .where((item) => item.info.state == BuildState.failed)
+          .length,
+      type: ResourceType.builds,
+    ),
+    _OpsRowData(
+      title: 'Procedures',
+      active: procedures
+          .where((item) => item.info.state == ProcedureState.running)
+          .length,
+      failed: procedures
+          .where((item) => item.info.state == ProcedureState.failed)
+          .length,
+      type: ResourceType.procedures,
+    ),
+    _OpsRowData(
+      title: 'Actions',
+      active: actions
+          .where((item) => item.info.state == ActionState.running)
+          .length,
+      failed: actions
+          .where((item) => item.info.state == ActionState.failed)
+          .length,
+      type: ResourceType.actions,
+    ),
+    _OpsRowData(
+      title: 'Syncs',
+      active: syncs.where((item) => item.info.state.isRunning).length,
+      failed: syncs
+          .where((item) => item.info.state == ResourceSyncState.failed)
+          .length,
+      type: ResourceType.syncs,
+    ),
+    _OpsRowData(
+      title: 'Repos',
+      active: repos.where((item) => item.info.state.isBusy).length,
+      failed: repos.where((item) => item.info.state == RepoState.failed).length,
+      type: ResourceType.repos,
+    ),
+  ];
 
-  @override
-  Widget build(BuildContext context) {
-    final state = server.info?.state ?? ServerState.unknown;
-    final color = switch (state) {
-      ServerState.ok => Colors.green,
-      ServerState.notOk => Colors.red,
-      ServerState.disabled => Colors.grey,
-      ServerState.unknown => Colors.orange,
-    };
+  final totalActive = rows.fold<int>(0, (sum, row) => sum + row.active);
+  final totalFailed = rows.fold<int>(0, (sum, row) => sum + row.failed);
 
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(server.name),
-        subtitle: Text(server.address),
-        trailing: Icon(AppIcons.chevron),
-        onTap: () => context.go(
-          '${AppRoutes.servers}/${server.id}?name=${Uri.encodeComponent(server.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _DeploymentListTile extends StatelessWidget {
-  const _DeploymentListTile({required this.deployment});
-
-  final Deployment deployment;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = deployment.info?.state ?? DeploymentState.unknown;
-    final color = switch (state) {
-      DeploymentState.deploying => Colors.blue,
-      DeploymentState.running => Colors.green,
-      DeploymentState.created => Colors.grey,
-      DeploymentState.restarting => Colors.blue,
-      DeploymentState.removing => Colors.grey,
-      DeploymentState.exited => Colors.orange,
-      DeploymentState.dead => Colors.red,
-      DeploymentState.paused => Colors.grey,
-      DeploymentState.notDeployed => Colors.grey,
-      DeploymentState.unknown => Colors.orange,
-    };
-
-    final imageLabel = deployment.imageLabel;
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(deployment.name),
-        subtitle: Text(imageLabel.isNotEmpty ? imageLabel : 'No image'),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-      ),
-    );
-  }
-}
-
-class _StackListTile extends StatelessWidget {
-  const _StackListTile({required this.stack});
-
-  final StackListItem stack;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = stack.info.state;
-    final color = switch (state) {
-      StackState.deploying => Colors.blue,
-      StackState.running => Colors.green,
-      StackState.paused => Colors.grey,
-      StackState.stopped => Colors.orange,
-      StackState.created => Colors.grey,
-      StackState.restarting => Colors.blue,
-      StackState.removing => Colors.grey,
-      StackState.unhealthy => Colors.red,
-      StackState.down => Colors.grey,
-      StackState.dead => Colors.red,
-      StackState.unknown => Colors.orange,
-    };
-
-    final repo = stack.info.repo;
-    final branch = stack.info.branch;
-    final subtitle = repo.isNotEmpty
-        ? (branch.isNotEmpty ? '$repo · $branch' : repo)
-        : 'No repo';
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(stack.name),
-        subtitle: Text(subtitle),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-        onTap: () => context.go(
-          '${AppRoutes.stacks}/${stack.id}?name=${Uri.encodeComponent(stack.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _RepoListTile extends StatelessWidget {
-  const _RepoListTile({required this.repo});
-
-  final RepoListItem repo;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = repo.info.state;
-    final color = switch (state) {
-      RepoState.ok => Colors.green,
-      RepoState.failed => Colors.red,
-      RepoState.cloning => Colors.blue,
-      RepoState.pulling => Colors.blue,
-      RepoState.building => Colors.orange,
-      RepoState.unknown => Colors.orange,
-    };
-
-    final repoPath = repo.info.repo;
-    final branch = repo.info.branch;
-    final subtitle = repoPath.isNotEmpty
-        ? (branch.isNotEmpty ? '$repoPath · $branch' : repoPath)
-        : 'No repo';
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(repo.name),
-        subtitle: Text(subtitle),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-        onTap: () => context.go(
-          '${AppRoutes.repos}/${repo.id}?name=${Uri.encodeComponent(repo.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _SyncListTile extends StatelessWidget {
-  const _SyncListTile({required this.sync});
-
-  final ResourceSyncListItem sync;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = sync.info.state;
-    final color = switch (state) {
-      ResourceSyncState.syncing => Colors.blue,
-      ResourceSyncState.pending => Colors.orange,
-      ResourceSyncState.ok => Colors.green,
-      ResourceSyncState.failed => Colors.red,
-      ResourceSyncState.unknown => Colors.orange,
-    };
-
-    final repo = sync.info.repo;
-    final branch = sync.info.branch;
-    final subtitle = repo.isNotEmpty
-        ? (branch.isNotEmpty ? '$repo · $branch' : repo)
-        : 'No repo';
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(sync.name),
-        subtitle: Text(subtitle),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-        onTap: () => context.go(
-          '${AppRoutes.syncs}/${sync.id}?name=${Uri.encodeComponent(sync.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _BuildListTile extends StatelessWidget {
-  const _BuildListTile({required this.buildItem});
-
-  final BuildListItem buildItem;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = buildItem.info.state;
-    final color = switch (state) {
-      BuildState.building => Colors.blue,
-      BuildState.ok => Colors.green,
-      BuildState.failed => Colors.red,
-      BuildState.unknown => Colors.orange,
-    };
-
-    final repo = buildItem.info.repo;
-    final branch = buildItem.info.branch;
-    final versionLabel = buildItem.info.version.label;
-    final subtitleParts = <String>[
-      if (repo.isNotEmpty) branch.isNotEmpty ? '$repo · $branch' : repo,
-      if (versionLabel != '0.0.0') 'v$versionLabel',
-    ];
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(buildItem.name),
-        subtitle: subtitleParts.isEmpty
-            ? const Text('No repo')
-            : Text(subtitleParts.join(' · ')),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-        onTap: () => context.go(
-          '${AppRoutes.builds}/${buildItem.id}?name=${Uri.encodeComponent(buildItem.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _ProcedureListTile extends StatelessWidget {
-  const _ProcedureListTile({required this.procedure});
-
-  final ProcedureListItem procedure;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = procedure.info.state;
-    final color = switch (state) {
-      ProcedureState.running => Colors.blue,
-      ProcedureState.ok => Colors.green,
-      ProcedureState.failed => Colors.red,
-      ProcedureState.unknown => Colors.orange,
-    };
-
-    final stages = procedure.info.stages;
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(procedure.name),
-        subtitle: Text('$stages stages'),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-        onTap: () => context.go(
-          '${AppRoutes.procedures}/${procedure.id}?name=${Uri.encodeComponent(procedure.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionListTile extends StatelessWidget {
-  const _ActionListTile({required this.action});
-
-  final ActionListItem action;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = action.info.state;
-    final color = switch (state) {
-      ActionState.running => Colors.blue,
-      ActionState.ok => Colors.green,
-      ActionState.failed => Colors.red,
-      ActionState.unknown => Colors.orange,
-    };
-
-    final hasSchedule = action.info.nextScheduledRun != null;
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(action.name),
-        subtitle: Text(hasSchedule ? 'Scheduled' : 'No schedule'),
-        trailing: Text(
-          state.displayName,
-          style: TextStyle(color: color, fontWeight: FontWeight.w500),
-        ),
-        onTap: () => context.go(
-          '${AppRoutes.actions}/${action.id}?name=${Uri.encodeComponent(action.name)}',
-        ),
-      ),
-    );
-  }
-}
-
-class _LoadingTile extends StatelessWidget {
-  const _LoadingTile();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Card(
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-    );
-  }
-}
-
-class _ErrorTile extends StatelessWidget {
-  const _ErrorTile({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            const Icon(AppIcons.formError, color: Colors.red),
-            const Gap(8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyListTile extends StatelessWidget {
-  const _EmptyListTile({required this.icon, required this.message});
-
-  final IconData icon;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: Column(
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Icon(
-                icon,
-                size: 32,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.3),
+              _OpsSummaryChip(
+                label: '$totalActive active',
+                color: Theme.of(context).colorScheme.primary,
               ),
               const Gap(8),
-              Text(
-                message,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
+              _OpsSummaryChip(
+                label: '$totalFailed failed',
+                color: Theme.of(context).colorScheme.error,
               ),
             ],
           ),
+          const Gap(12),
+          ...rows.map(
+            (row) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: HomeOpsStatusRow(
+                title: row.title,
+                active: row.active,
+                failed: row.failed,
+                onTap: () => onNavigate(row.type),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _OpsSummaryChip extends StatelessWidget {
+  const _OpsSummaryChip({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
+  }
+}
+
+class _OpsRowData {
+  const _OpsRowData({
+    required this.title,
+    required this.active,
+    required this.failed,
+    required this.type,
+  });
+
+  final String title;
+  final int active;
+  final int failed;
+  final ResourceType type;
+}
+
+class _ServerStatsEntry {
+  const _ServerStatsEntry({required this.server, required this.stats});
+
+  final Server server;
+  final SystemStats stats;
+}
+
+class _ServerStatsSummary {
+  const _ServerStatsSummary({
+    required this.total,
+    required this.online,
+    required this.offline,
+    required this.disabled,
+    required this.unknown,
+    required this.avgCpu,
+    required this.avgMem,
+    required this.avgDisk,
+    required this.maxCpu,
+    required this.maxMem,
+    required this.maxDisk,
+    required this.maxCpuServerName,
+    required this.maxMemServerName,
+    required this.maxDiskServerName,
+    required this.totalMemUsedGb,
+    required this.totalMemGb,
+    required this.totalDiskUsedGb,
+    required this.totalDiskGb,
+    required this.statsCount,
+  });
+
+  factory _ServerStatsSummary.from(
+    List<Server> servers,
+    List<_ServerStatsEntry> entries,
+  ) {
+    final total = servers.length;
+    final online = servers
+        .where((server) => server.state == ServerState.ok)
+        .length;
+    final offline = servers
+        .where((server) => server.state == ServerState.notOk)
+        .length;
+    final disabled = servers
+        .where((server) => server.state == ServerState.disabled)
+        .length;
+    final unknown = servers
+        .where((server) => server.state == ServerState.unknown)
+        .length;
+
+    if (entries.isEmpty) {
+      return _ServerStatsSummary(
+        total: total,
+        online: online,
+        offline: offline,
+        disabled: disabled,
+        unknown: unknown,
+        avgCpu: 0,
+        avgMem: 0,
+        avgDisk: 0,
+        maxCpu: 0,
+        maxMem: 0,
+        maxDisk: 0,
+        maxCpuServerName: null,
+        maxMemServerName: null,
+        maxDiskServerName: null,
+        totalMemUsedGb: 0,
+        totalMemGb: 0,
+        totalDiskUsedGb: 0,
+        totalDiskGb: 0,
+        statsCount: 0,
+      );
+    }
+
+    var sumCpu = 0.0;
+    var sumMem = 0.0;
+    var sumDisk = 0.0;
+    var totalMemUsed = 0.0;
+    var totalMem = 0.0;
+    var totalDiskUsed = 0.0;
+    var totalDisk = 0.0;
+
+    var maxCpu = -1.0;
+    var maxMem = -1.0;
+    var maxDisk = -1.0;
+    String? maxCpuServerName;
+    String? maxMemServerName;
+    String? maxDiskServerName;
+
+    for (final entry in entries) {
+      final stats = entry.stats;
+      sumCpu += stats.cpuPercent;
+      sumMem += stats.memPercent;
+      sumDisk += stats.diskPercent;
+
+      totalMemUsed += stats.memUsedGb;
+      totalMem += stats.memTotalGb;
+      totalDiskUsed += stats.diskUsedGb;
+      totalDisk += stats.diskTotalGb;
+
+      if (stats.cpuPercent >= maxCpu) {
+        maxCpu = stats.cpuPercent;
+        maxCpuServerName = entry.server.name;
+      }
+      if (stats.memPercent >= maxMem) {
+        maxMem = stats.memPercent;
+        maxMemServerName = entry.server.name;
+      }
+      if (stats.diskPercent >= maxDisk) {
+        maxDisk = stats.diskPercent;
+        maxDiskServerName = entry.server.name;
+      }
+    }
+
+    final count = entries.length.toDouble();
+
+    return _ServerStatsSummary(
+      total: total,
+      online: online,
+      offline: offline,
+      disabled: disabled,
+      unknown: unknown,
+      avgCpu: sumCpu / count,
+      avgMem: sumMem / count,
+      avgDisk: sumDisk / count,
+      maxCpu: maxCpu < 0 ? 0 : maxCpu,
+      maxMem: maxMem < 0 ? 0 : maxMem,
+      maxDisk: maxDisk < 0 ? 0 : maxDisk,
+      maxCpuServerName: maxCpuServerName,
+      maxMemServerName: maxMemServerName,
+      maxDiskServerName: maxDiskServerName,
+      totalMemUsedGb: totalMemUsed,
+      totalMemGb: totalMem,
+      totalDiskUsedGb: totalDiskUsed,
+      totalDiskGb: totalDisk,
+      statsCount: entries.length,
+    );
+  }
+
+  final int total;
+  final int online;
+  final int offline;
+  final int disabled;
+  final int unknown;
+  final double avgCpu;
+  final double avgMem;
+  final double avgDisk;
+  final double maxCpu;
+  final double maxMem;
+  final double maxDisk;
+  final String? maxCpuServerName;
+  final String? maxMemServerName;
+  final String? maxDiskServerName;
+  final double totalMemUsedGb;
+  final double totalMemGb;
+  final double totalDiskUsedGb;
+  final double totalDiskGb;
+  final int statsCount;
+
+  String get memTotalsLabel => _totalsLabel(totalMemUsedGb, totalMemGb);
+  String get diskTotalsLabel => _totalsLabel(totalDiskUsedGb, totalDiskGb);
+
+  String _totalsLabel(double used, double total) {
+    if (total <= 0) return '';
+    return _formatCapacity(used, total);
+  }
+
+  String _formatCapacity(double usedGb, double totalGb) {
+    if (totalGb >= 1024) {
+      final usedTb = usedGb / 1024;
+      final totalTb = totalGb / 1024;
+      return '${_formatNumber(usedTb)}/${_formatNumber(totalTb)}TB';
+    }
+    return '${_formatNumber(usedGb, decimals: 0)}/${_formatNumber(totalGb, decimals: 0)}GB';
+  }
+
+  String _formatNumber(double value, {int decimals = 1}) {
+    final fixed = value.toStringAsFixed(decimals);
+    if (decimals == 0) return fixed;
+    return fixed.endsWith('.0') ? fixed.substring(0, fixed.length - 2) : fixed;
   }
 }

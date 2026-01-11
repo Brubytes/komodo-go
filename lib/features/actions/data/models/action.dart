@@ -9,9 +9,8 @@ sealed class ActionListItem with _$ActionListItem {
   const factory ActionListItem({
     required String id,
     required String name,
-    @Default(false) bool template,
+    required ActionListItemInfo info, @Default(false) bool template,
     @Default([]) List<String> tags,
-    required ActionListItemInfo info,
   }) = _ActionListItem;
 
   factory ActionListItem.fromJson(Map<String, dynamic> json) =>
@@ -40,10 +39,9 @@ sealed class KomodoAction with _$KomodoAction {
   const factory KomodoAction({
     @JsonKey(readValue: _readId) required String id,
     required String name,
-    @Default('') String description,
+    required ActionConfig config, @Default('') String description,
     @Default(false) bool template,
     @Default([]) List<String> tags,
-    required ActionConfig config,
   }) = _KomodoAction;
 
   factory KomodoAction.fromJson(Map<String, dynamic> json) =>

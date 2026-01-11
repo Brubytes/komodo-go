@@ -1,9 +1,9 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
+import 'package:komodo_go/features/actions/data/models/action.dart';
+import 'package:komodo_go/features/actions/data/repositories/action_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../data/models/action.dart';
-import '../../data/repositories/action_repository.dart';
 
 part 'actions_provider.g.dart';
 
@@ -19,16 +19,15 @@ class Actions extends _$Actions {
 
     final result = await repository.listActions();
 
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (actions) => actions,
-    );
+    return unwrapOrThrow(result);
   }
 
   /// Refreshes the actions list.
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
@@ -42,10 +41,7 @@ Future<KomodoAction?> actionDetail(Ref ref, String actionIdOrName) async {
 
   final result = await repository.getAction(actionIdOrName);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (action) => action,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Action state for action operations.

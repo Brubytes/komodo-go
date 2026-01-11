@@ -1,9 +1,9 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
+import 'package:komodo_go/features/syncs/data/models/sync.dart';
+import 'package:komodo_go/features/syncs/data/repositories/sync_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../data/models/sync.dart';
-import '../../data/repositories/sync_repository.dart';
 
 part 'syncs_provider.g.dart';
 
@@ -19,16 +19,15 @@ class Syncs extends _$Syncs {
 
     final result = await repository.listSyncs();
 
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (syncs) => syncs,
-    );
+    return unwrapOrThrow(result);
   }
 
   /// Refreshes the syncs list.
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
@@ -42,10 +41,7 @@ Future<KomodoResourceSync?> syncDetail(Ref ref, String syncIdOrName) async {
 
   final result = await repository.getSync(syncIdOrName);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (sync) => sync,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Action state for sync operations.

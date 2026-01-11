@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import 'api_exception.dart';
+import 'package:komodo_go/core/api/api_exception.dart';
 
 /// RPC request structure for Komodo API.
 class RpcRequest<T> {
@@ -19,8 +19,8 @@ class RpcRequest<T> {
 /// containing the operation type and parameters.
 ///
 /// Note: The API can return either a Map or a List depending on the endpoint.
-/// - Single object endpoints return Map<String, dynamic>
-/// - List endpoints return List<dynamic> directly
+/// - Single object endpoints return `Map<String, dynamic>`
+/// - List endpoints return `List<dynamic>` directly
 class KomodoApiClient {
   KomodoApiClient(this._dio);
 

@@ -7,8 +7,8 @@ import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 
-import '../../data/models/action.dart';
-import '../providers/actions_provider.dart';
+import 'package:komodo_go/features/actions/data/models/action.dart';
+import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 
 /// View displaying detailed action information.
 class ActionDetailView extends ConsumerWidget {

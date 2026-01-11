@@ -9,9 +9,8 @@ sealed class ProcedureListItem with _$ProcedureListItem {
   const factory ProcedureListItem({
     required String id,
     required String name,
-    @Default(false) bool template,
+    required ProcedureListItemInfo info, @Default(false) bool template,
     @Default([]) List<String> tags,
-    required ProcedureListItemInfo info,
   }) = _ProcedureListItem;
 
   factory ProcedureListItem.fromJson(Map<String, dynamic> json) =>
@@ -41,10 +40,9 @@ sealed class KomodoProcedure with _$KomodoProcedure {
   const factory KomodoProcedure({
     @JsonKey(readValue: _readId) required String id,
     required String name,
-    @Default('') String description,
+    required ProcedureConfig config, @Default('') String description,
     @Default(false) bool template,
     @Default([]) List<String> tags,
-    required ProcedureConfig config,
   }) = _KomodoProcedure;
 
   factory KomodoProcedure.fromJson(Map<String, dynamic> json) =>

@@ -3,7 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 
-import '../../data/models/build.dart';
+import 'package:komodo_go/features/builds/data/models/build.dart';
 
 /// Card widget displaying build information.
 class BuildCard extends StatelessWidget {

@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/connections/connection_profile.dart';
+import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
-
-import '../../../../core/connections/connection_profile.dart';
-import '../../../../core/providers/connections_provider.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
-import '../widgets/add_connection_sheet.dart';
+import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
+import 'package:komodo_go/features/settings/presentation/widgets/add_connection_sheet.dart';
 
 class ConnectionsView extends ConsumerWidget {
   const ConnectionsView({super.key});
@@ -50,7 +49,7 @@ class ConnectionsView extends ConsumerWidget {
                       ),
                     );
 
-                    if (confirmed == true) {
+                    if (confirmed ?? false) {
                       await ref.read(authProvider.notifier).logout();
                     }
                   },
@@ -168,7 +167,7 @@ class ConnectionsView extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(null),
+            onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
           FilledButton(
@@ -211,7 +210,7 @@ class ConnectionsView extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       await ref
           .read(connectionsProvider.notifier)
           .deleteConnection(connection.id);

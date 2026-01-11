@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'resources_tab_provider.g.dart';
 
@@ -31,8 +31,10 @@ class ResourcesTarget extends _$ResourcesTarget {
   @override
   ResourceType? build() => null;
 
-  void open(ResourceType target) {
-    state = target;
+  ResourceType? get target => state;
+
+  set target(ResourceType? value) {
+    state = value;
   }
 
   void clear() {

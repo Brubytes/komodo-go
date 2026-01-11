@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
-import '../../data/models/server.dart';
+import 'package:komodo_go/features/servers/data/models/server.dart';
 
 /// Card widget displaying server information.
 class ServerCard extends StatelessWidget {

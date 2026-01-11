@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/variables/data/models/variable.dart';
 import 'package:komodo_go/features/variables/presentation/providers/variables_provider.dart';
@@ -31,12 +32,14 @@ class VariablesView extends ConsumerWidget {
                 final result = await VariableEditorSheet.show(context);
                 if (result == null) return;
 
-                final ok = await ref.read(variableActionsProvider.notifier).create(
-                  name: result.name,
-                  value: result.value,
-                  description: result.description,
-                  isSecret: result.isSecret,
-                );
+                final ok = await ref
+                    .read(variableActionsProvider.notifier)
+                    .create(
+                      name: result.name,
+                      value: result.value,
+                      description: result.description,
+                      isSecret: result.isSecret,
+                    );
 
                 if (!context.mounted) return;
                 AppSnackBar.show(
@@ -85,7 +88,9 @@ class VariablesView extends ConsumerWidget {
                       AppSnackBar.show(
                         context,
                         ok ? 'Variable updated' : 'Failed to update variable',
-                        tone: ok ? AppSnackBarTone.success : AppSnackBarTone.error,
+                        tone: ok
+                            ? AppSnackBarTone.success
+                            : AppSnackBarTone.error,
                       );
                     },
                     onDelete: () async {
@@ -117,14 +122,17 @@ class VariablesView extends ConsumerWidget {
                       AppSnackBar.show(
                         context,
                         ok ? 'Variable deleted' : 'Failed to delete variable',
-                        tone: ok ? AppSnackBarTone.success : AppSnackBarTone.error,
+                        tone: ok
+                            ? AppSnackBarTone.success
+                            : AppSnackBarTone.error,
                       );
                     },
                   ),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => _ErrorState(
+              error: (error, _) => ErrorStateView(
+                title: 'Failed to load variables',
                 message: error.toString(),
                 onRetry: () => ref.invalidate(variablesProvider),
               ),
@@ -132,7 +140,9 @@ class VariablesView extends ConsumerWidget {
           ),
           if (actionsState.isLoading)
             ColoredBox(
-              color: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
+              color: Theme.of(
+                context,
+              ).colorScheme.scrim.withValues(alpha: 0.25),
               child: const Center(child: CircularProgressIndicator()),
             ),
         ],
@@ -168,15 +178,11 @@ class _VariableTile extends StatelessWidget {
         ),
         title: Text(
           variable.name,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
-        subtitle: Text(
-          subtitle,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
+        subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -234,7 +240,11 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       children: [
         const Gap(48),
-        Icon(AppIcons.key, size: 64, color: scheme.primary.withValues(alpha: 0.5)),
+        Icon(
+          AppIcons.key,
+          size: 64,
+          color: scheme.primary.withValues(alpha: 0.5),
+        ),
         const Gap(16),
         Text(
           'No variables found',
@@ -249,41 +259,6 @@ class _EmptyState extends StatelessWidget {
           ),
           textAlign: TextAlign.center,
         ),
-      ],
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Gap(48),
-        Icon(AppIcons.formError, size: 64, color: scheme.error),
-        const Gap(16),
-        Text(
-          'Failed to load variables',
-          style: Theme.of(context).textTheme.titleMedium,
-          textAlign: TextAlign.center,
-        ),
-        const Gap(8),
-        Text(
-          message,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: scheme.onSurface.withValues(alpha: 0.7),
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const Gap(24),
-        FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
       ],
     );
   }

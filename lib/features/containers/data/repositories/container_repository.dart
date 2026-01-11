@@ -1,12 +1,13 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/api/api_call.dart';
+import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:komodo_go/core/utils/debug_log.dart';
+import 'package:komodo_go/features/containers/data/models/container.dart';
+import 'package:komodo_go/features/containers/data/models/container_log.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_exception.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/providers/dio_provider.dart';
-import '../models/container.dart';
-import '../models/container_log.dart';
 
 part 'container_repository.g.dart';
 
@@ -20,34 +21,32 @@ class ContainerRepository {
   Future<Either<Failure, List<ContainerListItem>>> listDockerContainers(
     String serverIdOrName,
   ) async {
-    try {
-      final response = await _client.read(
-        RpcRequest(
-          type: 'ListDockerContainers',
-          params: {'server': serverIdOrName},
-        ),
-      );
+    return apiCall(() async {
+      try {
+        final response = await _client.read(
+          RpcRequest(
+            type: 'ListDockerContainers',
+            params: {'server': serverIdOrName},
+          ),
+        );
 
-      final itemsJson = response as List<dynamic>? ?? [];
-      final items = itemsJson
-          .map(
-            (json) => ContainerListItem.fromJson(json as Map<String, dynamic>),
-          )
-          .toList();
-
-      return Right(items);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
+        final itemsJson = response as List<dynamic>? ?? [];
+        return itemsJson
+            .map(
+              (json) => ContainerListItem.fromJson(json as Map<String, dynamic>),
+            )
+            .toList();
+      } catch (e, stackTrace) {
+        if (e is ApiException) rethrow;
+        debugLog(
+          'Error parsing containers',
+          name: 'API',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        rethrow;
       }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e, stackTrace) {
-      // ignore: avoid_print
-      print('Error parsing containers: $e');
-      // ignore: avoid_print
-      print('Stack trace: $stackTrace');
-      return Left(Failure.unknown(message: e.toString()));
-    }
+    });
   }
 
   Future<Either<Failure, ContainerLog>> getContainerLog({
@@ -56,7 +55,7 @@ class ContainerRepository {
     int tail = 200,
     bool timestamps = false,
   }) async {
-    try {
+    return apiCall(() async {
       final response = await _client.read(
         RpcRequest(
           type: 'GetContainerLog',
@@ -69,15 +68,40 @@ class ContainerRepository {
         ),
       );
 
-      return Right(ContainerLog.fromJson(response as Map<String, dynamic>));
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+      return ContainerLog.fromJson(response as Map<String, dynamic>);
+    });
+  }
+
+  /// Stops a docker container on the target server.
+  Future<Either<Failure, void>> stopContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) async {
+    return _executeAction(
+      'StopContainer',
+      {'server': serverIdOrName, 'container': containerIdOrName},
+    );
+  }
+
+  /// Restarts a docker container on the target server.
+  Future<Either<Failure, void>> restartContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) async {
+    return _executeAction(
+      'RestartContainer',
+      {'server': serverIdOrName, 'container': containerIdOrName},
+    );
+  }
+
+  Future<Either<Failure, void>> _executeAction(
+    String actionType,
+    Map<String, dynamic> params,
+  ) async {
+    return apiCall(() async {
+      await _client.execute(RpcRequest(type: actionType, params: params));
+      return;
+    });
   }
 }
 

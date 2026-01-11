@@ -1,9 +1,9 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
+import 'package:komodo_go/features/repos/data/models/repo.dart';
+import 'package:komodo_go/features/repos/data/repositories/repo_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../data/models/repo.dart';
-import '../../data/repositories/repo_repository.dart';
 
 part 'repos_provider.g.dart';
 
@@ -19,16 +19,15 @@ class Repos extends _$Repos {
 
     final result = await repository.listRepos();
 
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (repos) => repos,
-    );
+    return unwrapOrThrow(result);
   }
 
   /// Refreshes the repos list.
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
@@ -42,10 +41,7 @@ Future<KomodoRepo?> repoDetail(Ref ref, String repoIdOrName) async {
 
   final result = await repository.getRepo(repoIdOrName);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (repo) => repo,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Action state for repo operations.
@@ -89,4 +85,3 @@ class RepoActions extends _$RepoActions {
     );
   }
 }
-

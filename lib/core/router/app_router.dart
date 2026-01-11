@@ -3,45 +3,45 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:komodo_go/core/router/route_observer.dart';
+import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-
-import 'route_observer.dart';
-import 'shell_state_provider.dart';
-import '../../features/auth/data/models/auth_state.dart';
-import '../../features/auth/presentation/providers/auth_provider.dart';
-import '../../features/auth/presentation/views/auth_loading_view.dart';
-import '../../features/auth/presentation/views/login_view.dart';
-import '../../features/deployments/presentation/views/deployment_detail_view.dart';
-import '../../features/deployments/presentation/views/deployments_list_view.dart';
-import '../../features/home/presentation/views/home_view.dart';
-import '../../features/builds/presentation/views/build_detail_view.dart';
-import '../../features/builds/presentation/views/builds_list_view.dart';
-import '../../features/actions/presentation/views/action_detail_view.dart';
-import '../../features/actions/presentation/views/actions_list_view.dart';
-import '../../features/syncs/presentation/views/sync_detail_view.dart';
-import '../../features/syncs/presentation/views/syncs_list_view.dart';
-import '../../features/containers/presentation/providers/containers_provider.dart';
-import '../../features/containers/presentation/views/containers_view.dart';
-import '../../features/containers/presentation/views/container_detail_view.dart';
-import '../../features/notifications/presentation/views/notifications_view.dart';
-import '../../features/resources/presentation/views/resources_view.dart';
-import '../../features/repos/presentation/views/repo_detail_view.dart';
-import '../../features/repos/presentation/views/repos_list_view.dart';
-import '../../features/procedures/presentation/views/procedure_detail_view.dart';
-import '../../features/procedures/presentation/views/procedures_list_view.dart';
-import '../../features/servers/presentation/views/servers_list_view.dart';
-import '../../features/servers/presentation/views/server_detail_view.dart';
-import '../../features/stacks/presentation/views/stack_detail_view.dart';
-import '../../features/stacks/presentation/views/stacks_list_view.dart';
-import '../../features/settings/presentation/views/connections_view.dart';
-import '../../features/settings/presentation/views/settings_view.dart';
-import '../../features/builders/presentation/views/builders_view.dart';
-import '../../features/alerters/presentation/views/alerter_detail_view.dart';
-import '../../features/alerters/presentation/views/alerters_view.dart';
-import '../../features/tags/presentation/views/tags_view.dart';
-import '../../features/variables/presentation/views/variables_view.dart';
-import '../widgets/adaptive_bottom_navigation_bar.dart';
+import 'package:komodo_go/core/widgets/adaptive_bottom_navigation_bar.dart';
+import 'package:komodo_go/features/actions/presentation/views/action_detail_view.dart';
+import 'package:komodo_go/features/actions/presentation/views/actions_list_view.dart';
+import 'package:komodo_go/features/alerters/presentation/views/alerter_detail_view.dart';
+import 'package:komodo_go/features/alerters/presentation/views/alerters_view.dart';
+import 'package:komodo_go/features/auth/data/models/auth_state.dart';
+import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
+import 'package:komodo_go/features/auth/presentation/views/auth_loading_view.dart';
+import 'package:komodo_go/features/auth/presentation/views/login_view.dart';
+import 'package:komodo_go/features/builders/presentation/views/builders_view.dart';
+import 'package:komodo_go/features/builds/presentation/views/build_detail_view.dart';
+import 'package:komodo_go/features/builds/presentation/views/builds_list_view.dart';
+import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
+import 'package:komodo_go/features/containers/presentation/views/container_detail_view.dart';
+import 'package:komodo_go/features/containers/presentation/views/containers_view.dart';
+import 'package:komodo_go/features/deployments/presentation/views/deployment_detail_view.dart';
+import 'package:komodo_go/features/deployments/presentation/views/deployments_list_view.dart';
+import 'package:komodo_go/features/home/presentation/views/home_view.dart';
+import 'package:komodo_go/features/notifications/presentation/views/notifications_view.dart';
+import 'package:komodo_go/features/procedures/presentation/views/procedure_detail_view.dart';
+import 'package:komodo_go/features/procedures/presentation/views/procedures_list_view.dart';
+import 'package:komodo_go/features/providers/presentation/views/providers_view.dart';
+import 'package:komodo_go/features/repos/presentation/views/repo_detail_view.dart';
+import 'package:komodo_go/features/repos/presentation/views/repos_list_view.dart';
+import 'package:komodo_go/features/resources/presentation/views/resources_view.dart';
+import 'package:komodo_go/features/servers/presentation/views/server_detail_view.dart';
+import 'package:komodo_go/features/servers/presentation/views/servers_list_view.dart';
+import 'package:komodo_go/features/settings/presentation/views/connections_view.dart';
+import 'package:komodo_go/features/settings/presentation/views/settings_view.dart';
+import 'package:komodo_go/features/stacks/presentation/views/stack_detail_view.dart';
+import 'package:komodo_go/features/stacks/presentation/views/stacks_list_view.dart';
+import 'package:komodo_go/features/syncs/presentation/views/sync_detail_view.dart';
+import 'package:komodo_go/features/syncs/presentation/views/syncs_list_view.dart';
+import 'package:komodo_go/features/tags/presentation/views/tags_view.dart';
+import 'package:komodo_go/features/variables/presentation/views/variables_view.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'app_router.g.dart';
 
@@ -83,6 +83,7 @@ abstract class AppRoutes {
   static const connections = '$settings/connections';
   static const komodoVariables = '$settings/komodo/variables';
   static const komodoTags = '$settings/komodo/tags';
+  static const komodoProviders = '$settings/komodo/providers';
   static const komodoBuilders = '$settings/komodo/builders';
   static const komodoAlerters = '$settings/komodo/alerters';
   static const komodoAlerterDetail = '$komodoAlerters/:id';
@@ -111,7 +112,7 @@ GoRouter appRouter(Ref ref) {
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
-    debugLogDiagnostics: true,
+    debugLogDiagnostics: kDebugMode,
     observers: [appRouteObserver],
     redirect: (context, state) {
       final isOnSplash = state.matchedLocation == AppRoutes.splash;
@@ -456,7 +457,7 @@ GoRouter appRouter(Ref ref) {
                           serverId: serverId,
                           containerIdOrName: container,
                           initialItem: state.extra is ContainerOverviewItem
-                              ? state.extra as ContainerOverviewItem
+                              ? state.extra! as ContainerOverviewItem
                               : null,
                         ),
                       );
@@ -496,6 +497,11 @@ GoRouter appRouter(Ref ref) {
                     path: 'komodo/tags',
                     pageBuilder: (context, state) =>
                         _adaptiveStackPage(context, const TagsView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/providers',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const ProvidersView()),
                   ),
                   GoRoute(
                     path: 'komodo/builders',
@@ -541,7 +547,7 @@ class MainShell extends ConsumerWidget {
     final storedIndex = ref.watch(mainShellIndexProvider);
     if (storedIndex != currentIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(mainShellIndexProvider.notifier).setIndex(currentIndex);
+        ref.read(mainShellIndexProvider.notifier).index = currentIndex;
       });
     }
 
@@ -586,6 +592,6 @@ class MainShell extends ConsumerWidget {
       index,
       initialLocation: index == navigationShell.currentIndex,
     );
-    ref.read(mainShellIndexProvider.notifier).setIndex(index);
+    ref.read(mainShellIndexProvider.notifier).index = index;
   }
 }

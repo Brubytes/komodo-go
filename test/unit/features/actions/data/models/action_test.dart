@@ -29,9 +29,9 @@ void main() {
           'webhook_enabled': true,
           'webhook_secret': 'secret',
           'reload_deno_deps': false,
-          'file_contents': 'console.log(\"hello\")',
+          'file_contents': 'console.log("hello")',
           'arguments_format': 'Json',
-          'arguments': '{\"hello\": \"world\"}',
+          'arguments': '{"hello": "world"}',
         },
       });
 

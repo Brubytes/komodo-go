@@ -13,8 +13,9 @@ Widget alwaysPasteContextMenu(BuildContext context, EditableTextState state) {
       ContextMenuButtonItem(
         type: ContextMenuButtonType.paste,
         onPressed: () {
-          state.pasteText(SelectionChangedCause.toolbar);
-          state.hideToolbar();
+          state
+            ..pasteText(SelectionChangedCause.toolbar)
+            ..hideToolbar();
         },
       ),
     ...items,

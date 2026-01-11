@@ -1,10 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:komodo_go/core/providers/connections_provider.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:komodo_go/features/auth/data/models/auth_state.dart';
+import 'package:komodo_go/features/auth/data/repositories/auth_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/providers/dio_provider.dart';
-import '../../../../core/providers/connections_provider.dart';
-import '../../data/models/auth_state.dart';
-import '../../data/repositories/auth_repository.dart';
 
 part 'auth_provider.g.dart';
 
@@ -14,12 +13,9 @@ class Auth extends _$Auth {
   @override
   Future<AuthState> build() async {
     if (kDebugMode) {
-      const delayMs = int.fromEnvironment(
-        'AUTH_BOOT_DELAY_MS',
-        defaultValue: 0,
-      );
+      const delayMs = int.fromEnvironment('AUTH_BOOT_DELAY_MS');
       if (delayMs > 0) {
-        await Future<void>.delayed(Duration(milliseconds: delayMs));
+        await Future<void>.delayed(Duration.zero);
       }
     }
 
@@ -50,13 +46,11 @@ class Auth extends _$Auth {
       (_) async {
         ref
             .read(activeConnectionProvider.notifier)
-            .setActive(
-              ActiveConnectionData(
-                connectionId: activeProfile.id,
-                name: activeProfile.name,
-                credentials: credentials,
-              ),
-            );
+            .active = ActiveConnectionData(
+          connectionId: activeProfile.id,
+          name: activeProfile.name,
+          credentials: credentials,
+        );
         await store.touchLastUsed(activeProfile.id);
         return AuthState.authenticated(
           connection: activeProfile,
@@ -68,10 +62,10 @@ class Auth extends _$Auth {
 
   /// Attempts to log in with the provided credentials.
   Future<void> login({
-    String? name,
     required String baseUrl,
     required String apiKey,
     required String apiSecret,
+    String? name,
   }) async {
     state = const AsyncValue.loading();
 
@@ -95,13 +89,11 @@ class Auth extends _$Auth {
 
         ref
             .read(activeConnectionProvider.notifier)
-            .setActive(
-              ActiveConnectionData(
-                connectionId: profile.id,
-                name: profile.name,
-                credentials: credentials,
-              ),
-            );
+            .active = ActiveConnectionData(
+          connectionId: profile.id,
+          name: profile.name,
+          credentials: credentials,
+        );
         final store = await ref.read(connectionsStoreProvider.future);
         await store.touchLastUsed(profile.id);
 
@@ -144,13 +136,11 @@ class Auth extends _$Auth {
         if (profile != null) {
           ref
               .read(activeConnectionProvider.notifier)
-              .setActive(
-                ActiveConnectionData(
-                  connectionId: profile.id,
-                  name: profile.name,
-                  credentials: credentials,
-                ),
-              );
+              .active = ActiveConnectionData(
+            connectionId: profile.id,
+            name: profile.name,
+            credentials: credentials,
+          );
           await store.touchLastUsed(profile.id);
           return AsyncValue.data(
             AuthState.authenticated(

@@ -9,9 +9,8 @@ sealed class ResourceSyncListItem with _$ResourceSyncListItem {
   const factory ResourceSyncListItem({
     required String id,
     required String name,
-    @Default(false) bool template,
+    required ResourceSyncListItemInfo info, @Default(false) bool template,
     @Default([]) List<String> tags,
-    required ResourceSyncListItemInfo info,
   }) = _ResourceSyncListItem;
 
   factory ResourceSyncListItem.fromJson(Map<String, dynamic> json) =>
@@ -52,11 +51,9 @@ sealed class KomodoResourceSync with _$KomodoResourceSync {
   const factory KomodoResourceSync({
     @JsonKey(readValue: _readId) required String id,
     required String name,
-    @Default('') String description,
+    required ResourceSyncConfig config, required ResourceSyncInfo info, @Default('') String description,
     @Default(false) bool template,
     @Default([]) List<String> tags,
-    required ResourceSyncConfig config,
-    required ResourceSyncInfo info,
   }) = _KomodoResourceSync;
 
   factory KomodoResourceSync.fromJson(Map<String, dynamic> json) =>

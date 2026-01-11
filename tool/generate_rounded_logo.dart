@@ -5,8 +5,9 @@ import 'package:image/image.dart' as img;
 
 void main(List<String> args) {
   final inputPath = args.isNotEmpty ? args.first : 'assets/komodo-go-logo.png';
-  final outputPath =
-      args.length > 1 ? args[1] : 'assets/komodo-go-logo_rounded.png';
+  final outputPath = args.length > 1
+      ? args[1]
+      : 'assets/komodo-go-logo_rounded.png';
 
   final inputFile = File(inputPath);
   if (!inputFile.existsSync()) {
@@ -50,13 +51,13 @@ void main(List<String> args) {
       }
 
       if (outside) {
-        final pixel = image.getPixel(x, y);
-        pixel.a = 0;
+        image.getPixel(x, y).a = 0;
       }
     }
   }
 
-  final outputFile = File(outputPath)..createSync(recursive: true);
-  outputFile.writeAsBytesSync(img.encodePng(image));
+  File(outputPath)
+    ..createSync(recursive: true)
+    ..writeAsBytesSync(img.encodePng(image));
   stdout.writeln('Wrote: $outputPath');
 }

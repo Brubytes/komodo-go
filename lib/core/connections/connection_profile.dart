@@ -10,6 +10,18 @@ class ConnectionProfile {
     required this.lastUsedAt,
   });
 
+  factory ConnectionProfile.fromJson(Map<String, dynamic> json) {
+    return ConnectionProfile(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      baseUrl: json['baseUrl'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      lastUsedAt: (json['lastUsedAt'] as String?) == null
+          ? null
+          : DateTime.parse(json['lastUsedAt'] as String),
+    );
+  }
+
   final String id;
   final String name;
   final String baseUrl;
@@ -39,18 +51,6 @@ class ConnectionProfile {
     'createdAt': createdAt.toIso8601String(),
     'lastUsedAt': lastUsedAt?.toIso8601String(),
   };
-
-  static ConnectionProfile fromJson(Map<String, dynamic> json) {
-    return ConnectionProfile(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      baseUrl: json['baseUrl'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      lastUsedAt: (json['lastUsedAt'] as String?) == null
-          ? null
-          : DateTime.parse(json['lastUsedAt'] as String),
-    );
-  }
 }
 
 String encodeConnectionProfiles(List<ConnectionProfile> profiles) {

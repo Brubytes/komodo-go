@@ -1,9 +1,10 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
+import 'package:komodo_go/features/alerters/data/models/alerter.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/data/repositories/alerter_repository.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'alerters_provider.g.dart';
 
@@ -15,33 +16,27 @@ class Alerters extends _$Alerters {
     if (repository == null) return [];
 
     final result = await repository.listAlerters();
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (items) => items..sort((a, b) => a.name.compareTo(b.name)),
-    );
+    final items = unwrapOrThrow(result);
+    return items..sort((a, b) => a.name.compareTo(b.name));
   }
 
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
 @riverpod
-Future<Map<String, dynamic>?> alerterJson(
-  Ref ref,
-  String alerterIdOrName,
-) async {
+Future<AlerterDetail?> alerterDetail(Ref ref, String alerterIdOrName) async {
   final repository = ref.watch(alerterRepositoryProvider);
   if (repository == null) return null;
 
-  final result = await repository.getAlerterJson(
+  final result = await repository.getAlerterDetail(
     alerterIdOrName: alerterIdOrName,
   );
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (json) => json,
-  );
+  return unwrapOrThrow(result);
 }
 
 @riverpod

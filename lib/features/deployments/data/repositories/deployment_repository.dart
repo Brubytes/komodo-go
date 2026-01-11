@@ -1,8 +1,10 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
-import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/api/query_templates.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:komodo_go/core/utils/debug_log.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -14,73 +16,61 @@ class DeploymentRepository {
 
   final KomodoApiClient _client;
 
-  static const Map<String, dynamic> _emptyDeploymentQuery = <String, dynamic>{
-    'names': <String>[],
-    'templates': 'Include',
-    'tags': <String>[],
-    'tag_behavior': 'All',
-    'specific': <String, dynamic>{
-      'server_ids': <String>[],
-      'build_ids': <String>[],
-      'update_available': false,
-    },
-  };
-
   /// Lists all deployments.
   Future<Either<Failure, List<Deployment>>> listDeployments() async {
-    try {
-      final response = await _client.read(
-        const RpcRequest(
-          type: 'ListDeployments',
-          params: <String, dynamic>{'query': _emptyDeploymentQuery},
-        ),
-      );
+    return apiCall(
+      () async {
+        final response = await _client.read(
+          RpcRequest(
+            type: 'ListDeployments',
+            params: <String, dynamic>{
+              'query': emptyQuery(
+                specific: <String, dynamic>{
+                  'server_ids': <String>[],
+                  'build_ids': <String>[],
+                  'update_available': false,
+                },
+              ),
+            },
+          ),
+        );
 
-      // API returns array directly for list endpoints
-      final deploymentsJson = response as List<dynamic>? ?? [];
-      final deployments = deploymentsJson
-          .map((json) => Deployment.fromJson(json as Map<String, dynamic>))
-          .toList();
-
-      return Right(deployments);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } on Object catch (e, stackTrace) {
-      // ignore: avoid_print -- Useful for debugging unexpected backend responses in development.
-      print('Error parsing deployments: $e');
-      // ignore: avoid_print -- Useful for debugging unexpected backend responses in development.
-      print('Stack trace: $stackTrace');
-      return Left(Failure.unknown(message: e.toString()));
-    }
+        // API returns array directly for list endpoints
+        final deploymentsJson = response as List<dynamic>? ?? [];
+        return deploymentsJson
+            .map((json) => Deployment.fromJson(json as Map<String, dynamic>))
+            .toList();
+      },
+      onUnknown: (error) {
+        debugLog('Error parsing deployments', name: 'API', error: error);
+        return Failure.unknown(message: error.toString());
+      },
+    );
   }
 
   /// Gets a specific deployment by ID or name.
   Future<Either<Failure, Deployment>> getDeployment(
     String deploymentIdOrName,
   ) async {
-    try {
-      final response = await _client.read(
-        RpcRequest(
-          type: 'GetDeployment',
-          params: {'deployment': deploymentIdOrName},
-        ),
-      );
+    return apiCall(
+      () async {
+        final response = await _client.read(
+          RpcRequest(
+            type: 'GetDeployment',
+            params: {'deployment': deploymentIdOrName},
+          ),
+        );
 
-      return Right(Deployment.fromJson(response as Map<String, dynamic>));
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      if (e.isNotFound) {
-        return const Left(Failure.server(message: 'Deployment not found'));
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } on Object catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+        return Deployment.fromJson(response as Map<String, dynamic>);
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
+        if (e.isNotFound) {
+          return const Failure.server(message: 'Deployment not found');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+    );
   }
 
   /// Starts a deployment.
@@ -141,22 +131,15 @@ class DeploymentRepository {
     String actionType,
     String deploymentIdOrName,
   ) async {
-    try {
+    return apiCall(() async {
       await _client.execute(
         RpcRequest(
           type: actionType,
           params: {'deployment': deploymentIdOrName},
         ),
       );
-      return const Right(null);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } on Object catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+      return;
+    });
   }
 }
 

@@ -1,9 +1,9 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builders/data/repositories/builder_repository.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'builders_provider.g.dart';
 
@@ -15,15 +15,15 @@ class Builders extends _$Builders {
     if (repository == null) return [];
 
     final result = await repository.listBuilders();
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (items) => items..sort((a, b) => a.name.compareTo(b.name)),
-    );
+    final items = unwrapOrThrow(result);
+    return items..sort((a, b) => a.name.compareTo(b.name));
   }
 
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
@@ -38,10 +38,7 @@ Future<Map<String, dynamic>?> builderJson(
   final result = await repository.getBuilderJson(
     builderIdOrName: builderIdOrName,
   );
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (json) => json,
-  );
+  return unwrapOrThrow(result);
 }
 
 @riverpod

@@ -1,9 +1,9 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
+import 'package:komodo_go/features/procedures/data/models/procedure.dart';
+import 'package:komodo_go/features/procedures/data/repositories/procedure_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../data/models/procedure.dart';
-import '../../data/repositories/procedure_repository.dart';
 
 part 'procedures_provider.g.dart';
 
@@ -19,22 +19,24 @@ class Procedures extends _$Procedures {
 
     final result = await repository.listProcedures();
 
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (procedures) => procedures,
-    );
+    return unwrapOrThrow(result);
   }
 
   /// Refreshes the procedures list.
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
 /// Provides details for a specific procedure.
 @riverpod
-Future<KomodoProcedure?> procedureDetail(Ref ref, String procedureIdOrName) async {
+Future<KomodoProcedure?> procedureDetail(
+  Ref ref,
+  String procedureIdOrName,
+) async {
   final repository = ref.watch(procedureRepositoryProvider);
   if (repository == null) {
     return null;
@@ -42,10 +44,7 @@ Future<KomodoProcedure?> procedureDetail(Ref ref, String procedureIdOrName) asyn
 
   final result = await repository.getProcedure(procedureIdOrName);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (procedure) => procedure,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Action state for procedure operations.
@@ -83,4 +82,3 @@ class ProcedureActions extends _$ProcedureActions {
     );
   }
 }
-

@@ -66,7 +66,6 @@ PopupMenuItem<T> komodoPopupMenuItem<T>({
 }) {
   return PopupMenuItem<T>(
     value: value,
-    height: 48,
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     child: KomodoPopupMenuItemRow(
       icon: icon,

@@ -1,11 +1,12 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/api/api_call.dart';
+import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/query_templates.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
+import 'package:komodo_go/core/utils/debug_log.dart';
+import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_exception.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/providers/dio_provider.dart';
-import '../models/build.dart';
 
 part 'build_repository.g.dart';
 
@@ -15,67 +16,54 @@ class BuildRepository {
 
   final KomodoApiClient _client;
 
-  static const Map<String, dynamic> _emptyBuildQuery = <String, dynamic>{
-    'names': <String>[],
-    'templates': 'Include',
-    'tags': <String>[],
-    'tag_behavior': 'All',
-    'specific': <String, dynamic>{
-      'builder_ids': <String>[],
-      'repos': <String>[],
-      'built_since': 0,
-    },
-  };
-
   /// Lists all builds.
   Future<Either<Failure, List<BuildListItem>>> listBuilds() async {
-    try {
-      final response = await _client.read(
-        const RpcRequest(
-          type: 'ListBuilds',
-          params: <String, dynamic>{'query': _emptyBuildQuery},
-        ),
-      );
+    return apiCall(
+      () async {
+        final response = await _client.read(
+          RpcRequest(
+            type: 'ListBuilds',
+            params: <String, dynamic>{
+              'query': emptyQuery(
+                specific: <String, dynamic>{
+                  'builder_ids': <String>[],
+                  'repos': <String>[],
+                  'built_since': 0,
+                },
+              ),
+            },
+          ),
+        );
 
-      final buildsJson = response as List<dynamic>? ?? [];
-      final builds = buildsJson
-          .map((json) => BuildListItem.fromJson(json as Map<String, dynamic>))
-          .toList();
-
-      return Right(builds);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e, stackTrace) {
-      // ignore: avoid_print
-      print('Error parsing builds: $e');
-      // ignore: avoid_print
-      print('Stack trace: $stackTrace');
-      return Left(Failure.unknown(message: e.toString()));
-    }
+        final buildsJson = response as List<dynamic>? ?? [];
+        return buildsJson
+            .map((json) => BuildListItem.fromJson(json as Map<String, dynamic>))
+            .toList();
+      },
+      onUnknown: (error) {
+        debugLog('Error parsing builds', name: 'API', error: error);
+        return Failure.unknown(message: error.toString());
+      },
+    );
   }
 
   /// Gets a specific build by ID or name.
   Future<Either<Failure, KomodoBuild>> getBuild(String buildIdOrName) async {
-    try {
-      final response = await _client.read(
-        RpcRequest(type: 'GetBuild', params: {'build': buildIdOrName}),
-      );
-
-      return Right(KomodoBuild.fromJson(response as Map<String, dynamic>));
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      if (e.isNotFound) {
-        return const Left(Failure.server(message: 'Build not found'));
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+    return apiCall(
+      () async {
+        final response = await _client.read(
+          RpcRequest(type: 'GetBuild', params: {'build': buildIdOrName}),
+        );
+        return KomodoBuild.fromJson(response as Map<String, dynamic>);
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
+        if (e.isNotFound) {
+          return const Failure.server(message: 'Build not found');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+    );
   }
 
   /// Runs the target build.
@@ -92,47 +80,41 @@ class BuildRepository {
   Future<Either<Failure, String?>> getBuilderName(
     String builderIdOrName,
   ) async {
-    try {
-      final response = await _client.read(
-        RpcRequest(type: 'GetBuilder', params: {'builder': builderIdOrName}),
-      );
+    return apiCall(
+      () async {
+        final response = await _client.read(
+          RpcRequest(type: 'GetBuilder', params: {'builder': builderIdOrName}),
+        );
 
-      if (response is Map) {
-        final name = response['name'];
-        if (name is String && name.trim().isNotEmpty) {
-          return Right(name.trim());
+        if (response is Map) {
+          final name = response['name'];
+          if (name is String && name.trim().isNotEmpty) {
+            return name.trim();
+          }
         }
-      }
 
-      return const Right(null);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      if (e.isNotFound) {
-        return const Right(null);
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+        return null;
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
+        if (e.isNotFound) {
+          return const Failure.server(message: 'Builder not found');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+    );
   }
 
   Future<Either<Failure, void>> _executeAction(
     String actionType,
     Map<String, dynamic> params,
   ) async {
-    try {
-      await _client.execute(RpcRequest(type: actionType, params: params));
-      return const Right(null);
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+    return apiCall(
+      () async {
+        await _client.execute(RpcRequest(type: actionType, params: params));
+        return;
+      },
+    );
   }
 }
 

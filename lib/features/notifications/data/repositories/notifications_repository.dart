@@ -1,6 +1,6 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
-import 'package:komodo_go/core/api/api_exception.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
@@ -32,7 +32,7 @@ class NotificationsRepository {
     required int page,
     Map<String, dynamic>? query,
   }) async {
-    try {
+    return apiCall(() async {
       final response = await _client.read(
         RpcRequest(
           type: 'ListAlerts',
@@ -41,7 +41,7 @@ class NotificationsRepository {
       );
 
       if (response is! Map) {
-        return const Right(AlertsPage(alerts: <Alert>[], nextPage: null));
+        return const AlertsPage(alerts: <Alert>[], nextPage: null);
       }
 
       final map = response.cast<String, dynamic>();
@@ -51,22 +51,15 @@ class NotificationsRepository {
           if (item is Map) Alert.fromJson(item.cast<String, dynamic>()),
       ];
       final nextPage = _readNullableInt(map['next_page']);
-      return Right(AlertsPage(alerts: alerts, nextPage: nextPage));
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+      return AlertsPage(alerts: alerts, nextPage: nextPage);
+    });
   }
 
   Future<Either<Failure, UpdatesPage>> listUpdates({
     required int page,
     Map<String, dynamic>? query,
   }) async {
-    try {
+    return apiCall(() async {
       final response = await _client.read(
         RpcRequest(
           type: 'ListUpdates',
@@ -75,8 +68,9 @@ class NotificationsRepository {
       );
 
       if (response is! Map) {
-        return const Right(
-          UpdatesPage(updates: <UpdateListItem>[], nextPage: null),
+        return const UpdatesPage(
+          updates: <UpdateListItem>[],
+          nextPage: null,
         );
       }
 
@@ -88,15 +82,8 @@ class NotificationsRepository {
             UpdateListItem.fromJson(item.cast<String, dynamic>()),
       ];
       final nextPage = _readNullableInt(map['next_page']);
-      return Right(UpdatesPage(updates: updates, nextPage: nextPage));
-    } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        return const Left(Failure.auth());
-      }
-      return Left(Failure.server(message: e.message, statusCode: e.statusCode));
-    } catch (e) {
-      return Left(Failure.unknown(message: e.toString()));
-    }
+      return UpdatesPage(updates: updates, nextPage: nextPage);
+    });
   }
 }
 

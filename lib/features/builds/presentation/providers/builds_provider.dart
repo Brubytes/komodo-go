@@ -1,9 +1,9 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
+import 'package:komodo_go/features/builds/data/models/build.dart';
+import 'package:komodo_go/features/builds/data/repositories/build_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../../../core/error/failures.dart';
-import '../../data/models/build.dart';
-import '../../data/repositories/build_repository.dart';
 
 part 'builds_provider.g.dart';
 
@@ -19,16 +19,15 @@ class Builds extends _$Builds {
 
     final result = await repository.listBuilds();
 
-    return result.fold(
-      (failure) => throw Exception(failure.displayMessage),
-      (builds) => builds,
-    );
+    return unwrapOrThrow(result);
   }
 
   /// Refreshes the builds list.
   Future<void> refresh() async {
     ref.invalidateSelf();
-    await future;
+    try {
+      await future;
+    } catch (_) {}
   }
 }
 
@@ -42,10 +41,7 @@ Future<KomodoBuild?> buildDetail(Ref ref, String buildIdOrName) async {
 
   final result = await repository.getBuild(buildIdOrName);
 
-  return result.fold(
-    (failure) => throw Exception(failure.displayMessage),
-    (build) => build,
-  );
+  return unwrapOrThrow(result);
 }
 
 /// Action state for build operations.
