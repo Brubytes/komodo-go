@@ -188,6 +188,39 @@ class StackRepository {
     });
   }
 
+  /// Updates a stack configuration and returns the updated stack.
+  ///
+  /// Uses the `/write` module `UpdateStack` RPC.
+  ///
+  /// Note: Only fields included in [partialConfig] will be updated.
+  Future<Either<Failure, KomodoStack>> updateStackConfig({
+    required String stackId,
+    required Map<String, dynamic> partialConfig,
+  }) async {
+    return apiCall(
+      () async {
+        final response = await _client.write(
+          RpcRequest(
+            type: 'UpdateStack',
+            params: <String, dynamic>{
+              'id': stackId,
+              'config': partialConfig,
+            },
+          ),
+        );
+
+        return KomodoStack.fromJson(response as Map<String, dynamic>);
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
+        if (e.isNotFound) {
+          return const Failure.server(message: 'Stack not found');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+    );
+  }
+
   Future<Either<Failure, void>> _executeAction(
     String actionType,
     Map<String, dynamic> params,

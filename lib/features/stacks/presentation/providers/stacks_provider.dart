@@ -97,6 +97,16 @@ class StackActions extends _$StackActions {
   Future<bool> destroy(String stackIdOrName) =>
       _executeAction((repo) => repo.destroyStack(stackIdOrName));
 
+  Future<KomodoStack?> updateStackConfig({
+    required String stackId,
+    required Map<String, dynamic> partialConfig,
+  }) => _executeRequest(
+    (repo) => repo.updateStackConfig(
+      stackId: stackId,
+      partialConfig: partialConfig,
+    ),
+  );
+
   Future<bool> _executeAction(
     Future<Either<Failure, void>> Function(StackRepository repo) action,
   ) async {
@@ -119,6 +129,32 @@ class StackActions extends _$StackActions {
         state = const AsyncValue.data(null);
         ref.invalidate(stacksProvider);
         return true;
+      },
+    );
+  }
+
+  Future<T?> _executeRequest<T>(
+    Future<Either<Failure, T>> Function(StackRepository repo) request,
+  ) async {
+    final repository = ref.read(stackRepositoryProvider);
+    if (repository == null) {
+      state = AsyncValue.error('Not authenticated', StackTrace.current);
+      return null;
+    }
+
+    state = const AsyncValue.loading();
+
+    final result = await request(repository);
+
+    return result.fold(
+      (failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return null;
+      },
+      (value) {
+        state = const AsyncValue.data(null);
+        ref.invalidate(stacksProvider);
+        return value;
       },
     );
   }

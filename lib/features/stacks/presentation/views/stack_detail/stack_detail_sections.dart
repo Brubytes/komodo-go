@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
+import 'package:syntax_highlight/syntax_highlight.dart';
 
 class StackHeroPanel extends StatelessWidget {
   const StackHeroPanel({
@@ -365,6 +367,438 @@ class StackConfigContent extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+class StackConfigEditorContent extends StatefulWidget {
+  const StackConfigEditorContent({
+    required this.initialConfig,
+    super.key,
+  });
+
+  final StackConfig initialConfig;
+
+  @override
+  State<StackConfigEditorContent> createState() =>
+      StackConfigEditorContentState();
+}
+
+class StackConfigEditorContentState extends State<StackConfigEditorContent> {
+  late StackConfig _initial;
+
+  late final TextEditingController _serverId;
+  late final TextEditingController _repo;
+  late final TextEditingController _branch;
+  late final TextEditingController _commit;
+  late final TextEditingController _linkedRepo;
+  late final TextEditingController _projectName;
+  late final TextEditingController _clonePath;
+  late final TextEditingController _runDirectory;
+  late final TextEditingController _envFilePath;
+
+  late final TextEditingController _links;
+  late final TextEditingController _additionalEnvFiles;
+  late final TextEditingController _filePaths;
+  late final TextEditingController _ignoreServices;
+
+  late CodeEditorController _composeController;
+  late CodeEditorController _environmentController;
+
+  late bool _autoPull;
+  late bool _autoUpdate;
+  late bool _pollForUpdates;
+  late bool _sendAlerts;
+
+  @override
+  void initState() {
+    super.initState();
+    _initial = widget.initialConfig;
+
+    _serverId = TextEditingController(text: _initial.serverId);
+    _repo = TextEditingController(text: _initial.repo);
+    _branch = TextEditingController(text: _initial.branch);
+    _commit = TextEditingController(text: _initial.commit);
+    _linkedRepo = TextEditingController(text: _initial.linkedRepo);
+    _projectName = TextEditingController(text: _initial.projectName);
+    _clonePath = TextEditingController(text: _initial.clonePath);
+    _runDirectory = TextEditingController(text: _initial.runDirectory);
+    _envFilePath = TextEditingController(text: _initial.envFilePath);
+
+    _links = TextEditingController(text: _initial.links.join('\n'));
+    _additionalEnvFiles =
+        TextEditingController(text: _initial.additionalEnvFiles.join('\n'));
+    _filePaths = TextEditingController(text: _initial.filePaths.join('\n'));
+    _ignoreServices =
+        TextEditingController(text: _initial.ignoreServices.join('\n'));
+
+    _autoPull = _initial.autoPull;
+    _autoUpdate = _initial.autoUpdate;
+    _pollForUpdates = _initial.pollForUpdates;
+    _sendAlerts = _initial.sendAlerts;
+
+    _composeController = _createCodeController(
+      language: 'yaml',
+      text: _initial.fileContents,
+    );
+    _environmentController = _createCodeController(
+      // No native dotenv language is registered in app highlight init.
+      // We still use a CodeEditor as requested.
+      language: 'yaml',
+      text: _initial.environment,
+    );
+  }
+
+  @override
+  void dispose() {
+    _serverId.dispose();
+    _repo.dispose();
+    _branch.dispose();
+    _commit.dispose();
+    _linkedRepo.dispose();
+    _projectName.dispose();
+    _clonePath.dispose();
+    _runDirectory.dispose();
+    _envFilePath.dispose();
+
+    _links.dispose();
+    _additionalEnvFiles.dispose();
+    _filePaths.dispose();
+    _ignoreServices.dispose();
+
+    _composeController.dispose();
+    _environmentController.dispose();
+    super.dispose();
+  }
+
+  CodeEditorController _createCodeController({
+    required String language,
+    required String text,
+  }) {
+    return CodeEditorController(
+      text: text,
+      lightHighlighter: Highlighter(
+        language: language,
+        theme: AppSyntaxHighlight.lightTheme,
+      ),
+      darkHighlighter: Highlighter(
+        language: language,
+        theme: AppSyntaxHighlight.darkTheme,
+      ),
+    );
+  }
+
+  void resetTo(StackConfig config) {
+    setState(() {
+      _initial = config;
+      _serverId.text = config.serverId;
+      _repo.text = config.repo;
+      _branch.text = config.branch;
+      _commit.text = config.commit;
+      _linkedRepo.text = config.linkedRepo;
+      _projectName.text = config.projectName;
+      _clonePath.text = config.clonePath;
+      _runDirectory.text = config.runDirectory;
+      _envFilePath.text = config.envFilePath;
+      _links.text = config.links.join('\n');
+      _additionalEnvFiles.text = config.additionalEnvFiles.join('\n');
+      _filePaths.text = config.filePaths.join('\n');
+      _ignoreServices.text = config.ignoreServices.join('\n');
+      _autoPull = config.autoPull;
+      _autoUpdate = config.autoUpdate;
+      _pollForUpdates = config.pollForUpdates;
+      _sendAlerts = config.sendAlerts;
+
+      _composeController.dispose();
+      _environmentController.dispose();
+      _composeController = _createCodeController(
+        language: 'yaml',
+        text: config.fileContents,
+      );
+      _environmentController = _createCodeController(
+        language: 'yaml',
+        text: config.environment,
+      );
+    });
+  }
+
+  Map<String, dynamic> buildPartialConfigParams() {
+    final params = <String, dynamic>{};
+
+    void setIfChanged<T>(String key, T current, T initial) {
+      if (current != initial) params[key] = current;
+    }
+
+    List<String> normalizeList(String raw) {
+      final parts = raw
+          .split(RegExp(r'[\n,]'))
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList(growable: false);
+      return parts;
+    }
+
+    setIfChanged('server_id', _serverId.text.trim(), _initial.serverId);
+    setIfChanged('repo', _repo.text.trim(), _initial.repo);
+    setIfChanged('branch', _branch.text.trim(), _initial.branch);
+    setIfChanged('commit', _commit.text.trim(), _initial.commit);
+    setIfChanged('linked_repo', _linkedRepo.text.trim(), _initial.linkedRepo);
+    setIfChanged(
+      'project_name',
+      _projectName.text.trim(),
+      _initial.projectName,
+    );
+    setIfChanged('clone_path', _clonePath.text.trim(), _initial.clonePath);
+    setIfChanged(
+      'run_directory',
+      _runDirectory.text.trim(),
+      _initial.runDirectory,
+    );
+    setIfChanged('env_file_path', _envFilePath.text.trim(), _initial.envFilePath);
+
+    setIfChanged('auto_pull', _autoPull, _initial.autoPull);
+    setIfChanged('auto_update', _autoUpdate, _initial.autoUpdate);
+    setIfChanged('poll_for_updates', _pollForUpdates, _initial.pollForUpdates);
+    setIfChanged('send_alerts', _sendAlerts, _initial.sendAlerts);
+
+    final links = normalizeList(_links.text);
+    if (!_listEquals(links, _initial.links)) params['links'] = links;
+
+    final extraEnv = normalizeList(_additionalEnvFiles.text);
+    if (!_listEquals(extraEnv, _initial.additionalEnvFiles)) {
+      params['additional_env_files'] = extraEnv;
+    }
+
+    final filePaths = normalizeList(_filePaths.text);
+    if (!_listEquals(filePaths, _initial.filePaths)) params['file_paths'] = filePaths;
+
+    final ignore = normalizeList(_ignoreServices.text);
+    if (!_listEquals(ignore, _initial.ignoreServices)) {
+      params['ignore_services'] = ignore;
+    }
+
+    final compose = _composeController.text;
+    if (compose != _initial.fileContents) params['file_contents'] = compose;
+
+    final env = _environmentController.text;
+    if (env != _initial.environment) params['environment'] = env;
+
+    return params;
+  }
+
+  bool _listEquals(List<String> a, List<String> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DetailSubCard(
+          title: 'Flags',
+          icon: AppIcons.settings,
+          child: Column(
+            children: [
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _autoPull,
+                title: const Text('Auto pull'),
+                onChanged: (v) => setState(() => _autoPull = v),
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _autoUpdate,
+                title: const Text('Auto update'),
+                onChanged: (v) => setState(() => _autoUpdate = v),
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _pollForUpdates,
+                title: const Text('Poll for updates'),
+                onChanged: (v) => setState(() => _pollForUpdates = v),
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _sendAlerts,
+                title: const Text('Send alerts'),
+                onChanged: (v) => setState(() => _sendAlerts = v),
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+        DetailSubCard(
+          title: 'Repository',
+          icon: AppIcons.repos,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _repo,
+                decoration: const InputDecoration(
+                  labelText: 'Repo',
+                  prefixIcon: Icon(AppIcons.repos),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _branch,
+                decoration: const InputDecoration(
+                  labelText: 'Branch',
+                  prefixIcon: Icon(AppIcons.repos),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _commit,
+                decoration: const InputDecoration(
+                  labelText: 'Commit',
+                  prefixIcon: Icon(AppIcons.tag),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _linkedRepo,
+                decoration: const InputDecoration(
+                  labelText: 'Linked repo',
+                  prefixIcon: Icon(AppIcons.repos),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+        DetailSubCard(
+          title: 'Paths',
+          icon: AppIcons.package,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _projectName,
+                decoration: const InputDecoration(
+                  labelText: 'Project',
+                  prefixIcon: Icon(AppIcons.package),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _clonePath,
+                decoration: const InputDecoration(
+                  labelText: 'Clone path',
+                  prefixIcon: Icon(AppIcons.package),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _runDirectory,
+                decoration: const InputDecoration(
+                  labelText: 'Run dir',
+                  prefixIcon: Icon(AppIcons.package),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _envFilePath,
+                decoration: const InputDecoration(
+                  labelText: 'Env file',
+                  prefixIcon: Icon(AppIcons.package),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+        DetailSubCard(
+          title: 'Extras',
+          icon: AppIcons.widgets,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _serverId,
+                decoration: InputDecoration(
+                  labelText: 'Server ID',
+                  prefixIcon: const Icon(AppIcons.server),
+                  helperStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  helperText: 'Changing server may move/cleanup the stack.',
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _links,
+                minLines: 2,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'Links (one per line)',
+                  prefixIcon: Icon(AppIcons.network),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _additionalEnvFiles,
+                minLines: 2,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'Extra env files (one per line)',
+                  prefixIcon: Icon(AppIcons.package),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _filePaths,
+                minLines: 2,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  labelText: 'Compose file paths (one per line)',
+                  prefixIcon: Icon(AppIcons.package),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _ignoreServices,
+                minLines: 2,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'Ignore services (comma or line separated)',
+                  prefixIcon: Icon(AppIcons.warning),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+        DetailSubCard(
+          title: 'Compose',
+          icon: AppIcons.stacks,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Compose config'),
+              const Gap(8),
+              DetailCodeEditor(controller: _composeController, maxHeight: 320),
+              const Gap(14),
+              Text(
+                'Environment variables',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Gap(8),
+              DetailCodeEditor(
+                controller: _environmentController,
+                maxHeight: 240,
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
