@@ -22,10 +22,7 @@ class SettingsView extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: const MainAppBar(
-        title: 'Settings',
-        icon: AppIcons.settings,
-      ),
+      appBar: const MainAppBar(title: 'Settings', icon: AppIcons.settings),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
@@ -39,10 +36,7 @@ class SettingsView extends ConsumerWidget {
             subtitle: connection == null
                 ? 'Manage server connections'
                 : connection.baseUrl,
-            trailing: _CardTrailing(
-              label: connection?.name,
-              showChevron: true,
-            ),
+            trailing: _CardTrailing(label: connection?.name, showChevron: true),
             onTap: () => context.push(AppRoutes.connections),
           ),
           const Gap(20),
@@ -89,6 +83,15 @@ class SettingsView extends ConsumerWidget {
             subtitle: 'View and edit tags',
             trailing: const _CardTrailing(showChevron: true),
             onTap: () => context.push(AppRoutes.komodoTags),
+          ),
+          const Gap(10),
+          _SettingsCardTile(
+            icon: AppIcons.repos,
+            accentColor: scheme.secondary,
+            title: 'Providers',
+            subtitle: 'Manage git and registry accounts',
+            trailing: const _CardTrailing(showChevron: true),
+            onTap: () => context.push(AppRoutes.komodoProviders),
           ),
           const Gap(10),
           _SettingsCardTile(
@@ -234,7 +237,9 @@ class _SettingsCardTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: accentColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: accentColor.withValues(alpha: 0.22)),
+                  border: Border.all(
+                    color: accentColor.withValues(alpha: 0.22),
+                  ),
                 ),
                 child: Icon(icon, size: 20, color: accentColor),
               ),
@@ -266,7 +271,8 @@ class _SettingsCardTile extends StatelessWidget {
               const Gap(12),
               DefaultTextStyle.merge(
                 style: TextStyle(color: scheme.onSurfaceVariant),
-                child: trailing ??
+                child:
+                    trailing ??
                     Icon(
                       AppIcons.chevron,
                       color: scheme.onSurfaceVariant.withValues(alpha: 0.65),

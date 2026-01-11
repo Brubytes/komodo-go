@@ -27,6 +27,7 @@ import 'package:komodo_go/features/home/presentation/views/home_view.dart';
 import 'package:komodo_go/features/notifications/presentation/views/notifications_view.dart';
 import 'package:komodo_go/features/procedures/presentation/views/procedure_detail_view.dart';
 import 'package:komodo_go/features/procedures/presentation/views/procedures_list_view.dart';
+import 'package:komodo_go/features/providers/presentation/views/providers_view.dart';
 import 'package:komodo_go/features/repos/presentation/views/repo_detail_view.dart';
 import 'package:komodo_go/features/repos/presentation/views/repos_list_view.dart';
 import 'package:komodo_go/features/resources/presentation/views/resources_view.dart';
@@ -82,6 +83,7 @@ abstract class AppRoutes {
   static const connections = '$settings/connections';
   static const komodoVariables = '$settings/komodo/variables';
   static const komodoTags = '$settings/komodo/tags';
+  static const komodoProviders = '$settings/komodo/providers';
   static const komodoBuilders = '$settings/komodo/builders';
   static const komodoAlerters = '$settings/komodo/alerters';
   static const komodoAlerterDetail = '$komodoAlerters/:id';
@@ -495,6 +497,11 @@ GoRouter appRouter(Ref ref) {
                     path: 'komodo/tags',
                     pageBuilder: (context, state) =>
                         _adaptiveStackPage(context, const TagsView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/providers',
+                    pageBuilder: (context, state) =>
+                        _adaptiveStackPage(context, const ProvidersView()),
                   ),
                   GoRoute(
                     path: 'komodo/builders',
