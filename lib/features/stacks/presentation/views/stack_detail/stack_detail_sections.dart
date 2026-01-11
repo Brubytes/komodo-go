@@ -3,6 +3,8 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/features/repos/data/models/repo.dart';
+import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
 
@@ -375,10 +377,14 @@ class StackConfigContent extends StatelessWidget {
 class StackConfigEditorContent extends StatefulWidget {
   const StackConfigEditorContent({
     required this.initialConfig,
+    this.servers = const [],
+    this.repos = const [],
     super.key,
   });
 
   final StackConfig initialConfig;
+  final List<Server> servers;
+  final List<RepoListItem> repos;
 
   @override
   State<StackConfigEditorContent> createState() =>
@@ -599,6 +605,27 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final servers = widget.servers;
+    final repos = widget.repos;
+
+    final sortedServers = [...servers]..sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
+    final sortedRepos = [...repos]..sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
+
+    final serverIdInList = sortedServers.any((s) => s.id == _serverId.text);
+    final linkedRepoInList = sortedRepos.any((r) => r.id == _linkedRepo.text);
+
+    final repoPathOptions = <String>{
+      for (final r in sortedRepos)
+        if (r.info.repo.trim().isNotEmpty) r.info.repo.trim(),
+    }.toList(growable: false)
+      ..sort(
+        (a, b) => a.toLowerCase().compareTo(b.toLowerCase()),
+      );
+    final repoInList = repoPathOptions.contains(_repo.text.trim());
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -641,13 +668,34 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
           icon: AppIcons.repos,
           child: Column(
             children: [
-              TextFormField(
-                controller: _repo,
-                decoration: const InputDecoration(
-                  labelText: 'Repo',
-                  prefixIcon: Icon(AppIcons.repos),
+              if (repoPathOptions.isNotEmpty)
+                DropdownButtonFormField<String>(
+                  key: ValueKey(repoPathOptions.length),
+                  value: repoInList ? _repo.text.trim() : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Repo',
+                    prefixIcon: Icon(AppIcons.repos),
+                  ),
+                  items: [
+                    for (final repoPath in repoPathOptions)
+                      DropdownMenuItem(
+                        value: repoPath,
+                        child: Text(repoPath),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _repo.text = value);
+                  },
+                )
+              else
+                TextFormField(
+                  controller: _repo,
+                  decoration: const InputDecoration(
+                    labelText: 'Repo',
+                    prefixIcon: Icon(AppIcons.repos),
+                  ),
                 ),
-              ),
               const Gap(12),
               TextFormField(
                 controller: _branch,
@@ -665,13 +713,50 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                 ),
               ),
               const Gap(12),
-              TextFormField(
-                controller: _linkedRepo,
-                decoration: const InputDecoration(
-                  labelText: 'Linked repo',
-                  prefixIcon: Icon(AppIcons.repos),
+              if (sortedRepos.isNotEmpty)
+                DropdownButtonFormField<String>(
+                  key: ValueKey(sortedRepos.length),
+                  value: linkedRepoInList ? _linkedRepo.text : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Linked repo',
+                    prefixIcon: Icon(AppIcons.repos),
+                  ),
+                  items: [
+                    for (final repo in sortedRepos)
+                      DropdownMenuItem(
+                        value: repo.id,
+                        child: Text(
+                          repo.info.repo.trim().isNotEmpty
+                              ? '${repo.name} · ${repo.info.repo.trim()}'
+                              : repo.name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _linkedRepo.text = value);
+                  },
+                )
+              else
+                TextFormField(
+                  controller: _linkedRepo,
+                  decoration: const InputDecoration(
+                    labelText: 'Linked repo',
+                    prefixIcon: Icon(AppIcons.repos),
+                  ),
                 ),
-              ),
+              if (sortedRepos.isNotEmpty && !linkedRepoInList) ...[
+                const Gap(8),
+                TextFormField(
+                  controller: _linkedRepo,
+                  decoration: const InputDecoration(
+                    labelText: 'Linked repo ID (manual)',
+                    prefixIcon: Icon(AppIcons.tag),
+                    helperText: 'Current value not found in repo list.',
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -721,15 +806,49 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
           icon: AppIcons.widgets,
           child: Column(
             children: [
-              TextFormField(
-                controller: _serverId,
-                decoration: InputDecoration(
-                  labelText: 'Server ID',
-                  prefixIcon: const Icon(AppIcons.server),
-                  helperStyle: TextStyle(color: scheme.onSurfaceVariant),
-                  helperText: 'Changing server may move/cleanup the stack.',
+              if (sortedServers.isNotEmpty)
+                DropdownButtonFormField<String>(
+                  key: ValueKey(sortedServers.length),
+                  value: serverIdInList ? _serverId.text : null,
+                  decoration: InputDecoration(
+                    labelText: 'Server',
+                    prefixIcon: const Icon(AppIcons.server),
+                    helperStyle: TextStyle(color: scheme.onSurfaceVariant),
+                    helperText: 'Changing server may move/cleanup the stack.',
+                  ),
+                  items: [
+                    for (final server in sortedServers)
+                      DropdownMenuItem(
+                        value: server.id,
+                        child: Text(server.name),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _serverId.text = value);
+                  },
+                )
+              else
+                TextFormField(
+                  controller: _serverId,
+                  decoration: InputDecoration(
+                    labelText: 'Server ID',
+                    prefixIcon: const Icon(AppIcons.server),
+                    helperStyle: TextStyle(color: scheme.onSurfaceVariant),
+                    helperText: 'Changing server may move/cleanup the stack.',
+                  ),
                 ),
-              ),
+              if (sortedServers.isNotEmpty && !serverIdInList) ...[
+                const Gap(8),
+                TextFormField(
+                  controller: _serverId,
+                  decoration: const InputDecoration(
+                    labelText: 'Server ID (manual)',
+                    prefixIcon: Icon(AppIcons.tag),
+                    helperText: 'Current value not found in server list.',
+                  ),
+                ),
+              ],
               const Gap(12),
               TextFormField(
                 controller: _links,

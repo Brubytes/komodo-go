@@ -12,6 +12,7 @@ import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
 import 'package:komodo_go/features/stacks/presentation/views/stack_detail/stack_detail_sections.dart';
@@ -90,6 +91,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
     final logAsync = ref.watch(stackLogProvider(widget.stackId));
     final stacksListAsync = ref.watch(stacksProvider);
     final serversListAsync = ref.watch(serversProvider);
+    final reposListAsync = ref.watch(reposProvider);
     final actionsState = ref.watch(stackActionsProvider);
 
     final scheme = Theme.of(context).colorScheme;
@@ -117,6 +119,9 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
       }
       return null;
     }
+
+    final servers = serversListAsync.asData?.value ?? const [];
+    final repos = reposListAsync.asData?.value ?? const [];
 
     return Scaffold(
       appBar: MainAppBar(
@@ -219,6 +224,8 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
                                           (_configEditSnapshot?.id == stack.id)
                                               ? _configEditSnapshot!.config
                                               : stack.config,
+                                      servers: servers,
+                                      repos: repos,
                                     )
                                   : StackConfigContent(
                                       config: stack.config,
