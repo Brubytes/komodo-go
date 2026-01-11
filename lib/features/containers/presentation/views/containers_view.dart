@@ -184,6 +184,8 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                 ),
                 const Gap(12),
                 containersAsync.when(
+                  skipLoadingOnRefresh: true,
+                  skipLoadingOnReload: true,
                   data: (result) {
                     final filtered = _applyFilters(
                       result.items,
@@ -237,7 +239,9 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
           ),
           if (actionsState.isLoading)
             ColoredBox(
-              color: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
+              color: Theme.of(
+                context,
+              ).colorScheme.scrim.withValues(alpha: 0.25),
               child: const Center(
                 child: Card(
                   child: Padding(
@@ -258,10 +262,9 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
     ContainerOverviewItem item,
     ContainerAction action,
   ) async {
-    final containerIdOrName =
-        (item.container.id?.trim().isNotEmpty ?? false)
-            ? item.container.id!.trim()
-            : item.container.name.trim();
+    final containerIdOrName = (item.container.id?.trim().isNotEmpty ?? false)
+        ? item.container.id!.trim()
+        : item.container.name.trim();
 
     if (containerIdOrName.isEmpty) {
       AppSnackBar.show(

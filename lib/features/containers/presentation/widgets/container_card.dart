@@ -45,6 +45,8 @@ class ContainerCard extends StatelessWidget {
 
     return AppCardSurface(
       padding: EdgeInsets.zero,
+      enableGradientInDark: true,
+      tintColor: scheme.secondary,
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(AppTokens.radiusLg),

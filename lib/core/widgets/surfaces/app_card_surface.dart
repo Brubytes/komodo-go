@@ -13,6 +13,8 @@ class AppCardSurface extends StatelessWidget {
     this.radius = AppTokens.radiusLg,
     this.showBorder = false,
     this.enableShadow = true,
+    this.enableGradientInDark = false,
+    this.tintColor,
   });
 
   final Widget child;
@@ -20,6 +22,8 @@ class AppCardSurface extends StatelessWidget {
   final double radius;
   final bool showBorder;
   final bool enableShadow;
+  final bool enableGradientInDark;
+  final Color? tintColor;
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +34,7 @@ class AppCardSurface extends StatelessWidget {
     final color =
         theme.cardTheme.color ??
         (isDark ? scheme.surfaceContainerHigh : scheme.surfaceContainerLow);
+    final tint = tintColor ?? scheme.primary;
 
     final borderColor = scheme.outlineVariant.withValues(
       alpha: isDark ? 0.35 : 0.55,
@@ -53,6 +58,17 @@ class AppCardSurface extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         border: showBorder ? Border.all(color: borderColor) : null,
         boxShadow: shadows,
+        gradient: isDark && enableGradientInDark
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [tint.withValues(alpha: 0.05), color.withValues(alpha: 0.25)],
+              )
+            : LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [tint.withValues(alpha: 0.05), color.withValues(alpha: 0.25)],
+              ),
       ),
       child: child,
     );
