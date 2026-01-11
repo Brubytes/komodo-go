@@ -120,7 +120,7 @@ class HomeView extends ConsumerWidget {
                 String avgWithTotals(double average, String totals) {
                   final avgLabel = '${average.toStringAsFixed(0)}%';
                   if (totals.isEmpty) return avgLabel;
-                  return '$avgLabel · $totals';
+                  return '$avgLabel\n$totals';
                 }
 
                 final cpuValue = hasStats
@@ -720,10 +720,21 @@ class _ServerStatsSummary {
 
   String _totalsLabel(double used, double total) {
     if (total <= 0) return '';
-    return '${_formatGb(used)}/${_formatGb(total)} GB';
+    return _formatCapacity(used, total);
   }
 
-  String _formatGb(double value) {
-    return value.toStringAsFixed(0);
+  String _formatCapacity(double usedGb, double totalGb) {
+    if (totalGb >= 1024) {
+      final usedTb = usedGb / 1024;
+      final totalTb = totalGb / 1024;
+      return '${_formatNumber(usedTb)}/${_formatNumber(totalTb)}TB';
+    }
+    return '${_formatNumber(usedGb, decimals: 0)}/${_formatNumber(totalGb, decimals: 0)}GB';
+  }
+
+  String _formatNumber(double value, {int decimals = 1}) {
+    final fixed = value.toStringAsFixed(decimals);
+    if (decimals == 0) return fixed;
+    return fixed.endsWith('.0') ? fixed.substring(0, fixed.length - 2) : fixed;
   }
 }

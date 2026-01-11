@@ -133,7 +133,7 @@ class HomeMetricCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -161,20 +161,48 @@ class HomeMetricCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const Gap(10),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+              const Spacer(),
+              Builder(
+                builder: (context) {
+                  final parts = value.split('\n');
+                  final primaryStyle =
+                      (parts.first.length > 14
+                              ? textTheme.titleLarge
+                              : textTheme.headlineSmall)
+                          ?.copyWith(fontWeight: FontWeight.w800, height: 1.05);
+                  final secondaryStyle = textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                    height: 1.1,
+                    fontSize: 12,
+                  );
+
+                  if (parts.length == 1) {
+                    return Text(
+                      value,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: primaryStyle,
+                    );
+                  }
+
+                  return Text.rich(
+                    TextSpan(
+                      text: parts.first,
+                      style: primaryStyle,
+                      children: [
+                        TextSpan(
+                          text: '\n${parts.skip(1).join(' ')}',
+                          style: secondaryStyle,
+                        ),
+                      ],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  );
+                },
               ),
-              const Gap(4),
+              const Gap(6),
               Text(
                 subtitle,
                 maxLines: 1,
@@ -182,6 +210,8 @@ class HomeMetricCard extends StatelessWidget {
                 style: textTheme.labelMedium?.copyWith(
                   color: accent,
                   fontWeight: FontWeight.w700,
+                  height: 1.1,
+                  fontSize: 12,
                 ),
               ),
             ],

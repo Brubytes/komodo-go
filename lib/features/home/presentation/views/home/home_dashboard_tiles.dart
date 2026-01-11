@@ -122,16 +122,27 @@ class HomeServerStatTile extends StatelessWidget {
     final percentLabel = _percentLabel(percent);
     final absoluteLabel = _absoluteLabel(used, total);
     if (absoluteLabel == '—') return percentLabel;
-    return '$percentLabel · $absoluteLabel';
+    return '$percentLabel\n$absoluteLabel';
   }
 
   String _absoluteLabel(double? used, double? total) {
     if (used == null || total == null || total <= 0) return '—';
-    return '${_formatGb(used)}/${_formatGb(total)} GB';
+    return _formatCapacity(used, total);
   }
 
-  String _formatGb(double value) {
-    return value.toStringAsFixed(0);
+  String _formatCapacity(double usedGb, double totalGb) {
+    if (totalGb >= 1024) {
+      final usedTb = usedGb / 1024;
+      final totalTb = totalGb / 1024;
+      return '${_formatNumber(usedTb)}/${_formatNumber(totalTb)}TB';
+    }
+    return '${_formatNumber(usedGb, decimals: 0)}/${_formatNumber(totalGb, decimals: 0)}GB';
+  }
+
+  String _formatNumber(double value, {int decimals = 1}) {
+    final fixed = value.toStringAsFixed(decimals);
+    if (decimals == 0) return fixed;
+    return fixed.endsWith('.0') ? fixed.substring(0, fixed.length - 2) : fixed;
   }
 
   Color _serverStatusColor(ServerState state) {
@@ -304,23 +315,52 @@ class _StatPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
-        child: Text(
-          '$label $value',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+      child: Builder(
+        builder: (context) {
+          final parts = value.split('\n');
+          final primaryStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
             color: color,
             fontWeight: FontWeight.w700,
-          ),
-        ),
+            fontSize: 11,
+            height: 1.1,
+          );
+          final secondaryStyle = Theme.of(context).textTheme.labelSmall
+              ?.copyWith(
+                color: color.withValues(alpha: 0.8),
+                fontWeight: FontWeight.w600,
+                fontSize: 10,
+                height: 1.1,
+              );
+
+          if (parts.length == 1) {
+            return Text(
+              '$label ${parts.first}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: primaryStyle,
+            );
+          }
+
+          return Text.rich(
+            TextSpan(
+              text: '$label ${parts.first}',
+              style: primaryStyle,
+              children: [
+                TextSpan(
+                  text: '\n${parts.skip(1).join(' ')}',
+                  style: secondaryStyle,
+                ),
+              ],
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          );
+        },
       ),
     );
   }
