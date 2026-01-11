@@ -3,14 +3,19 @@ import 'package:gap/gap.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 
 class ContainerCard extends StatelessWidget {
-  const ContainerCard({required this.item, this.onTap, this.onAction, super.key});
+  const ContainerCard({
+    required this.item,
+    this.onTap,
+    this.onAction,
+    super.key,
+  });
 
   final ContainerOverviewItem item;
   final VoidCallback? onTap;
@@ -38,7 +43,7 @@ class ContainerCard extends StatelessWidget {
 
     final hasActions = _hasActions(item.container.state);
 
-    return DetailSurface(
+    return AppCardSurface(
       padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,
@@ -59,9 +64,8 @@ class ContainerCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
                     const Gap(12),
@@ -130,8 +134,8 @@ class ContainerCard extends StatelessWidget {
                     value: stats.memUsage.trim().isNotEmpty
                         ? stats.memUsage
                         : (stats.memPerc.trim().isNotEmpty
-                            ? stats.memPerc
-                            : '-'),
+                              ? stats.memPerc
+                              : '-'),
                     progress: stats.memPercentValue != null
                         ? stats.memPercentValue! / 100.0
                         : null,
@@ -455,11 +459,7 @@ class _StatsChips extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: chips,
-    );
+    return Wrap(spacing: 10, runSpacing: 10, children: chips);
   }
 }
 

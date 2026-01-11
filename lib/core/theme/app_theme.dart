@@ -48,6 +48,10 @@ class AppTheme {
     final controlShape = RoundedRectangleBorder(borderRadius: radius);
     final isDark = colorScheme.brightness == Brightness.dark;
 
+    final cardSurface = isDark
+        ? colorScheme.surfaceContainerHigh
+        : colorScheme.surfaceContainerLow;
+
     return ThemeData(
       useMaterial3: true,
       brightness: colorScheme.brightness,
@@ -70,6 +74,7 @@ class AppTheme {
         surfaceTintColor: _surfaceTint,
       ),
       cardTheme: CardThemeData(
+        color: cardSurface,
         elevation: 0,
         surfaceTintColor: _surfaceTint,
         shape: cardShape,

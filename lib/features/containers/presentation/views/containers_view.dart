@@ -386,7 +386,8 @@ class _SortRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final directionIcon = sortState.descending
         ? Icons.arrow_downward_rounded
         : Icons.arrow_upward_rounded;
@@ -435,7 +436,7 @@ class _SortRow extends StatelessWidget {
         ),
         const Gap(8),
         Material(
-          color: scheme.surfaceContainerHigh,
+          color: theme.cardTheme.color ?? scheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(12),
           child: IconButton(
             tooltip: directionLabel,

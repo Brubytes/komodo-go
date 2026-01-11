@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/utils/byte_format.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_information.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
@@ -528,13 +528,9 @@ class ServerMessageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
+    return AppCardSurface(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-      ),
+      enableShadow: false,
       child: Text(message),
     );
   }
@@ -545,14 +541,10 @@ class ServerLoadingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-      ),
-      child: const Center(child: CircularProgressIndicator()),
+    return const AppCardSurface(
+      padding: EdgeInsets.all(16),
+      enableShadow: false,
+      child: Center(child: CircularProgressIndicator()),
     );
   }
 }

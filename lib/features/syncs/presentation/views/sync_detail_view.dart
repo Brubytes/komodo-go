@@ -8,6 +8,7 @@ import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 /// View displaying detailed sync information.
 class SyncDetailView extends ConsumerWidget {
@@ -284,16 +285,16 @@ class _ErrorContent extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: SelectableText(
-        error.trim(),
-        style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+      child: AppCardSurface(
+        padding: const EdgeInsets.all(12),
+        radius: 12,
+        enableShadow: false,
+        child: SelectableText(
+          error.trim(),
+          style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+        ),
       ),
     );
   }

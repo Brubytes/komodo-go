@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
@@ -187,31 +188,31 @@ class _LogBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final textTheme = Theme.of(context).textTheme;
+
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+      child: AppCardSurface(
+        padding: const EdgeInsets.all(12),
+        radius: 12,
+        enableShadow: false,
+        child: isLoading
+            ? Row(
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const Gap(10),
+                  Text(content, style: textTheme.bodySmall),
+                ],
+              )
+            : SelectableText(
+                content,
+                style: textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+              ),
       ),
-      child: isLoading
-          ? Row(
-              children: [
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const Gap(10),
-                Text(content, style: Theme.of(context).textTheme.bodySmall),
-              ],
-            )
-          : SelectableText(
-              content,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
-            ),
     );
   }
 }

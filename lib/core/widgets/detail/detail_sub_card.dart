@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
-import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 class DetailSubCard extends StatelessWidget {
   const DetailSubCard({
@@ -23,12 +23,9 @@ class DetailSubCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final tint = tintColor ?? scheme.primary;
 
-    return DetailSurface(
+    return AppCardSurface(
       radius: 20,
-      baseColor: scheme.surfaceContainerHigh,
-      tintColor: tint,
       padding: const EdgeInsets.all(12),
-      enableGradientInDark: false,
       enableShadow: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

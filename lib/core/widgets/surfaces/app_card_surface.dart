@@ -2,19 +2,15 @@ import 'package:flutter/material.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
 
-/// Shared surface styling for detail pages.
+/// Shared surface styling for list/detail cards.
 ///
-/// Uses the app's `CardTheme.color` by default so detail surfaces match
-/// dashboard/list cards.
-class DetailSurface extends StatelessWidget {
-  const DetailSurface({
+/// Uses the app's CardTheme color so all cards stay consistent across views.
+class AppCardSurface extends StatelessWidget {
+  const AppCardSurface({
     required this.child,
     super.key,
     this.padding = const EdgeInsets.all(16),
     this.radius = AppTokens.radiusLg,
-    this.tintColor,
-    this.baseColor,
-    this.enableGradientInDark = true,
     this.showBorder = false,
     this.enableShadow = true,
   });
@@ -22,9 +18,6 @@ class DetailSurface extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
   final double radius;
-  final Color? tintColor;
-  final Color? baseColor;
-  final bool enableGradientInDark;
   final bool showBorder;
   final bool enableShadow;
 
@@ -34,12 +27,9 @@ class DetailSurface extends StatelessWidget {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final defaultBase =
+    final color =
         theme.cardTheme.color ??
         (isDark ? scheme.surfaceContainerHigh : scheme.surfaceContainerLow);
-    final base = baseColor ?? defaultBase;
-    final tint = tintColor ?? scheme.primary;
-    final surfaceColor = base;
 
     final borderColor = scheme.outlineVariant.withValues(
       alpha: isDark ? 0.35 : 0.55,
@@ -59,17 +49,10 @@ class DetailSurface extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: color,
         borderRadius: BorderRadius.circular(radius),
         border: showBorder ? Border.all(color: borderColor) : null,
         boxShadow: shadows,
-        gradient: isDark && enableGradientInDark
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [tint.withValues(alpha: 0.06), base],
-              )
-            : null,
       ),
       child: child,
     );

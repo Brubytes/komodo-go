@@ -3,9 +3,14 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 class BuildHeroPanel extends StatelessWidget {
-  const BuildHeroPanel({required this.buildResource, required this.listItem, required this.builderLabel, super.key,
+  const BuildHeroPanel({
+    required this.buildResource,
+    required this.listItem,
+    required this.builderLabel,
+    super.key,
   });
 
   final KomodoBuild buildResource;
@@ -122,7 +127,10 @@ class BuildHeader extends StatelessWidget {
 
 // Configuration Content
 class BuildConfigContent extends StatelessWidget {
-  const BuildConfigContent({required this.buildResource, required this.builderLabel, super.key,
+  const BuildConfigContent({
+    required this.buildResource,
+    required this.builderLabel,
+    super.key,
   });
 
   final KomodoBuild buildResource;
@@ -341,17 +349,17 @@ class BuildLogsContent extends StatelessWidget {
             ),
           ),
           const Gap(8),
-          Container(
+          SizedBox(
             width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: SelectableText(
-              info.remoteError!.trim(),
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontFamily: 'monospace',
+            child: AppCardSurface(
+              padding: const EdgeInsets.all(12),
+              radius: 12,
+              enableShadow: false,
+              child: SelectableText(
+                info.remoteError!.trim(),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                ),
               ),
             ),
           ),
