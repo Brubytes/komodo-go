@@ -51,7 +51,7 @@ class HomeStatCard<T> extends StatelessWidget {
             final padding = isTight ? 8.0 : 11.0;
             final iconSize = isTight ? 16.0 : 19.0;
             final gap = isTight ? 4.0 : 6.0;
-            final showSubtitle = true;
+            const showSubtitle = true;
 
             final valueStyle =
                 (isTight ? textTheme.titleLarge : textTheme.headlineSmall)

@@ -88,7 +88,7 @@ class HomeView extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
           children: [
-            HomeSectionHeader(title: 'Server overview'),
+            const HomeSectionHeader(title: 'Server overview'),
             const Gap(8),
             serversAsync.when(
               data: (servers) {
