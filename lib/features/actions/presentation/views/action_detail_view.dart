@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:syntax_highlight/syntax_highlight.dart';
 
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
@@ -277,7 +279,7 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
   late final TextEditingController _webhookSecret;
 
   late final TextEditingController _arguments;
-  late final TextEditingController _fileContents;
+  late CodeEditorController _fileContentsController;
 
   var _runAtStartup = false;
   var _scheduleEnabled = false;
@@ -297,7 +299,10 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
     _scheduleTimezone = TextEditingController(text: _initial.scheduleTimezone);
     _webhookSecret = TextEditingController(text: _initial.webhookSecret);
     _arguments = TextEditingController(text: _initial.arguments);
-    _fileContents = TextEditingController(text: _initial.fileContents);
+    _fileContentsController = _createCodeController(
+      language: 'typescript',
+      text: _initial.fileContents,
+    );
 
     _runAtStartup = _initial.runAtStartup;
     _scheduleEnabled = _initial.scheduleEnabled;
@@ -315,8 +320,25 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
     _scheduleTimezone.dispose();
     _webhookSecret.dispose();
     _arguments.dispose();
-    _fileContents.dispose();
+    _fileContentsController.dispose();
     super.dispose();
+  }
+
+  CodeEditorController _createCodeController({
+    required String language,
+    required String text,
+  }) {
+    return CodeEditorController(
+      text: text,
+      lightHighlighter: Highlighter(
+        language: language,
+        theme: AppSyntaxHighlight.lightTheme,
+      ),
+      darkHighlighter: Highlighter(
+        language: language,
+        theme: AppSyntaxHighlight.darkTheme,
+      ),
+    );
   }
 
   void resetTo(ActionConfig config) {
@@ -327,7 +349,12 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
       _scheduleTimezone.text = config.scheduleTimezone;
       _webhookSecret.text = config.webhookSecret;
       _arguments.text = config.arguments;
-      _fileContents.text = config.fileContents;
+
+      _fileContentsController.dispose();
+      _fileContentsController = _createCodeController(
+        language: 'typescript',
+        text: config.fileContents,
+      );
 
       _runAtStartup = config.runAtStartup;
       _scheduleEnabled = config.scheduleEnabled;
@@ -392,7 +419,7 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
     final arguments = _arguments.text;
     setIfChanged('arguments', arguments, _initial.arguments);
 
-    final fileContents = _fileContents.text;
+    final fileContents = _fileContentsController.text;
     setIfChanged('file_contents', fileContents, _initial.fileContents);
 
     return params;
@@ -573,15 +600,9 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
           icon: AppIcons.package,
           child: Column(
             children: [
-              TextFormField(
-                controller: _fileContents,
-                minLines: 6,
-                maxLines: 18,
-                decoration: InputDecoration(
-                  labelText: 'Script',
-                  prefixIcon: const Icon(AppIcons.package),
-                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
-                ),
+              DetailCodeEditor(
+                controller: _fileContentsController,
+                maxHeight: 420,
               ),
             ],
           ),
