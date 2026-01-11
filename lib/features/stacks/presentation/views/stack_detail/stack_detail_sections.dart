@@ -186,6 +186,7 @@ class StackConfigContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final compose = config.fileContents.trim();
     final environment = config.environment.trim();
+    final isLinkedToRepo = config.linkedRepo.trim().isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,28 +225,30 @@ class StackConfigContent extends StatelessWidget {
             ),
           ],
         ),
-        const Gap(14),
-        DetailSubCard(
-          title: 'Repository',
-          icon: AppIcons.repos,
-          child: Column(
-            children: [
-              DetailKeyValueRow(
-                label: 'Repo',
-                value: config.repo.isNotEmpty ? config.repo : '—',
-              ),
-              DetailKeyValueRow(
-                label: 'Branch',
-                value: config.branch.isNotEmpty ? config.branch : '—',
-              ),
-              DetailKeyValueRow(
-                label: 'Commit',
-                value: config.commit.isNotEmpty ? config.commit : '—',
-                bottomPadding: 0,
-              ),
-            ],
+        if (isLinkedToRepo) ...[
+          const Gap(14),
+          DetailSubCard(
+            title: 'Repository',
+            icon: AppIcons.repos,
+            child: Column(
+              children: [
+                DetailKeyValueRow(
+                  label: 'Repo',
+                  value: config.repo.isNotEmpty ? config.repo : '—',
+                ),
+                DetailKeyValueRow(
+                  label: 'Branch',
+                  value: config.branch.isNotEmpty ? config.branch : '—',
+                ),
+                DetailKeyValueRow(
+                  label: 'Commit',
+                  value: config.commit.isNotEmpty ? config.commit : '—',
+                  bottomPadding: 0,
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
         const Gap(12),
         DetailSubCard(
           title: 'Paths',
@@ -321,7 +324,7 @@ class StackConfigContent extends StatelessWidget {
             ),
           ),
         ],
-        if (config.linkedRepo.isNotEmpty) ...[
+        if (isLinkedToRepo) ...[
           const Gap(12),
           DetailSubCard(
             title: 'Linked repo',
@@ -627,6 +630,8 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       );
     final repoInList = repoPathOptions.contains(_repo.text.trim());
 
+    final showRepoSection = _initial.linkedRepo.trim().isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -663,104 +668,106 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
           ),
         ),
         const Gap(12),
-        DetailSubCard(
-          title: 'Repository',
-          icon: AppIcons.repos,
-          child: Column(
-            children: [
-              if (repoPathOptions.isNotEmpty)
-                DropdownButtonFormField<String>(
-                  key: ValueKey(repoPathOptions.length),
-                  value: repoInList ? _repo.text.trim() : null,
-                  decoration: const InputDecoration(
-                    labelText: 'Repo',
-                    prefixIcon: Icon(AppIcons.repos),
-                  ),
-                  items: [
-                    for (final repoPath in repoPathOptions)
-                      DropdownMenuItem(
-                        value: repoPath,
-                        child: Text(repoPath),
+        if (showRepoSection) ...[
+          DetailSubCard(
+            title: 'Repository',
+            icon: AppIcons.repos,
+            child: Column(
+              children: [
+                  if (repoPathOptions.isNotEmpty)
+                    DropdownButtonFormField<String>(
+                      key: ValueKey(repoPathOptions.length),
+                      value: repoInList ? _repo.text.trim() : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Repo',
+                        prefixIcon: Icon(AppIcons.repos),
                       ),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => _repo.text = value);
-                  },
-                )
-              else
-                TextFormField(
-                  controller: _repo,
-                  decoration: const InputDecoration(
-                    labelText: 'Repo',
-                    prefixIcon: Icon(AppIcons.repos),
-                  ),
-                ),
-              const Gap(12),
-              TextFormField(
-                controller: _branch,
-                decoration: const InputDecoration(
-                  labelText: 'Branch',
-                  prefixIcon: Icon(AppIcons.repos),
-                ),
-              ),
-              const Gap(12),
-              TextFormField(
-                controller: _commit,
-                decoration: const InputDecoration(
-                  labelText: 'Commit',
-                  prefixIcon: Icon(AppIcons.tag),
-                ),
-              ),
-              const Gap(12),
-              if (sortedRepos.isNotEmpty)
-                DropdownButtonFormField<String>(
-                  key: ValueKey(sortedRepos.length),
-                  value: linkedRepoInList ? _linkedRepo.text : null,
-                  decoration: const InputDecoration(
-                    labelText: 'Linked repo',
-                    prefixIcon: Icon(AppIcons.repos),
-                  ),
-                  items: [
-                    for (final repo in sortedRepos)
-                      DropdownMenuItem(
-                        value: repo.id,
-                        child: Text(
-                          repo.info.repo.trim().isNotEmpty
-                              ? '${repo.name} · ${repo.info.repo.trim()}'
-                              : repo.name,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      items: [
+                        for (final repoPath in repoPathOptions)
+                          DropdownMenuItem(
+                            value: repoPath,
+                            child: Text(repoPath),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() => _repo.text = value);
+                      },
+                    )
+                  else
+                    TextFormField(
+                      controller: _repo,
+                      decoration: const InputDecoration(
+                        labelText: 'Repo',
+                        prefixIcon: Icon(AppIcons.repos),
                       ),
+                    ),
+                  const Gap(12),
+                  TextFormField(
+                    controller: _branch,
+                    decoration: const InputDecoration(
+                      labelText: 'Branch',
+                      prefixIcon: Icon(AppIcons.repos),
+                    ),
+                  ),
+                  const Gap(12),
+                  TextFormField(
+                    controller: _commit,
+                    decoration: const InputDecoration(
+                      labelText: 'Commit',
+                      prefixIcon: Icon(AppIcons.tag),
+                    ),
+                  ),
+                  const Gap(12),
+                  if (sortedRepos.isNotEmpty)
+                    DropdownButtonFormField<String>(
+                      key: ValueKey(sortedRepos.length),
+                      value: linkedRepoInList ? _linkedRepo.text : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Linked repo',
+                        prefixIcon: Icon(AppIcons.repos),
+                      ),
+                      items: [
+                        for (final repo in sortedRepos)
+                          DropdownMenuItem(
+                            value: repo.id,
+                            child: Text(
+                              repo.info.repo.trim().isNotEmpty
+                                  ? '${repo.name} · ${repo.info.repo.trim()}'
+                                  : repo.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() => _linkedRepo.text = value);
+                      },
+                    )
+                  else
+                    TextFormField(
+                      controller: _linkedRepo,
+                      decoration: const InputDecoration(
+                        labelText: 'Linked repo',
+                        prefixIcon: Icon(AppIcons.repos),
+                      ),
+                    ),
+                  if (sortedRepos.isNotEmpty && !linkedRepoInList) ...[
+                    const Gap(8),
+                    TextFormField(
+                      controller: _linkedRepo,
+                      decoration: const InputDecoration(
+                        labelText: 'Linked repo ID (manual)',
+                        prefixIcon: Icon(AppIcons.tag),
+                        helperText: 'Current value not found in repo list.',
+                      ),
+                    ),
                   ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => _linkedRepo.text = value);
-                  },
-                )
-              else
-                TextFormField(
-                  controller: _linkedRepo,
-                  decoration: const InputDecoration(
-                    labelText: 'Linked repo',
-                    prefixIcon: Icon(AppIcons.repos),
-                  ),
-                ),
-              if (sortedRepos.isNotEmpty && !linkedRepoInList) ...[
-                const Gap(8),
-                TextFormField(
-                  controller: _linkedRepo,
-                  decoration: const InputDecoration(
-                    labelText: 'Linked repo ID (manual)',
-                    prefixIcon: Icon(AppIcons.tag),
-                    helperText: 'Current value not found in repo list.',
-                  ),
-                ),
               ],
-            ],
+            ),
           ),
-        ),
-        const Gap(12),
+          const Gap(12),
+        ],
         DetailSubCard(
           title: 'Paths',
           icon: AppIcons.package,

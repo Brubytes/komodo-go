@@ -76,7 +76,7 @@ sealed class StackConfig with _$StackConfig {
     @JsonKey(name: 'server_id') @Default('') String serverId,
     @Default([]) List<String> links,
     @JsonKey(name: 'project_name') @Default('') String projectName,
-    @Default('') String linkedRepo,
+    @JsonKey(name: 'linked_repo') @Default('') String linkedRepo,
     @Default('') String repo,
     @Default('') String branch,
     @Default('') String commit,
