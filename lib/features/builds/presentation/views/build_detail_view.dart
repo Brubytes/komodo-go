@@ -237,8 +237,6 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
     required BuildContext context,
     required KomodoBuild build,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-
     if (!_isEditingConfig) {
       return IconButton(
         tooltip: 'Edit config',
@@ -255,7 +253,10 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextButton(
+        IconButton(
+          tooltip: 'Cancel',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.close_rounded),
           onPressed: () {
             if (_configEditSnapshot != null) {
               _configEditorKey.currentState?.resetTo(
@@ -267,16 +268,12 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
               _configEditSnapshot = null;
             });
           },
-          child: Text('Cancel', style: TextStyle(color: scheme.onPrimary)),
         ),
-        const Gap(6),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: scheme.onPrimary,
-            foregroundColor: scheme.primary,
-          ),
+        IconButton(
+          tooltip: 'Save',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.check_rounded),
           onPressed: () => _saveConfig(context: context, buildId: build.id),
-          child: const Text('Save'),
         ),
       ],
     );

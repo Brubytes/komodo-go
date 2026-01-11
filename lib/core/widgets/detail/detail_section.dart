@@ -74,6 +74,9 @@ class DetailSection extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
                     style: textTheme.titleMedium?.copyWith(
                       color: titleColor,
                       fontWeight: FontWeight.w900,

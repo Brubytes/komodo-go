@@ -157,7 +157,6 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
   }
 
   Widget _buildConfigTrailing(BuildContext context, Deployment deployment) {
-    final scheme = Theme.of(context).colorScheme;
     final config = deployment.config;
     if (config == null) return const SizedBox.shrink();
 
@@ -177,7 +176,10 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextButton(
+        IconButton(
+          tooltip: 'Cancel',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.close_rounded),
           onPressed: () {
             if (_configEditSnapshot != null) {
               _configEditorKey.currentState?.resetTo(_configEditSnapshot!);
@@ -187,17 +189,13 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
               _configEditSnapshot = null;
             });
           },
-          child: Text('Cancel', style: TextStyle(color: scheme.onPrimary)),
         ),
-        const Gap(6),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: scheme.onPrimary,
-            foregroundColor: scheme.primary,
-          ),
+        IconButton(
+          tooltip: 'Save',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.check_rounded),
           onPressed: () =>
               _saveConfig(context: context, deployment: deployment),
-          child: const Text('Save'),
         ),
       ],
     );

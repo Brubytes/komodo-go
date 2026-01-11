@@ -179,8 +179,6 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView> {
     required BuildContext context,
     required KomodoRepo repo,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-
     if (!_isEditingConfig) {
       return IconButton(
         tooltip: 'Edit config',
@@ -197,7 +195,10 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextButton(
+        IconButton(
+          tooltip: 'Cancel',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.close_rounded),
           onPressed: () {
             if (_configEditSnapshot != null) {
               _configEditorKey.currentState?.resetTo(
@@ -209,16 +210,12 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView> {
               _configEditSnapshot = null;
             });
           },
-          child: Text('Cancel', style: TextStyle(color: scheme.onPrimary)),
         ),
-        const Gap(6),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: scheme.onPrimary,
-            foregroundColor: scheme.primary,
-          ),
+        IconButton(
+          tooltip: 'Save',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.check_rounded),
           onPressed: () => _saveConfig(context: context, repoId: repo.id),
-          child: const Text('Save'),
         ),
       ],
     );
