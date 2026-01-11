@@ -36,7 +36,6 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
   Timer? _logRefreshTimer;
   var _autoRefreshLogs = true;
 
-
   @override
   void dispose() {
     _logRefreshTimer?.cancel();
@@ -242,8 +241,9 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
                           ),
                   ),
                   loading: () => const StackLoadingSurface(),
-                  error: (error, _) =>
-                      StackMessageSurface(message: 'Services unavailable: $error'),
+                  error: (error, _) => StackMessageSurface(
+                    message: 'Services unavailable: $error',
+                  ),
                 ),
                 const Gap(16),
                 logAsync.when(

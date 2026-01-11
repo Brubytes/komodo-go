@@ -11,6 +11,9 @@ class DetailSection extends StatelessWidget {
     super.key,
     this.tintColor,
     this.trailing,
+    this.baseColor,
+    this.showBorder = false,
+    this.enableShadow = false,
   });
 
   final String title;
@@ -18,41 +21,61 @@ class DetailSection extends StatelessWidget {
   final Widget child;
   final Color? tintColor;
   final Widget? trailing;
+  final Color? baseColor;
+  final bool showBorder;
+  final bool enableShadow;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final tint = tintColor ?? scheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = isDark ? scheme.onPrimary : scheme.onSurface;
+    // Make base color transparent if not provided 
+    final baseColor = this.baseColor ?? scheme.surface.withValues(alpha: 0);
 
     return DetailSurface(
       tintColor: tint,
+      baseColor: baseColor,
+      showBorder: showBorder,
+      enableShadow: enableShadow,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: tint.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: scheme.secondary.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: titleColor.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, size: 18, color: titleColor),
                 ),
-                child: Icon(icon, size: 18, color: tint),
-              ),
-              const Gap(12),
-              Text(
-                title,
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.2,
+                const Gap(12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: textTheme.titleMedium?.copyWith(
+                      color: titleColor,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
                 ),
-              ),
-              if (trailing != null) ...[const Spacer(), trailing!],
-            ],
+                if (trailing != null) trailing!,
+              ],
+            ),
           ),
-          const Gap(14),
+          const Gap(16),
           child,
         ],
       ),

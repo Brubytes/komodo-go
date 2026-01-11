@@ -63,6 +63,7 @@ class DetailIconInfoRow extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     final tint = tintColor ?? scheme.primary;
+    final valueColor = scheme.onSurface;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,7 +75,7 @@ class DetailIconInfoRow extends StatelessWidget {
             color: tint.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, size: 18, color: tint),
+          child: Icon(icon, size: 18, color: valueColor),
         ),
         const Gap(12),
         Expanded(
@@ -91,6 +92,7 @@ class DetailIconInfoRow extends StatelessWidget {
               Text(
                 value,
                 style: textTheme.bodyLarge?.copyWith(
+                  color: valueColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
