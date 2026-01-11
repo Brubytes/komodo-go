@@ -64,15 +64,43 @@ class ActionRepository {
     String actionIdOrName, {
     Map<String, dynamic>? args,
   }) async {
+    return apiCall(() async {
+      await _client.execute(
+        RpcRequest(
+          type: 'RunAction',
+          params: {'action': actionIdOrName, 'args': args},
+        ),
+      );
+      return;
+    });
+  }
+
+  /// Updates an action configuration and returns the updated action.
+  ///
+  /// Uses the `/write` module `UpdateAction` RPC.
+  ///
+  /// Note: Only fields included in [partialConfig] will be updated.
+  Future<Either<Failure, KomodoAction>> updateActionConfig({
+    required String actionId,
+    required Map<String, dynamic> partialConfig,
+  }) async {
     return apiCall(
       () async {
-        await _client.execute(
+        final response = await _client.write(
           RpcRequest(
-            type: 'RunAction',
-            params: {'action': actionIdOrName, 'args': args},
+            type: 'UpdateAction',
+            params: <String, dynamic>{'id': actionId, 'config': partialConfig},
           ),
         );
-        return;
+
+        return KomodoAction.fromJson(response as Map<String, dynamic>);
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
+        if (e.isNotFound) {
+          return const Failure.server(message: 'Action not found');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
       },
     );
   }

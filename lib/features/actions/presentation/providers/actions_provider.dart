@@ -26,7 +26,7 @@ class Actions extends _$Actions {
   Future<void> refresh() async {
     ref.invalidateSelf();
     try {
-      await future; 
+      await future;
     } catch (_) {}
   }
 }
@@ -53,6 +53,16 @@ class ActionActions extends _$ActionActions {
   Future<bool> run(String actionIdOrName, {Map<String, dynamic>? args}) =>
       _executeAction((repo) => repo.runAction(actionIdOrName, args: args));
 
+  Future<KomodoAction?> updateActionConfig({
+    required String actionId,
+    required Map<String, dynamic> partialConfig,
+  }) => _executeRequest(
+    (repo) => repo.updateActionConfig(
+      actionId: actionId,
+      partialConfig: partialConfig,
+    ),
+  );
+
   Future<bool> _executeAction(
     Future<Either<Failure, void>> Function(ActionRepository repo) action,
   ) async {
@@ -75,6 +85,32 @@ class ActionActions extends _$ActionActions {
         state = const AsyncValue.data(null);
         ref.invalidate(actionsProvider);
         return true;
+      },
+    );
+  }
+
+  Future<T?> _executeRequest<T>(
+    Future<Either<Failure, T>> Function(ActionRepository repo) request,
+  ) async {
+    final repository = ref.read(actionRepositoryProvider);
+    if (repository == null) {
+      state = AsyncValue.error('Not authenticated', StackTrace.current);
+      return null;
+    }
+
+    state = const AsyncValue.loading();
+
+    final result = await request(repository);
+
+    return result.fold(
+      (failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return null;
+      },
+      (value) {
+        state = const AsyncValue.data(null);
+        ref.invalidate(actionsProvider);
+        return value;
       },
     );
   }

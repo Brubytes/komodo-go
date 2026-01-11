@@ -11,7 +11,7 @@ import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 
 /// View displaying detailed action information.
-class ActionDetailView extends ConsumerWidget {
+class ActionDetailView extends ConsumerStatefulWidget {
   const ActionDetailView({
     required this.actionId,
     required this.actionName,
@@ -22,7 +22,17 @@ class ActionDetailView extends ConsumerWidget {
   final String actionName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ActionDetailView> createState() => _ActionDetailViewState();
+}
+
+class _ActionDetailViewState extends ConsumerState<ActionDetailView> {
+  var _isEditingConfig = false;
+  KomodoAction? _configEditSnapshot;
+  final _configEditorKey = GlobalKey<ActionConfigEditorContentState>();
+
+  @override
+  Widget build(BuildContext context) {
+    final actionId = widget.actionId;
     final actionAsync = ref.watch(actionDetailProvider(actionId));
     final actionsListAsync = ref.watch(actionsProvider);
     final actionsState = ref.watch(actionActionsProvider);
@@ -41,7 +51,7 @@ class ActionDetailView extends ConsumerWidget {
 
     return Scaffold(
       appBar: MainAppBar(
-        title: actionName,
+        title: widget.actionName,
         icon: AppIcons.actions,
         markColor: AppTokens.resourceActions,
         markUseGradient: true,
@@ -50,7 +60,7 @@ class ActionDetailView extends ConsumerWidget {
           IconButton(
             icon: const Icon(AppIcons.play),
             tooltip: 'Run',
-            onPressed: () => _runAction(context, ref, actionId),
+            onPressed: () => _runAction(context, actionId),
           ),
         ],
       ),
@@ -77,13 +87,28 @@ class ActionDetailView extends ConsumerWidget {
                         DetailSection(
                           title: 'Configuration',
                           icon: AppIcons.settings,
-                          child: _ActionConfigContent(
+                          trailing: _actionConfigTrailing(
+                            context: context,
                             action: action,
-                            listItem: listItem,
                           ),
+                          child: _isEditingConfig
+                              ? ActionConfigEditorContent(
+                                  key: _configEditorKey,
+                                  initialConfig:
+                                      (_configEditSnapshot?.id == action.id)
+                                      ? _configEditSnapshot!.config
+                                      : action.config,
+                                )
+                              : _ActionConfigContent(
+                                  action: action,
+                                  listItem: listItem,
+                                ),
                         ),
-                        if (action.config.arguments.trim().isNotEmpty ||
-                            action.config.fileContents.trim().isNotEmpty) ...[
+                        if (!_isEditingConfig &&
+                            (action.config.arguments.trim().isNotEmpty ||
+                                action.config.fileContents
+                                    .trim()
+                                    .isNotEmpty)) ...[
                           const Gap(16),
                           DetailSection(
                             title: 'Script',
@@ -117,11 +142,7 @@ class ActionDetailView extends ConsumerWidget {
     );
   }
 
-  Future<void> _runAction(
-    BuildContext context,
-    WidgetRef ref,
-    String actionId,
-  ) async {
+  Future<void> _runAction(BuildContext context, String actionId) async {
     final actions = ref.read(actionActionsProvider.notifier);
     final success = await actions.run(actionId);
 
@@ -138,6 +159,435 @@ class ActionDetailView extends ConsumerWidget {
         tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
       );
     }
+  }
+
+  Widget _actionConfigTrailing({
+    required BuildContext context,
+    required KomodoAction action,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+
+    if (!_isEditingConfig) {
+      return IconButton(
+        tooltip: 'Edit config',
+        icon: Icon(AppIcons.edit, color: scheme.onPrimary),
+        onPressed: () {
+          setState(() {
+            _isEditingConfig = true;
+            _configEditSnapshot = action;
+          });
+        },
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton(
+          onPressed: () {
+            if (_configEditSnapshot != null) {
+              _configEditorKey.currentState?.resetTo(
+                _configEditSnapshot!.config,
+              );
+            }
+            setState(() {
+              _isEditingConfig = false;
+              _configEditSnapshot = null;
+            });
+          },
+          child: Text('Cancel', style: TextStyle(color: scheme.onPrimary)),
+        ),
+        const Gap(6),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: scheme.onPrimary,
+            foregroundColor: scheme.primary,
+          ),
+          onPressed: () => _saveConfig(context: context, actionId: action.id),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _saveConfig({
+    required BuildContext context,
+    required String actionId,
+  }) async {
+    final draft = _configEditorKey.currentState;
+    if (draft == null) {
+      AppSnackBar.show(
+        context,
+        'Editor not ready',
+        tone: AppSnackBarTone.error,
+      );
+      return;
+    }
+
+    final partialConfig = draft.buildPartialConfigParams();
+    if (partialConfig.isEmpty) {
+      AppSnackBar.show(context, 'No changes to save');
+      return;
+    }
+
+    final updated = await ref
+        .read(actionActionsProvider.notifier)
+        .updateActionConfig(actionId: actionId, partialConfig: partialConfig);
+
+    if (!context.mounted) return;
+
+    if (updated == null) {
+      final err = ref.read(actionActionsProvider).asError?.error;
+      AppSnackBar.show(
+        context,
+        err != null ? 'Failed: $err' : 'Failed to update action',
+        tone: AppSnackBarTone.error,
+      );
+      return;
+    }
+
+    ref
+      ..invalidate(actionDetailProvider(actionId))
+      ..invalidate(actionsProvider);
+
+    setState(() {
+      _isEditingConfig = false;
+      _configEditSnapshot = null;
+    });
+
+    AppSnackBar.show(context, 'Action updated', tone: AppSnackBarTone.success);
+  }
+}
+
+class ActionConfigEditorContent extends StatefulWidget {
+  const ActionConfigEditorContent({required this.initialConfig, super.key});
+
+  final ActionConfig initialConfig;
+
+  @override
+  State<ActionConfigEditorContent> createState() =>
+      ActionConfigEditorContentState();
+}
+
+class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
+  late ActionConfig _initial;
+
+  late final TextEditingController _schedule;
+  late final TextEditingController _scheduleTimezone;
+  late final TextEditingController _webhookSecret;
+
+  late final TextEditingController _arguments;
+  late final TextEditingController _fileContents;
+
+  var _runAtStartup = false;
+  var _scheduleEnabled = false;
+  var _webhookEnabled = false;
+  var _reloadDenoDeps = false;
+  var _scheduleAlert = false;
+  var _failureAlert = false;
+  var _scheduleFormat = ScheduleFormat.english;
+  var _argumentsFormat = FileFormat.keyValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _initial = widget.initialConfig;
+
+    _schedule = TextEditingController(text: _initial.schedule);
+    _scheduleTimezone = TextEditingController(text: _initial.scheduleTimezone);
+    _webhookSecret = TextEditingController(text: _initial.webhookSecret);
+    _arguments = TextEditingController(text: _initial.arguments);
+    _fileContents = TextEditingController(text: _initial.fileContents);
+
+    _runAtStartup = _initial.runAtStartup;
+    _scheduleEnabled = _initial.scheduleEnabled;
+    _webhookEnabled = _initial.webhookEnabled;
+    _reloadDenoDeps = _initial.reloadDenoDeps;
+    _scheduleAlert = _initial.scheduleAlert;
+    _failureAlert = _initial.failureAlert;
+    _scheduleFormat = _initial.scheduleFormat;
+    _argumentsFormat = _initial.argumentsFormat;
+  }
+
+  @override
+  void dispose() {
+    _schedule.dispose();
+    _scheduleTimezone.dispose();
+    _webhookSecret.dispose();
+    _arguments.dispose();
+    _fileContents.dispose();
+    super.dispose();
+  }
+
+  void resetTo(ActionConfig config) {
+    setState(() {
+      _initial = config;
+
+      _schedule.text = config.schedule;
+      _scheduleTimezone.text = config.scheduleTimezone;
+      _webhookSecret.text = config.webhookSecret;
+      _arguments.text = config.arguments;
+      _fileContents.text = config.fileContents;
+
+      _runAtStartup = config.runAtStartup;
+      _scheduleEnabled = config.scheduleEnabled;
+      _webhookEnabled = config.webhookEnabled;
+      _reloadDenoDeps = config.reloadDenoDeps;
+      _scheduleAlert = config.scheduleAlert;
+      _failureAlert = config.failureAlert;
+      _scheduleFormat = config.scheduleFormat;
+      _argumentsFormat = config.argumentsFormat;
+    });
+  }
+
+  Map<String, dynamic> buildPartialConfigParams() {
+    final params = <String, dynamic>{};
+
+    void setIfChanged(String key, Object value, Object initialValue) {
+      if (value != initialValue) {
+        params[key] = value;
+      }
+    }
+
+    setIfChanged('run_at_startup', _runAtStartup, _initial.runAtStartup);
+    setIfChanged(
+      'schedule_enabled',
+      _scheduleEnabled,
+      _initial.scheduleEnabled,
+    );
+    setIfChanged('webhook_enabled', _webhookEnabled, _initial.webhookEnabled);
+    setIfChanged('reload_deno_deps', _reloadDenoDeps, _initial.reloadDenoDeps);
+    setIfChanged('schedule_alert', _scheduleAlert, _initial.scheduleAlert);
+    setIfChanged('failure_alert', _failureAlert, _initial.failureAlert);
+
+    final schedule = _schedule.text;
+    setIfChanged('schedule', schedule, _initial.schedule);
+
+    final scheduleTimezone = _scheduleTimezone.text.trim();
+    setIfChanged(
+      'schedule_timezone',
+      scheduleTimezone,
+      _initial.scheduleTimezone,
+    );
+
+    final webhookSecret = _webhookSecret.text;
+    setIfChanged('webhook_secret', webhookSecret, _initial.webhookSecret);
+
+    if (_scheduleFormat != _initial.scheduleFormat) {
+      params['schedule_format'] = switch (_scheduleFormat) {
+        ScheduleFormat.cron => 'Cron',
+        ScheduleFormat.english => 'English',
+      };
+    }
+
+    if (_argumentsFormat != _initial.argumentsFormat) {
+      params['arguments_format'] = switch (_argumentsFormat) {
+        FileFormat.keyValue => 'KeyValue',
+        FileFormat.toml => 'Toml',
+        FileFormat.yaml => 'Yaml',
+        FileFormat.json => 'Json',
+      };
+    }
+
+    final arguments = _arguments.text;
+    setIfChanged('arguments', arguments, _initial.arguments);
+
+    final fileContents = _fileContents.text;
+    setIfChanged('file_contents', fileContents, _initial.fileContents);
+
+    return params;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DetailSubCard(
+          title: 'Toggles',
+          icon: AppIcons.settings,
+          child: Column(
+            children: [
+              SwitchListTile.adaptive(
+                value: _runAtStartup,
+                onChanged: (v) => setState(() => _runAtStartup = v),
+                title: const Text('Run at startup'),
+                secondary: const Icon(AppIcons.play),
+                contentPadding: EdgeInsets.zero,
+              ),
+              SwitchListTile.adaptive(
+                value: _scheduleEnabled,
+                onChanged: (v) => setState(() => _scheduleEnabled = v),
+                title: const Text('Schedule enabled'),
+                secondary: const Icon(AppIcons.clock),
+                contentPadding: EdgeInsets.zero,
+              ),
+              SwitchListTile.adaptive(
+                value: _webhookEnabled,
+                onChanged: (v) => setState(() => _webhookEnabled = v),
+                title: const Text('Webhook enabled'),
+                secondary: const Icon(AppIcons.network),
+                contentPadding: EdgeInsets.zero,
+              ),
+              SwitchListTile.adaptive(
+                value: _reloadDenoDeps,
+                onChanged: (v) => setState(() => _reloadDenoDeps = v),
+                title: const Text('Reload Deno deps'),
+                secondary: const Icon(AppIcons.refresh),
+                contentPadding: EdgeInsets.zero,
+              ),
+              SwitchListTile.adaptive(
+                value: _scheduleAlert,
+                onChanged: (v) => setState(() => _scheduleAlert = v),
+                title: const Text('Schedule alerts'),
+                secondary: const Icon(AppIcons.notifications),
+                contentPadding: EdgeInsets.zero,
+              ),
+              SwitchListTile.adaptive(
+                value: _failureAlert,
+                onChanged: (v) => setState(() => _failureAlert = v),
+                title: const Text('Failure alerts'),
+                secondary: const Icon(AppIcons.warning),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+        DetailSubCard(
+          title: 'Schedule',
+          icon: AppIcons.clock,
+          child: Column(
+            children: [
+              DropdownButtonFormField<ScheduleFormat>(
+                key: const ValueKey('action_schedule_format'),
+                value: _scheduleFormat,
+                items: const [
+                  DropdownMenuItem(
+                    value: ScheduleFormat.english,
+                    child: Text('English'),
+                  ),
+                  DropdownMenuItem(
+                    value: ScheduleFormat.cron,
+                    child: Text('Cron'),
+                  ),
+                ],
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _scheduleFormat = v);
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Schedule format',
+                  prefixIcon: Icon(AppIcons.clock),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _scheduleTimezone,
+                decoration: InputDecoration(
+                  labelText: 'Timezone',
+                  prefixIcon: const Icon(AppIcons.clock),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _schedule,
+                minLines: 1,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'Schedule expression',
+                  prefixIcon: const Icon(AppIcons.tag),
+                  helperText: _scheduleFormat == ScheduleFormat.cron
+                      ? 'Cron (e.g. 0 0 * * *)'
+                      : 'English (e.g. every day at 01:00)',
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+        DetailSubCard(
+          title: 'Webhook',
+          icon: AppIcons.network,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _webhookSecret,
+                decoration: InputDecoration(
+                  labelText: 'Webhook secret',
+                  prefixIcon: const Icon(AppIcons.key),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+        DetailSubCard(
+          title: 'Arguments',
+          icon: AppIcons.tag,
+          child: Column(
+            children: [
+              DropdownButtonFormField<FileFormat>(
+                key: const ValueKey('action_arguments_format'),
+                value: _argumentsFormat,
+                items: const [
+                  DropdownMenuItem(
+                    value: FileFormat.keyValue,
+                    child: Text('KeyValue'),
+                  ),
+                  DropdownMenuItem(value: FileFormat.toml, child: Text('TOML')),
+                  DropdownMenuItem(value: FileFormat.yaml, child: Text('YAML')),
+                  DropdownMenuItem(value: FileFormat.json, child: Text('JSON')),
+                ],
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _argumentsFormat = v);
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Arguments format',
+                  prefixIcon: Icon(AppIcons.tag),
+                ),
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _arguments,
+                minLines: 2,
+                maxLines: 10,
+                decoration: InputDecoration(
+                  labelText: 'Arguments',
+                  prefixIcon: const Icon(AppIcons.package),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+        DetailSubCard(
+          title: 'File contents',
+          icon: AppIcons.package,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _fileContents,
+                minLines: 6,
+                maxLines: 18,
+                decoration: InputDecoration(
+                  labelText: 'Script',
+                  prefixIcon: const Icon(AppIcons.package),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 
