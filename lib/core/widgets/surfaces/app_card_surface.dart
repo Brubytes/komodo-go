@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
 
+LinearGradient appCardGradient({required Color tint, required Color base}) {
+  return LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [tint.withValues(alpha: 0.05), base.withValues(alpha: 0.25)],
+  );
+}
+
 /// Shared surface styling for list/detail cards.
 ///
 /// Uses the app's CardTheme color so all cards stay consistent across views.
@@ -59,16 +67,8 @@ class AppCardSurface extends StatelessWidget {
         border: showBorder ? Border.all(color: borderColor) : null,
         boxShadow: shadows,
         gradient: isDark && enableGradientInDark
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [tint.withValues(alpha: 0.05), color.withValues(alpha: 0.25)],
-              )
-            : LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [tint.withValues(alpha: 0.05), color.withValues(alpha: 0.25)],
-              ),
+            ? appCardGradient(tint: tint, base: color)
+            : appCardGradient(tint: tint, base: color),
       ),
       child: child,
     );

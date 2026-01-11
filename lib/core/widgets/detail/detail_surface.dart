@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 /// Shared surface styling for detail pages.
 ///
@@ -64,12 +65,8 @@ class DetailSurface extends StatelessWidget {
         border: showBorder ? Border.all(color: borderColor) : null,
         boxShadow: shadows,
         gradient: isDark && enableGradientInDark
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [tint.withValues(alpha: 0.06), base],
-              )
-            : null,
+            ? appCardGradient(tint: tint, base: base)
+            : appCardGradient(tint: tint, base: base),
       ),
       child: child,
     );
