@@ -599,11 +599,7 @@ class DeploymentConfigEditorContentState
     _disposeRowControllers(target);
 
     final cleaned = values.map((e) => e.trim()).where((e) => e.isNotEmpty);
-    final next = cleaned.isNotEmpty
-        ? cleaned.map((e) => TextEditingController(text: e)).toList()
-        : <TextEditingController>[TextEditingController()];
-
-    target.addAll(next);
+    target.addAll(cleaned.map((e) => TextEditingController(text: e)).toList());
     for (final c in target) {
       c.addListener(_notifyDirtyIfChanged);
     }
@@ -621,10 +617,6 @@ class DeploymentConfigEditorContentState
   void _removeRow(List<TextEditingController> target, int index) {
     if (index < 0 || index >= target.length) return;
     setState(() {
-      if (target.length <= 1) {
-        target.first.clear();
-        return;
-      }
       final c = target.removeAt(index);
       c.removeListener(_notifyDirtyIfChanged);
       c.dispose();
@@ -1115,46 +1107,74 @@ class DeploymentConfigEditorContentState
                 ),
               ],
               const Gap(12),
-              Column(
-                children: [
-                  for (var i = 0; i < _linkControllers.length; i++) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _linkControllers[i],
-                            decoration: InputDecoration(
-                              labelText: i == 0 ? 'Links' : null,
-                              hintText: i == 0 ? null : 'Link',
-                              prefixIcon: i == 0
-                                  ? const Icon(AppIcons.network)
-                                  : null,
-                              helperText: i == 0
-                                  ? 'Add quick links in the resource header.'
-                                  : null,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Links',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const Gap(4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Add quick links in the resource header.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Gap(8),
+              if (_linkControllers.isEmpty)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _addRow(_linkControllers),
+                    icon: const Icon(AppIcons.add),
+                    label: const Text('Link'),
+                  ),
+                )
+              else
+                Column(
+                  children: [
+                    for (var i = 0; i < _linkControllers.length; i++) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _linkControllers[i],
+                              decoration: InputDecoration(
+                                hintText: 'Link',
+                                prefixIcon: i == 0
+                                    ? const Icon(AppIcons.network)
+                                    : null,
+                              ),
                             ),
                           ),
-                        ),
-                        const Gap(8),
-                        IconButton(
-                          tooltip: 'Remove',
-                          icon: const Icon(AppIcons.delete),
-                          onPressed: () => _removeRow(_linkControllers, i),
-                        ),
-                      ],
+                          const Gap(8),
+                          Align(
+                            alignment: Alignment.center,
+                            child: IconButton(
+                              tooltip: 'Remove',
+                              icon: const Icon(AppIcons.delete),
+                              onPressed: () => _removeRow(_linkControllers, i),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Gap(8),
+                    ],
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => _addRow(_linkControllers),
+                        icon: const Icon(AppIcons.add),
+                        label: const Text('Add link'),
+                      ),
                     ),
-                    const Gap(8),
                   ],
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => _addRow(_linkControllers),
-                      icon: const Icon(AppIcons.add),
-                      label: const Text('Add link'),
-                    ),
-                  ),
-                ],
-              ),
+                ),
             ],
           ),
         ),
@@ -1270,46 +1290,75 @@ class DeploymentConfigEditorContentState
               const Gap(12),
               DetailCodeEditor(controller: _labelsController, maxHeight: 180),
               const Gap(12),
-              Column(
-                children: [
-                  for (var i = 0; i < _extraArgControllers.length; i++) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _extraArgControllers[i],
-                            decoration: InputDecoration(
-                              labelText: i == 0 ? 'Extra args' : null,
-                              hintText: i == 0 ? null : 'Arg',
-                              prefixIcon: i == 0
-                                  ? const Icon(AppIcons.settings)
-                                  : null,
-                              helperText: i == 0
-                                  ? "Pass extra arguments to 'docker run'."
-                                  : null,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Extra args',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const Gap(4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Pass extra arguments to 'docker run'.",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Gap(8),
+              if (_extraArgControllers.isEmpty)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _addRow(_extraArgControllers),
+                    icon: const Icon(AppIcons.add),
+                    label: const Text('Arg'),
+                  ),
+                )
+              else
+                Column(
+                  children: [
+                    for (var i = 0; i < _extraArgControllers.length; i++) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _extraArgControllers[i],
+                              decoration: InputDecoration(
+                                hintText: 'Arg',
+                                prefixIcon: i == 0
+                                    ? const Icon(AppIcons.settings)
+                                    : null,
+                              ),
                             ),
                           ),
-                        ),
-                        const Gap(8),
-                        IconButton(
-                          tooltip: 'Remove',
-                          icon: const Icon(AppIcons.delete),
-                          onPressed: () => _removeRow(_extraArgControllers, i),
-                        ),
-                      ],
+                          const Gap(8),
+                          Align(
+                            alignment: Alignment.center,
+                            child: IconButton(
+                              tooltip: 'Remove',
+                              icon: const Icon(AppIcons.delete),
+                              onPressed: () =>
+                                  _removeRow(_extraArgControllers, i),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Gap(8),
+                    ],
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => _addRow(_extraArgControllers),
+                        icon: const Icon(AppIcons.add),
+                        label: const Text('Add arg'),
+                      ),
                     ),
-                    const Gap(8),
                   ],
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => _addRow(_extraArgControllers),
-                      icon: const Icon(AppIcons.add),
-                      label: const Text('Add arg'),
-                    ),
-                  ),
-                ],
-              ),
+                ),
               const Gap(12),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
