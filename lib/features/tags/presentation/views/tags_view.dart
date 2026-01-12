@@ -26,6 +26,7 @@ class TagsView extends ConsumerWidget {
         centerTitle: true,
       ),
       floatingActionButton: FloatingActionButton.extended(
+        key: const ValueKey('tags_add'),
         onPressed: actionsState.isLoading
             ? null
             : () async {
@@ -92,16 +93,19 @@ class TagsView extends ConsumerWidget {
                       final confirmed = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
+                          key: ValueKey('tag_delete_dialog_${tag.id}'),
                           title: const Text('Delete tag'),
                           content: Text(
                             'Delete "${tag.name}"? This removes it from all resources.',
                           ),
                           actions: [
                             TextButton(
+                              key: ValueKey('tag_delete_cancel_${tag.id}'),
                               onPressed: () => Navigator.of(context).pop(false),
                               child: const Text('Cancel'),
                             ),
                             FilledButton(
+                              key: ValueKey('tag_delete_confirm_${tag.id}'),
                               onPressed: () => Navigator.of(context).pop(true),
                               child: const Text('Delete'),
                             ),
@@ -174,6 +178,7 @@ class _TagTile extends StatelessWidget {
           );
 
           return ListTile(
+            key: ValueKey('tag_tile_${tag.id}'),
             leading: Container(
               width: 36,
               height: 36,
@@ -195,6 +200,7 @@ class _TagTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             trailing: PopupMenuButton<_TagAction>(
+              key: ValueKey('tag_tile_menu_${tag.id}'),
               onSelected: (action) {
                 switch (action) {
                   case _TagAction.edit:
@@ -205,6 +211,7 @@ class _TagTile extends StatelessWidget {
               },
               itemBuilder: (context) => [
                 PopupMenuItem(
+                  key: ValueKey('tag_tile_edit_${tag.id}'),
                   value: _TagAction.edit,
                   child: Row(
                     children: [
@@ -215,6 +222,7 @@ class _TagTile extends StatelessWidget {
                   ),
                 ),
                 PopupMenuItem(
+                  key: ValueKey('tag_tile_delete_${tag.id}'),
                   value: _TagAction.delete,
                   child: Row(
                     children: [

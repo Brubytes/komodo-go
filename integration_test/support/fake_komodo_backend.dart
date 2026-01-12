@@ -38,6 +38,11 @@ class FakeKomodoBackend {
     _stack(id: 'stack-1', name: 'Test Stack'),
   ];
 
+  final List<Map<String, dynamic>> _tags = <Map<String, dynamic>>[
+    _tag(id: 'tag-1', name: 'Test Tag', owner: '', colorToken: 'Slate'),
+  ];
+  int _tagIdCounter = 2;
+
   Uri get baseUri {
     final server = _server;
     if (server == null) {
@@ -148,9 +153,21 @@ class FakeKomodoBackend {
       case 'GetVersion':
         return <String, dynamic>{'version': '0.0.0-test'};
 
+      case 'GetUsername':
+        final userId = (params['user_id'] as String?)?.trim() ?? '';
+        if (userId.isEmpty) {
+          return <String, dynamic>{'username': ''};
+        }
+        return <String, dynamic>{'username': 'Test User'};
+
       // Resources cards and list views
       case 'ListStacks':
         return List<Map<String, dynamic>>.from(_stacks);
+
+      // Settings: Komodo
+      case 'ListTags':
+        return List<Map<String, dynamic>>.from(_tags);
+
       case 'ListDeployments':
       case 'ListRepos':
       case 'ListBuilds':
@@ -166,7 +183,70 @@ class FakeKomodoBackend {
   }
 
   Object _handleWrite(String type, Map<String, dynamic> params) {
-    throw StateError('Unhandled /write RPC: $type');
+    switch (type) {
+      case 'CreateTag':
+        final name = (params['name'] as String?)?.trim() ?? '';
+        if (name.isEmpty) {
+          throw StateError('CreateTag missing name');
+        }
+        final colorToken = (params['color'] as String?)?.trim();
+        final created = _tag(
+          id: 'tag-${_tagIdCounter++}',
+          name: name,
+          owner: '',
+          colorToken: colorToken?.isEmpty ?? true ? 'Slate' : colorToken!,
+        );
+        _tags.add(created);
+        return created;
+
+      case 'DeleteTag':
+        final id = (params['id'] as String?)?.trim() ?? '';
+        final index = _tags.indexWhere((t) => t['id'] == id);
+        if (index == -1) {
+          throw StateError('DeleteTag: not found: $id');
+        }
+        final deleted = _tags.removeAt(index);
+        return deleted;
+
+      case 'RenameTag':
+        final id = (params['id'] as String?)?.trim() ?? '';
+        final name = (params['name'] as String?)?.trim() ?? '';
+        final index = _tags.indexWhere((t) => t['id'] == id);
+        if (index == -1) {
+          throw StateError('RenameTag: not found: $id');
+        }
+        if (name.isEmpty) {
+          throw StateError('RenameTag missing name');
+        }
+        final updated = Map<String, dynamic>.from(_tags[index]);
+        updated['name'] = name;
+        _tags[index] = updated;
+        return updated;
+
+      case 'UpdateTagColor':
+        final tagIdOrName = (params['tag'] as String?)?.trim() ?? '';
+        final colorToken = (params['color'] as String?)?.trim() ?? '';
+        if (tagIdOrName.isEmpty) {
+          throw StateError('UpdateTagColor missing tag');
+        }
+        if (colorToken.isEmpty) {
+          throw StateError('UpdateTagColor missing color');
+        }
+
+        final index = _tags.indexWhere(
+          (t) => t['id'] == tagIdOrName || t['name'] == tagIdOrName,
+        );
+        if (index == -1) {
+          throw StateError('UpdateTagColor: not found: $tagIdOrName');
+        }
+        final updated = Map<String, dynamic>.from(_tags[index]);
+        updated['color'] = colorToken;
+        _tags[index] = updated;
+        return updated;
+
+      default:
+        throw StateError('Unhandled /write RPC: $type');
+    }
   }
 
   Object _handleExecute(String type, Map<String, dynamic> params) {
@@ -200,6 +280,20 @@ Map<String, dynamic> _stack({required String id, required String name}) {
     'branch': null,
     'config_path': null,
     'linked_repo': null,
+  };
+}
+
+Map<String, dynamic> _tag({
+  required String id,
+  required String name,
+  required String owner,
+  required String colorToken,
+}) {
+  return <String, dynamic>{
+    'id': id,
+    'name': name,
+    'owner': owner,
+    'color': colorToken,
   };
 }
 

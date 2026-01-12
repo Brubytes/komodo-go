@@ -99,6 +99,7 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
           ),
           const Gap(12),
           TextField(
+            key: const ValueKey('tag_editor_name'),
             controller: _nameController,
             textInputAction: TextInputAction.done,
             decoration: const InputDecoration(
@@ -108,6 +109,7 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
           ),
           const Gap(12),
           InkWell(
+            key: const ValueKey('tag_editor_color'),
             borderRadius: BorderRadius.circular(12),
             onTap: () => _pickColor(context),
             child: InputDecorator(
@@ -136,6 +138,7 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
+              key: const ValueKey('tag_editor_submit'),
               onPressed: () {
                 final name = _nameController.text.trim();
                 if (name.isEmpty) return;
