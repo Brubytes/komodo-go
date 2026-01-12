@@ -572,6 +572,12 @@ class DeploymentConfigEditorContentState
     if (image == null) return '';
     if (image is String) return image;
     if (image is Map) {
+      final params = image['params'];
+      if (params is Map) {
+        final nested = params['image'];
+        if (nested is String) return nested;
+      }
+
       final direct = image['image'];
       if (direct is String) return direct;
 
@@ -891,7 +897,11 @@ class DeploymentConfigEditorContentState
     final initialImageText = _imageTextFromDynamic(_initial.image).trim();
     if (imageText.isNotEmpty && imageText != initialImageText) {
       partial['image'] = {
-        'Image': {'image': imageText},
+        // Server expects a tagged enum here (serde `tag = "type"`).
+        // Include both shapes for compatibility with different serde configs.
+        'type': 'Image',
+        'image': imageText,
+        'params': {'image': imageText},
       };
     }
 

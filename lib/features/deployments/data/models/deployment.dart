@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
 part 'deployment.freezed.dart';
 part 'deployment.g.dart';
 
@@ -37,6 +36,23 @@ sealed class Deployment with _$Deployment {
       return configImage;
     }
     if (configImage is Map) {
+      // Newer API shape: tagged enum (serde `tag = "type"`), optionally using
+      // `content = "params"`.
+      final type = configImage['type'];
+      if (type == 'Image') {
+        final direct = configImage['image'];
+        if (direct is String && direct.isNotEmpty) {
+          return direct;
+        }
+        final params = configImage['params'];
+        if (params is Map) {
+          final nested = params['image'];
+          if (nested is String && nested.isNotEmpty) {
+            return nested;
+          }
+        }
+      }
+
       final image = configImage['image'];
       if (image is String && image.isNotEmpty) {
         return image;
