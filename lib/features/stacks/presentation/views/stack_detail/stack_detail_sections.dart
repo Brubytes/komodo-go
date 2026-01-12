@@ -413,10 +413,10 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   late final TextEditingController _runDirectory;
   late final TextEditingController _envFilePath;
 
-  late final TextEditingController _links;
-  late final TextEditingController _additionalEnvFiles;
-  late final TextEditingController _filePaths;
-  late final TextEditingController _ignoreServices;
+  final List<TextEditingController> _linkControllers = [];
+  final List<TextEditingController> _additionalEnvFileControllers = [];
+  final List<TextEditingController> _filePathControllers = [];
+  final List<TextEditingController> _ignoreServiceControllers = [];
 
   late CodeEditorController _composeController;
   late CodeEditorController _environmentController;
@@ -441,14 +441,10 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _runDirectory = TextEditingController(text: _initial.runDirectory);
     _envFilePath = TextEditingController(text: _initial.envFilePath);
 
-    _links = TextEditingController(text: _initial.links.join('\n'));
-    _additionalEnvFiles = TextEditingController(
-      text: _initial.additionalEnvFiles.join('\n'),
-    );
-    _filePaths = TextEditingController(text: _initial.filePaths.join('\n'));
-    _ignoreServices = TextEditingController(
-      text: _initial.ignoreServices.join('\n'),
-    );
+    _setRowControllers(_linkControllers, _initial.links);
+    _setRowControllers(_additionalEnvFileControllers, _initial.additionalEnvFiles);
+    _setRowControllers(_filePathControllers, _initial.filePaths);
+    _setRowControllers(_ignoreServiceControllers, _initial.ignoreServices);
 
     _autoPull = _initial.autoPull;
     _autoUpdate = _initial.autoUpdate;
@@ -476,10 +472,6 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _clonePath,
       _runDirectory,
       _envFilePath,
-      _links,
-      _additionalEnvFiles,
-      _filePaths,
-      _ignoreServices,
       _composeController,
       _environmentController,
     ]) {
@@ -511,10 +503,6 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _clonePath,
       _runDirectory,
       _envFilePath,
-      _links,
-      _additionalEnvFiles,
-      _filePaths,
-      _ignoreServices,
       _composeController,
       _environmentController,
     ]) {
@@ -531,10 +519,10 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _runDirectory.dispose();
     _envFilePath.dispose();
 
-    _links.dispose();
-    _additionalEnvFiles.dispose();
-    _filePaths.dispose();
-    _ignoreServices.dispose();
+    _disposeRowControllers(_linkControllers);
+    _disposeRowControllers(_additionalEnvFileControllers);
+    _disposeRowControllers(_filePathControllers);
+    _disposeRowControllers(_ignoreServiceControllers);
 
     _composeController.dispose();
     _environmentController.dispose();
@@ -558,8 +546,54 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     );
   }
 
+  void _disposeRowControllers(List<TextEditingController> controllers) {
+    for (final c in controllers) {
+      c.removeListener(_notifyDirtyIfChanged);
+      c.dispose();
+    }
+    controllers.clear();
+  }
+
+  void _setRowControllers(
+    List<TextEditingController> target,
+    List<String> values,
+  ) {
+    _disposeRowControllers(target);
+
+    final cleaned = values.map((e) => e.trim()).where((e) => e.isNotEmpty);
+    target.addAll(cleaned.map((e) => TextEditingController(text: e)).toList());
+    for (final c in target) {
+      c.addListener(_notifyDirtyIfChanged);
+    }
+  }
+
+  void _addRow(List<TextEditingController> target) {
+    setState(() {
+      final c = TextEditingController();
+      c.addListener(_notifyDirtyIfChanged);
+      target.add(c);
+    });
+    _notifyDirtyIfChanged();
+  }
+
+  void _removeRow(List<TextEditingController> target, int index) {
+    if (index < 0 || index >= target.length) return;
+    setState(() {
+      final c = target.removeAt(index);
+      c.removeListener(_notifyDirtyIfChanged);
+      c.dispose();
+    });
+    _notifyDirtyIfChanged();
+  }
+
   void resetTo(StackConfig config) {
     _suppressDirtyNotify = true;
+
+    _setRowControllers(_linkControllers, config.links);
+    _setRowControllers(_additionalEnvFileControllers, config.additionalEnvFiles);
+    _setRowControllers(_filePathControllers, config.filePaths);
+    _setRowControllers(_ignoreServiceControllers, config.ignoreServices);
+
     setState(() {
       _initial = config;
       _serverId.text = config.serverId;
@@ -571,10 +605,6 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _clonePath.text = config.clonePath;
       _runDirectory.text = config.runDirectory;
       _envFilePath.text = config.envFilePath;
-      _links.text = config.links.join('\n');
-      _additionalEnvFiles.text = config.additionalEnvFiles.join('\n');
-      _filePaths.text = config.filePaths.join('\n');
-      _ignoreServices.text = config.ignoreServices.join('\n');
       _autoPull = config.autoPull;
       _autoUpdate = config.autoUpdate;
       _pollForUpdates = config.pollForUpdates;
@@ -617,13 +647,22 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       if (current != initial) params[key] = current;
     }
 
-    List<String> normalizeList(String raw) {
-      final parts = raw
-          .split(RegExp(r'[\n,]'))
+    void setListIfChanged(
+      String key,
+      List<TextEditingController> controllers,
+      List<String> initial,
+    ) {
+      final cleaned = controllers
+          .map((c) => c.text.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      final initCleaned = initial
           .map((e) => e.trim())
           .where((e) => e.isNotEmpty)
-          .toList(growable: false);
-      return parts;
+          .toList();
+      if (!_listEquals(cleaned, initCleaned)) {
+        params[key] = cleaned;
+      }
     }
 
     setIfChanged('server_id', _serverId.text.trim(), _initial.serverId);
@@ -653,22 +692,18 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     setIfChanged('poll_for_updates', _pollForUpdates, _initial.pollForUpdates);
     setIfChanged('send_alerts', _sendAlerts, _initial.sendAlerts);
 
-    final links = normalizeList(_links.text);
-    if (!_listEquals(links, _initial.links)) params['links'] = links;
-
-    final extraEnv = normalizeList(_additionalEnvFiles.text);
-    if (!_listEquals(extraEnv, _initial.additionalEnvFiles)) {
-      params['additional_env_files'] = extraEnv;
-    }
-
-    final filePaths = normalizeList(_filePaths.text);
-    if (!_listEquals(filePaths, _initial.filePaths))
-      params['file_paths'] = filePaths;
-
-    final ignore = normalizeList(_ignoreServices.text);
-    if (!_listEquals(ignore, _initial.ignoreServices)) {
-      params['ignore_services'] = ignore;
-    }
+    setListIfChanged('links', _linkControllers, _initial.links);
+    setListIfChanged(
+      'additional_env_files',
+      _additionalEnvFileControllers,
+      _initial.additionalEnvFiles,
+    );
+    setListIfChanged('file_paths', _filePathControllers, _initial.filePaths);
+    setListIfChanged(
+      'ignore_services',
+      _ignoreServiceControllers,
+      _initial.ignoreServices,
+    );
 
     final compose = _composeController.text;
     if (compose != _initial.fileContents) params['file_contents'] = compose;
@@ -702,120 +737,89 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     final serverIdInList = sortedServers.any((s) => s.id == _serverId.text);
     final linkedRepoInList = sortedRepos.any((r) => r.id == _linkedRepo.text);
 
-    final repoPathOptions =
-        <String>{
-            for (final r in sortedRepos)
-              if (r.info.repo.trim().isNotEmpty) r.info.repo.trim(),
-          }.toList(growable: false)
-          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    final repoInList = repoPathOptions.contains(_repo.text.trim());
+    // Show Source section if there's any repo-related config
+    final hasRepoConfig = _initial.linkedRepo.trim().isNotEmpty ||
+        _initial.repo.trim().isNotEmpty ||
+        _initial.branch.trim().isNotEmpty ||
+        _initial.clonePath.trim().isNotEmpty;
 
-    final showRepoSection = _initial.linkedRepo.trim().isNotEmpty;
+    // Track if a linked repo is currently selected
+    final hasLinkedRepo = _linkedRepo.text.trim().isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // 1. Server
         DetailSubCard(
-          title: 'Flags',
-          icon: AppIcons.settings,
+          title: 'Server',
+          icon: AppIcons.server,
           child: Column(
             children: [
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _autoPull,
-                title: const Text('Auto pull'),
-                onChanged: (v) {
-                  setState(() => _autoPull = v);
-                  _notifyDirtyIfChanged();
-                },
-              ),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _autoUpdate,
-                title: const Text('Auto update'),
-                onChanged: (v) {
-                  setState(() => _autoUpdate = v);
-                  _notifyDirtyIfChanged();
-                },
-              ),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _pollForUpdates,
-                title: const Text('Poll for updates'),
-                onChanged: (v) {
-                  setState(() => _pollForUpdates = v);
-                  _notifyDirtyIfChanged();
-                },
-              ),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _sendAlerts,
-                title: const Text('Send alerts'),
-                onChanged: (v) {
-                  setState(() => _sendAlerts = v);
-                  _notifyDirtyIfChanged();
-                },
-              ),
+              if (sortedServers.isNotEmpty)
+                KomodoSelectMenuField<String>(
+                  key: ValueKey(sortedServers.length),
+                  value: serverIdInList ? _serverId.text : null,
+                  decoration: InputDecoration(
+                    labelText: 'Server',
+                    prefixIcon: const Icon(AppIcons.server),
+                    helperStyle: TextStyle(color: scheme.onSurfaceVariant),
+                    helperText: 'Select the server to deploy on.',
+                  ),
+                  items: [
+                    for (final server in sortedServers)
+                      KomodoSelectMenuItem(
+                        value: server.id,
+                        label: server.name,
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _serverId.text = value);
+                  },
+                )
+              else
+                TextFormField(
+                  controller: _serverId,
+                  decoration: InputDecoration(
+                    labelText: 'Server ID',
+                    prefixIcon: const Icon(AppIcons.server),
+                    helperStyle: TextStyle(color: scheme.onSurfaceVariant),
+                    helperText: 'Select the server to deploy on.',
+                  ),
+                ),
+              if (sortedServers.isNotEmpty && !serverIdInList) ...[
+                const Gap(8),
+                TextFormField(
+                  controller: _serverId,
+                  decoration: const InputDecoration(
+                    labelText: 'Server ID (manual)',
+                    prefixIcon: Icon(AppIcons.tag),
+                    helperText: 'Current value not found in server list.',
+                  ),
+                ),
+              ],
             ],
           ),
         ),
         const Gap(12),
-        if (showRepoSection) ...[
+
+        // 2. Source (repo section)
+        if (hasRepoConfig) ...[
           DetailSubCard(
-            title: 'Repository',
+            title: 'Source',
             icon: AppIcons.repos,
             child: Column(
               children: [
-                if (repoPathOptions.isNotEmpty)
-                  KomodoSelectMenuField<String>(
-                    key: ValueKey(repoPathOptions.length),
-                    value: repoInList ? _repo.text.trim() : null,
-                    decoration: const InputDecoration(
-                      labelText: 'Repo',
-                      prefixIcon: Icon(AppIcons.repos),
-                    ),
-                    items: [
-                      for (final repoPath in repoPathOptions)
-                        KomodoSelectMenuItem(value: repoPath, label: repoPath),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => _repo.text = value);
-                      _notifyDirtyIfChanged();
-                    },
-                  )
-                else
-                  TextFormField(
-                    controller: _repo,
-                    decoration: const InputDecoration(
-                      labelText: 'Repo',
-                      prefixIcon: Icon(AppIcons.repos),
-                    ),
-                  ),
-                const Gap(12),
-                TextFormField(
-                  controller: _branch,
-                  decoration: const InputDecoration(
-                    labelText: 'Branch',
-                    prefixIcon: Icon(AppIcons.repos),
-                  ),
-                ),
-                const Gap(12),
-                TextFormField(
-                  controller: _commit,
-                  decoration: const InputDecoration(
-                    labelText: 'Commit',
-                    prefixIcon: Icon(AppIcons.tag),
-                  ),
-                ),
-                const Gap(12),
+                // Linked repo selector (always shown in this section)
                 if (sortedRepos.isNotEmpty)
                   KomodoSelectMenuField<String>(
                     key: ValueKey(sortedRepos.length),
                     value: linkedRepoInList ? _linkedRepo.text : null,
                     decoration: const InputDecoration(
-                      labelText: 'Linked repo',
+                      labelText: 'Repo',
                       prefixIcon: Icon(AppIcons.repos),
+                      helperText:
+                          'Select an existing Repo to attach, or configure below.',
                     ),
                     items: [
                       for (final repo in sortedRepos)
@@ -829,6 +833,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                     onChanged: (value) {
                       if (value == null) return;
                       setState(() => _linkedRepo.text = value);
+                      _notifyDirtyIfChanged();
                     },
                   )
                 else
@@ -850,143 +855,459 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                     ),
                   ),
                 ],
+
+                // Only show manual git config fields when NO linked repo is selected
+                if (!hasLinkedRepo) ...[
+                  const Gap(12),
+                  TextFormField(
+                    controller: _repo,
+                    decoration: const InputDecoration(
+                      labelText: 'Repo path',
+                      prefixIcon: Icon(AppIcons.repos),
+                      helperText: 'The repo path: {namespace}/{repo_name}',
+                    ),
+                  ),
+                  const Gap(12),
+                  TextFormField(
+                    controller: _branch,
+                    decoration: const InputDecoration(
+                      labelText: 'Branch',
+                      prefixIcon: Icon(AppIcons.repos),
+                      helperText: "Custom branch, or defaults to 'main'.",
+                    ),
+                  ),
+                  const Gap(12),
+                  TextFormField(
+                    controller: _commit,
+                    decoration: const InputDecoration(
+                      labelText: 'Commit hash',
+                      prefixIcon: Icon(AppIcons.tag),
+                      helperText:
+                          'Optional. Switch to a specific commit after cloning.',
+                    ),
+                  ),
+                  const Gap(12),
+                  TextFormField(
+                    controller: _clonePath,
+                    decoration: const InputDecoration(
+                      labelText: 'Clone path',
+                      prefixIcon: Icon(AppIcons.package),
+                      helperText:
+                          'Folder on the host to clone the repo in.',
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
           const Gap(12),
         ],
+
+        // 3. Files
         DetailSubCard(
-          title: 'Paths',
+          title: 'Files',
           icon: AppIcons.package,
           child: Column(
             children: [
               TextFormField(
-                controller: _projectName,
-                decoration: const InputDecoration(
-                  labelText: 'Project',
-                  prefixIcon: Icon(AppIcons.package),
-                ),
-              ),
-              const Gap(12),
-              TextFormField(
-                controller: _clonePath,
-                decoration: const InputDecoration(
-                  labelText: 'Clone path',
-                  prefixIcon: Icon(AppIcons.package),
-                ),
-              ),
-              const Gap(12),
-              TextFormField(
                 controller: _runDirectory,
                 decoration: const InputDecoration(
-                  labelText: 'Run dir',
+                  labelText: 'Run directory',
                   prefixIcon: Icon(AppIcons.package),
+                  helperText:
+                      'Working directory for compose up, relative to repo root.',
                 ),
+              ),
+              const Gap(12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'File paths',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const Gap(4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Files for 'docker compose -f'. Relative to run directory.",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Gap(8),
+              if (_filePathControllers.isEmpty)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _addRow(_filePathControllers),
+                    icon: const Icon(AppIcons.add),
+                    label: const Text('File path'),
+                  ),
+                )
+              else
+                Column(
+                  children: [
+                    for (var i = 0; i < _filePathControllers.length; i++) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _filePathControllers[i],
+                              decoration: InputDecoration(
+                                hintText: 'File path',
+                                prefixIcon: i == 0
+                                    ? const Icon(AppIcons.package)
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          const Gap(8),
+                          IconButton(
+                            tooltip: 'Remove',
+                            icon: const Icon(AppIcons.delete),
+                            onPressed: () =>
+                                _removeRow(_filePathControllers, i),
+                          ),
+                        ],
+                      ),
+                      const Gap(8),
+                    ],
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => _addRow(_filePathControllers),
+                        icon: const Icon(AppIcons.add),
+                        label: const Text('Add file path'),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        const Gap(12),
+
+        // 4. Environment
+        DetailSubCard(
+          title: 'Environment',
+          icon: AppIcons.settings,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Environment variables',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Gap(8),
+              DetailCodeEditor(
+                controller: _environmentController,
+                maxHeight: 240,
               ),
               const Gap(12),
               TextFormField(
                 controller: _envFilePath,
                 decoration: const InputDecoration(
-                  labelText: 'Env file',
+                  labelText: 'Env file path',
                   prefixIcon: Icon(AppIcons.package),
+                  helperText: 'Path to write env file, relative to run directory.',
                 ),
               ),
-            ],
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Extras',
-          icon: AppIcons.widgets,
-          child: Column(
-            children: [
-              if (sortedServers.isNotEmpty)
-                KomodoSelectMenuField<String>(
-                  key: ValueKey(sortedServers.length),
-                  value: serverIdInList ? _serverId.text : null,
-                  decoration: InputDecoration(
-                    labelText: 'Server',
-                    prefixIcon: const Icon(AppIcons.server),
-                    helperStyle: TextStyle(color: scheme.onSurfaceVariant),
-                    helperText: 'Changing server may move/cleanup the stack.',
+              const Gap(12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Additional env files',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const Gap(4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Extra env files for '--env-file'. Relative to run directory.",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
                   ),
-                  items: [
-                    for (final server in sortedServers)
-                      KomodoSelectMenuItem(
-                        value: server.id,
-                        label: server.name,
-                      ),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => _serverId.text = value);
-                  },
+                ),
+              ),
+              const Gap(8),
+              if (_additionalEnvFileControllers.isEmpty)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _addRow(_additionalEnvFileControllers),
+                    icon: const Icon(AppIcons.add),
+                    label: const Text('Env file'),
+                  ),
                 )
               else
-                TextFormField(
-                  controller: _serverId,
-                  decoration: InputDecoration(
-                    labelText: 'Server ID',
-                    prefixIcon: const Icon(AppIcons.server),
-                    helperStyle: TextStyle(color: scheme.onSurfaceVariant),
-                    helperText: 'Changing server may move/cleanup the stack.',
-                  ),
+                Column(
+                  children: [
+                    for (var i = 0;
+                        i < _additionalEnvFileControllers.length;
+                        i++) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _additionalEnvFileControllers[i],
+                              decoration: InputDecoration(
+                                hintText: 'Env file path',
+                                prefixIcon: i == 0
+                                    ? const Icon(AppIcons.package)
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          const Gap(8),
+                          IconButton(
+                            tooltip: 'Remove',
+                            icon: const Icon(AppIcons.delete),
+                            onPressed: () =>
+                                _removeRow(_additionalEnvFileControllers, i),
+                          ),
+                        ],
+                      ),
+                      const Gap(8),
+                    ],
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => _addRow(_additionalEnvFileControllers),
+                        icon: const Icon(AppIcons.add),
+                        label: const Text('Add env file'),
+                      ),
+                    ),
+                  ],
                 ),
-              if (sortedServers.isNotEmpty && !serverIdInList) ...[
-                const Gap(8),
-                TextFormField(
-                  controller: _serverId,
-                  decoration: const InputDecoration(
-                    labelText: 'Server ID (manual)',
-                    prefixIcon: Icon(AppIcons.tag),
-                    helperText: 'Current value not found in server list.',
-                  ),
-                ),
-              ],
-              const Gap(12),
-              TextFormField(
-                controller: _links,
-                minLines: 2,
-                maxLines: 6,
-                decoration: const InputDecoration(
-                  labelText: 'Links (one per line)',
-                  prefixIcon: Icon(AppIcons.network),
-                ),
+            ],
+          ),
+        ),
+        const Gap(12),
+
+        // 5. Auto Update
+        DetailSubCard(
+          title: 'Auto Update',
+          icon: AppIcons.refresh,
+          child: Column(
+            children: [
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _pollForUpdates,
+                title: const Text('Poll for updates'),
+                subtitle: const Text('Check for image updates on an interval.'),
+                onChanged: (v) {
+                  setState(() => _pollForUpdates = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
-              const Gap(12),
-              TextFormField(
-                controller: _additionalEnvFiles,
-                minLines: 2,
-                maxLines: 6,
-                decoration: const InputDecoration(
-                  labelText: 'Extra env files (one per line)',
-                  prefixIcon: Icon(AppIcons.package),
-                ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _autoUpdate,
+                title: const Text('Auto update'),
+                subtitle: const Text('Trigger redeploy if newer image is found.'),
+                onChanged: (v) {
+                  setState(() => _autoUpdate = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
-              const Gap(12),
-              TextFormField(
-                controller: _filePaths,
-                minLines: 2,
-                maxLines: 8,
-                decoration: const InputDecoration(
-                  labelText: 'Compose file paths (one per line)',
-                  prefixIcon: Icon(AppIcons.package),
-                ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _autoPull,
+                title: const Text('Auto pull'),
+                subtitle: const Text('Pull latest changes before deploying.'),
+                onChanged: (v) {
+                  setState(() => _autoPull = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
-              const Gap(12),
-              TextFormField(
-                controller: _ignoreServices,
-                minLines: 2,
-                maxLines: 6,
-                decoration: const InputDecoration(
-                  labelText: 'Ignore services (comma or line separated)',
-                  prefixIcon: Icon(AppIcons.warning),
-                ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _sendAlerts,
+                title: const Text('Send alerts'),
+                onChanged: (v) {
+                  setState(() => _sendAlerts = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
             ],
           ),
         ),
         const Gap(12),
+
+        // 6. Links
+        DetailSubCard(
+          title: 'Links',
+          icon: AppIcons.network,
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Quick links',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const Gap(4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Add quick links in the resource header.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Gap(8),
+              if (_linkControllers.isEmpty)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _addRow(_linkControllers),
+                    icon: const Icon(AppIcons.add),
+                    label: const Text('Link'),
+                  ),
+                )
+              else
+                Column(
+                  children: [
+                    for (var i = 0; i < _linkControllers.length; i++) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _linkControllers[i],
+                              decoration: InputDecoration(
+                                hintText: 'Link',
+                                prefixIcon: i == 0
+                                    ? const Icon(AppIcons.network)
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          const Gap(8),
+                          IconButton(
+                            tooltip: 'Remove',
+                            icon: const Icon(AppIcons.delete),
+                            onPressed: () => _removeRow(_linkControllers, i),
+                          ),
+                        ],
+                      ),
+                      const Gap(8),
+                    ],
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => _addRow(_linkControllers),
+                        icon: const Icon(AppIcons.add),
+                        label: const Text('Add link'),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        const Gap(12),
+
+        // 7. Advanced
+        DetailSubCard(
+          title: 'Advanced',
+          icon: AppIcons.settings,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _projectName,
+                decoration: const InputDecoration(
+                  labelText: 'Project name',
+                  prefixIcon: Icon(AppIcons.package),
+                  helperText:
+                      'Compose project name. Match existing name if importing.',
+                ),
+              ),
+              const Gap(12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Ignore services',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const Gap(4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Init services that exit early, so stack reports correct health.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Gap(8),
+              if (_ignoreServiceControllers.isEmpty)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _addRow(_ignoreServiceControllers),
+                    icon: const Icon(AppIcons.add),
+                    label: const Text('Service'),
+                  ),
+                )
+              else
+                Column(
+                  children: [
+                    for (var i = 0;
+                        i < _ignoreServiceControllers.length;
+                        i++) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _ignoreServiceControllers[i],
+                              decoration: InputDecoration(
+                                hintText: 'Service name',
+                                prefixIcon: i == 0
+                                    ? const Icon(AppIcons.warning)
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          const Gap(8),
+                          IconButton(
+                            tooltip: 'Remove',
+                            icon: const Icon(AppIcons.delete),
+                            onPressed: () =>
+                                _removeRow(_ignoreServiceControllers, i),
+                          ),
+                        ],
+                      ),
+                      const Gap(8),
+                    ],
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => _addRow(_ignoreServiceControllers),
+                        icon: const Icon(AppIcons.add),
+                        label: const Text('Add service'),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        const Gap(12),
+
+        // 8. Compose (file contents)
         DetailSubCard(
           title: 'Compose',
           icon: AppIcons.stacks,
@@ -996,19 +1317,6 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
               const Text('Compose config'),
               const Gap(8),
               DetailCodeEditor(controller: _composeController, maxHeight: 320),
-              const Gap(14),
-              Text(
-                'Environment variables',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Gap(8),
-              DetailCodeEditor(
-                controller: _environmentController,
-                maxHeight: 240,
-              ),
             ],
           ),
         ),
