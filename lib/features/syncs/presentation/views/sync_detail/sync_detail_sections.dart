@@ -9,12 +9,14 @@ import 'package:komodo_go/features/syncs/data/models/sync.dart';
 class SyncConfigEditorContent extends StatefulWidget {
   const SyncConfigEditorContent({
     required this.initialConfig,
+    this.onDirtyChanged,
     this.repos = const [],
     this.gitProviders = const [],
     super.key,
   });
 
   final ResourceSyncConfig initialConfig;
+  final ValueChanged<bool>? onDirtyChanged;
   final List<RepoListItem> repos;
   final List<GitProviderAccount> gitProviders;
 
@@ -25,6 +27,9 @@ class SyncConfigEditorContent extends StatefulWidget {
 
 class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
   late ResourceSyncConfig _initial;
+
+  var _suppressDirtyNotify = false;
+  var _lastDirty = false;
 
   late final TextEditingController _linkedRepo;
   late final TextEditingController _gitProvider;
@@ -74,10 +79,51 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
     _includeVariables = _initial.includeVariables;
     _includeUserGroups = _initial.includeUserGroups;
     _pendingAlert = _initial.pendingAlert;
+
+    for (final c in <TextEditingController>[
+      _linkedRepo,
+      _gitProvider,
+      _gitAccount,
+      _repo,
+      _branch,
+      _commit,
+      _resourcePath,
+      _matchTags,
+      _webhookSecret,
+      _fileContents,
+    ]) {
+      c.addListener(_notifyDirtyIfChanged);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant SyncConfigEditorContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.initialConfig != oldWidget.initialConfig) {
+      final dirty = buildPartialConfigParams().isNotEmpty;
+      if (!dirty) {
+        resetTo(widget.initialConfig);
+      }
+    }
   }
 
   @override
   void dispose() {
+    for (final c in <TextEditingController>[
+      _linkedRepo,
+      _gitProvider,
+      _gitAccount,
+      _repo,
+      _branch,
+      _commit,
+      _resourcePath,
+      _matchTags,
+      _webhookSecret,
+      _fileContents,
+    ]) {
+      c.removeListener(_notifyDirtyIfChanged);
+    }
     _linkedRepo.dispose();
     _gitProvider.dispose();
     _gitAccount.dispose();
@@ -92,6 +138,7 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
   }
 
   void resetTo(ResourceSyncConfig config) {
+    _suppressDirtyNotify = true;
     setState(() {
       _initial = config;
 
@@ -116,6 +163,19 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
       _includeUserGroups = config.includeUserGroups;
       _pendingAlert = config.pendingAlert;
     });
+
+    _suppressDirtyNotify = false;
+    _lastDirty = false;
+    widget.onDirtyChanged?.call(false);
+  }
+
+  void _notifyDirtyIfChanged() {
+    if (_suppressDirtyNotify) return;
+
+    final dirty = buildPartialConfigParams().isNotEmpty;
+    if (dirty == _lastDirty) return;
+    _lastDirty = dirty;
+    widget.onDirtyChanged?.call(dirty);
   }
 
   Map<String, dynamic> buildPartialConfigParams() {
@@ -275,25 +335,37 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
                 contentPadding: EdgeInsets.zero,
                 value: _managed,
                 title: const Text('Managed'),
-                onChanged: (v) => setState(() => _managed = v),
+                onChanged: (v) {
+                  setState(() => _managed = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _delete,
                 title: const Text('Delete missing'),
-                onChanged: (v) => setState(() => _delete = v),
+                onChanged: (v) {
+                  setState(() => _delete = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _filesOnHost,
                 title: const Text('Files on host'),
-                onChanged: (v) => setState(() => _filesOnHost = v),
+                onChanged: (v) {
+                  setState(() => _filesOnHost = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _pendingAlert,
                 title: const Text('Pending alert'),
-                onChanged: (v) => setState(() => _pendingAlert = v),
+                onChanged: (v) {
+                  setState(() => _pendingAlert = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
             ],
           ),
@@ -308,19 +380,28 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
                 contentPadding: EdgeInsets.zero,
                 value: _includeResources,
                 title: const Text('Include resources'),
-                onChanged: (v) => setState(() => _includeResources = v),
+                onChanged: (v) {
+                  setState(() => _includeResources = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _includeVariables,
                 title: const Text('Include variables'),
-                onChanged: (v) => setState(() => _includeVariables = v),
+                onChanged: (v) {
+                  setState(() => _includeVariables = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _includeUserGroups,
                 title: const Text('Include user groups'),
-                onChanged: (v) => setState(() => _includeUserGroups = v),
+                onChanged: (v) {
+                  setState(() => _includeUserGroups = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               TextFormField(
                 controller: _matchTags,
@@ -344,7 +425,7 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
               if (sortedRepos.isNotEmpty)
                 DropdownButtonFormField<String>(
                   key: ValueKey('sync_linked_repo_${sortedRepos.length}'),
-                  value: linkedRepoInList ? _linkedRepo.text : null,
+                  initialValue: linkedRepoInList ? _linkedRepo.text : null,
                   decoration: const InputDecoration(
                     labelText: 'Linked repo',
                     prefixIcon: Icon(AppIcons.repos),
@@ -392,7 +473,9 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
                   key: ValueKey(
                     'sync_git_provider_${gitProviderDomains.length}',
                   ),
-                  value: providerDomainInList ? _gitProvider.text.trim() : null,
+                  initialValue: providerDomainInList
+                      ? _gitProvider.text.trim()
+                      : null,
                   decoration: const InputDecoration(
                     labelText: 'Git provider',
                     prefixIcon: Icon(AppIcons.repos),
@@ -442,7 +525,7 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
                   key: ValueKey(
                     '${selectedDomain}_${accountsForDomain.length}',
                   ),
-                  value: accountInList ? _gitAccount.text.trim() : null,
+                  initialValue: accountInList ? _gitAccount.text.trim() : null,
                   decoration: const InputDecoration(
                     labelText: 'Git account',
                     prefixIcon: Icon(AppIcons.user),
@@ -488,13 +571,16 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
                 contentPadding: EdgeInsets.zero,
                 value: _gitHttps,
                 title: const Text('Git HTTPS'),
-                onChanged: (v) => setState(() => _gitHttps = v),
+                onChanged: (v) {
+                  setState(() => _gitHttps = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               const Gap(12),
               if (repoPathOptions.isNotEmpty)
                 DropdownButtonFormField<String>(
                   key: ValueKey('sync_repo_${repoPathOptions.length}'),
-                  value: repoInList ? _repo.text.trim() : null,
+                  initialValue: repoInList ? _repo.text.trim() : null,
                   decoration: const InputDecoration(
                     labelText: 'Repo',
                     prefixIcon: Icon(AppIcons.repos),
@@ -545,7 +631,10 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
                 contentPadding: EdgeInsets.zero,
                 value: _webhookEnabled,
                 title: const Text('Webhook enabled'),
-                onChanged: (v) => setState(() => _webhookEnabled = v),
+                onChanged: (v) {
+                  setState(() => _webhookEnabled = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               TextFormField(
                 controller: _webhookSecret,

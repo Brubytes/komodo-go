@@ -6,13 +6,13 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/providers/data/models/git_provider_account.dart';
 import 'package:komodo_go/features/providers/presentation/providers/git_providers_provider.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
-import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/syncs/presentation/views/sync_detail/sync_detail_sections.dart';
 
 /// View displaying detailed sync information.
@@ -31,9 +31,11 @@ class SyncDetailView extends ConsumerStatefulWidget {
 }
 
 class _SyncDetailViewState extends ConsumerState<SyncDetailView> {
-  var _isEditingConfig = false;
-  KomodoResourceSync? _configEditSnapshot;
   final _configEditorKey = GlobalKey<SyncConfigEditorContentState>();
+
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>?
+  _configDirtySnackBar;
+  var _configSaveInFlight = false;
 
   @override
   Widget build(BuildContext context) {
@@ -81,21 +83,18 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView> {
                             DetailSection(
                               title: 'Configuration',
                               icon: AppIcons.settings,
-                              trailing: _buildConfigTrailing(
-                                context: context,
-                                sync: sync,
+                              child: SyncConfigEditorContent(
+                                key: _configEditorKey,
+                                initialConfig: sync.config,
+                                repos: repos,
+                                gitProviders: gitProviders,
+                                onDirtyChanged: (dirty) {
+                                  _onConfigDirtyChanged(
+                                    dirty: dirty,
+                                    sync: sync,
+                                  );
+                                },
                               ),
-                              child: _isEditingConfig
-                                  ? SyncConfigEditorContent(
-                                      key: _configEditorKey,
-                                      initialConfig:
-                                          (_configEditSnapshot?.id == sync.id)
-                                          ? _configEditSnapshot!.config
-                                          : sync.config,
-                                      repos: repos,
-                                      gitProviders: gitProviders,
-                                    )
-                                  : _SyncConfigContent(syncResource: sync),
                             ),
                             const Gap(16),
                             DetailSection(
@@ -138,56 +137,81 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView> {
     );
   }
 
-  Widget _buildConfigTrailing({
-    required BuildContext context,
+  void _onConfigDirtyChanged({
+    required bool dirty,
     required KomodoResourceSync sync,
   }) {
-    if (!_isEditingConfig) {
-      return IconButton(
-        tooltip: 'Edit config',
-        icon: const Icon(AppIcons.edit),
-        onPressed: () {
-          setState(() {
-            _isEditingConfig = true;
-            _configEditSnapshot = sync;
-          });
-        },
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Cancel',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.close),
-          onPressed: () {
-            if (_configEditSnapshot != null) {
-              _configEditorKey.currentState?.resetTo(
-                _configEditSnapshot!.config,
-              );
-            }
-            setState(() {
-              _isEditingConfig = false;
-              _configEditSnapshot = null;
-            });
-          },
-        ),
-        IconButton(
-          tooltip: 'Save',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.check),
-          onPressed: () => _saveConfig(context: context, syncId: sync.id),
-        ),
-      ],
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!dirty) {
+        _hideConfigDirtySnackBar();
+      } else {
+        _showConfigDirtySnackBar(sync);
+      }
+    });
   }
 
-  Future<void> _saveConfig({
-    required BuildContext context,
-    required String syncId,
-  }) async {
+  void _hideConfigDirtySnackBar() {
+    if (_configDirtySnackBar == null) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    _configDirtySnackBar = null;
+  }
+
+  void _showConfigDirtySnackBar(KomodoResourceSync sync) {
+    if (_configDirtySnackBar != null) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    final controller = messenger.showSnackBar(
+      SnackBar(
+        backgroundColor: scheme.inverseSurface,
+        duration: const Duration(days: 1),
+        dismissDirection: DismissDirection.none,
+        behavior: SnackBarBehavior.floating,
+        content: DefaultTextStyle(
+          style: TextStyle(color: scheme.onInverseSurface),
+          child: Row(
+            children: [
+              const Expanded(child: Text('Unsaved changes')),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: scheme.onInverseSurface,
+                ),
+                onPressed: () => _discardConfig(sync),
+                child: const Text('Discard'),
+              ),
+              const Gap(8),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: scheme.onInverseSurface,
+                ),
+                onPressed: () => _saveConfig(sync: sync),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    _configDirtySnackBar = controller;
+    controller.closed.then((_) {
+      if (!mounted) return;
+      if (_configDirtySnackBar == controller) {
+        _configDirtySnackBar = null;
+      }
+    });
+  }
+
+  void _discardConfig(KomodoResourceSync sync) {
+    _configEditorKey.currentState?.resetTo(sync.config);
+    _hideConfigDirtySnackBar();
+  }
+
+  Future<void> _saveConfig({required KomodoResourceSync sync}) async {
+    if (_configSaveInFlight) return;
+
     final draft = _configEditorKey.currentState;
     if (draft == null) {
       AppSnackBar.show(
@@ -200,39 +224,48 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView> {
 
     final partialConfig = draft.buildPartialConfigParams();
     if (partialConfig.isEmpty) {
-      AppSnackBar.show(
-        context,
-        'No changes to save.',
-        tone: AppSnackBarTone.neutral,
-      );
+      _hideConfigDirtySnackBar();
       return;
     }
 
     final actions = ref.read(syncActionsProvider.notifier);
+    _configSaveInFlight = true;
     final updated = await actions.updateSyncConfig(
-      syncId: syncId,
+      syncId: sync.id,
       partialConfig: partialConfig,
     );
+    _configSaveInFlight = false;
 
     final success = updated != null;
     if (success) {
       ref
-        ..invalidate(syncDetailProvider(syncId))
+        ..invalidate(syncDetailProvider(sync.id))
         ..invalidate(syncsProvider);
-      if (mounted) {
-        setState(() {
-          _isEditingConfig = false;
-          _configEditSnapshot = null;
-        });
-      }
+
+      _configEditorKey.currentState?.resetTo(updated.config);
+      _hideConfigDirtySnackBar();
     }
 
-    if (context.mounted) {
-      AppSnackBar.show(
-        context,
-        success ? 'Config saved.' : 'Failed to save config.',
-        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
-      );
+    if (!mounted) return;
+
+    AppSnackBar.show(
+      context,
+      success ? 'Config saved.' : 'Failed to save config.',
+      tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
+    );
+
+    if (!success) {
+      // AppSnackBar replaces the current snackbar; re-show the persistent
+      // Save/Discard bar if we are still dirty.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final stillDirty =
+            _configEditorKey.currentState
+                ?.buildPartialConfigParams()
+                .isNotEmpty ??
+            false;
+        if (stillDirty) _showConfigDirtySnackBar(sync);
+      });
     }
   }
 
@@ -338,35 +371,6 @@ class _SyncHeader extends StatelessWidget {
             ),
           ),
         ],
-      ],
-    );
-  }
-}
-
-// Configuration Content
-class _SyncConfigContent extends StatelessWidget {
-  const _SyncConfigContent({required this.syncResource});
-
-  final KomodoResourceSync syncResource;
-
-  @override
-  Widget build(BuildContext context) {
-    final config = syncResource.config;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DetailKeyValueRow(
-          label: 'Managed',
-          value: config.managed ? 'Yes' : 'No',
-        ),
-        DetailKeyValueRow(label: 'Delete', value: config.delete ? 'Yes' : 'No'),
-        DetailKeyValueRow(
-          label: 'Webhook',
-          value: config.webhookEnabled ? 'Enabled' : 'Disabled',
-        ),
-        if (config.webhookSecret.isNotEmpty)
-          const DetailKeyValueRow(label: 'Webhook Secret', value: 'Configured'),
       ],
     );
   }
