@@ -13,6 +13,16 @@ Flutter app to control the Komodo infrastructure management platform.
 - `fvm flutter analyze`
 - `fvm flutter test`
 
+## Integration tests (Patrol)
+
+Run the Patrol iOS integration test suite on the iPhone 17 Pro simulator:
+
+- VS Code task: `Patrol: iOS (iPhone 17 Pro)`
+- CLI:
+  - `patrol test -t integration_test/app_test.dart -d BE3A6A62-DF90-4DC9-9249-37BFD2A75742 -v`
+
+Note: Xcode UI tests often run on a temporary cloned simulator instance, which may shut down when the run finishes. The VS Code task re-opens Simulator and boots the target device afterwards.
+
 ## Design system / theming
 
 The app uses a single unified Material 3 theme on both iOS and Android (no platform-specific split).
