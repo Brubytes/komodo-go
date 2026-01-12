@@ -5,7 +5,7 @@ import 'package:patrol/patrol.dart';
 import '../support/app_steps.dart';
 import '../support/fake_komodo_backend.dart';
 
-void main() {
+void registerStacksListLoadsTests() {
   patrolTest('stacks list loads via /read ListStacks (fake backend)', ($) async {
     final backend = FakeKomodoBackend(
       expectedApiKey: 'test-key',
@@ -43,3 +43,5 @@ void main() {
     }
   });
 }
+
+void main() => registerStacksListLoadsTests();

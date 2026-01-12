@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
 
@@ -9,8 +9,8 @@ Future<void> ensureOnLoginAddForm(PatrolIntegrationTester $) async {
   if ($(find.text('Resources')).exists &&
       !$(find.byKey(const Key('login_serverUrl'))).exists) {
     await $(find.text('Settings')).tap();
-    await $(find.text('Logout')).tap();
-    await $(find.text('Logout')).tap(); // confirm dialog
+    await $(find.text('Logout')).scrollTo().tap();
+    await $(find.widgetWithText(FilledButton, 'Logout')).tap();
     await $.pumpAndSettle();
   }
 
@@ -35,5 +35,6 @@ Future<void> loginWith(
   await $(find.byKey(const Key('login_serverUrl'))).enterText(baseUrl);
   await $(find.byKey(const Key('login_apiKey'))).enterText(apiKey);
   await $(find.byKey(const Key('login_apiSecret'))).enterText(apiSecret);
-  await $(find.byKey(const Key('login_saveConnection'))).tap();
+  await $.pumpAndSettle();
+  await $(find.byKey(const Key('login_saveConnection'))).scrollTo().tap();
 }

@@ -6,7 +6,7 @@ import 'package:patrol/patrol.dart';
 import '../support/app_steps.dart';
 import '../support/fake_komodo_backend.dart';
 
-void main() {
+void registerStacksDestroyTests() {
   patrolTest('login → stacks → destroy stack (fake backend)', ($) async {
     final backend = FakeKomodoBackend(
       expectedApiKey: 'test-key',
@@ -49,3 +49,5 @@ void main() {
     }
   });
 }
+
+void main() => registerStacksDestroyTests();

@@ -1,4 +1,5 @@
 PODS:
+  - CocoaAsyncSocket (7.6.5)
   - device_info_plus (0.0.1):
     - Flutter
   - Flutter (1.0.0)
@@ -11,6 +12,10 @@ PODS:
   - irondash_engine_context (0.0.1):
     - Flutter
   - path_provider_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - patrol (0.0.1):
+    - CocoaAsyncSocket (~> 7.6)
     - Flutter
     - FlutterMacOS
   - shared_preferences_foundation (0.0.1):
@@ -27,8 +32,13 @@ DEPENDENCIES:
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
   - irondash_engine_context (from `.symlinks/plugins/irondash_engine_context/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+  - patrol (from `.symlinks/plugins/patrol/darwin`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - super_native_extensions (from `.symlinks/plugins/super_native_extensions/ios`)
+
+SPEC REPOS:
+  trunk:
+    - CocoaAsyncSocket
 
 EXTERNAL SOURCES:
   device_info_plus:
@@ -45,12 +55,15 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/irondash_engine_context/ios"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
+  patrol:
+    :path: ".symlinks/plugins/patrol/darwin"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   super_native_extensions:
     :path: ".symlinks/plugins/super_native_extensions/ios"
 
 SPEC CHECKSUMS:
+  CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
   device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_native_splash: c32d145d68aeda5502d5f543ee38c192065986cf
@@ -58,9 +71,10 @@ SPEC CHECKSUMS:
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
   irondash_engine_context: 8e58ca8e0212ee9d1c7dc6a42121849986c88486
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
+  patrol: cea8074f183a2a4232d0ebd10569ae05149ada42
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
   super_native_extensions: b763c02dc3a8fd078389f410bf15149179020cb4
 
-PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
+PODFILE CHECKSUM: 098aa2b1bc6a78bc2df1550967862802d377dd3f
 
 COCOAPODS: 1.16.2

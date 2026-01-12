@@ -4,7 +4,7 @@ import 'package:patrol/patrol.dart';
 
 import '../support/app_steps.dart';
 
-void main() {
+void registerLoginUnreachableServerTests() {
   patrolTest('unhappy: unreachable server shows login error', ($) async {
     await app.main();
     await $.pumpAndSettle();
@@ -24,3 +24,5 @@ void main() {
     ).waitUntilVisible();
   });
 }
+
+void main() => registerLoginUnreachableServerTests();

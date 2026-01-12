@@ -41,6 +41,9 @@ dev_dependencies:
   riverpod_generator: ^3.0.0
   very_good_analysis: ^7.0.0
 
+patrol:
+  test_directory: integration_test
+
 flutter:
   uses-material-design: true
   assets:
