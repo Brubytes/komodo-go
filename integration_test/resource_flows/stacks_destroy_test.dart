@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:komodo_go/main.dart' as app;
 import 'package:patrol/patrol.dart';
 
+import '../support/app_steps.dart';
 import '../support/fake_komodo_backend.dart';
 
 void main() {
@@ -17,21 +18,12 @@ void main() {
       await app.main();
       await $.pumpAndSettle();
 
-      // If we're already logged in (local dev), log out first.
-      if ($(find.text('Resources')).exists &&
-          !$(find.text('Server URL')).exists) {
-        await $(find.text('Settings')).tap();
-        await $(find.text('Logout')).tap();
-        await $(find.text('Logout')).tap(); // confirm dialog
-        await $.pumpAndSettle();
-      }
-
-      await $(find.byKey(const Key('login_serverUrl')))
-          .enterText(backend.baseUrl);
-      await $(find.byKey(const Key('login_apiKey'))).enterText('test-key');
-      await $(find.byKey(const Key('login_apiSecret')))
-          .enterText('test-secret');
-      await $(find.byKey(const Key('login_saveConnection'))).tap();
+      await loginWith(
+        $,
+        baseUrl: backend.baseUrl,
+        apiKey: 'test-key',
+        apiSecret: 'test-secret',
+      );
 
       await $(find.text('Resources')).waitUntilVisible();
       await $(find.text('Stacks')).tap();
