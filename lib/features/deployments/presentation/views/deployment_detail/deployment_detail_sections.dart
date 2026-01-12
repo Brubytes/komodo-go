@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
@@ -130,6 +133,7 @@ class DeploymentConfigContent extends StatelessWidget {
     }
 
     final serverId = config.serverId;
+    final isHostNetwork = config.network.trim().toLowerCase() == 'host';
     final ports = config.ports.trim();
     final volumes = config.volumes.trim();
     final environment = config.environment.trim();
@@ -138,41 +142,18 @@ class DeploymentConfigContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            StatusPill.onOff(
-              isOn: config.autoUpdate,
-              onLabel: 'Auto update',
-              offLabel: 'Manual update',
-              onIcon: AppIcons.ok,
-              offIcon: AppIcons.pause,
+        if (serverId.isNotEmpty) ...[
+          DetailSubCard(
+            title: 'Server',
+            icon: AppIcons.server,
+            child: DetailKeyValueRow(
+              label: 'Server',
+              value: serverName ?? serverId,
+              bottomPadding: 0,
             ),
-            StatusPill.onOff(
-              isOn: config.pollForUpdates,
-              onLabel: 'Polling on',
-              offLabel: 'Polling off',
-              onIcon: AppIcons.ok,
-              offIcon: AppIcons.pause,
-            ),
-            StatusPill.onOff(
-              isOn: config.sendAlerts,
-              onLabel: 'Alerts on',
-              offLabel: 'Alerts off',
-              onIcon: AppIcons.ok,
-              offIcon: AppIcons.notifications,
-            ),
-            StatusPill.onOff(
-              isOn: config.redeployOnBuild,
-              onLabel: 'Redeploy on build',
-              offLabel: 'Manual redeploy',
-              onIcon: AppIcons.ok,
-              offIcon: AppIcons.pause,
-            ),
-          ],
-        ),
-        const Gap(14),
+          ),
+          const Gap(12),
+        ],
         DetailSubCard(
           title: 'Image',
           icon: AppIcons.deployments,
@@ -185,66 +166,55 @@ class DeploymentConfigContent extends StatelessWidget {
                     : '—',
               ),
               DetailKeyValueRow(
-                label: 'Registry',
-                value: config.imageRegistryAccount.isNotEmpty
-                    ? config.imageRegistryAccount
+                label: 'Registry account',
+                value: config.imageRegistryAccount.trim().isNotEmpty
+                    ? config.imageRegistryAccount.trim()
                     : '—',
                 bottomPadding: 0,
               ),
             ],
           ),
         ),
-        if (serverId.isNotEmpty) ...[
+        if (config.network.trim().isNotEmpty || config.links.isNotEmpty) ...[
           const Gap(12),
           DetailSubCard(
-            title: 'Server',
-            icon: AppIcons.server,
-            child: DetailKeyValueRow(
-              label: 'Server',
-              value: serverName ?? serverId,
-              bottomPadding: 0,
-            ),
-          ),
-        ],
-        if (config.network.isNotEmpty ||
-            config.restart != null ||
-            config.terminationTimeout > 0) ...[
-          const Gap(12),
-          DetailSubCard(
-            title: 'Container',
-            icon: AppIcons.settings,
+            title: 'Network',
+            icon: AppIcons.network,
             child: Column(
               children: [
-                if (config.network.isNotEmpty)
-                  DetailKeyValueRow(label: 'Network', value: config.network),
-                if (config.restart != null)
+                DetailKeyValueRow(
+                  label: 'Network mode',
+                  value: config.network.trim().isNotEmpty
+                      ? config.network.trim()
+                      : '—',
+                ),
+                if (config.links.isNotEmpty)
                   DetailKeyValueRow(
-                    label: 'Restart',
-                    value: config.restart.toString(),
+                    label: 'Links',
+                    value: '',
+                    bottomPadding: 8,
                   ),
-                if (config.terminationTimeout > 0)
-                  DetailKeyValueRow(
-                    label: 'Term timeout',
-                    value: '${config.terminationTimeout}s',
-                    bottomPadding: 0,
+                if (config.links.isNotEmpty)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: DetailPillList(
+                      items: config.links,
+                      emptyLabel: 'No links',
+                    ),
                   ),
               ],
             ),
           ),
         ],
-        if (config.command.isNotEmpty) ...[
+        if (environment.isNotEmpty) ...[
           const Gap(12),
           DetailSubCard(
-            title: 'Command',
-            icon: AppIcons.activity,
-            child: DetailKeyValueRow(
-              label: 'Command',
-              value: config.command,
-              bottomPadding: 0,
-            ),
+            title: 'Environment',
+            icon: AppIcons.settings,
+            child: DetailCodeBlock(code: environment),
           ),
         ],
-        if (ports.isNotEmpty) ...[
+        if (!isHostNetwork && ports.isNotEmpty) ...[
           const Gap(12),
           DetailSubCard(
             title: 'Ports',
@@ -260,12 +230,67 @@ class DeploymentConfigContent extends StatelessWidget {
             child: DetailCodeBlock(code: volumes),
           ),
         ],
-        if (environment.isNotEmpty) ...[
+        if (config.restart != null) ...[
           const Gap(12),
           DetailSubCard(
-            title: 'Environment',
+            title: 'Restart Mode',
             icon: AppIcons.settings,
-            child: DetailCodeBlock(code: environment),
+            child: DetailKeyValueRow(
+              label: 'Restart',
+              value: config.restart.toString(),
+              bottomPadding: 0,
+            ),
+          ),
+        ],
+        const Gap(12),
+        DetailSubCard(
+          title: 'Auto Update',
+          icon: AppIcons.updateAvailable,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              StatusPill.onOff(
+                isOn: config.pollForUpdates,
+                onLabel: 'Polling on',
+                offLabel: 'Polling off',
+                onIcon: AppIcons.ok,
+                offIcon: AppIcons.pause,
+              ),
+              StatusPill.onOff(
+                isOn: config.autoUpdate,
+                onLabel: 'Auto update',
+                offLabel: 'Manual update',
+                onIcon: AppIcons.ok,
+                offIcon: AppIcons.pause,
+              ),
+              StatusPill.onOff(
+                isOn: config.redeployOnBuild,
+                onLabel: 'Redeploy on build',
+                offLabel: 'Manual redeploy',
+                onIcon: AppIcons.ok,
+                offIcon: AppIcons.pause,
+              ),
+              StatusPill.onOff(
+                isOn: config.sendAlerts,
+                onLabel: 'Alerts on',
+                offLabel: 'Alerts off',
+                onIcon: AppIcons.ok,
+                offIcon: AppIcons.notifications,
+              ),
+            ],
+          ),
+        ),
+        if (config.command.isNotEmpty) ...[
+          const Gap(12),
+          DetailSubCard(
+            title: 'Command',
+            icon: AppIcons.activity,
+            child: DetailKeyValueRow(
+              label: 'Command',
+              value: config.command,
+              bottomPadding: 0,
+            ),
           ),
         ],
         if (labels.isNotEmpty) ...[
@@ -276,14 +301,6 @@ class DeploymentConfigContent extends StatelessWidget {
             child: DetailCodeBlock(code: labels),
           ),
         ],
-        if (config.links.isNotEmpty) ...[
-          const Gap(12),
-          DetailSubCard(
-            title: 'Links',
-            icon: AppIcons.network,
-            child: DetailPillList(items: config.links, emptyLabel: 'No links'),
-          ),
-        ],
         if (config.extraArgs.isNotEmpty) ...[
           const Gap(12),
           DetailSubCard(
@@ -292,6 +309,37 @@ class DeploymentConfigContent extends StatelessWidget {
             child: DetailPillList(
               items: config.extraArgs,
               emptyLabel: 'No args',
+            ),
+          ),
+        ],
+        if (config.terminationSignal != null ||
+            config.terminationTimeout > 0 ||
+            config.termSignalLabels.isNotEmpty) ...[
+          const Gap(12),
+          DetailSubCard(
+            title: 'Termination',
+            icon: AppIcons.warning,
+            child: Column(
+              children: [
+                if (config.terminationSignal != null)
+                  DetailKeyValueRow(
+                    label: 'Default signal',
+                    value: config.terminationSignal.toString(),
+                  ),
+                if (config.terminationTimeout > 0)
+                  DetailKeyValueRow(
+                    label: 'Timeout',
+                    value: '${config.terminationTimeout}s',
+                  ),
+                if (config.termSignalLabels.isNotEmpty)
+                  DetailKeyValueRow(
+                    label: 'Signal labels',
+                    value: config.termSignalLabels,
+                    bottomPadding: 0,
+                  )
+                else
+                  const SizedBox.shrink(),
+              ],
             ),
           ),
         ],
@@ -323,6 +371,8 @@ class DeploymentConfigEditorContent extends StatefulWidget {
 
 class DeploymentConfigEditorContentState
     extends State<DeploymentConfigEditorContent> {
+  static const _builtinNetworkOptions = <String>['bridge', 'host'];
+
   // Komodo expects docker-style restart strings:
   //   no | on-failure | always | unless-stopped
   static const _restartOptions = <String>[
@@ -357,9 +407,14 @@ class DeploymentConfigEditorContentState
   late final TextEditingController _command;
   late final TextEditingController _terminationTimeout;
   late final TextEditingController _termSignalLabels;
-  late final TextEditingController _links;
-  late final TextEditingController _extraArgs;
   late final TextEditingController _image;
+
+  final List<TextEditingController> _linkControllers = [];
+  final List<TextEditingController> _extraArgControllers = [];
+
+  var _networkOptions = <String>['', ..._builtinNetworkOptions];
+  var _loadingNetworkOptions = false;
+  String _networkOptionsForServer = '';
 
   late CodeEditorController _portsController;
   late CodeEditorController _volumesController;
@@ -390,8 +445,9 @@ class DeploymentConfigEditorContentState
       text: _initial.terminationTimeout.toString(),
     );
     _termSignalLabels = TextEditingController(text: _initial.termSignalLabels);
-    _links = TextEditingController(text: _initial.links.join('\n'));
-    _extraArgs = TextEditingController(text: _initial.extraArgs.join('\n'));
+
+    _setRowControllers(_linkControllers, _initial.links);
+    _setRowControllers(_extraArgControllers, _initial.extraArgs);
 
     _image = TextEditingController(text: _imageTextFromDynamic(_initial.image));
 
@@ -428,8 +484,6 @@ class DeploymentConfigEditorContentState
       _command,
       _terminationTimeout,
       _termSignalLabels,
-      _links,
-      _extraArgs,
       _image,
       _portsController,
       _volumesController,
@@ -438,6 +492,13 @@ class DeploymentConfigEditorContentState
     ]) {
       c.addListener(_notifyDirtyIfChanged);
     }
+
+    _serverId.addListener(_maybeRefreshNetworkOptions);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _refreshNetworkOptions(_serverId.text.trim());
+    });
   }
 
   @override
@@ -461,8 +522,6 @@ class DeploymentConfigEditorContentState
       _command,
       _terminationTimeout,
       _termSignalLabels,
-      _links,
-      _extraArgs,
       _image,
       _portsController,
       _volumesController,
@@ -472,15 +531,18 @@ class DeploymentConfigEditorContentState
       c.removeListener(_notifyDirtyIfChanged);
     }
 
+    _serverId.removeListener(_maybeRefreshNetworkOptions);
+
     _serverId.dispose();
     _imageRegistryAccount.dispose();
     _network.dispose();
     _command.dispose();
     _terminationTimeout.dispose();
     _termSignalLabels.dispose();
-    _links.dispose();
-    _extraArgs.dispose();
     _image.dispose();
+
+    _disposeRowControllers(_linkControllers);
+    _disposeRowControllers(_extraArgControllers);
 
     _portsController.dispose();
     _volumesController.dispose();
@@ -522,6 +584,130 @@ class DeploymentConfigEditorContentState
     return '';
   }
 
+  void _disposeRowControllers(List<TextEditingController> controllers) {
+    for (final c in controllers) {
+      c.removeListener(_notifyDirtyIfChanged);
+      c.dispose();
+    }
+    controllers.clear();
+  }
+
+  void _setRowControllers(
+    List<TextEditingController> target,
+    List<String> values,
+  ) {
+    _disposeRowControllers(target);
+
+    final cleaned = values.map((e) => e.trim()).where((e) => e.isNotEmpty);
+    final next = cleaned.isNotEmpty
+        ? cleaned.map((e) => TextEditingController(text: e)).toList()
+        : <TextEditingController>[TextEditingController()];
+
+    target.addAll(next);
+    for (final c in target) {
+      c.addListener(_notifyDirtyIfChanged);
+    }
+  }
+
+  void _addRow(List<TextEditingController> target) {
+    setState(() {
+      final c = TextEditingController();
+      c.addListener(_notifyDirtyIfChanged);
+      target.add(c);
+    });
+    _notifyDirtyIfChanged();
+  }
+
+  void _removeRow(List<TextEditingController> target, int index) {
+    if (index < 0 || index >= target.length) return;
+    setState(() {
+      if (target.length <= 1) {
+        target.first.clear();
+        return;
+      }
+      final c = target.removeAt(index);
+      c.removeListener(_notifyDirtyIfChanged);
+      c.dispose();
+    });
+    _notifyDirtyIfChanged();
+  }
+
+  void _maybeRefreshNetworkOptions() {
+    final serverId = _serverId.text.trim();
+    if (serverId == _networkOptionsForServer) return;
+    _refreshNetworkOptions(serverId);
+  }
+
+  Future<void> _refreshNetworkOptions(String serverId) async {
+    final trimmed = serverId.trim();
+    if (!mounted) return;
+
+    if (trimmed.isEmpty) {
+      setState(() {
+        _networkOptionsForServer = '';
+        _loadingNetworkOptions = false;
+        _networkOptions = <String>['', ..._builtinNetworkOptions];
+      });
+      return;
+    }
+
+    setState(() {
+      _networkOptionsForServer = trimmed;
+      _loadingNetworkOptions = true;
+    });
+
+    final container = ProviderScope.containerOf(context, listen: false);
+    final api = container.read(apiClientProvider);
+    if (api == null) {
+      if (!mounted) return;
+      setState(() {
+        _loadingNetworkOptions = false;
+        _networkOptions = <String>['', ..._builtinNetworkOptions];
+      });
+      return;
+    }
+
+    try {
+      final response = await api.read(
+        RpcRequest(type: 'ListDockerNetworks', params: {'server': trimmed}),
+      );
+
+      final names = <String>[];
+      if (response is List) {
+        for (final item in response) {
+          if (item is Map) {
+            final name = item['name'];
+            if (name is String && name.trim().isNotEmpty) {
+              names.add(name.trim());
+            }
+          }
+        }
+      }
+
+      final custom = names.toSet().toList()
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      final options = <String>[
+        '',
+        ..._builtinNetworkOptions,
+        ...custom.where((n) => !_builtinNetworkOptions.contains(n)),
+      ];
+
+      if (!mounted) return;
+      if (_serverId.text.trim() != trimmed) return;
+      setState(() {
+        _loadingNetworkOptions = false;
+        _networkOptions = options;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      if (_serverId.text.trim() != trimmed) return;
+      setState(() {
+        _loadingNetworkOptions = false;
+        _networkOptions = <String>['', ..._builtinNetworkOptions];
+      });
+    }
+  }
+
   static String? _stringOrNull(Object? value) {
     if (value is String && value.trim().isNotEmpty) return value.trim();
     return null;
@@ -561,6 +747,10 @@ class DeploymentConfigEditorContentState
 
   void resetTo(DeploymentConfig config) {
     _suppressDirtyNotify = true;
+
+    _setRowControllers(_linkControllers, config.links);
+    _setRowControllers(_extraArgControllers, config.extraArgs);
+
     setState(() {
       _initial = config;
       _serverId.text = config.serverId;
@@ -569,8 +759,6 @@ class DeploymentConfigEditorContentState
       _command.text = config.command;
       _terminationTimeout.text = config.terminationTimeout.toString();
       _termSignalLabels.text = config.termSignalLabels;
-      _links.text = config.links.join('\n');
-      _extraArgs.text = config.extraArgs.join('\n');
       _image.text = _imageTextFromDynamic(config.image);
 
       _skipSecretInterp = config.skipSecretInterp;
@@ -586,6 +774,11 @@ class DeploymentConfigEditorContentState
       _volumesController.text = config.volumes;
       _environmentController.text = config.environment;
       _labelsController.text = config.labels;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _refreshNetworkOptions(_serverId.text.trim());
     });
 
     _suppressDirtyNotify = false;
@@ -695,10 +888,10 @@ class DeploymentConfigEditorContentState
     final labels = _labelsController.text.trim();
     if (labels != _initial.labels.trim()) partial['labels'] = labels;
 
-    final links = _links.text.split('\n');
+    final links = _linkControllers.map((c) => c.text).toList();
     setListIfChanged('links', links, _initial.links);
 
-    final extraArgs = _extraArgs.text.split('\n');
+    final extraArgs = _extraArgControllers.map((c) => c.text).toList();
     setListIfChanged('extra_args', extraArgs, _initial.extraArgs);
 
     // Optional: allow editing image (supports Image variant only).
@@ -745,63 +938,67 @@ class DeploymentConfigEditorContentState
       (r) => r.id == _imageRegistryAccount.text,
     );
 
+    final networkInList = _networkOptions.contains(_network.text);
+    final networkIsHost = _network.text.trim().toLowerCase() == 'host';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Server
         DetailSubCard(
-          title: 'Flags',
-          icon: AppIcons.settings,
+          title: 'Server',
+          icon: AppIcons.server,
           child: Column(
             children: [
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _autoUpdate,
-                title: const Text('Auto update'),
-                onChanged: (v) {
-                  setState(() => _autoUpdate = v);
-                  _notifyDirtyIfChanged();
-                },
-              ),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _pollForUpdates,
-                title: const Text('Poll for updates'),
-                onChanged: (v) {
-                  setState(() => _pollForUpdates = v);
-                  _notifyDirtyIfChanged();
-                },
-              ),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _sendAlerts,
-                title: const Text('Send alerts'),
-                onChanged: (v) {
-                  setState(() => _sendAlerts = v);
-                  _notifyDirtyIfChanged();
-                },
-              ),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _redeployOnBuild,
-                title: const Text('Redeploy on build'),
-                onChanged: (v) {
-                  setState(() => _redeployOnBuild = v);
-                  _notifyDirtyIfChanged();
-                },
-              ),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _skipSecretInterp,
-                title: const Text('Skip secret interpolation'),
-                onChanged: (v) {
-                  setState(() => _skipSecretInterp = v);
-                  _notifyDirtyIfChanged();
-                },
-              ),
+              if (sortedServers.isNotEmpty)
+                KomodoSelectMenuField<String>(
+                  key: ValueKey(sortedServers.length),
+                  value: serverIdInList ? _serverId.text : null,
+                  decoration: InputDecoration(
+                    labelText: 'Server',
+                    prefixIcon: const Icon(AppIcons.server),
+                    helperStyle: TextStyle(color: scheme.onSurfaceVariant),
+                    helperText: 'Select the server to deploy on.',
+                  ),
+                  items: [
+                    for (final server in sortedServers)
+                      KomodoSelectMenuItem(
+                        value: server.id,
+                        label: server.name,
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _serverId.text = value);
+                  },
+                )
+              else
+                TextFormField(
+                  controller: _serverId,
+                  decoration: InputDecoration(
+                    labelText: 'Server ID',
+                    prefixIcon: const Icon(AppIcons.server),
+                    helperStyle: TextStyle(color: scheme.onSurfaceVariant),
+                    helperText: 'Select the server to deploy on.',
+                  ),
+                ),
+              if (sortedServers.isNotEmpty && !serverIdInList) ...[
+                const Gap(8),
+                TextFormField(
+                  controller: _serverId,
+                  decoration: const InputDecoration(
+                    labelText: 'Server ID (manual)',
+                    prefixIcon: Icon(AppIcons.tag),
+                    helperText: 'Current value not found in server list.',
+                  ),
+                ),
+              ],
             ],
           ),
         ),
         const Gap(12),
+
+        // Image + Account
         DetailSubCard(
           title: 'Image',
           icon: AppIcons.deployments,
@@ -817,7 +1014,7 @@ class DeploymentConfigEditorContentState
                   labelText: 'Image (optional)',
                   prefixIcon: const Icon(AppIcons.deployments),
                   helperStyle: TextStyle(color: scheme.onSurfaceVariant),
-                  helperText: 'Only supports external image (Image variant).',
+                  helperText: 'Either pass a docker image directly.',
                 ),
               ),
               const Gap(12),
@@ -834,9 +1031,8 @@ class DeploymentConfigEditorContentState
                   labelText: 'Registry account',
                   prefixIcon: const Icon(AppIcons.package),
                   helperStyle: TextStyle(color: scheme.onSurfaceVariant),
-                  helperText: sortedRegistries.isNotEmpty
-                      ? 'Select a saved registry account.'
-                      : 'No registry accounts found. Add one under Providers.',
+                  helperText:
+                      'Select the account used to log in to the provider.',
                 ),
                 items: sortedRegistries.isNotEmpty
                     ? [
@@ -879,97 +1075,289 @@ class DeploymentConfigEditorContentState
           ),
         ),
         const Gap(12),
+
+        // Network + Links
         DetailSubCard(
-          title: 'Server',
-          icon: AppIcons.server,
+          title: 'Network',
+          icon: AppIcons.network,
           child: Column(
             children: [
-              if (sortedServers.isNotEmpty)
-                KomodoSelectMenuField<String>(
-                  key: ValueKey(sortedServers.length),
-                  value: serverIdInList ? _serverId.text : null,
-                  decoration: InputDecoration(
-                    labelText: 'Server',
-                    prefixIcon: const Icon(AppIcons.server),
-                    helperStyle: TextStyle(color: scheme.onSurfaceVariant),
-                    helperText: 'Changing server may move/cleanup deployment.',
-                  ),
-                  items: [
-                    for (final server in sortedServers)
-                      KomodoSelectMenuItem(
-                        value: server.id,
-                        label: server.name,
-                      ),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => _serverId.text = value);
-                  },
-                )
-              else
-                TextFormField(
-                  controller: _serverId,
-                  decoration: InputDecoration(
-                    labelText: 'Server ID',
-                    prefixIcon: const Icon(AppIcons.server),
-                    helperStyle: TextStyle(color: scheme.onSurfaceVariant),
-                    helperText: 'Changing server may move/cleanup deployment.',
-                  ),
+              KomodoSelectMenuField<String>(
+                key: ValueKey(_networkOptions.length),
+                value: networkInList ? _network.text : null,
+                decoration: InputDecoration(
+                  labelText: 'Network mode',
+                  prefixIcon: const Icon(AppIcons.network),
+                  helperStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  helperText: _loadingNetworkOptions
+                      ? 'Loading networks…'
+                      : 'Choose the --network attached to container.',
                 ),
-              if (sortedServers.isNotEmpty && !serverIdInList) ...[
+                items: [
+                  const KomodoSelectMenuItem(value: '', label: '—'),
+                  for (final v in _networkOptions.where((e) => e.isNotEmpty))
+                    KomodoSelectMenuItem(value: v, label: v),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _network.text = value);
+                },
+              ),
+              if (!networkInList && _network.text.trim().isNotEmpty) ...[
                 const Gap(8),
                 TextFormField(
-                  controller: _serverId,
+                  controller: _network,
                   decoration: const InputDecoration(
-                    labelText: 'Server ID (manual)',
+                    labelText: 'Network mode (manual)',
                     prefixIcon: Icon(AppIcons.tag),
-                    helperText: 'Current value not found in server list.',
+                    helperText: 'Current value not found in network list.',
                   ),
                 ),
               ],
+              const Gap(12),
+              Column(
+                children: [
+                  for (var i = 0; i < _linkControllers.length; i++) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _linkControllers[i],
+                            decoration: InputDecoration(
+                              labelText: i == 0 ? 'Links' : null,
+                              hintText: i == 0 ? null : 'Link',
+                              prefixIcon: i == 0
+                                  ? const Icon(AppIcons.network)
+                                  : null,
+                              helperText: i == 0
+                                  ? 'Add quick links in the resource header.'
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        const Gap(8),
+                        IconButton(
+                          tooltip: 'Remove',
+                          icon: const Icon(AppIcons.delete),
+                          onPressed: () => _removeRow(_linkControllers, i),
+                        ),
+                      ],
+                    ),
+                    const Gap(8),
+                  ],
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => _addRow(_linkControllers),
+                      icon: const Icon(AppIcons.add),
+                      label: const Text('Add link'),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
         const Gap(12),
+
+        // Environment
         DetailSubCard(
-          title: 'Container',
+          title: 'Environment',
+          icon: AppIcons.settings,
+          child: DetailCodeEditor(
+            controller: _environmentController,
+            maxHeight: 220,
+          ),
+        ),
+        const Gap(12),
+
+        // Ports (hidden for host network mode)
+        if (!networkIsHost) ...[
+          DetailSubCard(
+            title: 'Ports',
+            icon: AppIcons.settings,
+            child: DetailCodeEditor(
+              controller: _portsController,
+              maxHeight: 180,
+            ),
+          ),
+          const Gap(12),
+        ],
+
+        // Volumes
+        DetailSubCard(
+          title: 'Volumes',
+          icon: AppIcons.package,
+          child: DetailCodeEditor(
+            controller: _volumesController,
+            maxHeight: 180,
+          ),
+        ),
+        const Gap(12),
+
+        // Restart mode
+        DetailSubCard(
+          title: 'Restart Mode',
+          icon: AppIcons.settings,
+          child: KomodoSelectMenuField<String>(
+            value: (_restartOptions.contains(_restart) ? _restart : null),
+            decoration: const InputDecoration(
+              labelText: 'Restart',
+              prefixIcon: Icon(AppIcons.settings),
+              helperText: 'Configure the --restart behavior.',
+            ),
+            items: [
+              for (final v in _restartOptions)
+                KomodoSelectMenuItem(value: v, label: _restartLabels[v] ?? v),
+            ],
+            onChanged: (v) {
+              setState(() => _restart = v);
+              _notifyDirtyIfChanged();
+            },
+          ),
+        ),
+        const Gap(12),
+
+        // Auto update (web-style ordering)
+        DetailSubCard(
+          title: 'Auto Update',
+          icon: AppIcons.updateAvailable,
+          child: Column(
+            children: [
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _pollForUpdates,
+                title: const Text('Poll for updates'),
+                subtitle: const Text(
+                  'Check for updates to the image on an interval.',
+                ),
+                onChanged: (v) {
+                  setState(() => _pollForUpdates = v);
+                  _notifyDirtyIfChanged();
+                },
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _autoUpdate,
+                title: const Text('Auto update'),
+                subtitle: const Text(
+                  'Trigger a redeploy if a newer image is found.',
+                ),
+                onChanged: (v) {
+                  setState(() => _autoUpdate = v);
+                  _notifyDirtyIfChanged();
+                },
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+
+        // Advanced
+        DetailSubCard(
+          title: 'Advanced',
           icon: AppIcons.settings,
           child: Column(
             children: [
               TextFormField(
-                controller: _network,
+                controller: _command,
                 decoration: const InputDecoration(
-                  labelText: 'Network',
-                  prefixIcon: Icon(AppIcons.network),
+                  labelText: 'Command',
+                  prefixIcon: Icon(AppIcons.activity),
+                  helperText: 'Replace the CMD, or extend the ENTRYPOINT.',
                 ),
               ),
               const Gap(12),
-              KomodoSelectMenuField<String>(
-                value: (_restartOptions.contains(_restart) ? _restart : null),
-                decoration: const InputDecoration(
-                  labelText: 'Restart',
-                  prefixIcon: Icon(AppIcons.settings),
-                ),
-                items: [
-                  for (final v in _restartOptions)
-                    KomodoSelectMenuItem(
-                      value: v,
-                      label: _restartLabels[v] ?? v,
+              DetailCodeEditor(controller: _labelsController, maxHeight: 180),
+              const Gap(12),
+              Column(
+                children: [
+                  for (var i = 0; i < _extraArgControllers.length; i++) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _extraArgControllers[i],
+                            decoration: InputDecoration(
+                              labelText: i == 0 ? 'Extra args' : null,
+                              hintText: i == 0 ? null : 'Arg',
+                              prefixIcon: i == 0
+                                  ? const Icon(AppIcons.settings)
+                                  : null,
+                              helperText: i == 0
+                                  ? "Pass extra arguments to 'docker run'."
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        const Gap(8),
+                        IconButton(
+                          tooltip: 'Remove',
+                          icon: const Icon(AppIcons.delete),
+                          onPressed: () => _removeRow(_extraArgControllers, i),
+                        ),
+                      ],
                     ),
+                    const Gap(8),
+                  ],
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => _addRow(_extraArgControllers),
+                      icon: const Icon(AppIcons.add),
+                      label: const Text('Add arg'),
+                    ),
+                  ),
                 ],
+              ),
+              const Gap(12),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _sendAlerts,
+                title: const Text('Send alerts'),
                 onChanged: (v) {
-                  setState(() => _restart = v);
+                  setState(() => _sendAlerts = v);
                   _notifyDirtyIfChanged();
                 },
               ),
-              const Gap(12),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _redeployOnBuild,
+                title: const Text('Redeploy on build'),
+                onChanged: (v) {
+                  setState(() => _redeployOnBuild = v);
+                  _notifyDirtyIfChanged();
+                },
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _skipSecretInterp,
+                title: const Text('Skip secret interpolation'),
+                onChanged: (v) {
+                  setState(() => _skipSecretInterp = v);
+                  _notifyDirtyIfChanged();
+                },
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+
+        // Termination
+        DetailSubCard(
+          title: 'Termination',
+          icon: AppIcons.warning,
+          child: Column(
+            children: [
               KomodoSelectMenuField<String>(
                 value: (_terminationSignalOptions.contains(_terminationSignal)
                     ? _terminationSignal
                     : null),
                 decoration: const InputDecoration(
-                  labelText: 'Termination signal',
+                  labelText: 'Default termination signal',
                   prefixIcon: Icon(AppIcons.warning),
+                  helperText:
+                      'Configure the signals used to stop the container.',
                 ),
                 items: [
                   for (final v in _terminationSignalOptions)
@@ -993,80 +1381,12 @@ class DeploymentConfigEditorContentState
               TextFormField(
                 controller: _termSignalLabels,
                 decoration: const InputDecoration(
-                  labelText: 'Term signal labels',
+                  labelText: 'Termination signal labels',
                   prefixIcon: Icon(AppIcons.tag),
-                ),
-              ),
-              const Gap(12),
-              TextFormField(
-                controller: _command,
-                decoration: const InputDecoration(
-                  labelText: 'Command',
-                  prefixIcon: Icon(AppIcons.activity),
+                  helperText: 'Choose between multiple signals when stopping.',
                 ),
               ),
             ],
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Ports',
-          icon: AppIcons.settings,
-          child: DetailCodeEditor(controller: _portsController, maxHeight: 180),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Volumes',
-          icon: AppIcons.package,
-          child: DetailCodeEditor(
-            controller: _volumesController,
-            maxHeight: 180,
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Environment',
-          icon: AppIcons.settings,
-          child: DetailCodeEditor(
-            controller: _environmentController,
-            maxHeight: 220,
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Labels',
-          icon: AppIcons.tag,
-          child: DetailCodeEditor(
-            controller: _labelsController,
-            maxHeight: 180,
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Links',
-          icon: AppIcons.network,
-          child: TextFormField(
-            controller: _links,
-            minLines: 2,
-            maxLines: 8,
-            decoration: const InputDecoration(
-              labelText: 'Links (one per line)',
-              prefixIcon: Icon(AppIcons.network),
-            ),
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Extra Args',
-          icon: AppIcons.settings,
-          child: TextFormField(
-            controller: _extraArgs,
-            minLines: 2,
-            maxLines: 8,
-            decoration: const InputDecoration(
-              labelText: 'Args (one per line)',
-              prefixIcon: Icon(AppIcons.settings),
-            ),
           ),
         ),
       ],
