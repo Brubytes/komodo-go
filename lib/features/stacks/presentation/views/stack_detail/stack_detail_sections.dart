@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
@@ -441,11 +442,13 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _envFilePath = TextEditingController(text: _initial.envFilePath);
 
     _links = TextEditingController(text: _initial.links.join('\n'));
-    _additionalEnvFiles =
-        TextEditingController(text: _initial.additionalEnvFiles.join('\n'));
+    _additionalEnvFiles = TextEditingController(
+      text: _initial.additionalEnvFiles.join('\n'),
+    );
     _filePaths = TextEditingController(text: _initial.filePaths.join('\n'));
-    _ignoreServices =
-        TextEditingController(text: _initial.ignoreServices.join('\n'));
+    _ignoreServices = TextEditingController(
+      text: _initial.ignoreServices.join('\n'),
+    );
 
     _autoPull = _initial.autoPull;
     _autoUpdate = _initial.autoUpdate;
@@ -639,7 +642,11 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _runDirectory.text.trim(),
       _initial.runDirectory,
     );
-    setIfChanged('env_file_path', _envFilePath.text.trim(), _initial.envFilePath);
+    setIfChanged(
+      'env_file_path',
+      _envFilePath.text.trim(),
+      _initial.envFilePath,
+    );
 
     setIfChanged('auto_pull', _autoPull, _initial.autoPull);
     setIfChanged('auto_update', _autoUpdate, _initial.autoUpdate);
@@ -655,7 +662,8 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     }
 
     final filePaths = normalizeList(_filePaths.text);
-    if (!_listEquals(filePaths, _initial.filePaths)) params['file_paths'] = filePaths;
+    if (!_listEquals(filePaths, _initial.filePaths))
+      params['file_paths'] = filePaths;
 
     final ignore = normalizeList(_ignoreServices.text);
     if (!_listEquals(ignore, _initial.ignoreServices)) {
@@ -686,23 +694,20 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     final servers = widget.servers;
     final repos = widget.repos;
 
-    final sortedServers = [...servers]..sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-      );
-    final sortedRepos = [...repos]..sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-      );
+    final sortedServers = [...servers]
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final sortedRepos = [...repos]
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     final serverIdInList = sortedServers.any((s) => s.id == _serverId.text);
     final linkedRepoInList = sortedRepos.any((r) => r.id == _linkedRepo.text);
 
-    final repoPathOptions = <String>{
-      for (final r in sortedRepos)
-        if (r.info.repo.trim().isNotEmpty) r.info.repo.trim(),
-    }.toList(growable: false)
-      ..sort(
-        (a, b) => a.toLowerCase().compareTo(b.toLowerCase()),
-      );
+    final repoPathOptions =
+        <String>{
+            for (final r in sortedRepos)
+              if (r.info.repo.trim().isNotEmpty) r.info.repo.trim(),
+          }.toList(growable: false)
+          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final repoInList = repoPathOptions.contains(_repo.text.trim());
 
     final showRepoSection = _initial.linkedRepo.trim().isNotEmpty;
@@ -761,96 +766,90 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
             icon: AppIcons.repos,
             child: Column(
               children: [
-                  if (repoPathOptions.isNotEmpty)
-                    DropdownButtonFormField<String>(
-                      key: ValueKey(repoPathOptions.length),
-                      value: repoInList ? _repo.text.trim() : null,
-                      decoration: const InputDecoration(
-                        labelText: 'Repo',
-                        prefixIcon: Icon(AppIcons.repos),
-                      ),
-                      items: [
-                        for (final repoPath in repoPathOptions)
-                          DropdownMenuItem(
-                            value: repoPath,
-                            child: Text(repoPath),
-                          ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => _repo.text = value);
-                        _notifyDirtyIfChanged();
-                      },
-                    )
-                  else
-                    TextFormField(
-                      controller: _repo,
-                      decoration: const InputDecoration(
-                        labelText: 'Repo',
-                        prefixIcon: Icon(AppIcons.repos),
-                      ),
-                    ),
-                  const Gap(12),
-                  TextFormField(
-                    controller: _branch,
+                if (repoPathOptions.isNotEmpty)
+                  KomodoSelectMenuField<String>(
+                    key: ValueKey(repoPathOptions.length),
+                    value: repoInList ? _repo.text.trim() : null,
                     decoration: const InputDecoration(
-                      labelText: 'Branch',
+                      labelText: 'Repo',
+                      prefixIcon: Icon(AppIcons.repos),
+                    ),
+                    items: [
+                      for (final repoPath in repoPathOptions)
+                        KomodoSelectMenuItem(value: repoPath, label: repoPath),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _repo.text = value);
+                      _notifyDirtyIfChanged();
+                    },
+                  )
+                else
+                  TextFormField(
+                    controller: _repo,
+                    decoration: const InputDecoration(
+                      labelText: 'Repo',
                       prefixIcon: Icon(AppIcons.repos),
                     ),
                   ),
-                  const Gap(12),
-                  TextFormField(
-                    controller: _commit,
+                const Gap(12),
+                TextFormField(
+                  controller: _branch,
+                  decoration: const InputDecoration(
+                    labelText: 'Branch',
+                    prefixIcon: Icon(AppIcons.repos),
+                  ),
+                ),
+                const Gap(12),
+                TextFormField(
+                  controller: _commit,
+                  decoration: const InputDecoration(
+                    labelText: 'Commit',
+                    prefixIcon: Icon(AppIcons.tag),
+                  ),
+                ),
+                const Gap(12),
+                if (sortedRepos.isNotEmpty)
+                  KomodoSelectMenuField<String>(
+                    key: ValueKey(sortedRepos.length),
+                    value: linkedRepoInList ? _linkedRepo.text : null,
                     decoration: const InputDecoration(
-                      labelText: 'Commit',
-                      prefixIcon: Icon(AppIcons.tag),
+                      labelText: 'Linked repo',
+                      prefixIcon: Icon(AppIcons.repos),
+                    ),
+                    items: [
+                      for (final repo in sortedRepos)
+                        KomodoSelectMenuItem(
+                          value: repo.id,
+                          label: repo.info.repo.trim().isNotEmpty
+                              ? '${repo.name} · ${repo.info.repo.trim()}'
+                              : repo.name,
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _linkedRepo.text = value);
+                    },
+                  )
+                else
+                  TextFormField(
+                    controller: _linkedRepo,
+                    decoration: const InputDecoration(
+                      labelText: 'Linked repo',
+                      prefixIcon: Icon(AppIcons.repos),
                     ),
                   ),
-                  const Gap(12),
-                  if (sortedRepos.isNotEmpty)
-                    DropdownButtonFormField<String>(
-                      key: ValueKey(sortedRepos.length),
-                      value: linkedRepoInList ? _linkedRepo.text : null,
-                      decoration: const InputDecoration(
-                        labelText: 'Linked repo',
-                        prefixIcon: Icon(AppIcons.repos),
-                      ),
-                      items: [
-                        for (final repo in sortedRepos)
-                          DropdownMenuItem(
-                            value: repo.id,
-                            child: Text(
-                              repo.info.repo.trim().isNotEmpty
-                                  ? '${repo.name} · ${repo.info.repo.trim()}'
-                                  : repo.name,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => _linkedRepo.text = value);
-                      },
-                    )
-                  else
-                    TextFormField(
-                      controller: _linkedRepo,
-                      decoration: const InputDecoration(
-                        labelText: 'Linked repo',
-                        prefixIcon: Icon(AppIcons.repos),
-                      ),
+                if (sortedRepos.isNotEmpty && !linkedRepoInList) ...[
+                  const Gap(8),
+                  TextFormField(
+                    controller: _linkedRepo,
+                    decoration: const InputDecoration(
+                      labelText: 'Linked repo ID (manual)',
+                      prefixIcon: Icon(AppIcons.tag),
+                      helperText: 'Current value not found in repo list.',
                     ),
-                  if (sortedRepos.isNotEmpty && !linkedRepoInList) ...[
-                    const Gap(8),
-                    TextFormField(
-                      controller: _linkedRepo,
-                      decoration: const InputDecoration(
-                        labelText: 'Linked repo ID (manual)',
-                        prefixIcon: Icon(AppIcons.tag),
-                        helperText: 'Current value not found in repo list.',
-                      ),
-                    ),
-                  ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -902,7 +901,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
           child: Column(
             children: [
               if (sortedServers.isNotEmpty)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuField<String>(
                   key: ValueKey(sortedServers.length),
                   value: serverIdInList ? _serverId.text : null,
                   decoration: InputDecoration(
@@ -913,9 +912,9 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   ),
                   items: [
                     for (final server in sortedServers)
-                      DropdownMenuItem(
+                      KomodoSelectMenuItem(
                         value: server.id,
-                        child: Text(server.name),
+                        label: server.name,
                       ),
                   ],
                   onChanged: (value) {

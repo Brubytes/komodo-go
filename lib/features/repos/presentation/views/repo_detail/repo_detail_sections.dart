@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/providers/data/models/git_provider_account.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
@@ -269,7 +270,7 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
           child: Column(
             children: [
               if (gitProviderDomains.isNotEmpty)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuField<String>(
                   key: ValueKey(gitProviderDomains.length),
                   value: providerDomainInList ? _gitProvider.text.trim() : null,
                   decoration: const InputDecoration(
@@ -277,9 +278,9 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
                     prefixIcon: Icon(AppIcons.repos),
                   ),
                   items: [
-                    const DropdownMenuItem(value: '', child: Text('—')),
+                    const KomodoSelectMenuItem(value: '', label: '—'),
                     for (final domain in gitProviderDomains)
-                      DropdownMenuItem(value: domain, child: Text(domain)),
+                      KomodoSelectMenuItem(value: domain, label: domain),
                   ],
                   onChanged: (value) {
                     if (value == null) return;
@@ -318,7 +319,7 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
               ],
               const Gap(12),
               if (accountsForDomain.isNotEmpty)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuField<String>(
                   key: ValueKey(
                     '${selectedDomain}_${accountsForDomain.length}',
                   ),
@@ -328,11 +329,11 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
                     prefixIcon: Icon(AppIcons.user),
                   ),
                   items: [
-                    const DropdownMenuItem(value: '', child: Text('—')),
+                    const KomodoSelectMenuItem(value: '', label: '—'),
                     for (final account in accountsForDomain)
-                      DropdownMenuItem(
+                      KomodoSelectMenuItem(
                         value: account.username,
-                        child: Text(account.username),
+                        label: account.username,
                       ),
                   ],
                   onChanged: (value) {
@@ -413,7 +414,7 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
           child: Column(
             children: [
               if (sortedServers.isNotEmpty)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuField<String>(
                   key: ValueKey(sortedServers.length),
                   value: serverIdInList ? _serverId.text : null,
                   decoration: InputDecoration(
@@ -424,11 +425,11 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
                         'Changing server may cleanup the repo on the old server.',
                   ),
                   items: [
-                    const DropdownMenuItem(value: '', child: Text('—')),
+                    const KomodoSelectMenuItem(value: '', label: '—'),
                     for (final server in sortedServers)
-                      DropdownMenuItem(
+                      KomodoSelectMenuItem(
                         value: server.id,
-                        child: Text(server.name),
+                        label: server.name,
                       ),
                   ],
                   onChanged: (value) {
@@ -460,7 +461,7 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
               ],
               const Gap(12),
               if (sortedBuilders.isNotEmpty)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuField<String>(
                   key: ValueKey(sortedBuilders.length),
                   value: builderIdInList ? _builderId.text : null,
                   decoration: const InputDecoration(
@@ -468,11 +469,11 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
                     prefixIcon: Icon(AppIcons.factory),
                   ),
                   items: [
-                    const DropdownMenuItem(value: '', child: Text('—')),
+                    const KomodoSelectMenuItem(value: '', label: '—'),
                     for (final builder in sortedBuilders)
-                      DropdownMenuItem(
+                      KomodoSelectMenuItem(
                         value: builder.id,
-                        child: Text(builder.name),
+                        label: builder.name,
                       ),
                   ],
                   onChanged: (value) {

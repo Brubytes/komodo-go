@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/providers/data/models/git_provider_account.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
@@ -423,24 +424,21 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
           child: Column(
             children: [
               if (sortedRepos.isNotEmpty)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuField<String>(
                   key: ValueKey('sync_linked_repo_${sortedRepos.length}'),
-                  initialValue: linkedRepoInList ? _linkedRepo.text : null,
+                  value: linkedRepoInList ? _linkedRepo.text : null,
                   decoration: const InputDecoration(
                     labelText: 'Linked repo',
                     prefixIcon: Icon(AppIcons.repos),
                   ),
                   items: [
-                    const DropdownMenuItem(value: '', child: Text('—')),
+                    const KomodoSelectMenuItem(value: '', label: '—'),
                     for (final repo in sortedRepos)
-                      DropdownMenuItem(
+                      KomodoSelectMenuItem(
                         value: repo.id,
-                        child: Text(
-                          repo.info.repo.trim().isNotEmpty
-                              ? '${repo.name} · ${repo.info.repo.trim()}'
-                              : repo.name,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        label: repo.info.repo.trim().isNotEmpty
+                            ? '${repo.name} · ${repo.info.repo.trim()}'
+                            : repo.name,
                       ),
                   ],
                   onChanged: (value) {
@@ -469,21 +467,19 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
               ],
               const Gap(12),
               if (gitProviderDomains.isNotEmpty)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuField<String>(
                   key: ValueKey(
                     'sync_git_provider_${gitProviderDomains.length}',
                   ),
-                  initialValue: providerDomainInList
-                      ? _gitProvider.text.trim()
-                      : null,
+                  value: providerDomainInList ? _gitProvider.text.trim() : null,
                   decoration: const InputDecoration(
                     labelText: 'Git provider',
                     prefixIcon: Icon(AppIcons.repos),
                   ),
                   items: [
-                    const DropdownMenuItem(value: '', child: Text('—')),
+                    const KomodoSelectMenuItem(value: '', label: '—'),
                     for (final domain in gitProviderDomains)
-                      DropdownMenuItem(value: domain, child: Text(domain)),
+                      KomodoSelectMenuItem(value: domain, label: domain),
                   ],
                   onChanged: (value) {
                     if (value == null) return;
@@ -521,21 +517,21 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
               ],
               const Gap(12),
               if (accountsForDomain.isNotEmpty)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuField<String>(
                   key: ValueKey(
                     '${selectedDomain}_${accountsForDomain.length}',
                   ),
-                  initialValue: accountInList ? _gitAccount.text.trim() : null,
+                  value: accountInList ? _gitAccount.text.trim() : null,
                   decoration: const InputDecoration(
                     labelText: 'Git account',
                     prefixIcon: Icon(AppIcons.user),
                   ),
                   items: [
-                    const DropdownMenuItem(value: '', child: Text('—')),
+                    const KomodoSelectMenuItem(value: '', label: '—'),
                     for (final account in accountsForDomain)
-                      DropdownMenuItem(
+                      KomodoSelectMenuItem(
                         value: account.username,
-                        child: Text(account.username),
+                        label: account.username,
                       ),
                   ],
                   onChanged: (value) {
@@ -578,16 +574,16 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
               ),
               const Gap(12),
               if (repoPathOptions.isNotEmpty)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuField<String>(
                   key: ValueKey('sync_repo_${repoPathOptions.length}'),
-                  initialValue: repoInList ? _repo.text.trim() : null,
+                  value: repoInList ? _repo.text.trim() : null,
                   decoration: const InputDecoration(
                     labelText: 'Repo',
                     prefixIcon: Icon(AppIcons.repos),
                   ),
                   items: [
                     for (final repoPath in repoPathOptions)
-                      DropdownMenuItem(value: repoPath, child: Text(repoPath)),
+                      KomodoSelectMenuItem(value: repoPath, label: repoPath),
                   ],
                   onChanged: (value) {
                     if (value == null) return;

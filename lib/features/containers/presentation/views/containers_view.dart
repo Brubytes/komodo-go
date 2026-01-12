@@ -11,6 +11,7 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_filters_provider.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
@@ -313,25 +314,25 @@ class _FiltersRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final serverField = serversAsync.maybeWhen(
-      data: (servers) => DropdownButtonFormField<String?>(
+      data: (servers) => KomodoSelectMenuFormField<String?>(
         initialValue: selectedServerId,
         decoration: const InputDecoration(
           labelText: 'Server',
           prefixIcon: Icon(AppIcons.server),
         ),
         items: [
-          const DropdownMenuItem(child: Text('All servers')),
+          const KomodoSelectMenuItem(value: null, label: 'All servers'),
           for (final server in servers)
-            DropdownMenuItem(value: server.id, child: Text(server.name)),
+            KomodoSelectMenuItem(value: server.id, label: server.name),
         ],
         onChanged: onServerChanged,
       ),
-      orElse: () => DropdownButtonFormField<String?>(
+      orElse: () => KomodoSelectMenuFormField<String?>(
         decoration: const InputDecoration(
           labelText: 'Server',
           prefixIcon: Icon(AppIcons.server),
         ),
-        items: const [DropdownMenuItem(child: Text('All servers'))],
+        items: const [KomodoSelectMenuItem(value: null, label: 'All servers')],
         onChanged: null,
       ),
     );
@@ -399,36 +400,36 @@ class _SortRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: DropdownButtonFormField<ContainersSortField>(
+          child: KomodoSelectMenuFormField<ContainersSortField>(
             initialValue: sortState.field,
             decoration: const InputDecoration(
               labelText: 'Sort by',
               prefixIcon: Icon(Icons.sort),
             ),
             items: const [
-              DropdownMenuItem(
+              KomodoSelectMenuItem(
                 value: ContainersSortField.name,
-                child: Text('Name'),
+                label: 'Name',
               ),
-              DropdownMenuItem(
+              KomodoSelectMenuItem(
                 value: ContainersSortField.cpu,
-                child: Text('CPU'),
+                label: 'CPU',
               ),
-              DropdownMenuItem(
+              KomodoSelectMenuItem(
                 value: ContainersSortField.memory,
-                child: Text('Memory'),
+                label: 'Memory',
               ),
-              DropdownMenuItem(
+              KomodoSelectMenuItem(
                 value: ContainersSortField.network,
-                child: Text('Network I/O'),
+                label: 'Network I/O',
               ),
-              DropdownMenuItem(
+              KomodoSelectMenuItem(
                 value: ContainersSortField.blockIo,
-                child: Text('Drive I/O'),
+                label: 'Drive I/O',
               ),
-              DropdownMenuItem(
+              KomodoSelectMenuItem(
                 value: ContainersSortField.pids,
-                child: Text('PIDs'),
+                label: 'PIDs',
               ),
             ],
             onChanged: (value) {

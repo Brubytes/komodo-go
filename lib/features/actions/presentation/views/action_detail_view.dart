@@ -7,6 +7,7 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
@@ -173,10 +174,7 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
     setState(() => _configSaveInFlight = true);
     final updated = await ref
         .read(actionActionsProvider.notifier)
-        .updateActionConfig(
-          actionId: action.id,
-          partialConfig: partialConfig,
-        );
+        .updateActionConfig(actionId: action.id, partialConfig: partialConfig);
     if (!mounted) return;
     setState(() => _configSaveInFlight = false);
 
@@ -517,17 +515,17 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
           icon: AppIcons.clock,
           child: Column(
             children: [
-              DropdownButtonFormField<ScheduleFormat>(
+              KomodoSelectMenuField<ScheduleFormat>(
                 key: const ValueKey('action_schedule_format'),
                 value: _scheduleFormat,
                 items: const [
-                  DropdownMenuItem(
+                  KomodoSelectMenuItem(
                     value: ScheduleFormat.english,
-                    child: Text('English'),
+                    label: 'English',
                   ),
-                  DropdownMenuItem(
+                  KomodoSelectMenuItem(
                     value: ScheduleFormat.cron,
-                    child: Text('Cron'),
+                    label: 'Cron',
                   ),
                 ],
                 onChanged: (v) {
@@ -589,17 +587,17 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
           icon: AppIcons.tag,
           child: Column(
             children: [
-              DropdownButtonFormField<FileFormat>(
+              KomodoSelectMenuField<FileFormat>(
                 key: const ValueKey('action_arguments_format'),
                 value: _argumentsFormat,
                 items: const [
-                  DropdownMenuItem(
+                  KomodoSelectMenuItem(
                     value: FileFormat.keyValue,
-                    child: Text('KeyValue'),
+                    label: 'KeyValue',
                   ),
-                  DropdownMenuItem(value: FileFormat.toml, child: Text('TOML')),
-                  DropdownMenuItem(value: FileFormat.yaml, child: Text('YAML')),
-                  DropdownMenuItem(value: FileFormat.json, child: Text('JSON')),
+                  KomodoSelectMenuItem(value: FileFormat.toml, label: 'TOML'),
+                  KomodoSelectMenuItem(value: FileFormat.yaml, label: 'YAML'),
+                  KomodoSelectMenuItem(value: FileFormat.json, label: 'JSON'),
                 ],
                 onChanged: (v) {
                   if (v == null) return;

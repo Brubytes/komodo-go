@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
 
 class MaintenanceWindowsEditorSheet extends StatefulWidget {
@@ -199,27 +200,19 @@ class _MaintenanceWindowEditorDialogState
     super.initState();
     final i = widget.initial;
     _nameController = TextEditingController(text: i?.name ?? '');
-    _descriptionController = TextEditingController(
-      text: i?.description ?? '',
-    );
+    _descriptionController = TextEditingController(text: i?.description ?? '');
     final st = i?.scheduleType.trim() ?? '';
     _scheduleType = _scheduleTypes.contains(st) ? st : _scheduleTypes.first;
-    _dayOfWeekController = TextEditingController(
-      text: i?.dayOfWeek ?? '',
-    );
+    _dayOfWeekController = TextEditingController(text: i?.dayOfWeek ?? '');
     _dateController = TextEditingController(text: i?.date ?? '');
-    _hourController = TextEditingController(
-      text: (i?.hour ?? 0).toString(),
-    );
+    _hourController = TextEditingController(text: (i?.hour ?? 0).toString());
     _minuteController = TextEditingController(
       text: (i?.minute ?? 0).toString(),
     );
     _durationController = TextEditingController(
       text: (i?.durationMinutes ?? 60).toString(),
     );
-    _timezoneController = TextEditingController(
-      text: i?.timezone ?? 'UTC',
-    );
+    _timezoneController = TextEditingController(text: i?.timezone ?? 'UTC');
     _enabled = i?.enabled ?? true;
   }
 
@@ -289,12 +282,12 @@ class _MaintenanceWindowEditorDialogState
                 decoration: const InputDecoration(labelText: 'Description'),
               ),
               const Gap(12),
-              DropdownButtonFormField<String>(
+              KomodoSelectMenuField<String>(
                 key: ValueKey(_scheduleType),
-                initialValue: _scheduleType,
+                value: _scheduleType,
                 items: [
                   for (final t in _scheduleTypes)
-                    DropdownMenuItem(value: t, child: Text(t)),
+                    KomodoSelectMenuItem(value: t, label: t),
                 ],
                 onChanged: (v) {
                   if (v == null) return;
@@ -402,19 +395,17 @@ class _MaintenanceWindowEditorDialogState
                             date: _scheduleType == 'OneTime'
                                 ? _dateController.text.trim()
                                 : '',
-                            hour: int.tryParse(_hourController.text.trim()) ??
-                                0,
+                            hour:
+                                int.tryParse(_hourController.text.trim()) ?? 0,
                             minute:
                                 int.tryParse(_minuteController.text.trim()) ??
-                                    0,
-                            durationMinutes: int.tryParse(
-                                  _durationController.text.trim(),
-                                ) ??
+                                0,
+                            durationMinutes:
+                                int.tryParse(_durationController.text.trim()) ??
                                 60,
-                            timezone:
-                                _timezoneController.text.trim().isEmpty
-                                    ? 'UTC'
-                                    : _timezoneController.text.trim(),
+                            timezone: _timezoneController.text.trim().isEmpty
+                                ? 'UTC'
+                                : _timezoneController.text.trim(),
                             enabled: _enabled,
                           ),
                         );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
@@ -620,15 +621,14 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
           child: Column(
             children: [
               if (builderItems.isNotEmpty && hasBuilderInOptions)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuFormField<String>(
                   key: ValueKey('build_builder_${builderItems.length}'),
                   initialValue: _builderId.text.trim().isNotEmpty
                       ? _builderId.text.trim()
                       : null,
                   items: builderItems
                       .map(
-                        (b) =>
-                            DropdownMenuItem(value: b.id, child: Text(b.name)),
+                        (b) => KomodoSelectMenuItem(value: b.id, label: b.name),
                       )
                       .toList(),
                   onChanged: (v) {
@@ -753,15 +753,14 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
           child: Column(
             children: [
               if (repoItems.isNotEmpty && hasLinkedRepoInOptions)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuFormField<String>(
                   key: ValueKey('build_linked_repo_${repoItems.length}'),
                   initialValue: _linkedRepo.text.trim().isNotEmpty
                       ? _linkedRepo.text.trim()
                       : null,
                   items: repoItems
                       .map(
-                        (r) =>
-                            DropdownMenuItem(value: r.id, child: Text(r.name)),
+                        (r) => KomodoSelectMenuItem(value: r.id, label: r.name),
                       )
                       .toList(),
                   onChanged: (v) {
@@ -783,13 +782,13 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
                 ),
               const Gap(12),
               if (repoPathOptions.isNotEmpty && hasRepoInOptions)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuFormField<String>(
                   key: ValueKey('build_repo_${repoPathOptions.length}'),
                   initialValue: _repo.text.trim().isNotEmpty
                       ? _repo.text.trim()
                       : null,
                   items: repoPathOptions
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                      .map((r) => KomodoSelectMenuItem(value: r, label: r))
                       .toList(),
                   onChanged: (v) {
                     if (v == null) return;
@@ -810,13 +809,13 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
                 ),
               const Gap(12),
               if (branchOptions.isNotEmpty && hasBranchInOptions)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuFormField<String>(
                   key: ValueKey('build_branch_${branchOptions.length}'),
                   initialValue: _branch.text.trim().isNotEmpty
                       ? _branch.text.trim()
                       : null,
                   items: branchOptions
-                      .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                      .map((b) => KomodoSelectMenuItem(value: b, label: b))
                       .toList(),
                   onChanged: (v) {
                     if (v == null) return;

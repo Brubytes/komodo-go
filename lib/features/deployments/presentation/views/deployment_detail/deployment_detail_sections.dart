@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
@@ -820,7 +821,7 @@ class DeploymentConfigEditorContentState
                 ),
               ),
               const Gap(12),
-              DropdownButtonFormField<String>(
+              KomodoSelectMenuField<String>(
                 key: ValueKey(sortedRegistries.length),
                 value: sortedRegistries.isNotEmpty
                     ? (registryInList
@@ -839,19 +840,17 @@ class DeploymentConfigEditorContentState
                 ),
                 items: sortedRegistries.isNotEmpty
                     ? [
-                        const DropdownMenuItem(value: '', child: Text('—')),
+                        const KomodoSelectMenuItem(value: '', label: '—'),
                         for (final registry in sortedRegistries)
-                          DropdownMenuItem(
+                          KomodoSelectMenuItem(
                             value: registry.id,
-                            child: Text(
-                              '${registry.username}@${registry.domain}',
-                            ),
+                            label: '${registry.username}@${registry.domain}',
                           ),
                       ]
                     : const [
-                        DropdownMenuItem(
+                        KomodoSelectMenuItem(
                           value: '',
-                          child: Text('No registry accounts'),
+                          label: 'No registry accounts',
                         ),
                       ],
                 onChanged: sortedRegistries.isNotEmpty
@@ -886,7 +885,7 @@ class DeploymentConfigEditorContentState
           child: Column(
             children: [
               if (sortedServers.isNotEmpty)
-                DropdownButtonFormField<String>(
+                KomodoSelectMenuField<String>(
                   key: ValueKey(sortedServers.length),
                   value: serverIdInList ? _serverId.text : null,
                   decoration: InputDecoration(
@@ -897,9 +896,9 @@ class DeploymentConfigEditorContentState
                   ),
                   items: [
                     for (final server in sortedServers)
-                      DropdownMenuItem(
+                      KomodoSelectMenuItem(
                         value: server.id,
-                        child: Text(server.name),
+                        label: server.name,
                       ),
                   ],
                   onChanged: (value) {
@@ -945,7 +944,7 @@ class DeploymentConfigEditorContentState
                 ),
               ),
               const Gap(12),
-              DropdownButtonFormField<String>(
+              KomodoSelectMenuField<String>(
                 value: (_restartOptions.contains(_restart) ? _restart : null),
                 decoration: const InputDecoration(
                   labelText: 'Restart',
@@ -953,9 +952,9 @@ class DeploymentConfigEditorContentState
                 ),
                 items: [
                   for (final v in _restartOptions)
-                    DropdownMenuItem(
+                    KomodoSelectMenuItem(
                       value: v,
-                      child: Text(_restartLabels[v] ?? v),
+                      label: _restartLabels[v] ?? v,
                     ),
                 ],
                 onChanged: (v) {
@@ -964,7 +963,7 @@ class DeploymentConfigEditorContentState
                 },
               ),
               const Gap(12),
-              DropdownButtonFormField<String>(
+              KomodoSelectMenuField<String>(
                 value: (_terminationSignalOptions.contains(_terminationSignal)
                     ? _terminationSignal
                     : null),
@@ -974,7 +973,7 @@ class DeploymentConfigEditorContentState
                 ),
                 items: [
                   for (final v in _terminationSignalOptions)
-                    DropdownMenuItem(value: v, child: Text(v)),
+                    KomodoSelectMenuItem(value: v, label: v),
                 ],
                 onChanged: (v) {
                   setState(() => _terminationSignal = v);

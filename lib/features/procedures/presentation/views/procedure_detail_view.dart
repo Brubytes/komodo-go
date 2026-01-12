@@ -8,6 +8,7 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 
 import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
@@ -102,8 +103,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                               syncDirtySnackBar(
                                 dirty: dirty,
                                 onDiscard: () => _discardConfig(procedure),
-                                onSave: () =>
-                                    _saveConfig(procedure: procedure),
+                                onSave: () => _saveConfig(procedure: procedure),
                                 saveEnabled: !_configSaveInFlight,
                               );
                             },
@@ -447,17 +447,17 @@ class ProcedureConfigEditorContentState
           icon: AppIcons.clock,
           child: Column(
             children: [
-              DropdownButtonFormField<ScheduleFormat>(
+              KomodoSelectMenuField<ScheduleFormat>(
                 key: const ValueKey('procedure_schedule_format'),
                 value: _scheduleFormat,
                 items: const [
-                  DropdownMenuItem(
+                  KomodoSelectMenuItem(
                     value: ScheduleFormat.english,
-                    child: Text('English'),
+                    label: 'English',
                   ),
-                  DropdownMenuItem(
+                  KomodoSelectMenuItem(
                     value: ScheduleFormat.cron,
-                    child: Text('Cron'),
+                    label: 'Cron',
                   ),
                 ],
                 onChanged: (v) {
