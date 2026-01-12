@@ -58,6 +58,7 @@ class StackCard extends StatelessWidget {
                   ),
                   if (onAction != null)
                     PopupMenuButton<StackAction>(
+                      key: const ValueKey('stack_card_menu'),
                       icon: const Icon(AppIcons.moreVertical),
                       onSelected: onAction,
                       itemBuilder: (context) => _buildMenuItems(context, state),

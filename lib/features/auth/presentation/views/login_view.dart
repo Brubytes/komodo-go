@@ -314,6 +314,7 @@ class LoginView extends HookConsumerWidget {
 
                       // Server URL
                       TextFormField(
+                        key: const Key('login_serverUrl'),
                         controller: baseUrlController,
                         decoration: const InputDecoration(
                           labelText: 'Server URL',
@@ -336,6 +337,7 @@ class LoginView extends HookConsumerWidget {
 
                       // API Key
                       TextFormField(
+                        key: const Key('login_apiKey'),
                         controller: apiKeyController,
                         decoration: const InputDecoration(
                           labelText: 'API Key',
@@ -356,6 +358,7 @@ class LoginView extends HookConsumerWidget {
 
                       // API Secret
                       TextFormField(
+                        key: const Key('login_apiSecret'),
                         controller: apiSecretController,
                         decoration: InputDecoration(
                           labelText: 'API Secret',
@@ -388,6 +391,7 @@ class LoginView extends HookConsumerWidget {
 
                       // Save Button
                       FilledButton(
+                        key: const Key('login_saveConnection'),
                         onPressed: authState.isLoading ? null : handleLogin,
                         child: authState.isLoading
                             ? const SizedBox(
