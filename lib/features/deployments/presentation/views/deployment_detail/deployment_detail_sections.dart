@@ -895,7 +895,8 @@ class DeploymentConfigEditorContentState
     // Optional: allow editing image (supports Image variant only).
     final imageText = _image.text.trim();
     final initialImageText = _imageTextFromDynamic(_initial.image).trim();
-    if (imageText.isNotEmpty && imageText != initialImageText) {
+    // Treat clearing the field as a change too, so users can remove an image.
+    if (imageText != initialImageText) {
       partial['image'] = {
         // Server expects a tagged enum here (serde `tag = "type"`).
         // Include both shapes for compatibility with different serde configs.
