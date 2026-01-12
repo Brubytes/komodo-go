@@ -30,9 +30,11 @@ class BuildDetailView extends ConsumerStatefulWidget {
 }
 
 class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
-  var _isEditingConfig = false;
-  KomodoBuild? _configEditSnapshot;
   final _configEditorKey = GlobalKey<BuildConfigEditorContentState>();
+
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>?
+  _configDirtySnackBar;
+  var _configSaveInFlight = false;
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +56,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
         actions: [
           PopupMenuButton<BuildAction>(
             icon: const Icon(AppIcons.moreVertical),
-            onSelected: (action) => _handleAction(context, buildId, action),
+            onSelected: (action) => _handleAction(buildId, action),
             itemBuilder: (context) {
               final scheme = Theme.of(context).colorScheme;
               return [
@@ -131,24 +133,15 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
                         DetailSection(
                           title: 'Build Configuration',
                           icon: AppIcons.settings,
-                          trailing: _buildConfigTrailing(
-                            context: context,
-                            build: build,
+                          child: BuildConfigEditorContent(
+                            key: _configEditorKey,
+                            initialConfig: build.config,
+                            builders: builders,
+                            repos: repos,
+                            onDirtyChanged: (dirty) {
+                              _onConfigDirtyChanged(dirty: dirty, build: build);
+                            },
                           ),
-                          child: _isEditingConfig
-                              ? BuildConfigEditorContent(
-                                  key: _configEditorKey,
-                                  initialConfig:
-                                      (_configEditSnapshot?.id == build.id)
-                                      ? _configEditSnapshot!.config
-                                      : build.config,
-                                  builders: builders,
-                                  repos: repos,
-                                )
-                              : BuildConfigContent(
-                                  buildResource: build,
-                                  builderLabel: builderLabel,
-                                ),
                         ),
                         const Gap(16),
                         DetailSection(
@@ -207,11 +200,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
     );
   }
 
-  Future<void> _handleAction(
-    BuildContext context,
-    String buildId,
-    BuildAction action,
-  ) async {
+  Future<void> _handleAction(String buildId, BuildAction action) async {
     final actions = ref.read(buildActionsProvider.notifier);
     final success = await switch (action) {
       BuildAction.run => actions.run(buildId),
@@ -222,67 +211,94 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
       ref.invalidate(buildDetailProvider(buildId));
     }
 
-    if (context.mounted) {
-      AppSnackBar.show(
-        context,
-        success
-            ? 'Action completed successfully'
-            : 'Action failed. Please try again.',
-        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
-      );
-    }
-  }
+    if (!mounted) return;
 
-  Widget _buildConfigTrailing({
-    required BuildContext context,
-    required KomodoBuild build,
-  }) {
-    if (!_isEditingConfig) {
-      return IconButton(
-        tooltip: 'Edit config',
-        icon: const Icon(AppIcons.edit),
-        onPressed: () {
-          setState(() {
-            _isEditingConfig = true;
-            _configEditSnapshot = build;
-          });
-        },
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Cancel',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.close),
-          onPressed: () {
-            if (_configEditSnapshot != null) {
-              _configEditorKey.currentState?.resetTo(
-                _configEditSnapshot!.config,
-              );
-            }
-            setState(() {
-              _isEditingConfig = false;
-              _configEditSnapshot = null;
-            });
-          },
-        ),
-        IconButton(
-          tooltip: 'Save',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.check),
-          onPressed: () => _saveConfig(context: context, buildId: build.id),
-        ),
-      ],
+    AppSnackBar.show(
+      context,
+      success
+          ? 'Action completed successfully'
+          : 'Action failed. Please try again.',
+      tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
     );
   }
 
-  Future<void> _saveConfig({
-    required BuildContext context,
-    required String buildId,
-  }) async {
+  void _onConfigDirtyChanged({
+    required bool dirty,
+    required KomodoBuild build,
+  }) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!dirty) {
+        _hideConfigDirtySnackBar();
+      } else {
+        _showConfigDirtySnackBar(build);
+      }
+    });
+  }
+
+  void _hideConfigDirtySnackBar() {
+    if (_configDirtySnackBar == null) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    _configDirtySnackBar = null;
+  }
+
+  void _showConfigDirtySnackBar(KomodoBuild build) {
+    if (_configDirtySnackBar != null) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    final controller = messenger.showSnackBar(
+      SnackBar(
+        backgroundColor: scheme.inverseSurface,
+        duration: const Duration(days: 1),
+        dismissDirection: DismissDirection.none,
+        behavior: SnackBarBehavior.floating,
+        content: DefaultTextStyle(
+          style: TextStyle(color: scheme.onInverseSurface),
+          child: Row(
+            children: [
+              const Expanded(child: Text('Unsaved changes')),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: scheme.onInverseSurface,
+                ),
+                onPressed: () => _discardConfig(build),
+                child: const Text('Discard'),
+              ),
+              const Gap(8),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: scheme.primary,
+                  foregroundColor: scheme.onPrimary,
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: () => _saveConfig(build: build),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    _configDirtySnackBar = controller;
+    controller.closed.then((_) {
+      if (!mounted) return;
+      if (_configDirtySnackBar == controller) {
+        _configDirtySnackBar = null;
+      }
+    });
+  }
+
+  void _discardConfig(KomodoBuild build) {
+    _configEditorKey.currentState?.resetTo(build.config);
+    _hideConfigDirtySnackBar();
+  }
+
+  Future<void> _saveConfig({required KomodoBuild build}) async {
+    if (_configSaveInFlight) return;
+
     final draft = _configEditorKey.currentState;
     if (draft == null) {
       AppSnackBar.show(
@@ -295,15 +311,28 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
 
     final partialConfig = draft.buildPartialConfigParams();
     if (partialConfig.isEmpty) {
-      AppSnackBar.show(context, 'No changes to save');
+      _hideConfigDirtySnackBar();
       return;
     }
 
-    final updated = await ref
-        .read(buildActionsProvider.notifier)
-        .updateBuildConfig(buildId: buildId, partialConfig: partialConfig);
+    final actions = ref.read(buildActionsProvider.notifier);
+    _configSaveInFlight = true;
+    final updated = await actions.updateBuildConfig(
+      buildId: build.id,
+      partialConfig: partialConfig,
+    );
+    _configSaveInFlight = false;
 
-    if (!context.mounted) return;
+    if (updated != null) {
+      ref
+        ..invalidate(buildDetailProvider(build.id))
+        ..invalidate(buildsProvider);
+
+      _configEditorKey.currentState?.resetTo(updated.config);
+      _hideConfigDirtySnackBar();
+    }
+
+    if (!mounted) return;
 
     if (updated == null) {
       final err = ref.read(buildActionsProvider).asError?.error;
@@ -312,16 +341,21 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
         err != null ? 'Failed: $err' : 'Failed to update build',
         tone: AppSnackBarTone.error,
       );
+
+      // AppSnackBar replaces the current snackbar; re-show the persistent
+      // Save/Discard bar if we are still dirty.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final stillDirty =
+            _configEditorKey.currentState
+                ?.buildPartialConfigParams()
+                .isNotEmpty ??
+            false;
+        if (stillDirty) _showConfigDirtySnackBar(build);
+      });
+
       return;
     }
-
-    ref.invalidate(buildDetailProvider(buildId));
-    ref.invalidate(buildsProvider);
-
-    setState(() {
-      _isEditingConfig = false;
-      _configEditSnapshot = null;
-    });
 
     AppSnackBar.show(context, 'Build updated', tone: AppSnackBarTone.success);
   }

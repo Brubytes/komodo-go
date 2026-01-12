@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
-import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
+import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 
 class BuildHeroPanel extends StatelessWidget {
@@ -259,12 +259,14 @@ class BuildConfigContent extends StatelessWidget {
 class BuildConfigEditorContent extends StatefulWidget {
   const BuildConfigEditorContent({
     required this.initialConfig,
+    this.onDirtyChanged,
     this.builders = const [],
     this.repos = const [],
     super.key,
   });
 
   final BuildConfig initialConfig;
+  final ValueChanged<bool>? onDirtyChanged;
   final List<BuilderListItem> builders;
   final List<RepoListItem> repos;
 
@@ -275,6 +277,9 @@ class BuildConfigEditorContent extends StatefulWidget {
 
 class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
   late BuildConfig _initial;
+
+  var _suppressDirtyNotify = false;
+  var _lastDirty = false;
 
   late final TextEditingController _builderId;
   late final TextEditingController _versionMajor;
@@ -320,10 +325,57 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
     _filesOnHost = _initial.filesOnHost;
     _skipSecretInterp = _initial.skipSecretInterp;
     _useBuildx = _initial.useBuildx;
+
+    for (final c in <TextEditingController>[
+      _builderId,
+      _versionMajor,
+      _versionMinor,
+      _versionPatch,
+      _imageName,
+      _imageTag,
+      _linkedRepo,
+      _repo,
+      _branch,
+      _commit,
+      _buildPath,
+      _dockerfilePath,
+      _extraArgs,
+    ]) {
+      c.addListener(_notifyDirtyIfChanged);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant BuildConfigEditorContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.initialConfig != oldWidget.initialConfig) {
+      final dirty = buildPartialConfigParams().isNotEmpty;
+      if (!dirty) {
+        resetTo(widget.initialConfig);
+      }
+    }
   }
 
   @override
   void dispose() {
+    for (final c in <TextEditingController>[
+      _builderId,
+      _versionMajor,
+      _versionMinor,
+      _versionPatch,
+      _imageName,
+      _imageTag,
+      _linkedRepo,
+      _repo,
+      _branch,
+      _commit,
+      _buildPath,
+      _dockerfilePath,
+      _extraArgs,
+    ]) {
+      c.removeListener(_notifyDirtyIfChanged);
+    }
     _builderId.dispose();
     _versionMajor.dispose();
     _versionMinor.dispose();
@@ -341,6 +393,7 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
   }
 
   void resetTo(BuildConfig config) {
+    _suppressDirtyNotify = true;
     setState(() {
       _initial = config;
 
@@ -364,6 +417,19 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
       _skipSecretInterp = config.skipSecretInterp;
       _useBuildx = config.useBuildx;
     });
+
+    _suppressDirtyNotify = false;
+    _lastDirty = false;
+    widget.onDirtyChanged?.call(false);
+  }
+
+  void _notifyDirtyIfChanged() {
+    if (_suppressDirtyNotify) return;
+
+    final dirty = buildPartialConfigParams().isNotEmpty;
+    if (dirty == _lastDirty) return;
+    _lastDirty = dirty;
+    widget.onDirtyChanged?.call(dirty);
   }
 
   Map<String, dynamic> buildPartialConfigParams() {
@@ -454,27 +520,34 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
     final builders = widget.builders;
     final repos = widget.repos;
 
-    final builderItems = [...builders]..sort((a, b) => a.name.compareTo(b.name));
+    final builderItems = [...builders]
+      ..sort((a, b) => a.name.compareTo(b.name));
     final repoItems = [...repos]..sort((a, b) => a.name.compareTo(b.name));
 
     final builderIdOptions = builderItems.map((b) => b.id).toList();
-    final hasBuilderInOptions = builderIdOptions.contains(_builderId.text.trim());
+    final hasBuilderInOptions = builderIdOptions.contains(
+      _builderId.text.trim(),
+    );
 
     final linkedRepoOptions = repoItems.map((r) => r.id).toList();
-    final hasLinkedRepoInOptions = linkedRepoOptions.contains(_linkedRepo.text.trim());
+    final hasLinkedRepoInOptions = linkedRepoOptions.contains(
+      _linkedRepo.text.trim(),
+    );
 
-    final repoPathOptions = repoItems
-        .map((r) => r.info.repo.trim())
-        .where((s) => s.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final branchOptions = repoItems
-        .map((r) => r.info.branch.trim())
-        .where((s) => s.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    final repoPathOptions =
+        repoItems
+            .map((r) => r.info.repo.trim())
+            .where((s) => s.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final branchOptions =
+        repoItems
+            .map((r) => r.info.branch.trim())
+            .where((s) => s.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
 
     final hasRepoInOptions = repoPathOptions.contains(_repo.text.trim());
     final hasBranchInOptions = branchOptions.contains(_branch.text.trim());
@@ -489,35 +562,50 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
             children: [
               SwitchListTile.adaptive(
                 value: _webhookEnabled,
-                onChanged: (v) => setState(() => _webhookEnabled = v),
+                onChanged: (v) {
+                  setState(() => _webhookEnabled = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Webhook enabled'),
                 secondary: const Icon(AppIcons.network),
                 contentPadding: EdgeInsets.zero,
               ),
               SwitchListTile.adaptive(
                 value: _autoIncrementVersion,
-                onChanged: (v) => setState(() => _autoIncrementVersion = v),
+                onChanged: (v) {
+                  setState(() => _autoIncrementVersion = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Auto increment version'),
                 secondary: const Icon(AppIcons.tag),
                 contentPadding: EdgeInsets.zero,
               ),
               SwitchListTile.adaptive(
                 value: _useBuildx,
-                onChanged: (v) => setState(() => _useBuildx = v),
+                onChanged: (v) {
+                  setState(() => _useBuildx = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Use Buildx'),
                 secondary: const Icon(AppIcons.builds),
                 contentPadding: EdgeInsets.zero,
               ),
               SwitchListTile.adaptive(
                 value: _filesOnHost,
-                onChanged: (v) => setState(() => _filesOnHost = v),
+                onChanged: (v) {
+                  setState(() => _filesOnHost = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Files on host'),
                 secondary: const Icon(AppIcons.package),
                 contentPadding: EdgeInsets.zero,
               ),
               SwitchListTile.adaptive(
                 value: _skipSecretInterp,
-                onChanged: (v) => setState(() => _skipSecretInterp = v),
+                onChanged: (v) {
+                  setState(() => _skipSecretInterp = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Skip secret interpolation'),
                 secondary: const Icon(AppIcons.warning),
                 contentPadding: EdgeInsets.zero,
@@ -534,15 +622,13 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
               if (builderItems.isNotEmpty && hasBuilderInOptions)
                 DropdownButtonFormField<String>(
                   key: ValueKey('build_builder_${builderItems.length}'),
-                  value: _builderId.text.trim().isNotEmpty
+                  initialValue: _builderId.text.trim().isNotEmpty
                       ? _builderId.text.trim()
                       : null,
                   items: builderItems
                       .map(
-                        (b) => DropdownMenuItem(
-                          value: b.id,
-                          child: Text(b.name),
-                        ),
+                        (b) =>
+                            DropdownMenuItem(value: b.id, child: Text(b.name)),
                       )
                       .toList(),
                   onChanged: (v) {
@@ -669,15 +755,13 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
               if (repoItems.isNotEmpty && hasLinkedRepoInOptions)
                 DropdownButtonFormField<String>(
                   key: ValueKey('build_linked_repo_${repoItems.length}'),
-                  value: _linkedRepo.text.trim().isNotEmpty
+                  initialValue: _linkedRepo.text.trim().isNotEmpty
                       ? _linkedRepo.text.trim()
                       : null,
                   items: repoItems
                       .map(
-                        (r) => DropdownMenuItem(
-                          value: r.id,
-                          child: Text(r.name),
-                        ),
+                        (r) =>
+                            DropdownMenuItem(value: r.id, child: Text(r.name)),
                       )
                       .toList(),
                   onChanged: (v) {
@@ -701,11 +785,11 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
               if (repoPathOptions.isNotEmpty && hasRepoInOptions)
                 DropdownButtonFormField<String>(
                   key: ValueKey('build_repo_${repoPathOptions.length}'),
-                  value: _repo.text.trim().isNotEmpty ? _repo.text.trim() : null,
+                  initialValue: _repo.text.trim().isNotEmpty
+                      ? _repo.text.trim()
+                      : null,
                   items: repoPathOptions
-                      .map(
-                        (r) => DropdownMenuItem(value: r, child: Text(r)),
-                      )
+                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                       .toList(),
                   onChanged: (v) {
                     if (v == null) return;
@@ -728,13 +812,11 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
               if (branchOptions.isNotEmpty && hasBranchInOptions)
                 DropdownButtonFormField<String>(
                   key: ValueKey('build_branch_${branchOptions.length}'),
-                  value: _branch.text.trim().isNotEmpty
+                  initialValue: _branch.text.trim().isNotEmpty
                       ? _branch.text.trim()
                       : null,
                   items: branchOptions
-                      .map(
-                        (b) => DropdownMenuItem(value: b, child: Text(b)),
-                      )
+                      .map((b) => DropdownMenuItem(value: b, child: Text(b)))
                       .toList(),
                   onChanged: (v) {
                     if (v == null) return;
@@ -849,17 +931,33 @@ class BuildHashesContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (info.latestHash != null)
-          DetailKeyValueRow(label: 'Latest Hash', value: info.latestHash!),
-        if (info.builtHash != null)
-          DetailKeyValueRow(label: 'Built Hash', value: info.builtHash!),
-        if (info.latestMessage != null && info.latestMessage!.isNotEmpty)
-          DetailKeyValueRow(
-            label: 'Latest Message',
-            value: info.latestMessage!,
+        DetailSubCard(
+          title: 'Hashes',
+          icon: AppIcons.tag,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (info.latestHash != null)
+                DetailKeyValueRow(
+                  label: 'Latest Hash',
+                  value: info.latestHash!,
+                ),
+              if (info.builtHash != null)
+                DetailKeyValueRow(label: 'Built Hash', value: info.builtHash!),
+              if (info.latestMessage != null && info.latestMessage!.isNotEmpty)
+                DetailKeyValueRow(
+                  label: 'Latest Message',
+                  value: info.latestMessage!,
+                ),
+              if (info.builtMessage != null && info.builtMessage!.isNotEmpty)
+                DetailKeyValueRow(
+                  label: 'Built Message',
+                  value: info.builtMessage!,
+                  bottomPadding: 0,
+                ),
+            ],
           ),
-        if (info.builtMessage != null && info.builtMessage!.isNotEmpty)
-          DetailKeyValueRow(label: 'Built Message', value: info.builtMessage!),
+        ),
       ],
     );
   }
