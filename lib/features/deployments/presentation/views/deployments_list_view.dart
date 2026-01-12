@@ -84,6 +84,7 @@ class DeploymentsListContent extends ConsumerWidget {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
+          key: ValueKey('deployment_destroy_dialog_$deploymentId'),
           title: const Text('Destroy Deployment'),
           content: const Text(
             'Are you sure you want to destroy this deployment? '
@@ -91,10 +92,12 @@ class DeploymentsListContent extends ConsumerWidget {
           ),
           actions: [
             TextButton(
+              key: ValueKey('deployment_destroy_cancel_$deploymentId'),
               onPressed: () => Navigator.of(context).pop(false),
               child: const Text('Cancel'),
             ),
             FilledButton(
+              key: ValueKey('deployment_destroy_confirm_$deploymentId'),
               onPressed: () => Navigator.of(context).pop(true),
               child: const Text('Destroy'),
             ),

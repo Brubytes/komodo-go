@@ -361,16 +361,19 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView>
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
+          key: ValueKey('deployment_destroy_dialog_$deploymentId'),
           title: const Text('Destroy deployment?'),
           content: const Text(
             'This will stop and remove the container. Continue?',
           ),
           actions: [
             TextButton(
+              key: ValueKey('deployment_destroy_cancel_$deploymentId'),
               onPressed: () => Navigator.of(context).pop(false),
               child: const Text('Cancel'),
             ),
             FilledButton(
+              key: ValueKey('deployment_destroy_confirm_$deploymentId'),
               onPressed: () => Navigator.of(context).pop(true),
               child: const Text('Destroy'),
             ),

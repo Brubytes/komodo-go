@@ -48,8 +48,15 @@ class AdaptiveBottomNavigationBar extends StatelessWidget {
           items: [
             for (final item in items)
               BottomNavigationBarItem(
-                icon: item.icon,
-                activeIcon: item.activeIcon ?? item.icon,
+                icon: item.key == null
+                    ? item.icon
+                    : KeyedSubtree(key: item.key, child: item.icon),
+                activeIcon: item.key == null
+                    ? (item.activeIcon ?? item.icon)
+                    : KeyedSubtree(
+                        key: item.key,
+                        child: item.activeIcon ?? item.icon,
+                      ),
                 label: item.label,
               ),
           ],
@@ -80,6 +87,7 @@ class AdaptiveBottomNavigationBar extends StatelessWidget {
         destinations: [
           for (final item in items)
             NavigationDestination(
+              key: item.key,
               icon: item.icon,
               selectedIcon: item.activeIcon,
               label: item.label,
@@ -95,9 +103,11 @@ class AdaptiveNavigationItem {
     required this.icon,
     required this.label,
     this.activeIcon,
+    this.key,
   });
 
   final Widget icon;
   final String label;
   final Widget? activeIcon;
+  final Key? key;
 }

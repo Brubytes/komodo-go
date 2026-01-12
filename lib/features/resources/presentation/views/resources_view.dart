@@ -90,6 +90,7 @@ class ResourcesView extends ConsumerWidget {
                   onTap: () => context.push(_routeFor(ResourceType.servers)),
                 ),
                 HomeStatCard(
+                  key: const ValueKey('resources_stat_deployments'),
                   title: 'Deployments',
                   icon: AppIcons.deployments,
                   asyncValue: deploymentsAsync,

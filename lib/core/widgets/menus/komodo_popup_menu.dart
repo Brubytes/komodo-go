@@ -63,8 +63,10 @@ PopupMenuItem<T> komodoPopupMenuItem<T>({
   required String label,
   Color? iconColor,
   bool destructive = false,
+  Key? key,
 }) {
   return PopupMenuItem<T>(
+    key: key,
     value: value,
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     child: KomodoPopupMenuItemRow(

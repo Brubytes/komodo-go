@@ -23,6 +23,7 @@ class DeploymentCard extends StatelessWidget {
     final image = deployment.info?.image;
 
     return Card(
+      key: ValueKey('deployment_card_${deployment.id}'),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -65,6 +66,7 @@ class DeploymentCard extends StatelessWidget {
                   // Quick actions
                   if (onAction != null)
                     PopupMenuButton<DeploymentAction>(
+                      key: ValueKey('deployment_card_menu_${deployment.id}'),
                       icon: const Icon(AppIcons.moreVertical),
                       onSelected: onAction,
                       itemBuilder: (context) => _buildMenuItems(context, state),
@@ -201,6 +203,7 @@ class DeploymentCard extends StatelessWidget {
             icon: AppIcons.delete,
             label: 'Destroy',
             destructive: true,
+            key: ValueKey('deployment_card_destroy_${deployment.id}'),
           ),
         );
     }

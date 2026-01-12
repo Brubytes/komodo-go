@@ -43,6 +43,17 @@ class FakeKomodoBackend {
   ];
   int _tagIdCounter = 2;
 
+  final List<Map<String, dynamic>> _deployments = <Map<String, dynamic>>[
+    _deployment(
+      id: 'deployment-1',
+      name: 'Test Deployment',
+      description: 'Fake backend deployment',
+      state: 'running',
+      image: 'nginx:latest',
+      serverId: 'server-1',
+    ),
+  ];
+
   Uri get baseUri {
     final server = _server;
     if (server == null) {
@@ -169,6 +180,7 @@ class FakeKomodoBackend {
         return List<Map<String, dynamic>>.from(_tags);
 
       case 'ListDeployments':
+        return List<Map<String, dynamic>>.from(_deployments);
       case 'ListRepos':
       case 'ListBuilds':
       case 'ListResourceSyncs':
@@ -260,6 +272,16 @@ class FakeKomodoBackend {
         }
         return <String, dynamic>{};
 
+      case 'DestroyDeployment':
+        final deploymentIdOrName = params['deployment'];
+        if (deploymentIdOrName is String) {
+          _deployments.removeWhere(
+            (d) =>
+                d['id'] == deploymentIdOrName || d['name'] == deploymentIdOrName,
+          );
+        }
+        return <String, dynamic>{};
+
       default:
         throw StateError('Unhandled /execute RPC: $type');
     }
@@ -294,6 +316,31 @@ Map<String, dynamic> _tag({
     'name': name,
     'owner': owner,
     'color': colorToken,
+  };
+}
+
+Map<String, dynamic> _deployment({
+  required String id,
+  required String name,
+  required String description,
+  required String state,
+  required String image,
+  required String serverId,
+}) {
+  return <String, dynamic>{
+    'id': id,
+    'name': name,
+    'description': description,
+    'tags': <Object>[],
+    'template': false,
+    'info': <String, dynamic>{
+      'state': state,
+      'status': null,
+      'image': image,
+      'update_available': false,
+      'server_id': serverId,
+      'build_id': null,
+    },
   };
 }
 

@@ -558,26 +558,31 @@ class MainShell extends ConsumerWidget {
         onTap: (index) => _onItemTapped(ref, index),
         items: const [
           AdaptiveNavigationItem(
+            key: ValueKey('bottom_nav_home'),
             icon: Icon(AppIcons.home),
             activeIcon: Icon(AppIcons.home),
             label: 'Home',
           ),
           AdaptiveNavigationItem(
+            key: ValueKey('bottom_nav_resources'),
             icon: Icon(AppIcons.resources),
             activeIcon: Icon(AppIcons.resources),
             label: 'Resources',
           ),
           AdaptiveNavigationItem(
+            key: ValueKey('bottom_nav_containers'),
             icon: Icon(AppIcons.containers),
             activeIcon: Icon(AppIcons.containers),
             label: 'Containers',
           ),
           AdaptiveNavigationItem(
+            key: ValueKey('bottom_nav_notifications'),
             icon: Icon(AppIcons.notifications),
             activeIcon: Icon(AppIcons.notificationsActive),
             label: 'Notifications',
           ),
           AdaptiveNavigationItem(
+            key: ValueKey('bottom_nav_settings'),
             icon: Icon(AppIcons.settings),
             activeIcon: Icon(AppIcons.settings),
             label: 'Settings',
