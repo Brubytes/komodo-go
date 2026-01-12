@@ -2,6 +2,62 @@ import 'package:flutter/material.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
 
+InputDecoration _decorationWithoutSubText(
+  InputDecoration decoration, {
+  required bool enabled,
+}) {
+  // NOTE: InputDecoration.copyWith cannot "clear" fields like helperText/
+  // errorText because `null` means "keep existing". We must create a new
+  // InputDecoration instead.
+  return InputDecoration(
+    icon: decoration.icon,
+    iconColor: decoration.iconColor,
+    labelText: decoration.labelText,
+    labelStyle: decoration.labelStyle,
+    floatingLabelStyle: decoration.floatingLabelStyle,
+    helper: null,
+    helperText: null,
+    hintText: decoration.hintText,
+    hintStyle: decoration.hintStyle,
+    hintTextDirection: decoration.hintTextDirection,
+    hintMaxLines: decoration.hintMaxLines,
+    error: null,
+    errorText: null,
+    floatingLabelBehavior: decoration.floatingLabelBehavior,
+    floatingLabelAlignment: decoration.floatingLabelAlignment,
+    isDense: decoration.isDense,
+    contentPadding: decoration.contentPadding,
+    prefixIcon: decoration.prefixIcon,
+    prefixIconConstraints: decoration.prefixIconConstraints,
+    prefix: decoration.prefix,
+    prefixText: decoration.prefixText,
+    prefixStyle: decoration.prefixStyle,
+    prefixIconColor: decoration.prefixIconColor,
+    suffixIcon: decoration.suffixIcon,
+    suffixIconConstraints: decoration.suffixIconConstraints,
+    suffix: decoration.suffix,
+    suffixText: decoration.suffixText,
+    suffixStyle: decoration.suffixStyle,
+    suffixIconColor: decoration.suffixIconColor,
+    counter: null,
+    counterText: null,
+    filled: decoration.filled,
+    fillColor: decoration.fillColor,
+    focusColor: decoration.focusColor,
+    hoverColor: decoration.hoverColor,
+    errorBorder: decoration.errorBorder,
+    focusedBorder: decoration.focusedBorder,
+    focusedErrorBorder: decoration.focusedErrorBorder,
+    disabledBorder: decoration.disabledBorder,
+    enabledBorder: decoration.enabledBorder,
+    border: decoration.border,
+    enabled: enabled,
+    semanticCounterText: decoration.semanticCounterText,
+    alignLabelWithHint: decoration.alignLabelWithHint,
+    constraints: decoration.constraints,
+  );
+}
+
 class KomodoSelectMenuItem<T> {
   const KomodoSelectMenuItem({
     required this.value,
@@ -49,6 +105,7 @@ class KomodoSelectMenuField<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
     final selected = _selectedItem();
 
     final effectiveEnabled = enabled && onChanged != null;
@@ -62,25 +119,71 @@ class KomodoSelectMenuField<T> extends StatelessWidget {
 
     final displayText = selected?.label ?? hintText ?? '—';
 
-    return Semantics(
-      button: true,
+    // Apply theme defaults first so the rebuilt decoration preserves the
+    // project's InputDecorationTheme styling.
+    final baseDecoration = decoration.applyDefaults(theme.inputDecorationTheme);
+    final effectiveDecoration = _decorationWithoutSubText(
+      baseDecoration,
       enabled: effectiveEnabled,
-      child: InkWell(
-        onTap: effectiveEnabled ? () => _openMenu(context) : null,
-        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-        child: InputDecorator(
-          decoration: decoration.copyWith(enabled: effectiveEnabled),
-          isEmpty: selected == null,
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(displayText, style: labelStyle, maxLines: 1),
+    );
+
+    final subTextWidget = decoration.error ?? decoration.helper;
+    final subText = decoration.errorText ?? decoration.helperText;
+    final hasSubTextWidget = subTextWidget != null;
+    final hasSubText = subText != null && subText.trim().isNotEmpty;
+    final showError = (decoration.error ?? decoration.errorText) != null;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Builder(
+          builder: (fieldContext) {
+            return Semantics(
+              button: true,
+              enabled: effectiveEnabled,
+              child: InkWell(
+                onTap: effectiveEnabled ? () => _openMenu(fieldContext) : null,
+                borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                child: InputDecorator(
+                  decoration: effectiveDecoration,
+                  isEmpty: selected == null,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          displayText,
+                          style: labelStyle,
+                          maxLines: 1,
+                        ),
+                      ),
+                      Icon(
+                        Icons.expand_more,
+                        size: 20,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              Icon(Icons.expand_more, size: 20, color: scheme.onSurfaceVariant),
-            ],
-          ),
+            );
+          },
         ),
-      ),
+        if (hasSubTextWidget || hasSubText)
+          Padding(
+            padding: const EdgeInsets.only(left: 12, right: 12, top: 6),
+            child: DefaultTextStyle(
+              style:
+                  (showError
+                      ? theme.inputDecorationTheme.errorStyle
+                      : theme.inputDecorationTheme.helperStyle) ??
+                  theme.textTheme.bodySmall!.copyWith(
+                    color: showError ? scheme.error : scheme.onSurfaceVariant,
+                  ),
+              child: subTextWidget ?? Text(subText!),
+            ),
+          ),
+      ],
     );
   }
 
@@ -306,7 +409,8 @@ class KomodoSelectMenuFormField<T> extends FormField<T> {
          validator: validator,
          onSaved: onSaved,
          builder: (state) {
-           final effectiveOnChanged = (state.widget.enabled && onChanged != null)
+           final effectiveOnChanged =
+               (state.widget.enabled && onChanged != null)
                ? (T? v) {
                    state.didChange(v);
                    onChanged.call(v);
