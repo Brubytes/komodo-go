@@ -182,9 +182,11 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView> {
                 child: const Text('Discard'),
               ),
               const Gap(8),
-              TextButton(
-                style: TextButton.styleFrom(
-                  foregroundColor: scheme.onInverseSurface,
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: scheme.primary,
+                  foregroundColor: scheme.onPrimary,
+                  visualDensity: VisualDensity.compact,
                 ),
                 onPressed: () => _saveConfig(sync: sync),
                 child: const Text('Save'),
@@ -389,14 +391,27 @@ class _LastSyncContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DetailKeyValueRow(
-          label: 'Timestamp',
-          value: info.lastSyncTs.toString(),
+        DetailSubCard(
+          title: 'Info',
+          icon: AppIcons.clock,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DetailKeyValueRow(
+                label: 'Timestamp',
+                value: info.lastSyncTs.toString(),
+              ),
+              if (info.lastSyncHash != null)
+                DetailKeyValueRow(label: 'Hash', value: info.lastSyncHash!),
+              if (info.lastSyncMessage != null &&
+                  info.lastSyncMessage!.isNotEmpty)
+                DetailKeyValueRow(
+                  label: 'Message',
+                  value: info.lastSyncMessage!,
+                ),
+            ],
+          ),
         ),
-        if (info.lastSyncHash != null)
-          DetailKeyValueRow(label: 'Hash', value: info.lastSyncHash!),
-        if (info.lastSyncMessage != null && info.lastSyncMessage!.isNotEmpty)
-          DetailKeyValueRow(label: 'Message', value: info.lastSyncMessage!),
       ],
     );
   }
