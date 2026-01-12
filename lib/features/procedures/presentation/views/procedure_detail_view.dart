@@ -28,10 +28,10 @@ class ProcedureDetailView extends ConsumerStatefulWidget {
       _ProcedureDetailViewState();
 }
 
-class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
-  var _isEditingConfig = false;
-  KomodoProcedure? _configEditSnapshot;
+class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
+    with DetailDirtySnackBarMixin<ProcedureDetailView> {
   final _configEditorKey = GlobalKey<ProcedureConfigEditorContentState>();
+  var _configSaveInFlight = false;
 
   @override
   Widget build(BuildContext context) {
@@ -95,22 +95,19 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
                         DetailSection(
                           title: 'Configuration',
                           icon: AppIcons.settings,
-                          trailing: _buildConfigTrailing(
-                            context: context,
-                            procedure: procedure,
+                          child: ProcedureConfigEditorContent(
+                            key: _configEditorKey,
+                            initialConfig: procedure.config,
+                            onDirtyChanged: (dirty) {
+                              syncDirtySnackBar(
+                                dirty: dirty,
+                                onDiscard: () => _discardConfig(procedure),
+                                onSave: () =>
+                                    _saveConfig(procedure: procedure),
+                                saveEnabled: !_configSaveInFlight,
+                              );
+                            },
                           ),
-                          child: _isEditingConfig
-                              ? ProcedureConfigEditorContent(
-                                  key: _configEditorKey,
-                                  initialConfig:
-                                      (_configEditSnapshot?.id == procedure.id)
-                                      ? _configEditSnapshot!.config
-                                      : procedure.config,
-                                )
-                              : _ProcedureConfigContent(
-                                  procedure: procedure,
-                                  listItem: listItem,
-                                ),
                         ),
                         const Gap(16),
                         DetailSection(
@@ -165,57 +162,14 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
     }
   }
 
-  Widget _buildConfigTrailing({
-    required BuildContext context,
-    required KomodoProcedure procedure,
-  }) {
-    if (!_isEditingConfig) {
-      return IconButton(
-        tooltip: 'Edit config',
-        icon: const Icon(AppIcons.edit),
-        onPressed: () {
-          setState(() {
-            _isEditingConfig = true;
-            _configEditSnapshot = procedure;
-          });
-        },
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Cancel',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.close),
-          onPressed: () {
-            if (_configEditSnapshot != null) {
-              _configEditorKey.currentState?.resetTo(
-                _configEditSnapshot!.config,
-              );
-            }
-            setState(() {
-              _isEditingConfig = false;
-              _configEditSnapshot = null;
-            });
-          },
-        ),
-        IconButton(
-          tooltip: 'Save',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.check),
-          onPressed: () =>
-              _saveConfig(context: context, procedureId: procedure.id),
-        ),
-      ],
-    );
+  void _discardConfig(KomodoProcedure procedure) {
+    _configEditorKey.currentState?.resetTo(procedure.config);
+    hideDirtySnackBar();
   }
 
-  Future<void> _saveConfig({
-    required BuildContext context,
-    required String procedureId,
-  }) async {
+  Future<void> _saveConfig({required KomodoProcedure procedure}) async {
+    if (_configSaveInFlight) return;
+
     final draft = _configEditorKey.currentState;
     if (draft == null) {
       AppSnackBar.show(
@@ -228,50 +182,66 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView> {
 
     final partialConfig = draft.buildPartialConfigParams();
     if (partialConfig.isEmpty) {
-      AppSnackBar.show(context, 'No changes to save');
+      hideDirtySnackBar();
       return;
     }
 
+    setState(() => _configSaveInFlight = true);
     final updated = await ref
         .read(procedureActionsProvider.notifier)
         .updateProcedureConfig(
-          procedureId: procedureId,
+          procedureId: procedure.id,
           partialConfig: partialConfig,
         );
+    if (!mounted) return;
+    setState(() => _configSaveInFlight = false);
 
-    if (!context.mounted) return;
+    if (updated != null) {
+      ref
+        ..invalidate(procedureDetailProvider(widget.procedureId))
+        ..invalidate(procedureDetailProvider(procedure.id))
+        ..invalidate(proceduresProvider);
 
-    if (updated == null) {
-      final err = ref.read(procedureActionsProvider).asError?.error;
+      _configEditorKey.currentState?.resetTo(updated.config);
+      hideDirtySnackBar();
       AppSnackBar.show(
         context,
-        err != null ? 'Failed: $err' : 'Failed to update procedure',
-        tone: AppSnackBarTone.error,
+        'Procedure updated',
+        tone: AppSnackBarTone.success,
       );
       return;
     }
 
-    ref
-      ..invalidate(procedureDetailProvider(procedureId))
-      ..invalidate(proceduresProvider);
-
-    setState(() {
-      _isEditingConfig = false;
-      _configEditSnapshot = null;
-    });
-
+    final err = ref.read(procedureActionsProvider).asError?.error;
     AppSnackBar.show(
       context,
-      'Procedure updated',
-      tone: AppSnackBarTone.success,
+      err != null ? 'Failed: $err' : 'Failed to update procedure',
+      tone: AppSnackBarTone.error,
+    );
+
+    reShowDirtySnackBarIfStillDirty(
+      isStillDirty: () {
+        return _configEditorKey.currentState
+                ?.buildPartialConfigParams()
+                .isNotEmpty ??
+            false;
+      },
+      onDiscard: () => _discardConfig(procedure),
+      onSave: () => _saveConfig(procedure: procedure),
+      saveEnabled: !_configSaveInFlight,
     );
   }
 }
 
 class ProcedureConfigEditorContent extends StatefulWidget {
-  const ProcedureConfigEditorContent({required this.initialConfig, super.key});
+  const ProcedureConfigEditorContent({
+    required this.initialConfig,
+    this.onDirtyChanged,
+    super.key,
+  });
 
   final ProcedureConfig initialConfig;
+  final ValueChanged<bool>? onDirtyChanged;
 
   @override
   State<ProcedureConfigEditorContent> createState() =>
@@ -281,6 +251,9 @@ class ProcedureConfigEditorContent extends StatefulWidget {
 class ProcedureConfigEditorContentState
     extends State<ProcedureConfigEditorContent> {
   late ProcedureConfig _initial;
+
+  var _lastDirty = false;
+  var _suppressDirtyNotify = false;
 
   late final TextEditingController _schedule;
   late final TextEditingController _scheduleTimezone;
@@ -306,10 +279,38 @@ class ProcedureConfigEditorContentState
     _scheduleAlert = _initial.scheduleAlert;
     _failureAlert = _initial.failureAlert;
     _scheduleFormat = _initial.scheduleFormat;
+
+    for (final c in <TextEditingController>[
+      _schedule,
+      _scheduleTimezone,
+      _webhookSecret,
+    ]) {
+      c.addListener(_notifyDirtyIfChanged);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ProcedureConfigEditorContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.initialConfig != oldWidget.initialConfig) {
+      final dirty = buildPartialConfigParams().isNotEmpty;
+      if (!dirty) {
+        resetTo(widget.initialConfig);
+      }
+    }
   }
 
   @override
   void dispose() {
+    for (final c in <TextEditingController>[
+      _schedule,
+      _scheduleTimezone,
+      _webhookSecret,
+    ]) {
+      c.removeListener(_notifyDirtyIfChanged);
+    }
+
     _schedule.dispose();
     _scheduleTimezone.dispose();
     _webhookSecret.dispose();
@@ -317,6 +318,7 @@ class ProcedureConfigEditorContentState
   }
 
   void resetTo(ProcedureConfig config) {
+    _suppressDirtyNotify = true;
     setState(() {
       _initial = config;
 
@@ -330,6 +332,18 @@ class ProcedureConfigEditorContentState
       _failureAlert = config.failureAlert;
       _scheduleFormat = config.scheduleFormat;
     });
+
+    _suppressDirtyNotify = false;
+    _lastDirty = false;
+    widget.onDirtyChanged?.call(false);
+  }
+
+  void _notifyDirtyIfChanged() {
+    if (_suppressDirtyNotify) return;
+    final dirty = buildPartialConfigParams().isNotEmpty;
+    if (dirty == _lastDirty) return;
+    _lastDirty = dirty;
+    widget.onDirtyChanged?.call(dirty);
   }
 
   Map<String, dynamic> buildPartialConfigParams() {
@@ -386,28 +400,40 @@ class ProcedureConfigEditorContentState
             children: [
               SwitchListTile.adaptive(
                 value: _scheduleEnabled,
-                onChanged: (v) => setState(() => _scheduleEnabled = v),
+                onChanged: (v) {
+                  setState(() => _scheduleEnabled = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Schedule enabled'),
                 secondary: const Icon(AppIcons.clock),
                 contentPadding: EdgeInsets.zero,
               ),
               SwitchListTile.adaptive(
                 value: _webhookEnabled,
-                onChanged: (v) => setState(() => _webhookEnabled = v),
+                onChanged: (v) {
+                  setState(() => _webhookEnabled = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Webhook enabled'),
                 secondary: const Icon(AppIcons.network),
                 contentPadding: EdgeInsets.zero,
               ),
               SwitchListTile.adaptive(
                 value: _scheduleAlert,
-                onChanged: (v) => setState(() => _scheduleAlert = v),
+                onChanged: (v) {
+                  setState(() => _scheduleAlert = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Schedule alerts'),
                 secondary: const Icon(AppIcons.notifications),
                 contentPadding: EdgeInsets.zero,
               ),
               SwitchListTile.adaptive(
                 value: _failureAlert,
-                onChanged: (v) => setState(() => _failureAlert = v),
+                onChanged: (v) {
+                  setState(() => _failureAlert = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Failure alerts'),
                 secondary: const Icon(AppIcons.warning),
                 contentPadding: EdgeInsets.zero,
@@ -437,6 +463,7 @@ class ProcedureConfigEditorContentState
                 onChanged: (v) {
                   if (v == null) return;
                   setState(() => _scheduleFormat = v);
+                  _notifyDirtyIfChanged();
                 },
                 decoration: const InputDecoration(
                   labelText: 'Schedule format',
@@ -584,126 +611,6 @@ class _ProcedureHeader extends StatelessWidget {
             ),
           ),
         ],
-      ],
-    );
-  }
-}
-
-class _ProcedureConfigContent extends StatelessWidget {
-  const _ProcedureConfigContent({
-    required this.procedure,
-    required this.listItem,
-  });
-
-  final KomodoProcedure procedure;
-  final ProcedureListItem? listItem;
-
-  @override
-  Widget build(BuildContext context) {
-    final config = procedure.config;
-    final scheduleError = listItem?.info.scheduleError?.trim() ?? '';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            StatusPill.onOff(
-              isOn: config.scheduleEnabled,
-              onLabel: 'Schedule on',
-              offLabel: 'Schedule off',
-              onIcon: AppIcons.ok,
-              offIcon: AppIcons.pause,
-            ),
-            StatusPill.onOff(
-              isOn: config.webhookEnabled,
-              onLabel: 'Webhook on',
-              offLabel: 'Webhook off',
-              onIcon: AppIcons.ok,
-              offIcon: AppIcons.pause,
-            ),
-            StatusPill.onOff(
-              isOn: config.scheduleAlert,
-              onLabel: 'Schedule alerts',
-              offLabel: 'No schedule alerts',
-              onIcon: AppIcons.notifications,
-              offIcon: AppIcons.notifications,
-            ),
-            StatusPill.onOff(
-              isOn: config.failureAlert,
-              onLabel: 'Failure alerts',
-              offLabel: 'No failure alerts',
-              onIcon: AppIcons.warning,
-              offIcon: AppIcons.ok,
-            ),
-          ],
-        ),
-        const Gap(14),
-        DetailSubCard(
-          title: 'Schedule',
-          icon: AppIcons.clock,
-          child: Column(
-            children: [
-              DetailKeyValueRow(
-                label: 'Enabled',
-                value: config.scheduleEnabled ? 'Yes' : 'No',
-              ),
-              DetailKeyValueRow(
-                label: 'Format',
-                value: config.scheduleFormat.name.toUpperCase(),
-              ),
-              DetailKeyValueRow(
-                label: 'Timezone',
-                value: config.scheduleTimezone.isNotEmpty
-                    ? config.scheduleTimezone
-                    : '—',
-              ),
-              DetailKeyValueRow(
-                label: 'Expression',
-                value: config.schedule.isNotEmpty ? config.schedule : '—',
-              ),
-              if (listItem?.info.nextScheduledRun != null)
-                DetailKeyValueRow(
-                  label: 'Next run',
-                  value: _formatTimestampSeconds(
-                    listItem!.info.nextScheduledRun!,
-                  ),
-                ),
-              if (scheduleError.isNotEmpty)
-                DetailKeyValueRow(
-                  label: 'Schedule error',
-                  value: scheduleError,
-                  bottomPadding: 0,
-                )
-              else
-                const DetailKeyValueRow(
-                  label: 'Schedule error',
-                  value: '—',
-                  bottomPadding: 0,
-                ),
-            ],
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Webhook',
-          icon: AppIcons.network,
-          child: Column(
-            children: [
-              DetailKeyValueRow(
-                label: 'Enabled',
-                value: config.webhookEnabled ? 'Yes' : 'No',
-              ),
-              DetailKeyValueRow(
-                label: 'Secret',
-                value: config.webhookSecret.isNotEmpty ? 'Configured' : '—',
-                bottomPadding: 0,
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }

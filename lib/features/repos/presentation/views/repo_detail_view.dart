@@ -8,13 +8,13 @@ import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
+import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
+import 'package:komodo_go/features/providers/data/models/git_provider_account.dart';
+import 'package:komodo_go/features/providers/presentation/providers/git_providers_provider.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
 import 'package:komodo_go/features/repos/presentation/views/repo_detail/repo_detail_sections.dart';
 import 'package:komodo_go/features/repos/presentation/widgets/repo_card.dart';
-import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
-import 'package:komodo_go/features/providers/data/models/git_provider_account.dart';
-import 'package:komodo_go/features/providers/presentation/providers/git_providers_provider.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 
@@ -33,10 +33,11 @@ class RepoDetailView extends ConsumerStatefulWidget {
   ConsumerState<RepoDetailView> createState() => _RepoDetailViewState();
 }
 
-class _RepoDetailViewState extends ConsumerState<RepoDetailView> {
-  var _isEditingConfig = false;
-  KomodoRepo? _configEditSnapshot;
+class _RepoDetailViewState extends ConsumerState<RepoDetailView>
+    with DetailDirtySnackBarMixin<RepoDetailView> {
   final _configEditorKey = GlobalKey<RepoConfigEditorContentState>();
+
+  var _configSaveInFlight = false;
 
   @override
   Widget build(BuildContext context) {
@@ -120,27 +121,21 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView> {
                             DetailSection(
                               title: 'Config',
                               icon: AppIcons.settings,
-                              trailing: _buildConfigTrailing(
-                                context: context,
-                                repo: repo,
+                              child: RepoConfigEditorContent(
+                                key: _configEditorKey,
+                                initialConfig: repo.config,
+                                servers: servers,
+                                builders: builders,
+                                gitProviders: gitProviders,
+                                onDirtyChanged: (dirty) {
+                                  syncDirtySnackBar(
+                                    dirty: dirty,
+                                    onDiscard: () => _discardConfig(repo),
+                                    onSave: () => _saveConfig(repo: repo),
+                                    saveEnabled: !_configSaveInFlight,
+                                  );
+                                },
                               ),
-                              child: _isEditingConfig
-                                  ? RepoConfigEditorContent(
-                                      key: _configEditorKey,
-                                      initialConfig:
-                                          (_configEditSnapshot?.id == repo.id)
-                                          ? _configEditSnapshot!.config
-                                          : repo.config,
-                                      servers: servers,
-                                      builders: builders,
-                                      gitProviders: gitProviders,
-                                    )
-                                  : _RepoConfigContent(
-                                      config: repo.config,
-                                      serverName: serverNameForId(
-                                        repo.config.serverId,
-                                      ),
-                                    ),
                             ),
                             const Gap(16),
                             DetailSection(
@@ -175,56 +170,14 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView> {
     );
   }
 
-  Widget _buildConfigTrailing({
-    required BuildContext context,
-    required KomodoRepo repo,
-  }) {
-    if (!_isEditingConfig) {
-      return IconButton(
-        tooltip: 'Edit config',
-        icon: const Icon(AppIcons.edit),
-        onPressed: () {
-          setState(() {
-            _isEditingConfig = true;
-            _configEditSnapshot = repo;
-          });
-        },
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Cancel',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.close),
-          onPressed: () {
-            if (_configEditSnapshot != null) {
-              _configEditorKey.currentState?.resetTo(
-                _configEditSnapshot!.config,
-              );
-            }
-            setState(() {
-              _isEditingConfig = false;
-              _configEditSnapshot = null;
-            });
-          },
-        ),
-        IconButton(
-          tooltip: 'Save',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.check),
-          onPressed: () => _saveConfig(context: context, repoId: repo.id),
-        ),
-      ],
-    );
+  void _discardConfig(KomodoRepo repo) {
+    _configEditorKey.currentState?.resetTo(repo.config);
+    hideDirtySnackBar();
   }
 
-  Future<void> _saveConfig({
-    required BuildContext context,
-    required String repoId,
-  }) async {
+  Future<void> _saveConfig({required KomodoRepo repo}) async {
+    if (_configSaveInFlight) return;
+
     final draft = _configEditorKey.currentState;
     if (draft == null) {
       AppSnackBar.show(
@@ -237,38 +190,49 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView> {
 
     final partialConfig = draft.buildPartialConfigParams();
     if (partialConfig.isEmpty) {
-      AppSnackBar.show(
-        context,
-        'No changes to save.',
-        tone: AppSnackBarTone.neutral,
-      );
+      hideDirtySnackBar();
       return;
     }
 
     final actions = ref.read(repoActionsProvider.notifier);
+    setState(() => _configSaveInFlight = true);
     final updated = await actions.updateRepoConfig(
-      repoId: repoId,
+      repoId: repo.id,
       partialConfig: partialConfig,
     );
+    if (!mounted) return;
+    setState(() => _configSaveInFlight = false);
 
-    final success = updated != null;
-    if (success) {
-      ref.invalidate(repoDetailProvider(repoId));
-      if (mounted) {
-        setState(() {
-          _isEditingConfig = false;
-          _configEditSnapshot = null;
-        });
-      }
+    if (updated != null) {
+      ref
+        ..invalidate(repoDetailProvider(widget.repoId))
+        ..invalidate(repoDetailProvider(repo.id))
+        ..invalidate(reposProvider);
+
+      _configEditorKey.currentState?.resetTo(updated.config);
+      hideDirtySnackBar();
+      AppSnackBar.show(context, 'Repo updated', tone: AppSnackBarTone.success);
+      return;
     }
 
-    if (context.mounted) {
-      AppSnackBar.show(
-        context,
-        success ? 'Config saved.' : 'Failed to save config.',
-        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
-      );
-    }
+    final err = ref.read(repoActionsProvider).asError?.error;
+    AppSnackBar.show(
+      context,
+      err != null ? 'Failed: $err' : 'Failed to update repo',
+      tone: AppSnackBarTone.error,
+    );
+
+    reShowDirtySnackBarIfStillDirty(
+      isStillDirty: () {
+        return _configEditorKey.currentState
+                ?.buildPartialConfigParams()
+                .isNotEmpty ??
+            false;
+      },
+      onDiscard: () => _discardConfig(repo),
+      onSave: () => _saveConfig(repo: repo),
+      saveEnabled: !_configSaveInFlight,
+    );
   }
 
   Future<void> _handleAction(
@@ -388,108 +352,6 @@ class _RepoHeroPanel extends StatelessWidget {
       RepoState.failed => AppIcons.error,
       _ => AppIcons.unknown,
     };
-  }
-}
-
-class _RepoConfigContent extends StatelessWidget {
-  const _RepoConfigContent({required this.config, required this.serverName});
-
-  final RepoConfig config;
-  final String? serverName;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            StatusPill.onOff(
-              isOn: config.webhookEnabled,
-              onLabel: 'Webhook on',
-              offLabel: 'Webhook off',
-              onIcon: AppIcons.ok,
-              offIcon: AppIcons.pause,
-            ),
-            StatusPill.onOff(
-              isOn: config.gitHttps,
-              onLabel: 'HTTPS',
-              offLabel: 'SSH',
-              onIcon: AppIcons.ok,
-              offIcon: AppIcons.pause,
-            ),
-          ],
-        ),
-        const Gap(14),
-        DetailSubCard(
-          title: 'Repository',
-          icon: AppIcons.repos,
-          child: Column(
-            children: [
-              DetailKeyValueRow(
-                label: 'Provider',
-                value: config.gitProvider.isNotEmpty ? config.gitProvider : '—',
-              ),
-              DetailKeyValueRow(
-                label: 'Repo',
-                value: config.repo.isNotEmpty ? config.repo : '—',
-              ),
-              DetailKeyValueRow(
-                label: 'Branch',
-                value: config.branch.isNotEmpty ? config.branch : '—',
-              ),
-              DetailKeyValueRow(
-                label: 'Commit',
-                value: config.commit.isNotEmpty ? config.commit : '—',
-              ),
-              DetailKeyValueRow(
-                label: 'Account',
-                value: config.gitAccount.isNotEmpty ? config.gitAccount : '—',
-                bottomPadding: 0,
-              ),
-            ],
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Paths',
-          icon: AppIcons.package,
-          child: Column(
-            children: [
-              DetailKeyValueRow(
-                label: 'Path',
-                value: config.path.isNotEmpty ? config.path : '—',
-                bottomPadding: 0,
-              ),
-            ],
-          ),
-        ),
-        if (config.serverId.isNotEmpty || config.builderId.isNotEmpty) ...[
-          const Gap(12),
-          DetailSubCard(
-            title: 'Deployment',
-            icon: AppIcons.server,
-            child: Column(
-              children: [
-                if (config.serverId.isNotEmpty)
-                  DetailKeyValueRow(
-                    label: 'Server',
-                    value: serverName ?? config.serverId,
-                  ),
-                if (config.builderId.isNotEmpty)
-                  DetailKeyValueRow(
-                    label: 'Builder',
-                    value: config.builderId,
-                    bottomPadding: 0,
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
   }
 }
 

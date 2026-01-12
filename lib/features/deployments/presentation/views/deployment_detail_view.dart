@@ -30,10 +30,10 @@ class DeploymentDetailView extends ConsumerStatefulWidget {
       _DeploymentDetailViewState();
 }
 
-class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
-  var _isEditingConfig = false;
-  DeploymentConfig? _configEditSnapshot;
+class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView>
+  with DetailDirtySnackBarMixin<DeploymentDetailView> {
   final _configEditorKey = GlobalKey<DeploymentConfigEditorContentState>();
+  var _configSaveInFlight = false;
 
   @override
   Widget build(BuildContext context) {
@@ -101,12 +101,7 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
                             DetailSection(
                               title: 'Config',
                               icon: AppIcons.settings,
-                              trailing: _buildConfigTrailing(
-                                context,
-                                deployment,
-                              ),
-                              child:
-                                  _isEditingConfig && deployment.config != null
+                              child: deployment.config != null
                                   ? DeploymentConfigEditorContent(
                                       key: _configEditorKey,
                                       initialConfig: deployment.config!,
@@ -117,6 +112,16 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
                                       registryAccounts:
                                           registryAccountsAsync.asData?.value ??
                                           const [],
+                                      onDirtyChanged: (dirty) {
+                                        syncDirtySnackBar(
+                                          dirty: dirty,
+                                          onDiscard: () =>
+                                              _discardConfig(deployment),
+                                          onSave: () =>
+                                              _saveConfig(deployment: deployment),
+                                          saveEnabled: !_configSaveInFlight,
+                                        );
+                                      },
                                     )
                                   : DeploymentConfigContent(
                                       deployment: deployment,
@@ -156,55 +161,16 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
     );
   }
 
-  Widget _buildConfigTrailing(BuildContext context, Deployment deployment) {
+  void _discardConfig(Deployment deployment) {
     final config = deployment.config;
-    if (config == null) return const SizedBox.shrink();
-
-    if (!_isEditingConfig) {
-      return IconButton(
-        tooltip: 'Edit config',
-        icon: const Icon(AppIcons.edit),
-        onPressed: () {
-          setState(() {
-            _isEditingConfig = true;
-            _configEditSnapshot = config;
-          });
-        },
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Cancel',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.close),
-          onPressed: () {
-            if (_configEditSnapshot != null) {
-              _configEditorKey.currentState?.resetTo(_configEditSnapshot!);
-            }
-            setState(() {
-              _isEditingConfig = false;
-              _configEditSnapshot = null;
-            });
-          },
-        ),
-        IconButton(
-          tooltip: 'Save',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.check),
-          onPressed: () =>
-              _saveConfig(context: context, deployment: deployment),
-        ),
-      ],
-    );
+    if (config == null) return;
+    _configEditorKey.currentState?.resetTo(config);
+    hideDirtySnackBar();
   }
 
-  Future<void> _saveConfig({
-    required BuildContext context,
-    required Deployment deployment,
-  }) async {
+  Future<void> _saveConfig({required Deployment deployment}) async {
+    if (_configSaveInFlight) return;
+
     final draft = _configEditorKey.currentState;
     if (draft == null) {
       AppSnackBar.show(
@@ -223,38 +189,52 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView> {
 
     final partialConfig = draft.buildPartialConfigParams();
     if (partialConfig.isEmpty) {
-      AppSnackBar.show(
-        context,
-        'No changes to save.',
-        tone: AppSnackBarTone.neutral,
-      );
+      hideDirtySnackBar();
       return;
     }
 
     final actions = ref.read(deploymentActionsProvider.notifier);
+    setState(() => _configSaveInFlight = true);
     final updated = await actions.updateDeploymentConfig(
       deploymentId: deployment.id,
       partialConfig: partialConfig,
     );
+    if (!mounted) return;
+    setState(() => _configSaveInFlight = false);
 
-    final success = updated != null;
-    if (success) {
+    if (updated != null) {
       ref.invalidate(deploymentDetailProvider(deployment.id));
-      if (mounted) {
-        setState(() {
-          _isEditingConfig = false;
-          _configEditSnapshot = null;
-        });
+      final updatedConfig = updated.config;
+      if (updatedConfig != null) {
+        _configEditorKey.currentState?.resetTo(updatedConfig);
       }
-    }
-
-    if (context.mounted) {
+      hideDirtySnackBar();
       AppSnackBar.show(
         context,
-        success ? 'Config saved.' : 'Failed to save config.',
-        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
+        'Deployment updated',
+        tone: AppSnackBarTone.success,
       );
+      return;
     }
+
+    final err = ref.read(deploymentActionsProvider).asError?.error;
+    AppSnackBar.show(
+      context,
+      err != null ? 'Failed: $err' : 'Failed to update deployment',
+      tone: AppSnackBarTone.error,
+    );
+
+    reShowDirtySnackBarIfStillDirty(
+      isStillDirty: () {
+        return _configEditorKey.currentState
+                ?.buildPartialConfigParams()
+                .isNotEmpty ??
+            false;
+      },
+      onDiscard: () => _discardConfig(deployment),
+      onSave: () => _saveConfig(deployment: deployment),
+      saveEnabled: !_configSaveInFlight,
+    );
   }
 
   List<PopupMenuEntry<DeploymentAction>> _buildMenuItems(

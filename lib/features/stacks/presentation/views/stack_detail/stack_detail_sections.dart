@@ -382,12 +382,14 @@ class StackConfigEditorContent extends StatefulWidget {
     required this.initialConfig,
     this.servers = const [],
     this.repos = const [],
+    this.onDirtyChanged,
     super.key,
   });
 
   final StackConfig initialConfig;
   final List<Server> servers;
   final List<RepoListItem> repos;
+  final ValueChanged<bool>? onDirtyChanged;
 
   @override
   State<StackConfigEditorContent> createState() =>
@@ -396,6 +398,9 @@ class StackConfigEditorContent extends StatefulWidget {
 
 class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   late StackConfig _initial;
+
+  var _lastDirty = false;
+  var _suppressDirtyNotify = false;
 
   late final TextEditingController _serverId;
   late final TextEditingController _repo;
@@ -457,10 +462,62 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       language: 'yaml',
       text: _initial.environment,
     );
+
+    for (final c in <ChangeNotifier>[
+      _serverId,
+      _repo,
+      _branch,
+      _commit,
+      _linkedRepo,
+      _projectName,
+      _clonePath,
+      _runDirectory,
+      _envFilePath,
+      _links,
+      _additionalEnvFiles,
+      _filePaths,
+      _ignoreServices,
+      _composeController,
+      _environmentController,
+    ]) {
+      c.addListener(_notifyDirtyIfChanged);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant StackConfigEditorContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.initialConfig != oldWidget.initialConfig) {
+      final dirty = buildPartialConfigParams().isNotEmpty;
+      if (!dirty) {
+        resetTo(widget.initialConfig);
+      }
+    }
   }
 
   @override
   void dispose() {
+    for (final c in <ChangeNotifier>[
+      _serverId,
+      _repo,
+      _branch,
+      _commit,
+      _linkedRepo,
+      _projectName,
+      _clonePath,
+      _runDirectory,
+      _envFilePath,
+      _links,
+      _additionalEnvFiles,
+      _filePaths,
+      _ignoreServices,
+      _composeController,
+      _environmentController,
+    ]) {
+      c.removeListener(_notifyDirtyIfChanged);
+    }
+
     _serverId.dispose();
     _repo.dispose();
     _branch.dispose();
@@ -499,6 +556,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   }
 
   void resetTo(StackConfig config) {
+    _suppressDirtyNotify = true;
     setState(() {
       _initial = config;
       _serverId.text = config.serverId;
@@ -519,6 +577,8 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _pollForUpdates = config.pollForUpdates;
       _sendAlerts = config.sendAlerts;
 
+      _composeController.removeListener(_notifyDirtyIfChanged);
+      _environmentController.removeListener(_notifyDirtyIfChanged);
       _composeController.dispose();
       _environmentController.dispose();
       _composeController = _createCodeController(
@@ -529,7 +589,22 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
         language: 'yaml',
         text: config.environment,
       );
+
+      _composeController.addListener(_notifyDirtyIfChanged);
+      _environmentController.addListener(_notifyDirtyIfChanged);
     });
+
+    _suppressDirtyNotify = false;
+    _lastDirty = false;
+    widget.onDirtyChanged?.call(false);
+  }
+
+  void _notifyDirtyIfChanged() {
+    if (_suppressDirtyNotify) return;
+    final dirty = buildPartialConfigParams().isNotEmpty;
+    if (dirty == _lastDirty) return;
+    _lastDirty = dirty;
+    widget.onDirtyChanged?.call(dirty);
   }
 
   Map<String, dynamic> buildPartialConfigParams() {
@@ -644,25 +719,37 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                 contentPadding: EdgeInsets.zero,
                 value: _autoPull,
                 title: const Text('Auto pull'),
-                onChanged: (v) => setState(() => _autoPull = v),
+                onChanged: (v) {
+                  setState(() => _autoPull = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _autoUpdate,
                 title: const Text('Auto update'),
-                onChanged: (v) => setState(() => _autoUpdate = v),
+                onChanged: (v) {
+                  setState(() => _autoUpdate = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _pollForUpdates,
                 title: const Text('Poll for updates'),
-                onChanged: (v) => setState(() => _pollForUpdates = v),
+                onChanged: (v) {
+                  setState(() => _pollForUpdates = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _sendAlerts,
                 title: const Text('Send alerts'),
-                onChanged: (v) => setState(() => _sendAlerts = v),
+                onChanged: (v) {
+                  setState(() => _sendAlerts = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
             ],
           ),
@@ -692,6 +779,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                       onChanged: (value) {
                         if (value == null) return;
                         setState(() => _repo.text = value);
+                        _notifyDirtyIfChanged();
                       },
                     )
                   else

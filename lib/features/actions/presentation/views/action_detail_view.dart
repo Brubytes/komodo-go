@@ -7,10 +7,9 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
-import 'package:syntax_highlight/syntax_highlight.dart';
-
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
+import 'package:syntax_highlight/syntax_highlight.dart';
 
 /// View displaying detailed action information.
 class ActionDetailView extends ConsumerStatefulWidget {
@@ -27,10 +26,10 @@ class ActionDetailView extends ConsumerStatefulWidget {
   ConsumerState<ActionDetailView> createState() => _ActionDetailViewState();
 }
 
-class _ActionDetailViewState extends ConsumerState<ActionDetailView> {
-  var _isEditingConfig = false;
-  KomodoAction? _configEditSnapshot;
+class _ActionDetailViewState extends ConsumerState<ActionDetailView>
+    with DetailDirtySnackBarMixin<ActionDetailView> {
   final _configEditorKey = GlobalKey<ActionConfigEditorContentState>();
+  var _configSaveInFlight = false;
 
   @override
   Widget build(BuildContext context) {
@@ -89,35 +88,19 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView> {
                         DetailSection(
                           title: 'Configuration',
                           icon: AppIcons.settings,
-                          trailing: _actionConfigTrailing(
-                            context: context,
-                            action: action,
+                          child: ActionConfigEditorContent(
+                            key: _configEditorKey,
+                            initialConfig: action.config,
+                            onDirtyChanged: (dirty) {
+                              syncDirtySnackBar(
+                                dirty: dirty,
+                                onDiscard: () => _discardConfig(action),
+                                onSave: () => _saveConfig(action: action),
+                                saveEnabled: !_configSaveInFlight,
+                              );
+                            },
                           ),
-                          child: _isEditingConfig
-                              ? ActionConfigEditorContent(
-                                  key: _configEditorKey,
-                                  initialConfig:
-                                      (_configEditSnapshot?.id == action.id)
-                                      ? _configEditSnapshot!.config
-                                      : action.config,
-                                )
-                              : _ActionConfigContent(
-                                  action: action,
-                                  listItem: listItem,
-                                ),
                         ),
-                        if (!_isEditingConfig &&
-                            (action.config.arguments.trim().isNotEmpty ||
-                                action.config.fileContents
-                                    .trim()
-                                    .isNotEmpty)) ...[
-                          const Gap(16),
-                          DetailSection(
-                            title: 'Script',
-                            icon: AppIcons.package,
-                            child: _ActionScriptContent(config: action.config),
-                          ),
-                        ],
                       ],
                     );
                   },
@@ -163,56 +146,14 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView> {
     }
   }
 
-  Widget _actionConfigTrailing({
-    required BuildContext context,
-    required KomodoAction action,
-  }) {
-    if (!_isEditingConfig) {
-      return IconButton(
-        tooltip: 'Edit config',
-        icon: const Icon(AppIcons.edit),
-        onPressed: () {
-          setState(() {
-            _isEditingConfig = true;
-            _configEditSnapshot = action;
-          });
-        },
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Cancel',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.close),
-          onPressed: () {
-            if (_configEditSnapshot != null) {
-              _configEditorKey.currentState?.resetTo(
-                _configEditSnapshot!.config,
-              );
-            }
-            setState(() {
-              _isEditingConfig = false;
-              _configEditSnapshot = null;
-            });
-          },
-        ),
-        IconButton(
-          tooltip: 'Save',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.check),
-          onPressed: () => _saveConfig(context: context, actionId: action.id),
-        ),
-      ],
-    );
+  void _discardConfig(KomodoAction action) {
+    _configEditorKey.currentState?.resetTo(action.config);
+    hideDirtySnackBar();
   }
 
-  Future<void> _saveConfig({
-    required BuildContext context,
-    required String actionId,
-  }) async {
+  Future<void> _saveConfig({required KomodoAction action}) async {
+    if (_configSaveInFlight) return;
+
     final draft = _configEditorKey.currentState;
     if (draft == null) {
       AppSnackBar.show(
@@ -225,43 +166,66 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView> {
 
     final partialConfig = draft.buildPartialConfigParams();
     if (partialConfig.isEmpty) {
-      AppSnackBar.show(context, 'No changes to save');
+      hideDirtySnackBar();
       return;
     }
 
+    setState(() => _configSaveInFlight = true);
     final updated = await ref
         .read(actionActionsProvider.notifier)
-        .updateActionConfig(actionId: actionId, partialConfig: partialConfig);
+        .updateActionConfig(
+          actionId: action.id,
+          partialConfig: partialConfig,
+        );
+    if (!mounted) return;
+    setState(() => _configSaveInFlight = false);
 
-    if (!context.mounted) return;
+    if (updated != null) {
+      ref
+        ..invalidate(actionDetailProvider(widget.actionId))
+        ..invalidate(actionDetailProvider(action.id))
+        ..invalidate(actionsProvider);
 
-    if (updated == null) {
-      final err = ref.read(actionActionsProvider).asError?.error;
+      _configEditorKey.currentState?.resetTo(updated.config);
+      hideDirtySnackBar();
       AppSnackBar.show(
         context,
-        err != null ? 'Failed: $err' : 'Failed to update action',
-        tone: AppSnackBarTone.error,
+        'Action updated',
+        tone: AppSnackBarTone.success,
       );
       return;
     }
 
-    ref
-      ..invalidate(actionDetailProvider(actionId))
-      ..invalidate(actionsProvider);
+    final err = ref.read(actionActionsProvider).asError?.error;
+    AppSnackBar.show(
+      context,
+      err != null ? 'Failed: $err' : 'Failed to update action',
+      tone: AppSnackBarTone.error,
+    );
 
-    setState(() {
-      _isEditingConfig = false;
-      _configEditSnapshot = null;
-    });
-
-    AppSnackBar.show(context, 'Action updated', tone: AppSnackBarTone.success);
+    reShowDirtySnackBarIfStillDirty(
+      isStillDirty: () {
+        return _configEditorKey.currentState
+                ?.buildPartialConfigParams()
+                .isNotEmpty ??
+            false;
+      },
+      onDiscard: () => _discardConfig(action),
+      onSave: () => _saveConfig(action: action),
+      saveEnabled: !_configSaveInFlight,
+    );
   }
 }
 
 class ActionConfigEditorContent extends StatefulWidget {
-  const ActionConfigEditorContent({required this.initialConfig, super.key});
+  const ActionConfigEditorContent({
+    required this.initialConfig,
+    this.onDirtyChanged,
+    super.key,
+  });
 
   final ActionConfig initialConfig;
+  final ValueChanged<bool>? onDirtyChanged;
 
   @override
   State<ActionConfigEditorContent> createState() =>
@@ -270,6 +234,9 @@ class ActionConfigEditorContent extends StatefulWidget {
 
 class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
   late ActionConfig _initial;
+
+  var _lastDirty = false;
+  var _suppressDirtyNotify = false;
 
   late final TextEditingController _schedule;
   late final TextEditingController _scheduleTimezone;
@@ -309,10 +276,42 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
     _failureAlert = _initial.failureAlert;
     _scheduleFormat = _initial.scheduleFormat;
     _argumentsFormat = _initial.argumentsFormat;
+
+    for (final c in <ChangeNotifier>[
+      _schedule,
+      _scheduleTimezone,
+      _webhookSecret,
+      _arguments,
+      _fileContentsController,
+    ]) {
+      c.addListener(_notifyDirtyIfChanged);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ActionConfigEditorContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.initialConfig != oldWidget.initialConfig) {
+      final dirty = buildPartialConfigParams().isNotEmpty;
+      if (!dirty) {
+        resetTo(widget.initialConfig);
+      }
+    }
   }
 
   @override
   void dispose() {
+    for (final c in <ChangeNotifier>[
+      _schedule,
+      _scheduleTimezone,
+      _webhookSecret,
+      _arguments,
+      _fileContentsController,
+    ]) {
+      c.removeListener(_notifyDirtyIfChanged);
+    }
+
     _schedule.dispose();
     _scheduleTimezone.dispose();
     _webhookSecret.dispose();
@@ -339,6 +338,7 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
   }
 
   void resetTo(ActionConfig config) {
+    _suppressDirtyNotify = true;
     setState(() {
       _initial = config;
 
@@ -347,11 +347,13 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
       _webhookSecret.text = config.webhookSecret;
       _arguments.text = config.arguments;
 
+      _fileContentsController.removeListener(_notifyDirtyIfChanged);
       _fileContentsController.dispose();
       _fileContentsController = _createCodeController(
         language: 'typescript',
         text: config.fileContents,
       );
+      _fileContentsController.addListener(_notifyDirtyIfChanged);
 
       _runAtStartup = config.runAtStartup;
       _scheduleEnabled = config.scheduleEnabled;
@@ -362,6 +364,18 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
       _scheduleFormat = config.scheduleFormat;
       _argumentsFormat = config.argumentsFormat;
     });
+
+    _suppressDirtyNotify = false;
+    _lastDirty = false;
+    widget.onDirtyChanged?.call(false);
+  }
+
+  void _notifyDirtyIfChanged() {
+    if (_suppressDirtyNotify) return;
+    final dirty = buildPartialConfigParams().isNotEmpty;
+    if (dirty == _lastDirty) return;
+    _lastDirty = dirty;
+    widget.onDirtyChanged?.call(dirty);
   }
 
   Map<String, dynamic> buildPartialConfigParams() {
@@ -436,42 +450,60 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
             children: [
               SwitchListTile.adaptive(
                 value: _runAtStartup,
-                onChanged: (v) => setState(() => _runAtStartup = v),
+                onChanged: (v) {
+                  setState(() => _runAtStartup = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Run at startup'),
                 secondary: const Icon(AppIcons.play),
                 contentPadding: EdgeInsets.zero,
               ),
               SwitchListTile.adaptive(
                 value: _scheduleEnabled,
-                onChanged: (v) => setState(() => _scheduleEnabled = v),
+                onChanged: (v) {
+                  setState(() => _scheduleEnabled = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Schedule enabled'),
                 secondary: const Icon(AppIcons.clock),
                 contentPadding: EdgeInsets.zero,
               ),
               SwitchListTile.adaptive(
                 value: _webhookEnabled,
-                onChanged: (v) => setState(() => _webhookEnabled = v),
+                onChanged: (v) {
+                  setState(() => _webhookEnabled = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Webhook enabled'),
                 secondary: const Icon(AppIcons.network),
                 contentPadding: EdgeInsets.zero,
               ),
               SwitchListTile.adaptive(
                 value: _reloadDenoDeps,
-                onChanged: (v) => setState(() => _reloadDenoDeps = v),
+                onChanged: (v) {
+                  setState(() => _reloadDenoDeps = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Reload Deno deps'),
                 secondary: const Icon(AppIcons.refresh),
                 contentPadding: EdgeInsets.zero,
               ),
               SwitchListTile.adaptive(
                 value: _scheduleAlert,
-                onChanged: (v) => setState(() => _scheduleAlert = v),
+                onChanged: (v) {
+                  setState(() => _scheduleAlert = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Schedule alerts'),
                 secondary: const Icon(AppIcons.notifications),
                 contentPadding: EdgeInsets.zero,
               ),
               SwitchListTile.adaptive(
                 value: _failureAlert,
-                onChanged: (v) => setState(() => _failureAlert = v),
+                onChanged: (v) {
+                  setState(() => _failureAlert = v);
+                  _notifyDirtyIfChanged();
+                },
                 title: const Text('Failure alerts'),
                 secondary: const Icon(AppIcons.warning),
                 contentPadding: EdgeInsets.zero,
@@ -501,6 +533,7 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
                 onChanged: (v) {
                   if (v == null) return;
                   setState(() => _scheduleFormat = v);
+                  _notifyDirtyIfChanged();
                 },
                 decoration: const InputDecoration(
                   labelText: 'Schedule format',
@@ -571,6 +604,7 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
                 onChanged: (v) {
                   if (v == null) return;
                   setState(() => _argumentsFormat = v);
+                  _notifyDirtyIfChanged();
                 },
                 decoration: const InputDecoration(
                   labelText: 'Arguments format',
@@ -701,194 +735,6 @@ class _ActionHeader extends StatelessWidget {
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _ActionConfigContent extends StatelessWidget {
-  const _ActionConfigContent({required this.action, required this.listItem});
-
-  final KomodoAction action;
-  final ActionListItem? listItem;
-
-  @override
-  Widget build(BuildContext context) {
-    final config = action.config;
-    final scheduleError = listItem?.info.scheduleError?.trim() ?? '';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            StatusPill.onOff(
-              isOn: config.runAtStartup,
-              onLabel: 'Startup on',
-              offLabel: 'Startup off',
-              onIcon: AppIcons.ok,
-              offIcon: AppIcons.pause,
-            ),
-            StatusPill.onOff(
-              isOn: config.scheduleEnabled,
-              onLabel: 'Schedule on',
-              offLabel: 'Schedule off',
-              onIcon: AppIcons.ok,
-              offIcon: AppIcons.pause,
-            ),
-            StatusPill.onOff(
-              isOn: config.webhookEnabled,
-              onLabel: 'Webhook on',
-              offLabel: 'Webhook off',
-              onIcon: AppIcons.ok,
-              offIcon: AppIcons.pause,
-            ),
-            StatusPill.onOff(
-              isOn: config.reloadDenoDeps,
-              onLabel: 'Reload deps',
-              offLabel: 'No reload',
-              onIcon: AppIcons.refresh,
-              offIcon: AppIcons.pause,
-            ),
-            StatusPill.onOff(
-              isOn: config.scheduleAlert,
-              onLabel: 'Schedule alerts',
-              offLabel: 'No schedule alerts',
-              onIcon: AppIcons.notifications,
-              offIcon: AppIcons.notifications,
-            ),
-            StatusPill.onOff(
-              isOn: config.failureAlert,
-              onLabel: 'Failure alerts',
-              offLabel: 'No failure alerts',
-              onIcon: AppIcons.warning,
-              offIcon: AppIcons.ok,
-            ),
-          ],
-        ),
-        const Gap(14),
-        DetailSubCard(
-          title: 'Schedule',
-          icon: AppIcons.clock,
-          child: Column(
-            children: [
-              DetailKeyValueRow(
-                label: 'Enabled',
-                value: config.scheduleEnabled ? 'Yes' : 'No',
-              ),
-              DetailKeyValueRow(
-                label: 'Format',
-                value: config.scheduleFormat.name.toUpperCase(),
-              ),
-              DetailKeyValueRow(
-                label: 'Timezone',
-                value: config.scheduleTimezone.isNotEmpty
-                    ? config.scheduleTimezone
-                    : '—',
-              ),
-              DetailKeyValueRow(
-                label: 'Expression',
-                value: config.schedule.isNotEmpty ? config.schedule : '—',
-              ),
-              if (listItem?.info.nextScheduledRun != null)
-                DetailKeyValueRow(
-                  label: 'Next run',
-                  value: _formatTimestampSeconds(
-                    listItem!.info.nextScheduledRun!,
-                  ),
-                ),
-              if (scheduleError.isNotEmpty)
-                DetailKeyValueRow(
-                  label: 'Schedule error',
-                  value: scheduleError,
-                  bottomPadding: 0,
-                )
-              else
-                const DetailKeyValueRow(
-                  label: 'Schedule error',
-                  value: '—',
-                  bottomPadding: 0,
-                ),
-            ],
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Webhook',
-          icon: AppIcons.network,
-          child: Column(
-            children: [
-              DetailKeyValueRow(
-                label: 'Enabled',
-                value: config.webhookEnabled ? 'Yes' : 'No',
-              ),
-              DetailKeyValueRow(
-                label: 'Secret',
-                value: config.webhookSecret.isNotEmpty ? 'Configured' : '—',
-                bottomPadding: 0,
-              ),
-            ],
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Arguments',
-          icon: AppIcons.tag,
-          child: Column(
-            children: [
-              DetailKeyValueRow(
-                label: 'Format',
-                value: config.argumentsFormat.displayName,
-                bottomPadding: 0,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ActionScriptContent extends StatelessWidget {
-  const _ActionScriptContent({required this.config});
-
-  final ActionConfig config;
-
-  @override
-  Widget build(BuildContext context) {
-    final args = config.arguments.trim();
-    final file = config.fileContents.trim();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (args.isNotEmpty) ...[
-          Text(
-            'Arguments',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const Gap(8),
-          DetailCodeBlock(code: args, maxHeight: 220),
-        ],
-        if (args.isNotEmpty && file.isNotEmpty) const Gap(16),
-        if (file.isNotEmpty) ...[
-          Text(
-            'File contents',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const Gap(8),
-          DetailCodeBlock(
-            code: file,
-            language: DetailCodeLanguage.typescript,
-            maxHeight: 420,
           ),
         ],
       ],

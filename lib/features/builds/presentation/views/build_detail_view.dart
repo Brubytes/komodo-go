@@ -29,11 +29,9 @@ class BuildDetailView extends ConsumerStatefulWidget {
   ConsumerState<BuildDetailView> createState() => _BuildDetailViewState();
 }
 
-class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
+class _BuildDetailViewState extends ConsumerState<BuildDetailView>
+  with DetailDirtySnackBarMixin<BuildDetailView> {
   final _configEditorKey = GlobalKey<BuildConfigEditorContentState>();
-
-  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>?
-  _configDirtySnackBar;
   var _configSaveInFlight = false;
 
   @override
@@ -139,7 +137,11 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
                             builders: builders,
                             repos: repos,
                             onDirtyChanged: (dirty) {
-                              _onConfigDirtyChanged(dirty: dirty, build: build);
+                              syncDirtySnackBar(
+                                dirty: dirty,
+                                onDiscard: () => _discardConfig(build),
+                                onSave: () => _saveConfig(build: build),
+                              );
                             },
                           ),
                         ),
@@ -222,78 +224,9 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
     );
   }
 
-  void _onConfigDirtyChanged({
-    required bool dirty,
-    required KomodoBuild build,
-  }) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (!dirty) {
-        _hideConfigDirtySnackBar();
-      } else {
-        _showConfigDirtySnackBar(build);
-      }
-    });
-  }
-
-  void _hideConfigDirtySnackBar() {
-    if (_configDirtySnackBar == null) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    _configDirtySnackBar = null;
-  }
-
-  void _showConfigDirtySnackBar(KomodoBuild build) {
-    if (_configDirtySnackBar != null) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    final scheme = Theme.of(context).colorScheme;
-
-    final controller = messenger.showSnackBar(
-      SnackBar(
-        backgroundColor: scheme.inverseSurface,
-        duration: const Duration(days: 1),
-        dismissDirection: DismissDirection.none,
-        behavior: SnackBarBehavior.floating,
-        content: DefaultTextStyle(
-          style: TextStyle(color: scheme.onInverseSurface),
-          child: Row(
-            children: [
-              const Expanded(child: Text('Unsaved changes')),
-              TextButton(
-                style: TextButton.styleFrom(
-                  foregroundColor: scheme.onInverseSurface,
-                ),
-                onPressed: () => _discardConfig(build),
-                child: const Text('Discard'),
-              ),
-              const Gap(8),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: scheme.primary,
-                  foregroundColor: scheme.onPrimary,
-                  visualDensity: VisualDensity.compact,
-                ),
-                onPressed: () => _saveConfig(build: build),
-                child: const Text('Save'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    _configDirtySnackBar = controller;
-    controller.closed.then((_) {
-      if (!mounted) return;
-      if (_configDirtySnackBar == controller) {
-        _configDirtySnackBar = null;
-      }
-    });
-  }
-
   void _discardConfig(KomodoBuild build) {
     _configEditorKey.currentState?.resetTo(build.config);
-    _hideConfigDirtySnackBar();
+    hideDirtySnackBar();
   }
 
   Future<void> _saveConfig({required KomodoBuild build}) async {
@@ -311,7 +244,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
 
     final partialConfig = draft.buildPartialConfigParams();
     if (partialConfig.isEmpty) {
-      _hideConfigDirtySnackBar();
+      hideDirtySnackBar();
       return;
     }
 
@@ -329,7 +262,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
         ..invalidate(buildsProvider);
 
       _configEditorKey.currentState?.resetTo(updated.config);
-      _hideConfigDirtySnackBar();
+      hideDirtySnackBar();
     }
 
     if (!mounted) return;
@@ -344,15 +277,16 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView> {
 
       // AppSnackBar replaces the current snackbar; re-show the persistent
       // Save/Discard bar if we are still dirty.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final stillDirty =
-            _configEditorKey.currentState
-                ?.buildPartialConfigParams()
-                .isNotEmpty ??
-            false;
-        if (stillDirty) _showConfigDirtySnackBar(build);
-      });
+      reShowDirtySnackBarIfStillDirty(
+        isStillDirty: () {
+          return _configEditorKey.currentState
+                  ?.buildPartialConfigParams()
+                  .isNotEmpty ??
+              false;
+        },
+        onDiscard: () => _discardConfig(build),
+        onSave: () => _saveConfig(build: build),
+      );
 
       return;
     }

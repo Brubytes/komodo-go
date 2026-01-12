@@ -305,6 +305,7 @@ class DeploymentConfigEditorContent extends StatefulWidget {
     required this.imageLabel,
     this.servers = const [],
     this.registryAccounts = const [],
+    this.onDirtyChanged,
     super.key,
   });
 
@@ -312,6 +313,7 @@ class DeploymentConfigEditorContent extends StatefulWidget {
   final String imageLabel;
   final List<Server> servers;
   final List<DockerRegistryAccount> registryAccounts;
+  final ValueChanged<bool>? onDirtyChanged;
 
   @override
   State<DeploymentConfigEditorContent> createState() =>
@@ -344,6 +346,9 @@ class DeploymentConfigEditorContentState
   ];
 
   late DeploymentConfig _initial;
+
+  var _lastDirty = false;
+  var _suppressDirtyNotify = false;
 
   late final TextEditingController _serverId;
   late final TextEditingController _imageRegistryAccount;
@@ -414,10 +419,58 @@ class DeploymentConfigEditorContentState
       language: 'yaml',
       text: _initial.labels,
     );
+
+    for (final c in <ChangeNotifier>[
+      _serverId,
+      _imageRegistryAccount,
+      _network,
+      _command,
+      _terminationTimeout,
+      _termSignalLabels,
+      _links,
+      _extraArgs,
+      _image,
+      _portsController,
+      _volumesController,
+      _environmentController,
+      _labelsController,
+    ]) {
+      c.addListener(_notifyDirtyIfChanged);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant DeploymentConfigEditorContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.initialConfig != oldWidget.initialConfig) {
+      final dirty = buildPartialConfigParams().isNotEmpty;
+      if (!dirty) {
+        resetTo(widget.initialConfig);
+      }
+    }
   }
 
   @override
   void dispose() {
+    for (final c in <ChangeNotifier>[
+      _serverId,
+      _imageRegistryAccount,
+      _network,
+      _command,
+      _terminationTimeout,
+      _termSignalLabels,
+      _links,
+      _extraArgs,
+      _image,
+      _portsController,
+      _volumesController,
+      _environmentController,
+      _labelsController,
+    ]) {
+      c.removeListener(_notifyDirtyIfChanged);
+    }
+
     _serverId.dispose();
     _imageRegistryAccount.dispose();
     _network.dispose();
@@ -506,6 +559,7 @@ class DeploymentConfigEditorContentState
   }
 
   void resetTo(DeploymentConfig config) {
+    _suppressDirtyNotify = true;
     setState(() {
       _initial = config;
       _serverId.text = config.serverId;
@@ -532,6 +586,19 @@ class DeploymentConfigEditorContentState
       _environmentController.text = config.environment;
       _labelsController.text = config.labels;
     });
+
+    _suppressDirtyNotify = false;
+    _lastDirty = false;
+    widget.onDirtyChanged?.call(false);
+  }
+
+  void _notifyDirtyIfChanged() {
+    if (_suppressDirtyNotify) return;
+
+    final dirty = buildPartialConfigParams().isNotEmpty;
+    if (dirty == _lastDirty) return;
+    _lastDirty = dirty;
+    widget.onDirtyChanged?.call(dirty);
   }
 
   String? validateDraft() {
@@ -689,31 +756,46 @@ class DeploymentConfigEditorContentState
                 contentPadding: EdgeInsets.zero,
                 value: _autoUpdate,
                 title: const Text('Auto update'),
-                onChanged: (v) => setState(() => _autoUpdate = v),
+                onChanged: (v) {
+                  setState(() => _autoUpdate = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _pollForUpdates,
                 title: const Text('Poll for updates'),
-                onChanged: (v) => setState(() => _pollForUpdates = v),
+                onChanged: (v) {
+                  setState(() => _pollForUpdates = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _sendAlerts,
                 title: const Text('Send alerts'),
-                onChanged: (v) => setState(() => _sendAlerts = v),
+                onChanged: (v) {
+                  setState(() => _sendAlerts = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _redeployOnBuild,
                 title: const Text('Redeploy on build'),
-                onChanged: (v) => setState(() => _redeployOnBuild = v),
+                onChanged: (v) {
+                  setState(() => _redeployOnBuild = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _skipSecretInterp,
                 title: const Text('Skip secret interpolation'),
-                onChanged: (v) => setState(() => _skipSecretInterp = v),
+                onChanged: (v) {
+                  setState(() => _skipSecretInterp = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
             ],
           ),
@@ -876,7 +958,10 @@ class DeploymentConfigEditorContentState
                       child: Text(_restartLabels[v] ?? v),
                     ),
                 ],
-                onChanged: (v) => setState(() => _restart = v),
+                onChanged: (v) {
+                  setState(() => _restart = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               const Gap(12),
               DropdownButtonFormField<String>(
@@ -891,7 +976,10 @@ class DeploymentConfigEditorContentState
                   for (final v in _terminationSignalOptions)
                     DropdownMenuItem(value: v, child: Text(v)),
                 ],
-                onChanged: (v) => setState(() => _terminationSignal = v),
+                onChanged: (v) {
+                  setState(() => _terminationSignal = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               const Gap(12),
               TextFormField(

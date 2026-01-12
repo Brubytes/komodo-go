@@ -33,13 +33,13 @@ class StackDetailView extends ConsumerStatefulWidget {
   ConsumerState<StackDetailView> createState() => _StackDetailViewState();
 }
 
-class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
+class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
+    with DetailDirtySnackBarMixin<StackDetailView> {
   Timer? _logRefreshTimer;
   var _autoRefreshLogs = true;
-
-  var _isEditingConfig = false;
-  KomodoStack? _configEditSnapshot;
   final _configEditorKey = GlobalKey<StackConfigEditorContentState>();
+
+  var _configSaveInFlight = false;
 
   @override
   void dispose() {
@@ -213,26 +213,20 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
                             DetailSection(
                               title: 'Config',
                               icon: AppIcons.settings,
-                              trailing: _buildConfigTrailing(
-                                context: context,
-                                stack: stack,
+                              child: StackConfigEditorContent(
+                                key: _configEditorKey,
+                                initialConfig: stack.config,
+                                servers: servers,
+                                repos: repos,
+                                onDirtyChanged: (dirty) {
+                                  syncDirtySnackBar(
+                                    dirty: dirty,
+                                    onDiscard: () => _discardConfig(stack),
+                                    onSave: () => _saveConfig(stack: stack),
+                                    saveEnabled: !_configSaveInFlight,
+                                  );
+                                },
                               ),
-                              child: _isEditingConfig
-                                  ? StackConfigEditorContent(
-                                      key: _configEditorKey,
-                                      initialConfig:
-                                          (_configEditSnapshot?.id == stack.id)
-                                          ? _configEditSnapshot!.config
-                                          : stack.config,
-                                      servers: servers,
-                                      repos: repos,
-                                    )
-                                  : StackConfigContent(
-                                      config: stack.config,
-                                      serverName: serverNameForId(
-                                        stack.config.serverId,
-                                      ),
-                                    ),
                             ),
                             const Gap(16),
                             DetailSection(
@@ -377,56 +371,14 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
     }
   }
 
-  Widget _buildConfigTrailing({
-    required BuildContext context,
-    required KomodoStack stack,
-  }) {
-    if (!_isEditingConfig) {
-      return IconButton(
-        tooltip: 'Edit config',
-        icon: const Icon(AppIcons.edit),
-        onPressed: () {
-          setState(() {
-            _isEditingConfig = true;
-            _configEditSnapshot = stack;
-          });
-        },
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Cancel',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.close),
-          onPressed: () {
-            if (_configEditSnapshot != null) {
-              _configEditorKey.currentState?.resetTo(
-                _configEditSnapshot!.config,
-              );
-            }
-            setState(() {
-              _isEditingConfig = false;
-              _configEditSnapshot = null;
-            });
-          },
-        ),
-        IconButton(
-          tooltip: 'Save',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(AppIcons.check),
-          onPressed: () => _saveConfig(context: context, stackId: stack.id),
-        ),
-      ],
-    );
+  void _discardConfig(KomodoStack stack) {
+    _configEditorKey.currentState?.resetTo(stack.config);
+    hideDirtySnackBar();
   }
 
-  Future<void> _saveConfig({
-    required BuildContext context,
-    required String stackId,
-  }) async {
+  Future<void> _saveConfig({required KomodoStack stack}) async {
+    if (_configSaveInFlight) return;
+
     final draft = _configEditorKey.currentState;
     if (draft == null) {
       AppSnackBar.show(
@@ -439,37 +391,47 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView> {
 
     final partialConfig = draft.buildPartialConfigParams();
     if (partialConfig.isEmpty) {
-      AppSnackBar.show(
-        context,
-        'No changes to save.',
-        tone: AppSnackBarTone.neutral,
-      );
+      hideDirtySnackBar();
       return;
     }
 
     final actions = ref.read(stackActionsProvider.notifier);
+    setState(() => _configSaveInFlight = true);
     final updated = await actions.updateStackConfig(
-      stackId: stackId,
+      stackId: stack.id,
       partialConfig: partialConfig,
     );
+    if (!mounted) return;
+    setState(() => _configSaveInFlight = false);
 
-    final success = updated != null;
-    if (success) {
-      ref.invalidate(stackDetailProvider(stackId));
-      if (mounted) {
-        setState(() {
-          _isEditingConfig = false;
-          _configEditSnapshot = null;
-        });
-      }
+    if (updated != null) {
+      ref
+        ..invalidate(stackDetailProvider(stack.id))
+        ..invalidate(stacksProvider);
+
+      _configEditorKey.currentState?.resetTo(updated.config);
+      hideDirtySnackBar();
+      AppSnackBar.show(context, 'Stack updated', tone: AppSnackBarTone.success);
+      return;
     }
 
-    if (context.mounted) {
-      AppSnackBar.show(
-        context,
-        success ? 'Config saved.' : 'Failed to save config.',
-        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
-      );
-    }
+    final err = ref.read(stackActionsProvider).asError?.error;
+    AppSnackBar.show(
+      context,
+      err != null ? 'Failed: $err' : 'Failed to update stack',
+      tone: AppSnackBarTone.error,
+    );
+
+    reShowDirtySnackBarIfStillDirty(
+      isStillDirty: () {
+        return _configEditorKey.currentState
+                ?.buildPartialConfigParams()
+                .isNotEmpty ??
+            false;
+      },
+      onDiscard: () => _discardConfig(stack),
+      onSave: () => _saveConfig(stack: stack),
+      saveEnabled: !_configSaveInFlight,
+    );
   }
 }

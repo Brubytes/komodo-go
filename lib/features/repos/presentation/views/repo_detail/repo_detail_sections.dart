@@ -13,6 +13,7 @@ class RepoConfigEditorContent extends StatefulWidget {
     this.servers = const [],
     this.builders = const [],
     this.gitProviders = const [],
+    this.onDirtyChanged,
     super.key,
   });
 
@@ -20,6 +21,7 @@ class RepoConfigEditorContent extends StatefulWidget {
   final List<Server> servers;
   final List<BuilderListItem> builders;
   final List<GitProviderAccount> gitProviders;
+  final ValueChanged<bool>? onDirtyChanged;
 
   @override
   State<RepoConfigEditorContent> createState() =>
@@ -28,6 +30,9 @@ class RepoConfigEditorContent extends StatefulWidget {
 
 class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
   late RepoConfig _initial;
+
+  var _lastDirty = false;
+  var _suppressDirtyNotify = false;
 
   late final TextEditingController _serverId;
   late final TextEditingController _builderId;
@@ -59,10 +64,48 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
     _webhookEnabled = _initial.webhookEnabled;
     _gitHttps = _initial.gitHttps;
     _skipSecretInterp = _initial.skipSecretInterp;
+
+    for (final c in <TextEditingController>[
+      _serverId,
+      _builderId,
+      _gitProvider,
+      _gitAccount,
+      _repo,
+      _branch,
+      _commit,
+      _path,
+    ]) {
+      c.addListener(_notifyDirtyIfChanged);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant RepoConfigEditorContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.initialConfig != oldWidget.initialConfig) {
+      final dirty = buildPartialConfigParams().isNotEmpty;
+      if (!dirty) {
+        resetTo(widget.initialConfig);
+      }
+    }
   }
 
   @override
   void dispose() {
+    for (final c in <TextEditingController>[
+      _serverId,
+      _builderId,
+      _gitProvider,
+      _gitAccount,
+      _repo,
+      _branch,
+      _commit,
+      _path,
+    ]) {
+      c.removeListener(_notifyDirtyIfChanged);
+    }
+
     _serverId.dispose();
     _builderId.dispose();
     _gitProvider.dispose();
@@ -75,6 +118,7 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
   }
 
   void resetTo(RepoConfig config) {
+    _suppressDirtyNotify = true;
     setState(() {
       _initial = config;
 
@@ -91,6 +135,18 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
       _gitHttps = config.gitHttps;
       _skipSecretInterp = config.skipSecretInterp;
     });
+
+    _suppressDirtyNotify = false;
+    _lastDirty = false;
+    widget.onDirtyChanged?.call(false);
+  }
+
+  void _notifyDirtyIfChanged() {
+    if (_suppressDirtyNotify) return;
+    final dirty = buildPartialConfigParams().isNotEmpty;
+    if (dirty == _lastDirty) return;
+    _lastDirty = dirty;
+    widget.onDirtyChanged?.call(dirty);
   }
 
   Map<String, dynamic> buildPartialConfigParams() {
@@ -180,19 +236,28 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
                 contentPadding: EdgeInsets.zero,
                 value: _webhookEnabled,
                 title: const Text('Webhook enabled'),
-                onChanged: (v) => setState(() => _webhookEnabled = v),
+                onChanged: (v) {
+                  setState(() => _webhookEnabled = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _gitHttps,
                 title: const Text('Git HTTPS'),
-                onChanged: (v) => setState(() => _gitHttps = v),
+                onChanged: (v) {
+                  setState(() => _gitHttps = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _skipSecretInterp,
                 title: const Text('Skip secret interpolation'),
-                onChanged: (v) => setState(() => _skipSecretInterp = v),
+                onChanged: (v) {
+                  setState(() => _skipSecretInterp = v);
+                  _notifyDirtyIfChanged();
+                },
               ),
             ],
           ),
