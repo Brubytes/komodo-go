@@ -24,10 +24,12 @@ class FakeKomodoBackend {
   FakeKomodoBackend({
     required this.expectedApiKey,
     required this.expectedApiSecret,
+    this.port = 0,
   });
 
   final String expectedApiKey;
   final String expectedApiSecret;
+  final int port;
 
   HttpServer? _server;
   final List<RecordedRpcCall> calls = <RecordedRpcCall>[];
@@ -49,7 +51,12 @@ class FakeKomodoBackend {
   Future<void> start() async {
     if (_server != null) return;
 
-    _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    try {
+      _server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
+    } on SocketException {
+      if (port == 0) rethrow;
+      _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    }
     unawaited(_serve());
   }
 

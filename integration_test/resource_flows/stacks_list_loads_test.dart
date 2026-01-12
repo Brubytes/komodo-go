@@ -10,6 +10,7 @@ void registerStacksListLoadsTests() {
     final backend = FakeKomodoBackend(
       expectedApiKey: 'test-key',
       expectedApiSecret: 'test-secret',
+      port: 57868,
     );
     await backend.start();
 
@@ -26,12 +27,15 @@ void registerStacksListLoadsTests() {
 
       await $(find.text('Resources')).waitUntilVisible();
 
-      // Isolate the list-loading call from login validation (GetVersion).
-      backend.resetCalls();
-
       await $(find.text('Resources')).tap();
       await $(find.text('Stacks')).tap();
 
+      await $(find.text('Test Stack')).waitUntilVisible();
+
+      // Isolate the list-loading call from login validation (GetVersion) and
+      // any cached state from previous test cases.
+      backend.resetCalls();
+      await pullToRefresh($);
       await $(find.text('Test Stack')).waitUntilVisible();
 
       final listCalls = backend.calls

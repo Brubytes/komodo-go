@@ -11,6 +11,7 @@ void registerStacksDestroyTests() {
     final backend = FakeKomodoBackend(
       expectedApiKey: 'test-key',
       expectedApiSecret: 'test-secret',
+      port: 57868,
     );
     await backend.start();
 

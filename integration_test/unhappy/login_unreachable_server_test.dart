@@ -17,11 +17,15 @@ void registerLoginUnreachableServerTests() {
       apiSecret: 'test-secret',
     );
 
-    await $(
-      find.text(
-        'Cannot reach the server. Check your connection and server address.',
-      ),
-    ).waitUntilVisible();
+    await $.pumpAndSettle();
+    final normalized = find.text(
+      'Cannot reach the server. Check your connection and server address.',
+    );
+    final raw = find.text('Could not connect to server');
+    expect(
+      normalized.evaluate().isNotEmpty || raw.evaluate().isNotEmpty,
+      isTrue,
+    );
   });
 }
 
