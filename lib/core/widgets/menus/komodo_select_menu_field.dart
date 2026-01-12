@@ -117,7 +117,8 @@ class KomodoSelectMenuField<T> extends StatelessWidget {
       fontWeight: FontWeight.w600,
     );
 
-    final displayText = selected?.label ?? hintText ?? '—';
+    final displayText =
+        selected?.label ?? hintText ?? decoration.hintText ?? '';
 
     // Apply theme defaults first so the rebuilt decoration preserves the
     // project's InputDecorationTheme styling.
