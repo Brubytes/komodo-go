@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
@@ -156,55 +157,67 @@ class AlertTile extends ConsumerWidget {
       SeverityLevel.unknown => scheme.onSurfaceVariant,
     };
 
-    return Card(
-      child: ListTile(
-        leading: Icon(_iconForAlert(alert), color: severityColor),
-        title: Text(title),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (primary != null && primary.isNotEmpty) Text(primary),
-            if (targetName != null && targetName.isNotEmpty) ...[
-              const Gap(4),
-              Text(
-                targetName,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-            const Gap(4),
-            Row(
-              children: [
-                Icon(AppIcons.clock, size: 16, color: scheme.onSurfaceVariant),
-                const Gap(6),
-                Expanded(
-                  child: Text(
-                    _formatTimestamp(alert.timestamp.toLocal()),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          leading: Icon(_iconForAlert(alert), color: severityColor),
+          title: Text(title),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (primary != null && primary.isNotEmpty) Text(primary),
+              if (targetName != null && targetName.isNotEmpty) ...[
+                const Gap(4),
+                Text(
+                  targetName,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
               ],
-            ),
-          ],
-        ),
-        trailing: alert.resolved
-            ? const NotificationsStatusChip(
-                label: 'RESOLVED',
-                kind: NotificationsStatusChipKind.neutral,
-              )
-            : NotificationsStatusChip(
-                label: _labelForSeverity(alert.level),
-                kind: _chipKindForAlertLevel(alert.level),
+              const Gap(4),
+              Row(
+                children: [
+                  Icon(
+                    AppIcons.clock,
+                    size: 16,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const Gap(6),
+                  Expanded(
+                    child: Text(
+                      _formatTimestamp(alert.timestamp.toLocal()),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-        onTap: () {
-          final route = _routeForTarget(target);
-          if (route != null) {
-            context.go(route);
-          }
-        },
+            ],
+          ),
+          trailing: alert.resolved
+              ? const NotificationsStatusChip(
+                  label: 'RESOLVED',
+                  kind: NotificationsStatusChipKind.neutral,
+                )
+              : NotificationsStatusChip(
+                  label: _labelForSeverity(alert.level),
+                  kind: _chipKindForAlertLevel(alert.level),
+                ),
+          onTap: () {
+            final route = _routeForTarget(target);
+            if (route != null) {
+              context.go(route);
+            }
+          },
+        ),
       ),
     );
   }
@@ -234,62 +247,75 @@ class UpdateTile extends ConsumerWidget {
                 orElse: () => target.displayName,
               );
 
-    return Card(
-      child: ListTile(
-        leading: Icon(_iconForTargetType(target?.type), color: scheme.primary),
-        title: Row(
-          children: [
-            Expanded(child: Text(title)),
-            NotificationsStatusChip(
-              label: _labelForUpdateStatus(update),
-              kind: _kindForUpdate(update),
-            ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Gap(4),
-            Text(
-              targetName,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const Gap(4),
-            Row(
-              children: [
-                if (operator != null) ...[
-                  Icon(AppIcons.user, size: 16, color: scheme.onSurfaceVariant),
-                  const Gap(6),
-                  Expanded(
-                    child: Text(
-                      operator,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          leading: Icon(
+            _iconForTargetType(target?.type),
+            color: scheme.primary,
+          ),
+          title: Row(
+            children: [
+              Expanded(child: Text(title)),
+              NotificationsStatusChip(
+                label: _labelForUpdateStatus(update),
+                kind: _kindForUpdate(update),
+              ),
+            ],
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Gap(4),
+              Text(
+                targetName,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const Gap(4),
+              Row(
+                children: [
+                  if (operator != null) ...[
+                    Icon(
+                      AppIcons.user,
+                      size: 16,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const Gap(6),
+                    Expanded(
+                      child: Text(
+                        operator,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                  ),
-                  const Gap(12),
-                ],
-                Icon(AppIcons.clock, size: 16, color: scheme.onSurfaceVariant),
-                const Gap(6),
-                Text(
-                  startTime,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    const Gap(12),
+                  ],
+                  Icon(
+                    AppIcons.clock,
+                    size: 16,
                     color: scheme.onSurfaceVariant,
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const Gap(6),
+                  Text(
+                    startTime,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        onTap: () {
-          final route = _routeForTarget(target);
-          if (route != null) {
-            context.go(route);
-          }
-        },
       ),
     );
   }

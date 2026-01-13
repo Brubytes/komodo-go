@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 class HomeSectionHeader extends StatelessWidget {
   const HomeSectionHeader({required this.title, this.onSeeAll, super.key});
@@ -31,7 +33,8 @@ class HomeLoadingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
+    return const AppCardSurface(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Center(child: CircularProgressIndicator()),
@@ -47,7 +50,8 @@ class HomeErrorTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -74,7 +78,8 @@ class HomeEmptyListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Center(
@@ -128,94 +133,105 @@ class HomeMetricCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final accent = color ?? scheme.primary;
 
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(icon, color: accent, size: 18),
                     ),
-                    child: Icon(icon, color: accent, size: 18),
-                  ),
-                  const Gap(8),
-                  Expanded(
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurfaceVariant,
+                    const Gap(8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const Gap(12),
-              Builder(
-                builder: (context) {
-                  final parts = value.split('\n');
-                  final primaryStyle =
-                      (parts.first.length > 14
-                              ? textTheme.titleLarge
-                              : textTheme.headlineSmall)
-                          ?.copyWith(fontWeight: FontWeight.w800, height: 1.05);
-                  final secondaryStyle = textTheme.labelMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                    height: 1.1,
-                    fontSize: 10,
-                  );
+                  ],
+                ),
+                const Gap(12),
+                Builder(
+                  builder: (context) {
+                    final parts = value.split('\n');
+                    final primaryStyle =
+                        (parts.first.length > 14
+                                ? textTheme.titleLarge
+                                : textTheme.headlineSmall)
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              height: 1.05,
+                            );
+                    final secondaryStyle = textTheme.labelMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                      fontSize: 10,
+                    );
 
-                  if (parts.length == 1) {
-                    return Text(
-                      value,
+                    if (parts.length == 1) {
+                      return Text(
+                        value,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: primaryStyle,
+                      );
+                    }
+
+                    return Text.rich(
+                      TextSpan(
+                        text: parts.first,
+                        style: primaryStyle,
+                        children: [
+                          TextSpan(
+                            text: '\n${parts.skip(1).join(' ')}',
+                            style: secondaryStyle,
+                          ),
+                        ],
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: primaryStyle,
                     );
-                  }
-
-                  return Text.rich(
-                    TextSpan(
-                      text: parts.first,
-                      style: primaryStyle,
-                      children: [
-                        TextSpan(
-                          text: '\n${parts.skip(1).join(' ')}',
-                          style: secondaryStyle,
-                        ),
-                      ],
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  );
-                },
-              ),
-              const Gap(6),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.labelMedium?.copyWith(
-                  color: accent,
-                  fontWeight: FontWeight.w700,
-                  height: 1.1,
-                  fontSize: 12,
+                  },
                 ),
-              ),
-            ],
+                const Gap(6),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelMedium?.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                    height: 1.1,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

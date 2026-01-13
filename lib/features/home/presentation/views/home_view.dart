@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
@@ -482,7 +483,8 @@ Widget _buildOpsPulseCard({
   final totalActive = rows.fold<int>(0, (sum, row) => sum + row.active);
   final totalFailed = rows.fold<int>(0, (sum, row) => sum + row.failed);
 
-  return Card(
+  return AppCardSurface(
+    padding: EdgeInsets.zero,
     child: Padding(
       padding: const EdgeInsets.all(12),
       child: Column(

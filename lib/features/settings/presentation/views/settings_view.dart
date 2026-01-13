@@ -3,9 +3,11 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/settings/presentation/providers/theme_provider.dart';
@@ -223,62 +225,70 @@ class _SettingsCardTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: accentColor.withValues(alpha: 0.22),
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: accentColor.withValues(alpha: 0.22),
+                    ),
+                  ),
+                  child: Icon(icon, size: 20, color: accentColor),
+                ),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const Gap(2),
+                      Text(
+                        subtitle,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          height: 1.25,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
-                child: Icon(icon, size: 20, color: accentColor),
-              ),
-              const Gap(12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.2,
+                const Gap(12),
+                DefaultTextStyle.merge(
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                  child:
+                      trailing ??
+                      Icon(
+                        AppIcons.chevron,
+                        color: scheme.onSurfaceVariant.withValues(alpha: 0.65),
                       ),
-                    ),
-                    const Gap(2),
-                    Text(
-                      subtitle,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        height: 1.25,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
                 ),
-              ),
-              const Gap(12),
-              DefaultTextStyle.merge(
-                style: TextStyle(color: scheme.onSurfaceVariant),
-                child:
-                    trailing ??
-                    Icon(
-                      AppIcons.chevron,
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.65),
-                    ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -414,67 +424,75 @@ class _ThemeChoiceTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final accent = scheme.secondary;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: accent.withValues(alpha: 0.22)),
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: accent.withValues(alpha: 0.22)),
+                  ),
+                  child: Icon(icon, size: 20, color: accent),
                 ),
-                child: Icon(icon, size: 20, color: accent),
-              ),
-              const Gap(12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.2,
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
                       ),
-                    ),
-                    const Gap(2),
-                    Text(
-                      subtitle,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
+                      const Gap(2),
+                      Text(
+                        subtitle,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const Gap(12),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? scheme.secondaryContainer.withValues(alpha: 0.55)
-                      : scheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: scheme.outlineVariant),
+                const Gap(12),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? scheme.secondaryContainer.withValues(alpha: 0.55)
+                        : scheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: scheme.outlineVariant),
+                  ),
+                  child: Icon(
+                    isSelected ? AppIcons.check : AppIcons.chevron,
+                    size: 18,
+                    color: isSelected
+                        ? scheme.onSecondaryContainer
+                        : scheme.onSurfaceVariant.withValues(alpha: 0.65),
+                  ),
                 ),
-                child: Icon(
-                  isSelected ? AppIcons.check : AppIcons.chevron,
-                  size: 18,
-                  color: isSelected
-                      ? scheme.onSecondaryContainer
-                      : scheme.onSurfaceVariant.withValues(alpha: 0.65),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
