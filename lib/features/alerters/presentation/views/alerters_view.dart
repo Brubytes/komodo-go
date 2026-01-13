@@ -4,13 +4,15 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pill_list.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
-import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
 
@@ -75,17 +77,19 @@ class _AlerterTile extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final info = item.info;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => context.push('${AppRoutes.komodoAlerters}/${item.id}'),
-          child: DetailSurface(
+          borderRadius: cardRadius,
+          child: Padding(
             padding: const EdgeInsets.all(14),
-            radius: 20,
-            enableGradientInDark: false,
-            enableShadow: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

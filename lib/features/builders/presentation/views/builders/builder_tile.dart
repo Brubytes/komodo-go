@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pill_list.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
-import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
 
@@ -26,10 +27,9 @@ class BuilderTile extends ConsumerWidget {
         instanceType.isNotEmpty &&
         !_looksLikeSensitiveId(instanceType);
 
-    return DetailSurface(
+    return AppCardSurface(
       padding: const EdgeInsets.all(14),
-      radius: 20,
-      enableGradientInDark: false,
+      radius: AppTokens.radiusLg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -129,10 +129,7 @@ class BuilderTile extends ConsumerWidget {
           ),
           if (item.tags.isNotEmpty) ...[
             const Gap(10),
-            DetailPillList(
-              items: item.tags,
-              maxItems: 6,
-            ),
+            DetailPillList(items: item.tags, maxItems: 6),
           ],
         ],
       ),

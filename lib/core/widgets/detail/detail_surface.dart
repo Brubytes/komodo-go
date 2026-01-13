@@ -37,7 +37,7 @@ class DetailSurface extends StatelessWidget {
 
     final defaultBase =
         theme.cardTheme.color ??
-        (isDark ? scheme.surfaceContainerHigh : scheme.surfaceContainerLow);
+        (isDark ? scheme.surfaceContainerHigh : scheme.surface);
     final base = baseColor ?? defaultBase;
     final tint = tintColor ?? scheme.primary;
     final surfaceColor = base;
@@ -66,7 +66,7 @@ class DetailSurface extends StatelessWidget {
         boxShadow: shadows,
         gradient: isDark && enableGradientInDark
             ? appCardGradient(tint: tint, base: base)
-            : appCardGradient(tint: tint, base: base),
+            : null,
       ),
       child: child,
     );
