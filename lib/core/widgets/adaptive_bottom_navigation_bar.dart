@@ -22,6 +22,8 @@ class AdaptiveBottomNavigationBar extends StatelessWidget {
         (platform == TargetPlatform.iOS || platform == TargetPlatform.macOS);
     final width = MediaQuery.sizeOf(context).width;
     final isCompact = width < 360;
+    final navigationBarHeight =
+        kBottomNavigationBarHeight + (isCompact ? 6.0 : 8.0);
 
     if (isCupertino) {
       final colorScheme = Theme.of(context).colorScheme;
@@ -40,6 +42,7 @@ class AdaptiveBottomNavigationBar extends StatelessWidget {
           ).textTheme.copyWith(tabLabelTextStyle: tabLabelTextStyle),
         ),
         child: CupertinoTabBar(
+          height: navigationBarHeight,
           currentIndex: selectedIndex,
           onTap: onTap,
           activeColor: colorScheme.primary,
@@ -80,7 +83,7 @@ class AdaptiveBottomNavigationBar extends StatelessWidget {
     return NavigationBarTheme(
       data: NavigationBarTheme.of(
         context,
-      ).copyWith(labelTextStyle: labelTextStyle),
+      ).copyWith(height: navigationBarHeight, labelTextStyle: labelTextStyle),
       child: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: onTap,
