@@ -5,6 +5,7 @@ import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -58,7 +59,7 @@ class ConnectionsView extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: AppSecondaryFab.extended(
         onPressed: authAsync.isLoading
             ? null
             : () => AddConnectionSheet.show(context),
