@@ -37,7 +37,13 @@ class StackDetailView extends ConsumerStatefulWidget {
 }
 
 class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
-    with DetailDirtySnackBarMixin<StackDetailView> {
+    with
+        SingleTickerProviderStateMixin,
+        DetailDirtySnackBarMixin<StackDetailView> {
+  static const int _tabLogs = 2;
+
+  late final TabController _tabController;
+
   Timer? _logRefreshTimer;
   var _autoRefreshLogs = true;
   final _configEditorKey = GlobalKey<StackConfigEditorContentState>();
@@ -45,17 +51,32 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
   var _configSaveInFlight = false;
 
   @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_onInnerTabChanged);
+  }
+
+  @override
   void dispose() {
     _logRefreshTimer?.cancel();
     _logRefreshTimer = null;
+    _tabController
+      ..removeListener(_onInnerTabChanged)
+      ..dispose();
     super.dispose();
   }
 
   @override
   void onVisibilityChanged() {
     if (!mounted) return;
-    _syncLogPolling(isActiveTab: ref.read(mainShellIndexProvider) == 1);
+    _syncLogPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
     super.onVisibilityChanged();
+  }
+
+  void _onInnerTabChanged() {
+    if (!mounted) return;
+    _syncLogPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
   }
 
   void _startLogPolling() {
@@ -73,7 +94,9 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     _logRefreshTimer = null;
   }
 
-  void _syncLogPolling({required bool isActiveTab}) {
+  void _syncLogPolling({required bool isShellTabActive}) {
+    final isLogsTabActive = _tabController.index == _tabLogs;
+    final isActiveTab = isShellTabActive && isLogsTabActive;
     if (shouldPoll(isActiveTab: isActiveTab, enabled: _autoRefreshLogs)) {
       _startLogPolling();
     } else {
@@ -86,7 +109,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     final isActiveTab = ref.watch(mainShellIndexProvider) == 1;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _syncLogPolling(isActiveTab: isActiveTab);
+      _syncLogPolling(isShellTabActive: isActiveTab);
     });
 
     final stackAsync = ref.watch(stackDetailProvider(widget.stackId));
@@ -191,124 +214,203 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       ),
       body: Stack(
         children: [
-          RefreshIndicator(
-            onRefresh: () async {
-              ref
-                ..invalidate(stackDetailProvider(widget.stackId))
-                ..invalidate(stackServicesProvider(widget.stackId))
-                ..invalidate(stackLogProvider(widget.stackId));
-            },
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              children: [
-                stackAsync.when(
-                  data: (stack) => stack != null
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            StackHeroPanel(
-                              stack: stack,
-                              listItem: listItem,
-                              serviceCount: serviceCount,
-                              updateCount: updateCount,
-                              serverName: serverNameForId(
-                                stack.config.serverId,
-                              ),
-                              sourceIcon: _sourceIcon(
-                                stack: stack,
-                                listItem: listItem,
-                                repos: repos,
-                              ),
-                              sourceLabel: _sourceLabel(
-                                stack: stack,
-                                listItem: listItem,
-                                repos: repos,
-                              ),
-                            ),
-                            const Gap(16),
-                            DetailSection(
-                              title: 'Config',
-                              icon: AppIcons.settings,
-                              child: StackConfigEditorContent(
-                                key: _configEditorKey,
-                                stackIdOrName: widget.stackId,
-                                initialConfig: stack.config,
-                                webhookBaseUrl: coreInfoAsync.maybeWhen(
-                                  data: (info) => info.webhookBaseUrl,
-                                  orElse: () => '',
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: stackAsync.when(
+                      data: (stack) => stack != null
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                StackHeroPanel(
+                                  stack: stack,
+                                  listItem: listItem,
+                                  serviceCount: serviceCount,
+                                  updateCount: updateCount,
+                                  serverName: serverNameForId(
+                                    stack.config.serverId,
+                                  ),
+                                  sourceIcon: _sourceIcon(
+                                    stack: stack,
+                                    listItem: listItem,
+                                    repos: repos,
+                                  ),
+                                  sourceLabel: _sourceLabel(
+                                    stack: stack,
+                                    listItem: listItem,
+                                    repos: repos,
+                                  ),
                                 ),
-                                servers: servers,
-                                repos: repos,
-                                registryAccounts: registryAccounts,
-                                onDirtyChanged: (dirty) {
-                                  syncDirtySnackBar(
-                                    dirty: dirty,
-                                    onDiscard: () => _discardConfig(stack),
-                                    onSave: () => _saveConfig(stack: stack),
-                                    saveEnabled: !_configSaveInFlight,
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        )
-                      : const StackMessageSurface(message: 'Stack not found'),
-                  loading: () => const StackLoadingSurface(),
-                  error: (error, _) =>
-                      StackMessageSurface(message: 'Error: $error'),
-                ),
-                const Gap(16),
-                servicesAsync.when(
-                  data: (services) => DetailSection(
-                    title: 'Services',
-                    icon: AppIcons.widgets,
-                    child: services.isEmpty
-                        ? const Text('No services found')
-                        : Column(
-                            children: [
-                              for (final service in services) ...[
-                                StackServiceCard(service: service),
                                 const Gap(12),
                               ],
-                            ],
-                          ),
-                  ),
-                  loading: () => const StackLoadingSurface(),
-                  error: (error, _) => StackMessageSurface(
-                    message: 'Services unavailable: $error',
+                            )
+                          : const StackMessageSurface(
+                              message: 'Stack not found',
+                            ),
+                      loading: () => const StackLoadingSurface(),
+                      error: (error, _) =>
+                          StackMessageSurface(message: 'Error: $error'),
+                    ),
                   ),
                 ),
-                const Gap(16),
-                logAsync.when(
-                  data: (log) => DetailSection(
-                    title: 'Logs',
-                    icon: AppIcons.activity,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _PinnedTabBarHeaderDelegate(
+                    backgroundColor: scheme.surface,
+                    tabBar: TabBar(
+                      controller: _tabController,
+                      tabs: const [
+                        Tab(text: 'Config'),
+                        Tab(text: 'Services'),
+                        Tab(text: 'Logs'),
+                      ],
+                    ),
+                  ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(stackDetailProvider(widget.stackId));
+                    },
+                    child: ListView(
+                      key: PageStorageKey('stack_${widget.stackId}_config'),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                       children: [
-                        Icon(
-                          AppIcons.refresh,
-                          size: 16,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                        const Gap(6),
-                        Switch(
-                          value: _autoRefreshLogs,
-                          onChanged: (value) {
-                            setState(() => _autoRefreshLogs = value);
-                            _syncLogPolling(
-                              isActiveTab:
-                                  ref.read(mainShellIndexProvider) == 1,
-                            );
-                          },
+                        stackAsync.when(
+                          data: (stack) => stack != null
+                              ? StackConfigEditorContent(
+                                  key: _configEditorKey,
+                                  stackIdOrName: widget.stackId,
+                                  initialConfig: stack.config,
+                                  webhookBaseUrl: coreInfoAsync.maybeWhen(
+                                    data: (info) => info.webhookBaseUrl,
+                                    orElse: () => '',
+                                  ),
+                                  servers: servers,
+                                  repos: repos,
+                                  registryAccounts: registryAccounts,
+                                  onDirtyChanged: (dirty) {
+                                    syncDirtySnackBar(
+                                      dirty: dirty,
+                                      onDiscard: () => _discardConfig(stack),
+                                      onSave: () => _saveConfig(stack: stack),
+                                      saveEnabled: !_configSaveInFlight,
+                                    );
+                                  },
+                                )
+                              : const StackMessageSurface(
+                                  message: 'Stack not found',
+                                ),
+                          loading: () => const StackLoadingSurface(),
+                          error: (error, _) =>
+                              StackMessageSurface(message: 'Error: $error'),
                         ),
                       ],
                     ),
-                    child: StackLogContent(log: log),
                   ),
-                  loading: () => const StackLoadingSurface(),
-                  error: (error, _) =>
-                      StackMessageSurface(message: 'Logs unavailable: $error'),
+                ),
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(stackServicesProvider(widget.stackId));
+                    },
+                    child: ListView(
+                      key: PageStorageKey('stack_${widget.stackId}_services'),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      children: [
+                        servicesAsync.when(
+                          data: (services) => services.isEmpty
+                              ? const Text('No services found')
+                              : Column(
+                                  children: [
+                                    for (final service in services) ...[
+                                      StackServiceCard(service: service),
+                                      const Gap(12),
+                                    ],
+                                  ],
+                                ),
+                          loading: () => const StackLoadingSurface(),
+                          error: (error, _) => StackMessageSurface(
+                            message: 'Services unavailable: $error',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(stackLogProvider(widget.stackId));
+                    },
+                    child: ListView(
+                      key: PageStorageKey('stack_${widget.stackId}_logs'),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      children: [
+                        Text(
+                          'Auto refresh logs',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const Gap(4),
+                        Text(
+                          'When enabled, logs refresh every 2.5 seconds while this tab is visible. Pull down to refresh once.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                        const Gap(10),
+                        Row(
+                          children: [
+                            Tooltip(
+                              message:
+                                  'When enabled, logs refresh every 2.5 seconds while this tab is visible.',
+                              child: Icon(
+                                AppIcons.refresh,
+                                size: 16,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const Gap(8),
+                            Expanded(
+                              child: Text(
+                                _autoRefreshLogs ? 'Enabled' : 'Disabled',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: scheme.onSurfaceVariant),
+                              ),
+                            ),
+                            Switch(
+                              value: _autoRefreshLogs,
+                              onChanged: (value) {
+                                setState(() => _autoRefreshLogs = value);
+                                _syncLogPolling(
+                                  isShellTabActive:
+                                      ref.read(mainShellIndexProvider) == 1,
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        const Gap(12),
+                        logAsync.when(
+                          data: (log) => StackLogContent(log: log),
+                          loading: () => const StackLoadingSurface(),
+                          error: (error, _) => StackMessageSurface(
+                            message: 'Logs unavailable: $error',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -330,11 +432,11 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     );
   }
 
-    IconData _sourceIcon({
+  IconData _sourceIcon({
     required KomodoStack stack,
     required StackListItem? listItem,
     required List<RepoListItem> repos,
-    }) {
+  }) {
     if (stack.config.filesOnHost) return AppIcons.server;
     final repoName = _resolveRepoName(
       stack: stack,
@@ -342,13 +444,13 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       repos: repos,
     );
     return repoName.isNotEmpty ? AppIcons.repos : AppIcons.notepadText;
-    }
+  }
 
-    String _sourceLabel({
+  String _sourceLabel({
     required KomodoStack stack,
     required StackListItem? listItem,
     required List<RepoListItem> repos,
-    }) {
+  }) {
     if (stack.config.filesOnHost) return 'Files on server';
 
     final repoName = _resolveRepoName(
@@ -360,44 +462,45 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     if (repoName.isEmpty) return 'UI Defined';
 
     final branch = stack.config.branch.trim().isNotEmpty
-      ? stack.config.branch.trim()
-      : (listItem?.info.branch.trim() ?? '');
+        ? stack.config.branch.trim()
+        : (listItem?.info.branch.trim() ?? '');
 
     return branch.isNotEmpty ? '$repoName · $branch' : repoName;
-    }
+  }
 
-    String _resolveRepoName({
+  String _resolveRepoName({
     required KomodoStack stack,
     required StackListItem? listItem,
     required List<RepoListItem> repos,
-    }) {
+  }) {
     // 1) linked_repo id -> RepoListItem.name
     final linkedRepoId = stack.config.linkedRepo.trim();
     if (linkedRepoId.isNotEmpty) {
       for (final repo in repos) {
-      if (repo.id == linkedRepoId) {
-        return repo.name.trim();
-      }
+        if (repo.id == linkedRepoId) {
+          return repo.name.trim();
+        }
       }
     }
 
     // 2) Try to map repo path (namespace/repo) -> RepoListItem by info.repo
     final repoPath = (listItem?.info.repo.trim().isNotEmpty ?? false)
-      ? listItem!.info.repo.trim()
-      : stack.config.repo.trim();
+        ? listItem!.info.repo.trim()
+        : stack.config.repo.trim();
 
     if (repoPath.isNotEmpty) {
       for (final repo in repos) {
-      if (repo.info.repo.trim() == repoPath) {
-        return repo.name.trim();
-      }
+        if (repo.info.repo.trim() == repoPath) {
+          return repo.name.trim();
+        }
       }
       // Fallback: if we can't resolve to a resource name, at least show the path.
       return repoPath;
     }
 
     return '';
-    }
+  }
+
   Future<void> _handleAction(
     BuildContext context,
     String stackId,
@@ -517,5 +620,61 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       onSave: () => _saveConfig(stack: stack),
       saveEnabled: !_configSaveInFlight,
     );
+  }
+}
+
+class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedTabBarHeaderDelegate({
+    required this.tabBar,
+    required this.backgroundColor,
+  });
+
+  final TabBar tabBar;
+  final Color backgroundColor;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Material(
+      color: backgroundColor,
+      elevation: overlapsContent ? 1 : 0,
+      child: tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedTabBarHeaderDelegate oldDelegate) {
+    return oldDelegate.tabBar != tabBar ||
+        oldDelegate.backgroundColor != backgroundColor;
+  }
+}
+
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin<_KeepAlive> {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
