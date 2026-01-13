@@ -21,7 +21,6 @@ class DetailCodeEditor extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return AppCardSurface(
-      enableShadow: false,
       radius: 16,
       padding: const EdgeInsets.all(12),
       child: SizedBox(
@@ -30,7 +29,8 @@ class DetailCodeEditor extends StatelessWidget {
         child: CodeEditor(
           controller: controller,
           readOnly: readOnly,
-          textStyle: textTheme.bodySmall?.copyWith(fontFamily: 'monospace') ??
+          textStyle:
+              textTheme.bodySmall?.copyWith(fontFamily: 'monospace') ??
               const TextStyle(fontFamily: 'monospace', fontSize: 12),
         ),
       ),

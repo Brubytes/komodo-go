@@ -31,7 +31,7 @@ class SyncDetailView extends ConsumerStatefulWidget {
 }
 
 class _SyncDetailViewState extends ConsumerState<SyncDetailView>
-  with DetailDirtySnackBarMixin<SyncDetailView> {
+    with DetailDirtySnackBarMixin<SyncDetailView> {
   final _configEditorKey = GlobalKey<SyncConfigEditorContentState>();
   var _configSaveInFlight = false;
 
@@ -368,7 +368,6 @@ class _ErrorContent extends StatelessWidget {
       child: AppCardSurface(
         padding: const EdgeInsets.all(12),
         radius: 12,
-        enableShadow: false,
         child: SelectableText(
           error.trim(),
           style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),

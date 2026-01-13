@@ -530,7 +530,6 @@ class ServerMessageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCardSurface(
       padding: const EdgeInsets.all(16),
-      enableShadow: false,
       child: Text(message),
     );
   }
@@ -543,7 +542,6 @@ class ServerLoadingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return const AppCardSurface(
       padding: EdgeInsets.all(16),
-      enableShadow: false,
       child: Center(child: CircularProgressIndicator()),
     );
   }

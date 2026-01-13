@@ -26,7 +26,6 @@ class DetailSubCard extends StatelessWidget {
     return AppCardSurface(
       radius: 20,
       padding: const EdgeInsets.all(12),
-      enableShadow: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -15,7 +15,7 @@ class DetailSurface extends StatelessWidget {
     this.radius = AppTokens.radiusLg,
     this.tintColor,
     this.baseColor,
-    this.enableGradientInDark = true,
+    this.enableGradientInDark = false,
     this.showBorder = false,
     this.enableShadow = true,
   });

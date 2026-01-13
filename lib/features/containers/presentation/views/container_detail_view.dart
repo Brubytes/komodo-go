@@ -162,11 +162,9 @@ class _NotFound extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Text('Container not found.'),
-      ),
+    return const AppCardSurface(
+      padding: EdgeInsets.all(16),
+      child: Text('Container not found.'),
     );
   }
 }
@@ -195,7 +193,6 @@ class _LogBox extends StatelessWidget {
       child: AppCardSurface(
         padding: const EdgeInsets.all(12),
         radius: 12,
-        enableShadow: false,
         child: isLoading
             ? Row(
                 children: [
@@ -230,35 +227,25 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const Gap(8),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const Gap(12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.tonal(
-                onPressed: onRetry,
-                child: const Text('Retry'),
-              ),
-            ),
-          ],
-        ),
+    return AppCardSurface(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const Gap(8),
+          Text(message),
+          const Gap(12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ),
+        ],
       ),
     );
   }

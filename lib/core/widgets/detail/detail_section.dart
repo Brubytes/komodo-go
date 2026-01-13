@@ -32,8 +32,7 @@ class DetailSection extends StatelessWidget {
     final tint = tintColor ?? scheme.primary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final titleColor = isDark ? scheme.onPrimary : scheme.onSurface;
-    // Make base color transparent if not provided
-    final baseColor = this.baseColor ?? scheme.surface.withValues(alpha: 0);
+    final baseColor = this.baseColor;
 
     final trailingWithHeaderColor = trailing == null
         ? null

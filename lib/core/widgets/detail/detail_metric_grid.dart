@@ -76,7 +76,6 @@ class _DetailMetricTile extends StatelessWidget {
     return AppCardSurface(
       padding: const EdgeInsets.all(12),
       radius: 18,
-      enableShadow: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

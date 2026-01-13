@@ -18,6 +18,8 @@ class TagsView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isLightMode = Theme.of(context).brightness == Brightness.light;
     final tagsAsync = ref.watch(tagsProvider);
     final actionsState = ref.watch(tagActionsProvider);
 
@@ -29,6 +31,8 @@ class TagsView extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         key: const ValueKey('tags_add'),
+        backgroundColor: isLightMode ? colorScheme.secondary : null,
+        foregroundColor: isLightMode ? colorScheme.onSecondary : null,
         onPressed: actionsState.isLoading
             ? null
             : () async {

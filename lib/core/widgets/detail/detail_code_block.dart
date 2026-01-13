@@ -28,7 +28,6 @@ class DetailCodeBlock extends StatelessWidget {
     final span = _highlight(context, code);
 
     return AppCardSurface(
-      enableShadow: false,
       radius: 16,
       padding: const EdgeInsets.all(12),
       child: ConstrainedBox(

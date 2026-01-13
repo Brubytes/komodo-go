@@ -990,7 +990,6 @@ class BuildLogsContent extends StatelessWidget {
             child: AppCardSurface(
               padding: const EdgeInsets.all(12),
               radius: 12,
-              enableShadow: false,
               child: SelectableText(
                 info.remoteError!.trim(),
                 style: theme.textTheme.bodySmall?.copyWith(
