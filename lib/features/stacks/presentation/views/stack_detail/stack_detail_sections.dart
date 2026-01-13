@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
@@ -380,14 +381,18 @@ class StackConfigContent extends StatelessWidget {
 
 class StackConfigEditorContent extends StatefulWidget {
   const StackConfigEditorContent({
+    required this.stackIdOrName,
     required this.initialConfig,
+    this.webhookBaseUrl = '',
     this.servers = const [],
     this.repos = const [],
     this.onDirtyChanged,
     super.key,
   });
 
+  final String stackIdOrName;
   final StackConfig initialConfig;
+  final String webhookBaseUrl;
   final List<Server> servers;
   final List<RepoListItem> repos;
   final ValueChanged<bool>? onDirtyChanged;
@@ -413,6 +418,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   late final TextEditingController _runDirectory;
   late final TextEditingController _envFilePath;
   late final TextEditingController _webhookSecret;
+  late final TextEditingController _webhookDeployUrlDisplay;
 
   final List<TextEditingController> _linkControllers = [];
   final List<TextEditingController> _additionalEnvFileControllers = [];
@@ -440,6 +446,9 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   void initState() {
     super.initState();
     _initial = widget.initialConfig;
+    _webhookDeployUrlDisplay = TextEditingController(
+      text: _computeDeployWebhookUrl(baseUrl: widget.webhookBaseUrl),
+    );
 
     _serverId = TextEditingController(text: _initial.serverId);
     _repo = TextEditingController(text: _initial.repo);
@@ -504,6 +513,13 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   void didUpdateWidget(covariant StackConfigEditorContent oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    if (widget.webhookBaseUrl != oldWidget.webhookBaseUrl ||
+        widget.stackIdOrName != oldWidget.stackIdOrName) {
+      _webhookDeployUrlDisplay.text = _computeDeployWebhookUrl(
+        baseUrl: widget.webhookBaseUrl,
+      );
+    }
+
     if (widget.initialConfig != oldWidget.initialConfig) {
       final dirty = buildPartialConfigParams().isNotEmpty;
       if (!dirty) {
@@ -541,6 +557,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _runDirectory.dispose();
     _envFilePath.dispose();
     _webhookSecret.dispose();
+    _webhookDeployUrlDisplay.dispose();
 
     _disposeRowControllers(_linkControllers);
     _disposeRowControllers(_additionalEnvFileControllers);
@@ -552,6 +569,23 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _composeController.dispose();
     _environmentController.dispose();
     super.dispose();
+  }
+
+  String _computeDeployWebhookUrl({required String baseUrl}) {
+    final trimmed = baseUrl.trim();
+    if (trimmed.isEmpty) return '';
+    final normalized = trimmed.replaceAll(RegExp(r'/+$'), '');
+    final stack = Uri.encodeComponent(widget.stackIdOrName);
+    return '$normalized/stack/$stack/deploy';
+  }
+
+  Future<void> _copyToClipboard(String value) async {
+    if (value.trim().isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: value));
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
   }
 
   void _disposeConfigFileControllers() {
@@ -764,8 +798,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       for (var i = 0; i < _configFilePathControllers.length; i++) {
         final path = _configFilePathControllers[i].text.trim();
         if (path.isEmpty) continue;
-        final services = _configFileServicesControllers[i]
-            .text
+        final services = _configFileServicesControllers[i].text
             .split(',')
             .map((e) => e.trim())
             .where((e) => e.isNotEmpty)
@@ -782,7 +815,10 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
           .map(
             (e) => <String, dynamic>{
               'path': e.path.trim(),
-              'services': e.services.map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+              'services': e.services
+                  .map((s) => s.trim())
+                  .where((s) => s.isNotEmpty)
+                  .toList(),
               'requires': _stackFileRequiresToWire(e.requires),
             },
           )
@@ -862,7 +898,10 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     return true;
   }
 
-  bool _deepListEquals(List<Map<String, dynamic>> a, List<Map<String, dynamic>> b) {
+  bool _deepListEquals(
+    List<Map<String, dynamic>> a,
+    List<Map<String, dynamic>> b,
+  ) {
     if (identical(a, b)) return true;
     if (a.length != b.length) return false;
     for (var i = 0; i < a.length; i++) {
@@ -1314,7 +1353,11 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
               else
                 Column(
                   children: [
-                    for (var i = 0; i < _configFilePathControllers.length; i++) ...[
+                    for (
+                      var i = 0;
+                      i < _configFilePathControllers.length;
+                      i++
+                    ) ...[
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -1323,7 +1366,8 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                               controller: _configFilePathControllers[i],
                               decoration: InputDecoration(
                                 labelText: i == 0 ? 'Path' : null,
-                                hintText: 'Relative path (e.g. config/app.yaml)',
+                                hintText:
+                                    'Relative path (e.g. config/app.yaml)',
                                 prefixIcon: i == 0
                                     ? const Icon(AppIcons.package)
                                     : null,
@@ -1521,6 +1565,25 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
           icon: AppIcons.plug,
           child: Column(
             children: [
+              if (_webhookDeployUrlDisplay.text.trim().isNotEmpty) ...[
+                TextFormField(
+                  controller: _webhookDeployUrlDisplay,
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: 'Webhook URL – Deploy',
+                    helperText:
+                        'Derived from the Komodo core webhook_base_url.',
+                    prefixIcon: const Icon(AppIcons.network),
+                    suffixIcon: IconButton(
+                      tooltip: 'Copy',
+                      icon: const Icon(AppIcons.copy),
+                      onPressed: () =>
+                          _copyToClipboard(_webhookDeployUrlDisplay.text),
+                    ),
+                  ),
+                ),
+                const Gap(12),
+              ],
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _webhookEnabled,

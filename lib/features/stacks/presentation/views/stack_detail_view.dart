@@ -8,6 +8,7 @@ import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/providers/core_info_provider.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
@@ -87,6 +88,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     });
 
     final stackAsync = ref.watch(stackDetailProvider(widget.stackId));
+    final coreInfoAsync = ref.watch(coreInfoProvider);
     final servicesAsync = ref.watch(stackServicesProvider(widget.stackId));
     final logAsync = ref.watch(stackLogProvider(widget.stackId));
     final stacksListAsync = ref.watch(stacksProvider);
@@ -215,7 +217,12 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                               icon: AppIcons.settings,
                               child: StackConfigEditorContent(
                                 key: _configEditorKey,
+                                stackIdOrName: widget.stackId,
                                 initialConfig: stack.config,
+                                webhookBaseUrl: coreInfoAsync.maybeWhen(
+                                  data: (info) => info.webhookBaseUrl,
+                                  orElse: () => '',
+                                ),
                                 servers: servers,
                                 repos: repos,
                                 onDirtyChanged: (dirty) {
