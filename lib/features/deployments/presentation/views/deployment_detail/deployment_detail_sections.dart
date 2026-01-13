@@ -1301,6 +1301,24 @@ class DeploymentConfigEditorContentState
                 ),
               ),
               const Gap(12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Labels',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const Gap(4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Docker labels to apply to the container.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Gap(8),
               DetailCodeEditor(controller: _labelsController, maxHeight: 180),
               const Gap(12),
               Align(
