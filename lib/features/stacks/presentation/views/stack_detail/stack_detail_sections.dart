@@ -38,8 +38,8 @@ class StackHeroPanel extends StatelessWidget {
     final info = stack.info;
 
     final isRepoDefined =
-      !config.filesOnHost &&
-      (config.linkedRepo.trim().isNotEmpty || config.repo.trim().isNotEmpty);
+        !config.filesOnHost &&
+        (config.linkedRepo.trim().isNotEmpty || config.repo.trim().isNotEmpty);
 
     final state = listItem?.info.state;
     final status = listItem?.info.status;
@@ -48,7 +48,7 @@ class StackHeroPanel extends StatelessWidget {
     final missingCount = info.missingFiles.length;
     final hasGitMeta = info.latestHash != null || info.deployedHash != null;
     final upToDate =
-      info.latestHash != null && info.deployedHash == info.latestHash;
+        info.latestHash != null && info.deployedHash == info.latestHash;
 
     return DetailHeroPanel(
       tintColor: scheme.surface,
@@ -145,7 +145,9 @@ class StackHeroPanel extends StatelessWidget {
                 ? AppIcons.widgets
                 : (upToDate ? AppIcons.ok : AppIcons.warning),
             label: 'Git',
-            value: !hasGitMeta ? '—' : (upToDate ? 'Up to date' : 'Out of date'),
+            value: !hasGitMeta
+                ? '—'
+                : (upToDate ? 'Up to date' : 'Out of date'),
             tone: !hasGitMeta
                 ? DetailMetricTone.neutral
                 : (upToDate
@@ -213,8 +215,8 @@ class StackConfigContent extends StatelessWidget {
     final compose = config.fileContents.trim();
     final environment = config.environment.trim();
     final isRepoDefined =
-      !config.filesOnHost &&
-      (config.linkedRepo.trim().isNotEmpty || config.repo.trim().isNotEmpty);
+        !config.filesOnHost &&
+        (config.linkedRepo.trim().isNotEmpty || config.repo.trim().isNotEmpty);
     final isLinkedToRepo = config.linkedRepo.trim().isNotEmpty;
 
     return Column(
@@ -1041,8 +1043,9 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     // Only show git source settings if this stack is actually defined via git.
     // (UI-defined stacks and files-on-host stacks shouldn't show the entire block.)
     final isGitDefined =
-      !_initial.filesOnHost &&
-      (_initial.linkedRepo.trim().isNotEmpty || _initial.repo.trim().isNotEmpty);
+        !_initial.filesOnHost &&
+        (_initial.linkedRepo.trim().isNotEmpty ||
+            _initial.repo.trim().isNotEmpty);
 
     // Track if a linked repo is currently selected
     final hasLinkedRepo = _linkedRepo.text.trim().isNotEmpty;
@@ -1104,7 +1107,25 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
         ),
         const Gap(12),
 
-        // 2. Source (repo section)
+        // 2. Compose (file contents)
+        if (!isGitDefined) ...[
+          DetailSubCard(
+            title: 'Compose',
+            icon: AppIcons.stacks,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DetailCodeEditor(
+                  controller: _composeController,
+                  maxHeight: 320,
+                ),
+              ],
+            ),
+          ),
+          const Gap(12),
+        ],
+
+        // 3. Source (repo section)
         if (isGitDefined) ...[
           DetailSubCard(
             title: 'Source',
@@ -1959,29 +1980,17 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
           ),
         ),
         const Gap(12),
-
-        // 9. Compose (file contents)
-        if (!isGitDefined)
-          DetailSubCard(
-            title: 'Compose',
-            icon: AppIcons.stacks,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                DetailCodeEditor(
-                  controller: _composeController,
-                  maxHeight: 320,
-                ),
-              ],
-            ),
-          ),
       ],
     );
   }
 }
 
 class StackDeploymentContent extends StatelessWidget {
-  const StackDeploymentContent({required this.info, required this.isRepoDefined, super.key});
+  const StackDeploymentContent({
+    required this.info,
+    required this.isRepoDefined,
+    super.key,
+  });
 
   final StackInfo info;
   final bool isRepoDefined;
