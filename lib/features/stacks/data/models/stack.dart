@@ -81,11 +81,17 @@ sealed class StackConfig with _$StackConfig {
     @Default('') String branch,
     @Default('') String commit,
     @JsonKey(name: 'clone_path') @Default('') String clonePath,
+    @JsonKey(name: 'reclone') @Default(false) bool reclone,
     @JsonKey(name: 'run_directory') @Default('') String runDirectory,
     @JsonKey(name: 'auto_pull') @Default(false) bool autoPull,
     @JsonKey(name: 'auto_update') @Default(false) bool autoUpdate,
     @JsonKey(name: 'poll_for_updates') @Default(false) bool pollForUpdates,
     @JsonKey(name: 'send_alerts') @Default(false) bool sendAlerts,
+    @JsonKey(name: 'webhook_enabled') @Default(false) bool webhookEnabled,
+    @JsonKey(name: 'webhook_force_deploy')
+    @Default(false)
+    bool webhookForceDeploy,
+    @JsonKey(name: 'webhook_secret') @Default('') String webhookSecret,
     @JsonKey(name: 'file_paths') @Default([]) List<String> filePaths,
     @JsonKey(name: 'env_file_path') @Default('') String envFilePath,
     @JsonKey(name: 'additional_env_files')

@@ -412,6 +412,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   late final TextEditingController _clonePath;
   late final TextEditingController _runDirectory;
   late final TextEditingController _envFilePath;
+  late final TextEditingController _webhookSecret;
 
   final List<TextEditingController> _linkControllers = [];
   final List<TextEditingController> _additionalEnvFileControllers = [];
@@ -425,6 +426,11 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   late bool _autoUpdate;
   late bool _pollForUpdates;
   late bool _sendAlerts;
+
+  late bool _reclone;
+
+  late bool _webhookEnabled;
+  late bool _webhookForceDeploy;
 
   @override
   void initState() {
@@ -440,9 +446,13 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _clonePath = TextEditingController(text: _initial.clonePath);
     _runDirectory = TextEditingController(text: _initial.runDirectory);
     _envFilePath = TextEditingController(text: _initial.envFilePath);
+    _webhookSecret = TextEditingController(text: _initial.webhookSecret);
 
     _setRowControllers(_linkControllers, _initial.links);
-    _setRowControllers(_additionalEnvFileControllers, _initial.additionalEnvFiles);
+    _setRowControllers(
+      _additionalEnvFileControllers,
+      _initial.additionalEnvFiles,
+    );
     _setRowControllers(_filePathControllers, _initial.filePaths);
     _setRowControllers(_ignoreServiceControllers, _initial.ignoreServices);
 
@@ -450,6 +460,11 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _autoUpdate = _initial.autoUpdate;
     _pollForUpdates = _initial.pollForUpdates;
     _sendAlerts = _initial.sendAlerts;
+
+    _reclone = _initial.reclone;
+
+    _webhookEnabled = _initial.webhookEnabled;
+    _webhookForceDeploy = _initial.webhookForceDeploy;
 
     _composeController = _createCodeController(
       language: 'yaml',
@@ -472,6 +487,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _clonePath,
       _runDirectory,
       _envFilePath,
+      _webhookSecret,
       _composeController,
       _environmentController,
     ]) {
@@ -503,6 +519,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _clonePath,
       _runDirectory,
       _envFilePath,
+      _webhookSecret,
       _composeController,
       _environmentController,
     ]) {
@@ -518,6 +535,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _clonePath.dispose();
     _runDirectory.dispose();
     _envFilePath.dispose();
+    _webhookSecret.dispose();
 
     _disposeRowControllers(_linkControllers);
     _disposeRowControllers(_additionalEnvFileControllers);
@@ -590,7 +608,10 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _suppressDirtyNotify = true;
 
     _setRowControllers(_linkControllers, config.links);
-    _setRowControllers(_additionalEnvFileControllers, config.additionalEnvFiles);
+    _setRowControllers(
+      _additionalEnvFileControllers,
+      config.additionalEnvFiles,
+    );
     _setRowControllers(_filePathControllers, config.filePaths);
     _setRowControllers(_ignoreServiceControllers, config.ignoreServices);
 
@@ -609,6 +630,12 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _autoUpdate = config.autoUpdate;
       _pollForUpdates = config.pollForUpdates;
       _sendAlerts = config.sendAlerts;
+
+      _reclone = config.reclone;
+
+      _webhookEnabled = config.webhookEnabled;
+      _webhookForceDeploy = config.webhookForceDeploy;
+      _webhookSecret.text = config.webhookSecret;
 
       _composeController.removeListener(_notifyDirtyIfChanged);
       _environmentController.removeListener(_notifyDirtyIfChanged);
@@ -692,6 +719,16 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     setIfChanged('poll_for_updates', _pollForUpdates, _initial.pollForUpdates);
     setIfChanged('send_alerts', _sendAlerts, _initial.sendAlerts);
 
+    setIfChanged('reclone', _reclone, _initial.reclone);
+
+    setIfChanged('webhook_enabled', _webhookEnabled, _initial.webhookEnabled);
+    setIfChanged(
+      'webhook_force_deploy',
+      _webhookForceDeploy,
+      _initial.webhookForceDeploy,
+    );
+    setIfChanged('webhook_secret', _webhookSecret.text, _initial.webhookSecret);
+
     setListIfChanged('links', _linkControllers, _initial.links);
     setListIfChanged(
       'additional_env_files',
@@ -737,11 +774,12 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     final serverIdInList = sortedServers.any((s) => s.id == _serverId.text);
     final linkedRepoInList = sortedRepos.any((r) => r.id == _linkedRepo.text);
 
-    // Show Source section if there's any repo-related config
-    final hasRepoConfig = _initial.linkedRepo.trim().isNotEmpty ||
-        _initial.repo.trim().isNotEmpty ||
-        _initial.branch.trim().isNotEmpty ||
-        _initial.clonePath.trim().isNotEmpty;
+    // Repo mode should react to edits, not just the initial config.
+    final hasRepoConfig =
+        _linkedRepo.text.trim().isNotEmpty ||
+        _repo.text.trim().isNotEmpty ||
+        _branch.text.trim().isNotEmpty ||
+        _clonePath.text.trim().isNotEmpty;
 
     // Track if a linked repo is currently selected
     final hasLinkedRepo = _linkedRepo.text.trim().isNotEmpty;
@@ -892,11 +930,24 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                     decoration: const InputDecoration(
                       labelText: 'Clone path',
                       prefixIcon: Icon(AppIcons.package),
-                      helperText:
-                          'Folder on the host to clone the repo in.',
+                      helperText: 'Folder on the host to clone the repo in.',
                     ),
                   ),
                 ],
+
+                const Gap(12),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  value: _reclone,
+                  title: const Text('Reclone'),
+                  subtitle: const Text(
+                    "Delete the repo folder and clone it again, instead of using 'git pull'.",
+                  ),
+                  onChanged: (v) {
+                    setState(() => _reclone = v);
+                    _notifyDirtyIfChanged();
+                  },
+                ),
               ],
             ),
           ),
@@ -1015,7 +1066,8 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                 decoration: const InputDecoration(
                   labelText: 'Env file path',
                   prefixIcon: Icon(AppIcons.package),
-                  helperText: 'Path to write env file, relative to run directory.',
+                  helperText:
+                      'Path to write env file, relative to run directory.',
                 ),
               ),
               const Gap(12),
@@ -1049,9 +1101,11 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
               else
                 Column(
                   children: [
-                    for (var i = 0;
-                        i < _additionalEnvFileControllers.length;
-                        i++) ...[
+                    for (
+                      var i = 0;
+                      i < _additionalEnvFileControllers.length;
+                      i++
+                    ) ...[
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -1112,7 +1166,9 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                 contentPadding: EdgeInsets.zero,
                 value: _autoUpdate,
                 title: const Text('Auto update'),
-                subtitle: const Text('Trigger redeploy if newer image is found.'),
+                subtitle: const Text(
+                  'Trigger redeploy if newer image is found.',
+                ),
                 onChanged: (v) {
                   setState(() => _autoUpdate = v);
                   _notifyDirtyIfChanged();
@@ -1218,7 +1274,49 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
         ),
         const Gap(12),
 
-        // 7. Advanced
+        // 7. Webhooks
+        DetailSubCard(
+          title: 'Webhooks',
+          icon: AppIcons.plug,
+          child: Column(
+            children: [
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _webhookEnabled,
+                title: const Text('Webhook enabled'),
+                subtitle: const Text('Allow git provider webhooks to deploy.'),
+                onChanged: (v) {
+                  setState(() => _webhookEnabled = v);
+                  _notifyDirtyIfChanged();
+                },
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _webhookForceDeploy,
+                title: const Text('Webhook force deploy'),
+                subtitle: const Text(
+                  "Force deploy even if Komodo doesn't detect file changes.",
+                ),
+                onChanged: (v) {
+                  setState(() => _webhookForceDeploy = v);
+                  _notifyDirtyIfChanged();
+                },
+              ),
+              TextFormField(
+                controller: _webhookSecret,
+                decoration: const InputDecoration(
+                  labelText: 'Webhook secret',
+                  helperText:
+                      'Leave empty to use the global default (if configured).',
+                  prefixIcon: Icon(AppIcons.lock),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Gap(12),
+
+        // 8. Advanced
         DetailSubCard(
           title: 'Advanced',
           icon: AppIcons.settings,
@@ -1264,9 +1362,11 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
               else
                 Column(
                   children: [
-                    for (var i = 0;
-                        i < _ignoreServiceControllers.length;
-                        i++) ...[
+                    for (
+                      var i = 0;
+                      i < _ignoreServiceControllers.length;
+                      i++
+                    ) ...[
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -1307,19 +1407,21 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
         ),
         const Gap(12),
 
-        // 8. Compose (file contents)
-        DetailSubCard(
-          title: 'Compose',
-          icon: AppIcons.stacks,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Compose config'),
-              const Gap(8),
-              DetailCodeEditor(controller: _composeController, maxHeight: 320),
-            ],
+        // 9. Compose (file contents)
+        if (!hasRepoConfig)
+          DetailSubCard(
+            title: 'Compose',
+            icon: AppIcons.stacks,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DetailCodeEditor(
+                  controller: _composeController,
+                  maxHeight: 320,
+                ),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
