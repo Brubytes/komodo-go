@@ -3,10 +3,17 @@ import 'package:gap/gap.dart';
 
 mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
   ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _dirtySnackBar;
+  ScaffoldMessengerState? _dirtySnackBarMessenger;
   String? _dirtySnackBarMessage;
   bool? _dirtySnackBarSaveEnabled;
 
   bool get isDirtySnackBarVisible => _dirtySnackBar != null;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _dirtySnackBarMessenger = ScaffoldMessenger.maybeOf(context);
+  }
 
   void syncDirtySnackBar({
     required bool dirty,
@@ -38,14 +45,15 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
   }) {
     if (_dirtySnackBar != null) {
       final needsUpdate =
-          message != _dirtySnackBarMessage || saveEnabled != _dirtySnackBarSaveEnabled;
+          message != _dirtySnackBarMessage ||
+          saveEnabled != _dirtySnackBarSaveEnabled;
       if (!needsUpdate) return;
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       _dirtySnackBar = null;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
+    final messenger = _dirtySnackBarMessenger ?? ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
 
     final controller = messenger.showSnackBar(
@@ -97,10 +105,26 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
 
   void hideDirtySnackBar() {
     if (_dirtySnackBar == null) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    _dirtySnackBarMessenger?.hideCurrentSnackBar();
     _dirtySnackBar = null;
     _dirtySnackBarMessage = null;
     _dirtySnackBarSaveEnabled = null;
+  }
+
+  @override
+  void dispose() {
+    if (_dirtySnackBar != null) {
+      final messenger = _dirtySnackBarMessenger;
+      if (messenger != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          messenger.removeCurrentSnackBar();
+        });
+      }
+      _dirtySnackBar = null;
+      _dirtySnackBarMessage = null;
+      _dirtySnackBarSaveEnabled = null;
+    }
+    super.dispose();
   }
 
   void reShowDirtySnackBarIfStillDirty({
