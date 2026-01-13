@@ -250,18 +250,6 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                 },
                               ),
                             ),
-                            const Gap(16),
-                            DetailSection(
-                              title: 'Deployment',
-                              icon: AppIcons.deployments,
-                              child: StackDeploymentContent(
-                                info: stack.info,
-                                isRepoDefined:
-                                    !stack.config.filesOnHost &&
-                                    (stack.config.linkedRepo.trim().isNotEmpty ||
-                                        stack.config.repo.trim().isNotEmpty),
-                              ),
-                            ),
                           ],
                         )
                       : const StackMessageSurface(message: 'Stack not found'),
