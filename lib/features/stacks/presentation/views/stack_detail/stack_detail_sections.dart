@@ -1038,12 +1038,11 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       (r) => r.id == _registryAccount.text,
     );
 
-    // Repo mode should react to edits, not just the initial config.
-    final hasRepoConfig =
-        _linkedRepo.text.trim().isNotEmpty ||
-        _repo.text.trim().isNotEmpty ||
-        _branch.text.trim().isNotEmpty ||
-        _clonePath.text.trim().isNotEmpty;
+    // Only show git source settings if this stack is actually defined via git.
+    // (UI-defined stacks and files-on-host stacks shouldn't show the entire block.)
+    final isGitDefined =
+      !_initial.filesOnHost &&
+      (_initial.linkedRepo.trim().isNotEmpty || _initial.repo.trim().isNotEmpty);
 
     // Track if a linked repo is currently selected
     final hasLinkedRepo = _linkedRepo.text.trim().isNotEmpty;
@@ -1106,7 +1105,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
         const Gap(12),
 
         // 2. Source (repo section)
-        if (hasRepoConfig) ...[
+        if (isGitDefined) ...[
           DetailSubCard(
             title: 'Source',
             icon: AppIcons.repos,
@@ -1962,7 +1961,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
         const Gap(12),
 
         // 9. Compose (file contents)
-        if (!hasRepoConfig)
+        if (!isGitDefined)
           DetailSubCard(
             title: 'Compose',
             icon: AppIcons.stacks,
