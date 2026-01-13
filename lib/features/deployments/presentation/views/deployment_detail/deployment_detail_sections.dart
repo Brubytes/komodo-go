@@ -175,7 +175,9 @@ class DeploymentConfigContent extends StatelessWidget {
             ],
           ),
         ),
-        if (config.network.trim().isNotEmpty || config.links.isNotEmpty) ...[
+        if (config.network.trim().isNotEmpty ||
+            config.links.isNotEmpty ||
+            (!isHostNetwork && ports.isNotEmpty)) ...[
           const Gap(12),
           DetailSubCard(
             title: 'Network',
@@ -188,6 +190,15 @@ class DeploymentConfigContent extends StatelessWidget {
                       ? config.network.trim()
                       : '—',
                 ),
+                if (!isHostNetwork && ports.isNotEmpty) ...[
+                  DetailKeyValueRow(
+                    label: 'Ports',
+                    value: '',
+                    bottomPadding: 8,
+                  ),
+                  DetailCodeBlock(code: ports),
+                  if (config.links.isNotEmpty) const Gap(10),
+                ],
                 if (config.links.isNotEmpty)
                   DetailKeyValueRow(
                     label: 'Links',
@@ -212,14 +223,6 @@ class DeploymentConfigContent extends StatelessWidget {
             title: 'Environment',
             icon: AppIcons.settings,
             child: DetailCodeBlock(code: environment),
-          ),
-        ],
-        if (!isHostNetwork && ports.isNotEmpty) ...[
-          const Gap(12),
-          DetailSubCard(
-            title: 'Ports',
-            icon: AppIcons.settings,
-            child: DetailCodeBlock(code: ports),
           ),
         ],
         if (volumes.isNotEmpty) ...[
@@ -1079,7 +1082,7 @@ class DeploymentConfigEditorContentState
         ),
         const Gap(12),
 
-        // Network + Links
+        // Network + Ports + Links
         DetailSubCard(
           title: 'Network',
           icon: AppIcons.network,
@@ -1116,6 +1119,18 @@ class DeploymentConfigEditorContentState
                     helperText: 'Current value not found in network list.',
                   ),
                 ),
+              ],
+              if (!networkIsHost) ...[
+                const Gap(12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Ports',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+                const Gap(6),
+                DetailCodeEditor(controller: _portsController, maxHeight: 180),
               ],
               const Gap(12),
               Align(
@@ -1201,19 +1216,6 @@ class DeploymentConfigEditorContentState
           ),
         ),
         const Gap(12),
-
-        // Ports (hidden for host network mode)
-        if (!networkIsHost) ...[
-          DetailSubCard(
-            title: 'Ports',
-            icon: AppIcons.settings,
-            child: DetailCodeEditor(
-              controller: _portsController,
-              maxHeight: 180,
-            ),
-          ),
-          const Gap(12),
-        ],
 
         // Volumes
         DetailSubCard(
