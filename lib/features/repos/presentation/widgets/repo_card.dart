@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 
 /// Card widget displaying repo information.
@@ -18,71 +20,78 @@ class RepoCard extends StatelessWidget {
     final repoPath = repo.info.repo;
     final branch = repo.info.branch;
 
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              _StatusBadge(state: state),
-              const Gap(12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      repo.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                _StatusBadge(state: state),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        repo.name,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
-                    ),
-                    const Gap(4),
-                    Text(
-                      repoPath.isNotEmpty
-                          ? (branch.isNotEmpty
-                                ? '$repoPath · $branch'
-                                : repoPath)
-                          : 'No repo',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
+                      const Gap(4),
+                      Text(
+                        repoPath.isNotEmpty
+                            ? (branch.isNotEmpty
+                                  ? '$repoPath · $branch'
+                                  : repoPath)
+                            : 'No repo',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              if (onAction != null)
-                PopupMenuButton<RepoAction>(
-                  icon: const Icon(AppIcons.moreVertical),
-                  onSelected: onAction,
-                  itemBuilder: (context) {
-                    final scheme = Theme.of(context).colorScheme;
-                    return [
-                      komodoPopupMenuItem(
-                        value: RepoAction.clone,
-                        icon: AppIcons.download,
-                        label: 'Clone',
-                        iconColor: scheme.primary,
-                      ),
-                      komodoPopupMenuItem(
-                        value: RepoAction.pull,
-                        icon: AppIcons.refresh,
-                        label: 'Pull',
-                        iconColor: scheme.secondary,
-                      ),
-                      komodoPopupMenuItem(
-                        value: RepoAction.build,
-                        icon: AppIcons.builds,
-                        label: 'Build',
-                        iconColor: scheme.tertiary,
-                      ),
-                    ];
-                  },
-                ),
-            ],
+                if (onAction != null)
+                  PopupMenuButton<RepoAction>(
+                    icon: const Icon(AppIcons.moreVertical),
+                    onSelected: onAction,
+                    itemBuilder: (context) {
+                      final scheme = Theme.of(context).colorScheme;
+                      return [
+                        komodoPopupMenuItem(
+                          value: RepoAction.clone,
+                          icon: AppIcons.download,
+                          label: 'Clone',
+                          iconColor: scheme.primary,
+                        ),
+                        komodoPopupMenuItem(
+                          value: RepoAction.pull,
+                          icon: AppIcons.refresh,
+                          label: 'Pull',
+                          iconColor: scheme.secondary,
+                        ),
+                        komodoPopupMenuItem(
+                          value: RepoAction.build,
+                          icon: AppIcons.builds,
+                          label: 'Build',
+                          iconColor: scheme.tertiary,
+                        ),
+                      ];
+                    },
+                  ),
+              ],
+            ),
           ),
         ),
       ),

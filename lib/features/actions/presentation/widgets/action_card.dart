@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 import 'package:komodo_go/features/actions/data/models/action.dart';
 
@@ -18,56 +20,64 @@ class ActionCard extends StatelessWidget {
     final scheduleError = action.info.scheduleError ?? '';
     final hasSchedule = action.info.nextScheduledRun != null;
 
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              _StatusBadge(state: state),
-              const Gap(12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      action.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                _StatusBadge(state: state),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        action.name,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
-                    ),
-                    const Gap(4),
-                    Text(
-                      hasSchedule ? 'Scheduled' : 'No schedule',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    if (scheduleError.isNotEmpty) ...[
                       const Gap(4),
                       Text(
-                        scheduleError,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.error,
+                        hasSchedule ? 'Scheduled' : 'No schedule',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
+                      if (scheduleError.isNotEmpty) ...[
+                        const Gap(4),
+                        Text(
+                          scheduleError,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              if (onRun != null)
-                IconButton(
-                  icon: const Icon(AppIcons.play),
-                  onPressed: onRun,
-                  tooltip: 'Run',
-                ),
-            ],
+                if (onRun != null)
+                  IconButton(
+                    icon: const Icon(AppIcons.play),
+                    onPressed: onRun,
+                    tooltip: 'Run',
+                  ),
+              ],
+            ),
           ),
         ),
       ),

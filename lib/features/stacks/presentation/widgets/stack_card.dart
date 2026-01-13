@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 
@@ -20,65 +22,76 @@ class StackCard extends StatelessWidget {
     final branch = stack.info.branch;
     final status = stack.info.status ?? '';
 
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  _StatusBadge(state: state),
-                  const Gap(12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          stack.name,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        if (repo.isNotEmpty) ...[
-                          const Gap(4),
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _StatusBadge(state: state),
+                    const Gap(12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            branch.isNotEmpty ? '$repo · $branch' : repo,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.7),
-                                ),
+                            stack.name,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
+                          if (repo.isNotEmpty) ...[
+                            const Gap(4),
+                            Text(
+                              branch.isNotEmpty ? '$repo · $branch' : repo,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                  ),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  if (onAction != null)
-                    PopupMenuButton<StackAction>(
-                      key: const ValueKey('stack_card_menu'),
-                      icon: const Icon(AppIcons.moreVertical),
-                      onSelected: onAction,
-                      itemBuilder: (context) => _buildMenuItems(context, state),
-                    ),
-                ],
-              ),
-              if (status.isNotEmpty) ...[
-                const Gap(8),
-                Text(
-                  status,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                    if (onAction != null)
+                      PopupMenuButton<StackAction>(
+                        key: const ValueKey('stack_card_menu'),
+                        icon: const Icon(AppIcons.moreVertical),
+                        onSelected: onAction,
+                        itemBuilder: (context) =>
+                            _buildMenuItems(context, state),
+                      ),
+                  ],
                 ),
+                if (status.isNotEmpty) ...[
+                  const Gap(8),
+                  Text(
+                    status,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 
 /// Card widget displaying deployment information.
@@ -22,74 +24,85 @@ class DeploymentCard extends StatelessWidget {
     final state = deployment.info?.state ?? DeploymentState.unknown;
     final image = deployment.info?.image;
 
-    return Card(
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
       key: ValueKey('deployment_card_${deployment.id}'),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  // Status badge
-                  _StatusBadge(state: state),
-                  const Gap(12),
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    // Status badge
+                    _StatusBadge(state: state),
+                    const Gap(12),
 
-                  // Deployment info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          deployment.name,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        if (image != null && image.isNotEmpty) ...[
-                          const Gap(4),
+                    // Deployment info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            image,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.7),
-                                ),
+                            deployment.name,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
+                          if (image != null && image.isNotEmpty) ...[
+                            const Gap(4),
+                            Text(
+                              image,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                  ),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
 
-                  // Quick actions
-                  if (onAction != null)
-                    PopupMenuButton<DeploymentAction>(
-                      key: ValueKey('deployment_card_menu_${deployment.id}'),
-                      icon: const Icon(AppIcons.moreVertical),
-                      onSelected: onAction,
-                      itemBuilder: (context) => _buildMenuItems(context, state),
-                    ),
-                ],
-              ),
-
-              // Description
-              if (deployment.description != null &&
-                  deployment.description!.isNotEmpty) ...[
-                const Gap(8),
-                Text(
-                  deployment.description!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                    // Quick actions
+                    if (onAction != null)
+                      PopupMenuButton<DeploymentAction>(
+                        key: ValueKey('deployment_card_menu_${deployment.id}'),
+                        icon: const Icon(AppIcons.moreVertical),
+                        onSelected: onAction,
+                        itemBuilder: (context) =>
+                            _buildMenuItems(context, state),
+                      ),
+                  ],
                 ),
+
+                // Description
+                if (deployment.description != null &&
+                    deployment.description!.isNotEmpty) ...[
+                  const Gap(8),
+                  Text(
+                    deployment.description!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

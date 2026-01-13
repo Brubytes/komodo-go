@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 import 'package:komodo_go/features/servers/data/models/server.dart';
 
@@ -15,64 +17,72 @@ class ServerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = server.info?.state ?? ServerState.unknown;
 
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Status indicator
-              _StatusIndicator(state: state),
-              const Gap(16),
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-              // Server info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      server.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Status indicator
+                _StatusIndicator(state: state),
+                const Gap(16),
+
+                // Server info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        server.name,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
-                    ),
-                    const Gap(4),
-                    Text(
-                      server.address,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    if (server.description != null &&
-                        server.description!.isNotEmpty) ...[
                       const Gap(4),
                       Text(
-                        server.description!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        server.address,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.5),
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
+                      if (server.description != null &&
+                          server.description!.isNotEmpty) ...[
+                        const Gap(4),
+                        Text(
+                          server.description!,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.5),
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
 
-              // Arrow
-              Icon(
-                AppIcons.chevron,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.3),
-              ),
-            ],
+                // Arrow
+                Icon(
+                  AppIcons.chevron,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+              ],
+            ),
           ),
         ),
       ),
