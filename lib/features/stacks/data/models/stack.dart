@@ -97,6 +97,9 @@ sealed class StackConfig with _$StackConfig {
     @JsonKey(name: 'additional_env_files')
     @Default([])
     List<String> additionalEnvFiles,
+    @JsonKey(name: 'config_files')
+    @Default([])
+    List<StackFileDependency> configFiles,
     @JsonKey(name: 'ignore_services') @Default([]) List<String> ignoreServices,
     @JsonKey(name: 'file_contents') @Default('') String fileContents,
     @Default('') String environment,
@@ -104,6 +107,47 @@ sealed class StackConfig with _$StackConfig {
 
   factory StackConfig.fromJson(Map<String, dynamic> json) =>
       _$StackConfigFromJson(json);
+}
+
+/// Additional file dependencies of the Stack (`StackFileDependency` in `komodo_client`).
+@freezed
+sealed class StackFileDependency with _$StackFileDependency {
+  const factory StackFileDependency({
+    @Default('') String path,
+    @Default([]) List<String> services,
+    @JsonKey(fromJson: _stackFileRequiresFromJson, toJson: _stackFileRequiresToJson)
+    @Default(StackFileRequires.none)
+    StackFileRequires requires,
+  }) = _StackFileDependency;
+
+  factory StackFileDependency.fromJson(Map<String, dynamic> json) =>
+      _$StackFileDependencyFromJson(json);
+}
+
+/// Diff requires service redeploy (`StackFileRequires` in `komodo_client`).
+enum StackFileRequires {
+  redeploy,
+  restart,
+  none,
+}
+
+StackFileRequires _stackFileRequiresFromJson(Object? value) {
+  if (value is! String) return StackFileRequires.none;
+  final normalized = value.trim().toLowerCase().replaceAll('_', '');
+  return switch (normalized) {
+    'redeploy' => StackFileRequires.redeploy,
+    'restart' => StackFileRequires.restart,
+    'none' => StackFileRequires.none,
+    _ => StackFileRequires.none,
+  };
+}
+
+String _stackFileRequiresToJson(StackFileRequires value) {
+  return switch (value) {
+    StackFileRequires.redeploy => 'Redeploy',
+    StackFileRequires.restart => 'Restart',
+    StackFileRequires.none => 'None',
+  };
 }
 
 /// Stack info returned by `GetStack` (`StackInfo` in `komodo_client`).

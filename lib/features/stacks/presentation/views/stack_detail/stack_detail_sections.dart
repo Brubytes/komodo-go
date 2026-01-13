@@ -419,6 +419,10 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   final List<TextEditingController> _filePathControllers = [];
   final List<TextEditingController> _ignoreServiceControllers = [];
 
+  final List<TextEditingController> _configFilePathControllers = [];
+  final List<TextEditingController> _configFileServicesControllers = [];
+  final List<StackFileRequires> _configFileRequires = [];
+
   late CodeEditorController _composeController;
   late CodeEditorController _environmentController;
 
@@ -455,6 +459,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     );
     _setRowControllers(_filePathControllers, _initial.filePaths);
     _setRowControllers(_ignoreServiceControllers, _initial.ignoreServices);
+    _setConfigFileControllers(_initial.configFiles);
 
     _autoPull = _initial.autoPull;
     _autoUpdate = _initial.autoUpdate;
@@ -542,9 +547,67 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _disposeRowControllers(_filePathControllers);
     _disposeRowControllers(_ignoreServiceControllers);
 
+    _disposeConfigFileControllers();
+
     _composeController.dispose();
     _environmentController.dispose();
     super.dispose();
+  }
+
+  void _disposeConfigFileControllers() {
+    for (final c in _configFilePathControllers) {
+      c.removeListener(_notifyDirtyIfChanged);
+      c.dispose();
+    }
+    for (final c in _configFileServicesControllers) {
+      c.removeListener(_notifyDirtyIfChanged);
+      c.dispose();
+    }
+    _configFilePathControllers.clear();
+    _configFileServicesControllers.clear();
+    _configFileRequires.clear();
+  }
+
+  void _setConfigFileControllers(List<StackFileDependency> values) {
+    _disposeConfigFileControllers();
+
+    final cleaned = values.where((e) => e.path.trim().isNotEmpty);
+    for (final dep in cleaned) {
+      final path = TextEditingController(text: dep.path.trim());
+      final services = TextEditingController(text: dep.services.join(', '));
+      path.addListener(_notifyDirtyIfChanged);
+      services.addListener(_notifyDirtyIfChanged);
+      _configFilePathControllers.add(path);
+      _configFileServicesControllers.add(services);
+      _configFileRequires.add(dep.requires);
+    }
+  }
+
+  void _addConfigFileRow() {
+    setState(() {
+      final path = TextEditingController();
+      final services = TextEditingController();
+      path.addListener(_notifyDirtyIfChanged);
+      services.addListener(_notifyDirtyIfChanged);
+      _configFilePathControllers.add(path);
+      _configFileServicesControllers.add(services);
+      _configFileRequires.add(StackFileRequires.none);
+    });
+    _notifyDirtyIfChanged();
+  }
+
+  void _removeConfigFileRow(int index) {
+    if (index < 0 || index >= _configFilePathControllers.length) return;
+    setState(() {
+      final path = _configFilePathControllers.removeAt(index);
+      final services = _configFileServicesControllers.removeAt(index);
+      _configFileRequires.removeAt(index);
+      path.removeListener(_notifyDirtyIfChanged);
+      services.removeListener(_notifyDirtyIfChanged);
+      path.dispose();
+      services.dispose();
+    });
+    _notifyDirtyIfChanged();
   }
 
   CodeEditorController _createCodeController({
@@ -614,6 +677,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     );
     _setRowControllers(_filePathControllers, config.filePaths);
     _setRowControllers(_ignoreServiceControllers, config.ignoreServices);
+    _setConfigFileControllers(config.configFiles);
 
     setState(() {
       _initial = config;
@@ -692,6 +756,43 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       }
     }
 
+    void setConfigFilesIfChanged(
+      String key,
+      List<StackFileDependency> initial,
+    ) {
+      final current = <Map<String, dynamic>>[];
+      for (var i = 0; i < _configFilePathControllers.length; i++) {
+        final path = _configFilePathControllers[i].text.trim();
+        if (path.isEmpty) continue;
+        final services = _configFileServicesControllers[i]
+            .text
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+        current.add(<String, dynamic>{
+          'path': path,
+          'services': services,
+          'requires': _stackFileRequiresToWire(_configFileRequires[i]),
+        });
+      }
+
+      final init = initial
+          .where((e) => e.path.trim().isNotEmpty)
+          .map(
+            (e) => <String, dynamic>{
+              'path': e.path.trim(),
+              'services': e.services.map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+              'requires': _stackFileRequiresToWire(e.requires),
+            },
+          )
+          .toList();
+
+      if (!_deepListEquals(current, init)) {
+        params[key] = current;
+      }
+    }
+
     setIfChanged('server_id', _serverId.text.trim(), _initial.serverId);
     setIfChanged('repo', _repo.text.trim(), _initial.repo);
     setIfChanged('branch', _branch.text.trim(), _initial.branch);
@@ -736,6 +837,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _initial.additionalEnvFiles,
     );
     setListIfChanged('file_paths', _filePathControllers, _initial.filePaths);
+    setConfigFilesIfChanged('config_files', _initial.configFiles);
     setListIfChanged(
       'ignore_services',
       _ignoreServiceControllers,
@@ -758,6 +860,43 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       if (a[i] != b[i]) return false;
     }
     return true;
+  }
+
+  bool _deepListEquals(List<Map<String, dynamic>> a, List<Map<String, dynamic>> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      final left = a[i];
+      final right = b[i];
+      if (left.length != right.length) return false;
+      for (final key in left.keys) {
+        if (!right.containsKey(key)) return false;
+        final lv = left[key];
+        final rv = right[key];
+        if (lv is List<String> && rv is List<String>) {
+          if (!_listEquals(lv, rv)) return false;
+        } else if (lv != rv) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  String _requiresLabel(StackFileRequires value) {
+    return switch (value) {
+      StackFileRequires.none => 'None',
+      StackFileRequires.restart => 'Restart',
+      StackFileRequires.redeploy => 'Redeploy',
+    };
+  }
+
+  String _stackFileRequiresToWire(StackFileRequires value) {
+    return switch (value) {
+      StackFileRequires.redeploy => 'Redeploy',
+      StackFileRequires.restart => 'Restart',
+      StackFileRequires.none => 'None',
+    };
   }
 
   @override
@@ -1146,7 +1285,109 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
         ),
         const Gap(12),
 
-        // 5. Auto Update
+        // 5. Config Files
+        DetailSubCard(
+          title: 'Config Files',
+          icon: AppIcons.package,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Add other config files to associate with the Stack, and edit in the UI. Relative to Run Directory.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Gap(8),
+              if (_configFilePathControllers.isEmpty)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _addConfigFileRow,
+                    icon: const Icon(AppIcons.add),
+                    label: const Text('Config file'),
+                  ),
+                )
+              else
+                Column(
+                  children: [
+                    for (var i = 0; i < _configFilePathControllers.length; i++) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _configFilePathControllers[i],
+                              decoration: InputDecoration(
+                                labelText: i == 0 ? 'Path' : null,
+                                hintText: 'Relative path (e.g. config/app.yaml)',
+                                prefixIcon: i == 0
+                                    ? const Icon(AppIcons.package)
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          const Gap(8),
+                          IconButton(
+                            tooltip: 'Remove',
+                            icon: const Icon(AppIcons.delete),
+                            onPressed: () => _removeConfigFileRow(i),
+                          ),
+                        ],
+                      ),
+                      const Gap(8),
+                      DropdownButtonFormField<StackFileRequires>(
+                        value: _configFileRequires[i],
+                        decoration: const InputDecoration(
+                          labelText: 'Requires',
+                          prefixIcon: Icon(AppIcons.refresh),
+                          helperText:
+                              'What should happen when this file changes.',
+                        ),
+                        items: [
+                          for (final v in StackFileRequires.values)
+                            DropdownMenuItem(
+                              value: v,
+                              child: Text(_requiresLabel(v)),
+                            ),
+                        ],
+                        onChanged: (v) {
+                          if (v == null) return;
+                          setState(() => _configFileRequires[i] = v);
+                          _notifyDirtyIfChanged();
+                        },
+                      ),
+                      const Gap(8),
+                      TextFormField(
+                        controller: _configFileServicesControllers[i],
+                        decoration: const InputDecoration(
+                          labelText: 'Services (optional)',
+                          prefixIcon: Icon(AppIcons.widgets),
+                          helperText:
+                              'Comma-separated list of services this file applies to.',
+                        ),
+                      ),
+                      const Gap(12),
+                    ],
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: _addConfigFileRow,
+                        icon: const Icon(AppIcons.add),
+                        label: const Text('Add config file'),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        const Gap(12),
+
+        // 6. Auto Update
         DetailSubCard(
           title: 'Auto Update',
           icon: AppIcons.refresh,
@@ -1198,7 +1439,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
         ),
         const Gap(12),
 
-        // 6. Links
+        // 7. Links
         DetailSubCard(
           title: 'Links',
           icon: AppIcons.network,
