@@ -69,8 +69,8 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
               const Gap(8),
               FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: scheme.primary,
-                  foregroundColor: scheme.onPrimary,
+                  backgroundColor: scheme.secondary,
+                  foregroundColor: scheme.onSecondary,
                   visualDensity: VisualDensity.compact,
                 ),
                 onPressed: saveEnabled ? onSave : null,
