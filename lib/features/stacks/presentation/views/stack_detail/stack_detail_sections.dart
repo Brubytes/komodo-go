@@ -1108,7 +1108,8 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
         const Gap(12),
 
         // 2. Compose (file contents)
-        if (!isGitDefined) ...[
+        // Only for UI-defined stacks (not git-defined, not files-on-host).
+        if (!_initial.filesOnHost && !isGitDefined) ...[
           DetailSubCard(
             title: 'Compose',
             icon: AppIcons.stacks,
