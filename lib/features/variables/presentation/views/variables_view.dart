@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/variables/data/models/variable.dart';
 import 'package:komodo_go/features/variables/presentation/providers/variables_provider.dart';
 import 'package:komodo_go/features/variables/presentation/widgets/variable_editor_sheet.dart';
@@ -169,60 +171,71 @@ class _VariableTile extends StatelessWidget {
         ? variable.description.trim()
         : (variable.isSecret ? 'Secret value' : 'Value: ${variable.value}');
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: ListTile(
-        leading: Icon(
-          variable.isSecret ? AppIcons.lock : AppIcons.key,
-          color: variable.isSecret ? scheme.tertiary : scheme.primary,
-        ),
-        title: Text(
-          variable.name,
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (variable.isSecret) const TextPill(label: 'Secret'),
-            const Gap(8),
-            PopupMenuButton<_VariableAction>(
-              onSelected: (action) {
-                switch (action) {
-                  case _VariableAction.edit:
-                    onEdit();
-                  case _VariableAction.delete:
-                    onDelete();
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: _VariableAction.edit,
-                  child: Row(
-                    children: [
-                      Icon(AppIcons.edit, color: scheme.primary, size: 18),
-                      const Gap(10),
-                      const Text('Edit'),
-                    ],
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          leading: Icon(
+            variable.isSecret ? AppIcons.lock : AppIcons.key,
+            color: variable.isSecret ? scheme.tertiary : scheme.primary,
+          ),
+          title: Text(
+            variable.name,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          subtitle: Text(
+            subtitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (variable.isSecret) const TextPill(label: 'Secret'),
+              const Gap(8),
+              PopupMenuButton<_VariableAction>(
+                onSelected: (action) {
+                  switch (action) {
+                    case _VariableAction.edit:
+                      onEdit();
+                    case _VariableAction.delete:
+                      onDelete();
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: _VariableAction.edit,
+                    child: Row(
+                      children: [
+                        Icon(AppIcons.edit, color: scheme.primary, size: 18),
+                        const Gap(10),
+                        const Text('Edit'),
+                      ],
+                    ),
                   ),
-                ),
-                PopupMenuItem(
-                  value: _VariableAction.delete,
-                  child: Row(
-                    children: [
-                      Icon(AppIcons.delete, color: scheme.error, size: 18),
-                      const Gap(10),
-                      const Text('Delete'),
-                    ],
+                  PopupMenuItem(
+                    value: _VariableAction.delete,
+                    child: Row(
+                      children: [
+                        Icon(AppIcons.delete, color: scheme.error, size: 18),
+                        const Gap(10),
+                        const Text('Delete'),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
+          onTap: onEdit,
         ),
-        onTap: onEdit,
       ),
     );
   }

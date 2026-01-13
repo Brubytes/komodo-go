@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/features/tags/presentation/widgets/tag_editor_sheet.dart';
@@ -166,8 +168,10 @@ class _TagTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
       child: Consumer(
         builder: (context, ref, _) {
           final ownerNameAsync = ref.watch(usernameProvider(tag.owner));
@@ -177,64 +181,69 @@ class _TagTile extends StatelessWidget {
             orElse: () => tag.owner,
           );
 
-          return ListTile(
-            key: ValueKey('tag_tile_${tag.id}'),
-            leading: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: tag.color.swatch.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(12),
+          return Material(
+            color: Colors.transparent,
+            borderRadius: cardRadius,
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              key: ValueKey('tag_tile_${tag.id}'),
+              leading: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: tag.color.swatch.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(AppIcons.tag, color: tag.color.swatch, size: 18),
               ),
-              child: Icon(AppIcons.tag, color: tag.color.swatch, size: 18),
-            ),
-            title: Text(
-              tag.name,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            subtitle: Text(
-              'Owner: $ownerLabel',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: PopupMenuButton<_TagAction>(
-              key: ValueKey('tag_tile_menu_${tag.id}'),
-              onSelected: (action) {
-                switch (action) {
-                  case _TagAction.edit:
-                    onEdit();
-                  case _TagAction.delete:
-                    onDelete();
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  key: ValueKey('tag_tile_edit_${tag.id}'),
-                  value: _TagAction.edit,
-                  child: Row(
-                    children: [
-                      Icon(AppIcons.edit, color: scheme.primary, size: 18),
-                      const Gap(10),
-                      const Text('Edit'),
-                    ],
+              title: Text(
+                tag.name,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              subtitle: Text(
+                'Owner: $ownerLabel',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: PopupMenuButton<_TagAction>(
+                key: ValueKey('tag_tile_menu_${tag.id}'),
+                onSelected: (action) {
+                  switch (action) {
+                    case _TagAction.edit:
+                      onEdit();
+                    case _TagAction.delete:
+                      onDelete();
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    key: ValueKey('tag_tile_edit_${tag.id}'),
+                    value: _TagAction.edit,
+                    child: Row(
+                      children: [
+                        Icon(AppIcons.edit, color: scheme.primary, size: 18),
+                        const Gap(10),
+                        const Text('Edit'),
+                      ],
+                    ),
                   ),
-                ),
-                PopupMenuItem(
-                  key: ValueKey('tag_tile_delete_${tag.id}'),
-                  value: _TagAction.delete,
-                  child: Row(
-                    children: [
-                      Icon(AppIcons.delete, color: scheme.error, size: 18),
-                      const Gap(10),
-                      const Text('Delete'),
-                    ],
+                  PopupMenuItem(
+                    key: ValueKey('tag_tile_delete_${tag.id}'),
+                    value: _TagAction.delete,
+                    child: Row(
+                      children: [
+                        Icon(AppIcons.delete, color: scheme.error, size: 18),
+                        const Gap(10),
+                        const Text('Delete'),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+              onTap: onEdit,
             ),
-            onTap: onEdit,
           );
         },
       ),
