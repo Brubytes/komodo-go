@@ -55,7 +55,7 @@ class DetailSection extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: scheme.secondary.withValues(alpha: 0.7),
+              color: scheme.secondary.withValues(alpha: isDark ? 0.6 : 0.9),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
