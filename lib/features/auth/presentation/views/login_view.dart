@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -9,6 +10,7 @@ import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/auth/presentation/providers/connection_draft_provider.dart';
+import 'package:komodo_go/features/auth/presentation/widgets/edit_connection_sheet.dart';
 
 /// Login screen for entering Komodo API credentials.
 class LoginView extends HookConsumerWidget {
@@ -86,6 +88,69 @@ class LoginView extends HookConsumerWidget {
               apiKey: apiKeyController.text,
               apiSecret: apiSecretController.text,
             );
+      }
+    }
+
+    Future<void> showConnectionActions(ConnectionProfile connection) async {
+      final action = await showModalBottomSheet<_ConnectionAction>(
+        context: context,
+        useSafeArea: true,
+        showDragHandle: true,
+        builder: (context) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(AppIcons.edit),
+              title: const Text('Edit'),
+              onTap: () => Navigator.of(context).pop(_ConnectionAction.edit),
+            ),
+            ListTile(
+              leading: const Icon(AppIcons.delete),
+              title: const Text('Delete'),
+              textColor: Theme.of(context).colorScheme.error,
+              iconColor: Theme.of(context).colorScheme.error,
+              onTap: () => Navigator.of(context).pop(_ConnectionAction.delete),
+            ),
+            const Gap(8),
+          ],
+        ),
+      );
+
+      if (!context.mounted) {
+        return;
+      }
+
+      if (action == null) {
+        return;
+      }
+
+      switch (action) {
+        case _ConnectionAction.edit:
+          await EditConnectionSheet.show(context, connection: connection);
+        case _ConnectionAction.delete:
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Delete connection'),
+              content: Text('Remove "${connection.name}"?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Delete'),
+                ),
+              ],
+            ),
+          );
+
+          if (confirmed ?? false) {
+            await ref
+                .read(connectionsProvider.notifier)
+                .deleteConnection(connection.id);
+          }
       }
     }
 
@@ -176,47 +241,6 @@ class LoginView extends HookConsumerWidget {
                                           context,
                                         ).colorScheme.primary,
                                       ),
-                                      trailing: IconButton(
-                                        tooltip: 'Delete',
-                                        icon: const Icon(AppIcons.delete),
-                                        onPressed: () async {
-                                          final confirmed = await showDialog<bool>(
-                                            context: context,
-                                            builder: (context) => AlertDialog(
-                                              title: const Text(
-                                                'Delete connection',
-                                              ),
-                                              content: Text(
-                                                'Remove "${connection.name}"?',
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.of(
-                                                    context,
-                                                  ).pop(false),
-                                                  child: const Text('Cancel'),
-                                                ),
-                                                FilledButton(
-                                                  onPressed: () => Navigator.of(
-                                                    context,
-                                                  ).pop(true),
-                                                  child: const Text('Delete'),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-
-                                          if (confirmed ?? false) {
-                                            await ref
-                                                .read(
-                                                  connectionsProvider.notifier,
-                                                )
-                                                .deleteConnection(
-                                                  connection.id,
-                                                );
-                                          }
-                                        },
-                                      ),
                                       onTap: authState.isLoading
                                           ? null
                                           : () async {
@@ -226,6 +250,11 @@ class LoginView extends HookConsumerWidget {
                                                     connection.id,
                                                   );
                                             },
+                                      onLongPress: authState.isLoading
+                                          ? null
+                                          : () => showConnectionActions(
+                                                connection,
+                                              ),
                                     ),
                                 ],
                               ),
@@ -427,3 +456,5 @@ class LoginView extends HookConsumerWidget {
     );
   }
 }
+
+enum _ConnectionAction { edit, delete }
