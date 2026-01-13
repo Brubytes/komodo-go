@@ -13,6 +13,7 @@ import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
@@ -213,6 +214,16 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                               serverName: serverNameForId(
                                 stack.config.serverId,
                               ),
+                              sourceIcon: _sourceIcon(
+                                stack: stack,
+                                listItem: listItem,
+                                repos: repos,
+                              ),
+                              sourceLabel: _sourceLabel(
+                                stack: stack,
+                                listItem: listItem,
+                                repos: repos,
+                              ),
                             ),
                             const Gap(16),
                             DetailSection(
@@ -243,7 +254,13 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                             DetailSection(
                               title: 'Deployment',
                               icon: AppIcons.deployments,
-                              child: StackDeploymentContent(info: stack.info),
+                              child: StackDeploymentContent(
+                                info: stack.info,
+                                isRepoDefined:
+                                    !stack.config.filesOnHost &&
+                                    (stack.config.linkedRepo.trim().isNotEmpty ||
+                                        stack.config.repo.trim().isNotEmpty),
+                              ),
                             ),
                           ],
                         )
@@ -325,6 +342,74 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     );
   }
 
+    IconData _sourceIcon({
+    required KomodoStack stack,
+    required StackListItem? listItem,
+    required List<RepoListItem> repos,
+    }) {
+    if (stack.config.filesOnHost) return AppIcons.server;
+    final repoName = _resolveRepoName(
+      stack: stack,
+      listItem: listItem,
+      repos: repos,
+    );
+    return repoName.isNotEmpty ? AppIcons.repos : AppIcons.notepadText;
+    }
+
+    String _sourceLabel({
+    required KomodoStack stack,
+    required StackListItem? listItem,
+    required List<RepoListItem> repos,
+    }) {
+    if (stack.config.filesOnHost) return 'Files on server';
+
+    final repoName = _resolveRepoName(
+      stack: stack,
+      listItem: listItem,
+      repos: repos,
+    );
+
+    if (repoName.isEmpty) return 'UI Defined';
+
+    final branch = stack.config.branch.trim().isNotEmpty
+      ? stack.config.branch.trim()
+      : (listItem?.info.branch.trim() ?? '');
+
+    return branch.isNotEmpty ? '$repoName · $branch' : repoName;
+    }
+
+    String _resolveRepoName({
+    required KomodoStack stack,
+    required StackListItem? listItem,
+    required List<RepoListItem> repos,
+    }) {
+    // 1) linked_repo id -> RepoListItem.name
+    final linkedRepoId = stack.config.linkedRepo.trim();
+    if (linkedRepoId.isNotEmpty) {
+      for (final repo in repos) {
+      if (repo.id == linkedRepoId) {
+        return repo.name.trim();
+      }
+      }
+    }
+
+    // 2) Try to map repo path (namespace/repo) -> RepoListItem by info.repo
+    final repoPath = (listItem?.info.repo.trim().isNotEmpty ?? false)
+      ? listItem!.info.repo.trim()
+      : stack.config.repo.trim();
+
+    if (repoPath.isNotEmpty) {
+      for (final repo in repos) {
+      if (repo.info.repo.trim() == repoPath) {
+        return repo.name.trim();
+      }
+      }
+      // Fallback: if we can't resolve to a resource name, at least show the path.
+      return repoPath;
+    }
+
+    return '';
+    }
   Future<void> _handleAction(
     BuildContext context,
     String stackId,

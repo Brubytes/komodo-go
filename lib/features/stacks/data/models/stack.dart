@@ -102,6 +102,7 @@ sealed class StackConfig with _$StackConfig {
     @Default(false)
     bool webhookForceDeploy,
     @JsonKey(name: 'webhook_secret') @Default('') String webhookSecret,
+    @JsonKey(name: 'files_on_host') @Default(false) bool filesOnHost,
     @JsonKey(name: 'file_paths') @Default([]) List<String> filePaths,
     @JsonKey(name: 'env_file_path') @Default('') String envFilePath,
     @JsonKey(name: 'additional_env_files')

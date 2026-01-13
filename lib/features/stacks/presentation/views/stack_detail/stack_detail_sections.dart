@@ -18,6 +18,8 @@ class StackHeroPanel extends StatelessWidget {
     required this.serviceCount,
     required this.updateCount,
     required this.serverName,
+    required this.sourceLabel,
+    required this.sourceIcon,
     super.key,
   });
 
@@ -26,6 +28,8 @@ class StackHeroPanel extends StatelessWidget {
   final int? serviceCount;
   final int? updateCount;
   final String? serverName;
+  final String sourceLabel;
+  final IconData sourceIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -33,13 +37,18 @@ class StackHeroPanel extends StatelessWidget {
     final config = stack.config;
     final info = stack.info;
 
+    final isRepoDefined =
+      !config.filesOnHost &&
+      (config.linkedRepo.trim().isNotEmpty || config.repo.trim().isNotEmpty);
+
     final state = listItem?.info.state;
     final status = listItem?.info.status;
     final projectMissing = listItem?.info.projectMissing ?? false;
 
     final missingCount = info.missingFiles.length;
+    final hasGitMeta = info.latestHash != null || info.deployedHash != null;
     final upToDate =
-        info.latestHash != null && info.deployedHash == info.latestHash;
+      info.latestHash != null && info.deployedHash == info.latestHash;
 
     return DetailHeroPanel(
       tintColor: scheme.surface,
@@ -54,6 +63,12 @@ class StackHeroPanel extends StatelessWidget {
             ),
             const Gap(10),
           ],
+          DetailIconInfoRow(
+            icon: sourceIcon,
+            label: 'Source',
+            value: sourceLabel,
+          ),
+          const Gap(10),
           if (config.serverId.isNotEmpty) ...[
             DetailIconInfoRow(
               icon: AppIcons.server,
@@ -95,12 +110,13 @@ class StackHeroPanel extends StatelessWidget {
           value: state?.displayName ?? '—',
           tone: _stateTone(state),
         ),
-        DetailMetricTileData(
-          icon: AppIcons.repos,
-          label: 'Branch',
-          value: config.branch.isNotEmpty ? config.branch : '—',
-          tone: DetailMetricTone.neutral,
-        ),
+        if (isRepoDefined)
+          DetailMetricTileData(
+            icon: AppIcons.repos,
+            label: 'Branch',
+            value: config.branch.isNotEmpty ? config.branch : '—',
+            tone: DetailMetricTone.neutral,
+          ),
         DetailMetricTileData(
           icon: AppIcons.widgets,
           label: 'Services',
@@ -123,12 +139,19 @@ class StackHeroPanel extends StatelessWidget {
               ? DetailMetricTone.tertiary
               : DetailMetricTone.success,
         ),
-        DetailMetricTileData(
-          icon: upToDate ? AppIcons.ok : AppIcons.warning,
-          label: 'Git',
-          value: upToDate ? 'Up to date' : 'Out of date',
-          tone: upToDate ? DetailMetricTone.success : DetailMetricTone.tertiary,
-        ),
+        if (isRepoDefined)
+          DetailMetricTileData(
+            icon: !hasGitMeta
+                ? AppIcons.widgets
+                : (upToDate ? AppIcons.ok : AppIcons.warning),
+            label: 'Git',
+            value: !hasGitMeta ? '—' : (upToDate ? 'Up to date' : 'Out of date'),
+            tone: !hasGitMeta
+                ? DetailMetricTone.neutral
+                : (upToDate
+                      ? DetailMetricTone.success
+                      : DetailMetricTone.tertiary),
+          ),
       ],
       footer: DetailPillList(
         items: stack.tags,
@@ -189,6 +212,9 @@ class StackConfigContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final compose = config.fileContents.trim();
     final environment = config.environment.trim();
+    final isRepoDefined =
+      !config.filesOnHost &&
+      (config.linkedRepo.trim().isNotEmpty || config.repo.trim().isNotEmpty);
     final isLinkedToRepo = config.linkedRepo.trim().isNotEmpty;
 
     return Column(
@@ -228,7 +254,7 @@ class StackConfigContent extends StatelessWidget {
             ),
           ],
         ),
-        if (isLinkedToRepo) ...[
+        if (isRepoDefined) ...[
           const Gap(14),
           DetailSubCard(
             title: 'Repository',
@@ -1956,9 +1982,10 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 }
 
 class StackDeploymentContent extends StatelessWidget {
-  const StackDeploymentContent({required this.info, super.key});
+  const StackDeploymentContent({required this.info, required this.isRepoDefined, super.key});
 
   final StackInfo info;
+  final bool isRepoDefined;
 
   @override
   Widget build(BuildContext context) {
@@ -1974,11 +2001,12 @@ class StackDeploymentContent extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            StatusPill(
-              label: upToDate ? 'Up to date' : 'Out of date',
-              icon: upToDate ? AppIcons.ok : AppIcons.warning,
-              tone: upToDate ? PillTone.success : PillTone.warning,
-            ),
+            if (isRepoDefined)
+              StatusPill(
+                label: upToDate ? 'Up to date' : 'Out of date',
+                icon: upToDate ? AppIcons.ok : AppIcons.warning,
+                tone: upToDate ? PillTone.success : PillTone.warning,
+              ),
             if (info.missingFiles.isNotEmpty)
               StatusPill(
                 label: '${info.missingFiles.length} missing files',
@@ -1987,40 +2015,42 @@ class StackDeploymentContent extends StatelessWidget {
               ),
           ],
         ),
-        const Gap(14),
-        DetailSubCard(
-          title: 'Commits',
-          icon: AppIcons.repos,
-          child: Column(
-            children: [
-              DetailKeyValueRow(
-                label: 'Latest',
-                value: _shortHash(latest) ?? '—',
-              ),
-              if (info.latestMessage?.trim().isNotEmpty ?? false)
+        if (isRepoDefined) ...[
+          const Gap(14),
+          DetailSubCard(
+            title: 'Commits',
+            icon: AppIcons.repos,
+            child: Column(
+              children: [
                 DetailKeyValueRow(
-                  label: 'Message',
-                  value: info.latestMessage!.trim(),
+                  label: 'Latest',
+                  value: _shortHash(latest) ?? '—',
                 ),
-              DetailKeyValueRow(
-                label: 'Deployed',
-                value: _shortHash(deployed) ?? '—',
-              ),
-              if (info.deployedMessage?.trim().isNotEmpty ?? false)
+                if (info.latestMessage?.trim().isNotEmpty ?? false)
+                  DetailKeyValueRow(
+                    label: 'Message',
+                    value: info.latestMessage!.trim(),
+                  ),
                 DetailKeyValueRow(
-                  label: 'Message',
-                  value: info.deployedMessage!.trim(),
-                  bottomPadding: 0,
-                )
-              else
-                const DetailKeyValueRow(
-                  label: 'Message',
-                  value: '—',
-                  bottomPadding: 0,
+                  label: 'Deployed',
+                  value: _shortHash(deployed) ?? '—',
                 ),
-            ],
+                if (info.deployedMessage?.trim().isNotEmpty ?? false)
+                  DetailKeyValueRow(
+                    label: 'Message',
+                    value: info.deployedMessage!.trim(),
+                    bottomPadding: 0,
+                  )
+                else
+                  const DetailKeyValueRow(
+                    label: 'Message',
+                    value: '—',
+                    bottomPadding: 0,
+                  ),
+              ],
+            ),
           ),
-        ),
+        ],
         if (info.missingFiles.isNotEmpty) ...[
           const Gap(12),
           DetailSubCard(

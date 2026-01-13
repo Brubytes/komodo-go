@@ -72,6 +72,7 @@ abstract class AppIcons {
   static const IconData deployments = LucideIcons.rocket;
   static const IconData stacks = LucideIcons.layers;
   static const IconData repos = LucideIcons.gitBranch;
+  static const IconData notepadText = LucideIcons.notepadText;
   static const IconData builds = LucideIcons.hammer;
   static const IconData procedures = LucideIcons.route;
   static const IconData actions = LucideIcons.zap;
