@@ -40,8 +40,7 @@ class AppCardSurface extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     final color =
-        theme.cardTheme.color ??
-        (isDark ? scheme.surfaceContainerHigh : scheme.surfaceContainerLow);
+        theme.cardTheme.color ?? scheme.surface;
     final tint = tintColor ?? scheme.primary;
 
     final borderColor = scheme.outlineVariant.withValues(
@@ -68,7 +67,7 @@ class AppCardSurface extends StatelessWidget {
         boxShadow: shadows,
         gradient: isDark && enableGradientInDark
             ? appCardGradient(tint: tint, base: color)
-            : appCardGradient(tint: tint, base: color),
+            : null,
       ),
       child: child,
     );
