@@ -76,6 +76,17 @@ sealed class StackConfig with _$StackConfig {
     @JsonKey(name: 'server_id') @Default('') String serverId,
     @Default([]) List<String> links,
     @JsonKey(name: 'project_name') @Default('') String projectName,
+
+    /// Pull images before deploying.
+    @JsonKey(name: 'auto_pull') @Default(false) bool autoPull,
+
+    /// Build images before deploying.
+    @JsonKey(name: 'run_build') @Default(false) bool runBuild,
+
+    /// Destroy existing containers before deploying.
+    @JsonKey(name: 'destroy_before_deploy')
+    @Default(false)
+    bool destroyBeforeDeploy,
     @JsonKey(name: 'linked_repo') @Default('') String linkedRepo,
     @Default('') String repo,
     @Default('') String branch,
@@ -83,7 +94,6 @@ sealed class StackConfig with _$StackConfig {
     @JsonKey(name: 'clone_path') @Default('') String clonePath,
     @JsonKey(name: 'reclone') @Default(false) bool reclone,
     @JsonKey(name: 'run_directory') @Default('') String runDirectory,
-    @JsonKey(name: 'auto_pull') @Default(false) bool autoPull,
     @JsonKey(name: 'auto_update') @Default(false) bool autoUpdate,
     @JsonKey(name: 'poll_for_updates') @Default(false) bool pollForUpdates,
     @JsonKey(name: 'send_alerts') @Default(false) bool sendAlerts,
@@ -103,6 +113,14 @@ sealed class StackConfig with _$StackConfig {
     @JsonKey(name: 'ignore_services') @Default([]) List<String> ignoreServices,
     @JsonKey(name: 'file_contents') @Default('') String fileContents,
     @Default('') String environment,
+
+    /// Optional image registry selection.
+    @JsonKey(name: 'registry_provider') @Default('') String registryProvider,
+    @JsonKey(name: 'registry_account') @Default('') String registryAccount,
+
+    /// Extra args for compose deploy/build.
+    @JsonKey(name: 'extra_args') @Default([]) List<String> extraArgs,
+    @JsonKey(name: 'build_extra_args') @Default([]) List<String> buildExtraArgs,
   }) = _StackConfig;
 
   factory StackConfig.fromJson(Map<String, dynamic> json) =>
@@ -115,7 +133,10 @@ sealed class StackFileDependency with _$StackFileDependency {
   const factory StackFileDependency({
     @Default('') String path,
     @Default([]) List<String> services,
-    @JsonKey(fromJson: _stackFileRequiresFromJson, toJson: _stackFileRequiresToJson)
+    @JsonKey(
+      fromJson: _stackFileRequiresFromJson,
+      toJson: _stackFileRequiresToJson,
+    )
     @Default(StackFileRequires.none)
     StackFileRequires requires,
   }) = _StackFileDependency;
@@ -125,11 +146,7 @@ sealed class StackFileDependency with _$StackFileDependency {
 }
 
 /// Diff requires service redeploy (`StackFileRequires` in `komodo_client`).
-enum StackFileRequires {
-  redeploy,
-  restart,
-  none,
-}
+enum StackFileRequires { redeploy, restart, none }
 
 StackFileRequires _stackFileRequiresFromJson(Object? value) {
   if (value is! String) return StackFileRequires.none;

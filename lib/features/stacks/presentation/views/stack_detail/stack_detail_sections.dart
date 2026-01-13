@@ -5,6 +5,7 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
+import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
@@ -386,6 +387,7 @@ class StackConfigEditorContent extends StatefulWidget {
     this.webhookBaseUrl = '',
     this.servers = const [],
     this.repos = const [],
+    this.registryAccounts = const [],
     this.onDirtyChanged,
     super.key,
   });
@@ -395,6 +397,7 @@ class StackConfigEditorContent extends StatefulWidget {
   final String webhookBaseUrl;
   final List<Server> servers;
   final List<RepoListItem> repos;
+  final List<DockerRegistryAccount> registryAccounts;
   final ValueChanged<bool>? onDirtyChanged;
 
   @override
@@ -420,10 +423,13 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   late final TextEditingController _webhookSecret;
   late final TextEditingController _webhookDeployUrlDisplay;
 
+  late final TextEditingController _registryAccount;
+
   final List<TextEditingController> _linkControllers = [];
   final List<TextEditingController> _additionalEnvFileControllers = [];
   final List<TextEditingController> _filePathControllers = [];
   final List<TextEditingController> _ignoreServiceControllers = [];
+  final List<TextEditingController> _extraArgControllers = [];
 
   final List<TextEditingController> _configFilePathControllers = [];
   final List<TextEditingController> _configFileServicesControllers = [];
@@ -436,6 +442,9 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   late bool _autoUpdate;
   late bool _pollForUpdates;
   late bool _sendAlerts;
+
+  late bool _runBuild;
+  late bool _destroyBeforeDeploy;
 
   late bool _reclone;
 
@@ -461,6 +470,8 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _envFilePath = TextEditingController(text: _initial.envFilePath);
     _webhookSecret = TextEditingController(text: _initial.webhookSecret);
 
+    _registryAccount = TextEditingController(text: _initial.registryAccount);
+
     _setRowControllers(_linkControllers, _initial.links);
     _setRowControllers(
       _additionalEnvFileControllers,
@@ -468,12 +479,16 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     );
     _setRowControllers(_filePathControllers, _initial.filePaths);
     _setRowControllers(_ignoreServiceControllers, _initial.ignoreServices);
+    _setRowControllers(_extraArgControllers, _initial.extraArgs);
     _setConfigFileControllers(_initial.configFiles);
 
     _autoPull = _initial.autoPull;
     _autoUpdate = _initial.autoUpdate;
     _pollForUpdates = _initial.pollForUpdates;
     _sendAlerts = _initial.sendAlerts;
+
+    _runBuild = _initial.runBuild;
+    _destroyBeforeDeploy = _initial.destroyBeforeDeploy;
 
     _reclone = _initial.reclone;
 
@@ -501,6 +516,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _clonePath,
       _runDirectory,
       _envFilePath,
+      _registryAccount,
       _webhookSecret,
       _composeController,
       _environmentController,
@@ -540,6 +556,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _clonePath,
       _runDirectory,
       _envFilePath,
+      _registryAccount,
       _webhookSecret,
       _composeController,
       _environmentController,
@@ -556,6 +573,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _clonePath.dispose();
     _runDirectory.dispose();
     _envFilePath.dispose();
+    _registryAccount.dispose();
     _webhookSecret.dispose();
     _webhookDeployUrlDisplay.dispose();
 
@@ -563,6 +581,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _disposeRowControllers(_additionalEnvFileControllers);
     _disposeRowControllers(_filePathControllers);
     _disposeRowControllers(_ignoreServiceControllers);
+    _disposeRowControllers(_extraArgControllers);
 
     _disposeConfigFileControllers();
 
@@ -711,6 +730,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     );
     _setRowControllers(_filePathControllers, config.filePaths);
     _setRowControllers(_ignoreServiceControllers, config.ignoreServices);
+    _setRowControllers(_extraArgControllers, config.extraArgs);
     _setConfigFileControllers(config.configFiles);
 
     setState(() {
@@ -724,10 +744,14 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _clonePath.text = config.clonePath;
       _runDirectory.text = config.runDirectory;
       _envFilePath.text = config.envFilePath;
+      _registryAccount.text = config.registryAccount;
       _autoPull = config.autoPull;
       _autoUpdate = config.autoUpdate;
       _pollForUpdates = config.pollForUpdates;
       _sendAlerts = config.sendAlerts;
+
+      _runBuild = config.runBuild;
+      _destroyBeforeDeploy = config.destroyBeforeDeploy;
 
       _reclone = config.reclone;
 
@@ -851,10 +875,33 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _initial.envFilePath,
     );
 
+    String registryProviderForAccount(String accountId) {
+      for (final a in widget.registryAccounts) {
+        if (a.id == accountId) return a.domain;
+      }
+      return '';
+    }
+
+    final currentRegistryAccount = _registryAccount.text.trim();
+    final initialRegistryAccount = _initial.registryAccount.trim();
+    if (currentRegistryAccount != initialRegistryAccount) {
+      params['registry_account'] = currentRegistryAccount;
+      params['registry_provider'] = currentRegistryAccount.isEmpty
+          ? ''
+          : registryProviderForAccount(currentRegistryAccount);
+    }
+
     setIfChanged('auto_pull', _autoPull, _initial.autoPull);
+    setIfChanged('run_build', _runBuild, _initial.runBuild);
     setIfChanged('auto_update', _autoUpdate, _initial.autoUpdate);
     setIfChanged('poll_for_updates', _pollForUpdates, _initial.pollForUpdates);
     setIfChanged('send_alerts', _sendAlerts, _initial.sendAlerts);
+
+    setIfChanged(
+      'destroy_before_deploy',
+      _destroyBeforeDeploy,
+      _initial.destroyBeforeDeploy,
+    );
 
     setIfChanged('reclone', _reclone, _initial.reclone);
 
@@ -879,6 +926,8 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       _ignoreServiceControllers,
       _initial.ignoreServices,
     );
+
+    setListIfChanged('extra_args', _extraArgControllers, _initial.extraArgs);
 
     final compose = _composeController.text;
     if (compose != _initial.fileContents) params['file_contents'] = compose;
@@ -943,14 +992,25 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     final scheme = Theme.of(context).colorScheme;
     final servers = widget.servers;
     final repos = widget.repos;
+    final registries = widget.registryAccounts;
 
     final sortedServers = [...servers]
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final sortedRepos = [...repos]
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
+    final sortedRegistries = [...registries]
+      ..sort(
+        (a, b) => a.domain.toLowerCase().compareTo(b.domain.toLowerCase()) != 0
+            ? a.domain.toLowerCase().compareTo(b.domain.toLowerCase())
+            : a.username.toLowerCase().compareTo(b.username.toLowerCase()),
+      );
+
     final serverIdInList = sortedServers.any((s) => s.id == _serverId.text);
     final linkedRepoInList = sortedRepos.any((r) => r.id == _linkedRepo.text);
+    final registryInList = sortedRegistries.any(
+      (r) => r.id == _registryAccount.text,
+    );
 
     // Repo mode should react to edits, not just the initial config.
     final hasRepoConfig =
@@ -1461,16 +1521,6 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
-                value: _autoPull,
-                title: const Text('Auto pull'),
-                subtitle: const Text('Pull latest changes before deploying.'),
-                onChanged: (v) {
-                  setState(() => _autoPull = v);
-                  _notifyDirtyIfChanged();
-                },
-              ),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
                 value: _sendAlerts,
                 title: const Text('Send alerts'),
                 onChanged: (v) {
@@ -1635,6 +1685,180 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                       'Compose project name. Match existing name if importing.',
                 ),
               ),
+              const Gap(12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Deployment behavior',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const Gap(4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Advanced switches that affect deploy behavior.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Gap(8),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _autoPull,
+                title: const Text('Pre-pull images'),
+                subtitle: const Text('Pull images before deploying.'),
+                onChanged: (v) {
+                  setState(() => _autoPull = v);
+                  _notifyDirtyIfChanged();
+                },
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _runBuild,
+                title: const Text('Pre-build images'),
+                subtitle: const Text('Build images before deploying.'),
+                onChanged: (v) {
+                  setState(() => _runBuild = v);
+                  _notifyDirtyIfChanged();
+                },
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _destroyBeforeDeploy,
+                title: const Text('Destroy before deploy'),
+                subtitle: const Text(
+                  'Destroy existing resources before deploying.',
+                ),
+                onChanged: (v) {
+                  setState(() => _destroyBeforeDeploy = v);
+                  _notifyDirtyIfChanged();
+                },
+              ),
+              const Gap(12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Image registry',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const Gap(8),
+              if (sortedRegistries.isNotEmpty)
+                KomodoSelectMenuField<String>(
+                  key: ValueKey(sortedRegistries.length),
+                  value: registryInList ? _registryAccount.text : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Registry account',
+                    prefixIcon: Icon(AppIcons.package),
+                    helperText:
+                        'Select a Docker registry account for private images.',
+                  ),
+                  items: [
+                    KomodoSelectMenuItem(value: '', label: 'None'),
+                    for (final account in sortedRegistries)
+                      KomodoSelectMenuItem(
+                        value: account.id,
+                        label: '${account.domain} · ${account.username}',
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _registryAccount.text = value);
+                    _notifyDirtyIfChanged();
+                  },
+                )
+              else
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'No registry accounts configured.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              if (sortedRegistries.isNotEmpty && !registryInList)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Current registry account is not in the account list.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              const Gap(12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Extra args',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const Gap(4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Extra args for deploy (one argument per row).',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Gap(8),
+              if (_extraArgControllers.isEmpty)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _addRow(_extraArgControllers),
+                    icon: const Icon(AppIcons.add),
+                    label: const Text('Arg'),
+                  ),
+                )
+              else
+                Column(
+                  children: [
+                    for (var i = 0; i < _extraArgControllers.length; i++) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _extraArgControllers[i],
+                              decoration: InputDecoration(
+                                hintText: 'Argument',
+                                prefixIcon: i == 0
+                                    ? const Icon(AppIcons.tag)
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          const Gap(8),
+                          IconButton(
+                            tooltip: 'Remove',
+                            icon: const Icon(AppIcons.delete),
+                            onPressed: () =>
+                                _removeRow(_extraArgControllers, i),
+                          ),
+                        ],
+                      ),
+                      const Gap(8),
+                    ],
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => _addRow(_extraArgControllers),
+                        icon: const Icon(AppIcons.add),
+                        label: const Text('Add arg'),
+                      ),
+                    ),
+                  ],
+                ),
               const Gap(12),
               Align(
                 alignment: Alignment.centerLeft,

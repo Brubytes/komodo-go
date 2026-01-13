@@ -18,6 +18,7 @@ import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
 import 'package:komodo_go/features/stacks/presentation/views/stack_detail/stack_detail_sections.dart';
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
+import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 
 /// View displaying detailed stack information.
 class StackDetailView extends ConsumerStatefulWidget {
@@ -94,6 +95,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     final stacksListAsync = ref.watch(stacksProvider);
     final serversListAsync = ref.watch(serversProvider);
     final reposListAsync = ref.watch(reposProvider);
+    final registryAccountsAsync = ref.watch(dockerRegistryAccountsProvider);
     final actionsState = ref.watch(stackActionsProvider);
 
     final scheme = Theme.of(context).colorScheme;
@@ -124,6 +126,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
 
     final servers = serversListAsync.asData?.value ?? const [];
     final repos = reposListAsync.asData?.value ?? const [];
+    final registryAccounts = registryAccountsAsync.asData?.value ?? const [];
 
     return Scaffold(
       appBar: MainAppBar(
@@ -225,6 +228,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                 ),
                                 servers: servers,
                                 repos: repos,
+                                registryAccounts: registryAccounts,
                                 onDirtyChanged: (dirty) {
                                   syncDirtySnackBar(
                                     dirty: dirty,
