@@ -230,39 +230,36 @@ class _DeploymentDetailViewState
                               );
                             }
 
-                            return DetailSurface(
-                              child: deployment.config != null
-                                  ? DeploymentConfigEditorContent(
-                                      key: _configEditorKey,
-                                      initialConfig: deployment.config!,
-                                      imageLabel: deployment.imageLabel,
-                                      servers:
-                                          serversListAsync.asData?.value ??
-                                          const [],
-                                      registryAccounts:
-                                          registryAccountsAsync.asData?.value ??
-                                          const [],
-                                      onDirtyChanged: (dirty) {
-                                        syncDirtySnackBar(
-                                          dirty: dirty,
-                                          onDiscard: () =>
-                                              _discardConfig(deployment),
-                                          onSave: () => _saveConfig(
-                                            deployment: deployment,
-                                          ),
-                                          saveEnabled: !_configSaveInFlight,
-                                        );
-                                      },
-                                    )
-                                  : DeploymentConfigContent(
-                                      deployment: deployment,
-                                      serverName: serverNameForId(
-                                        deployment.config?.serverId ??
-                                            deployment.info?.serverId ??
-                                            '',
-                                      ),
+                            return deployment.config != null
+                                ? DeploymentConfigEditorContent(
+                                    key: _configEditorKey,
+                                    initialConfig: deployment.config!,
+                                    imageLabel: deployment.imageLabel,
+                                    servers: serversListAsync.asData?.value ??
+                                        const [],
+                                    registryAccounts:
+                                        registryAccountsAsync.asData?.value ??
+                                            const [],
+                                    onDirtyChanged: (dirty) {
+                                      syncDirtySnackBar(
+                                        dirty: dirty,
+                                        onDiscard: () =>
+                                            _discardConfig(deployment),
+                                        onSave: () => _saveConfig(
+                                          deployment: deployment,
+                                        ),
+                                        saveEnabled: !_configSaveInFlight,
+                                      );
+                                    },
+                                  )
+                                : DeploymentConfigContent(
+                                    deployment: deployment,
+                                    serverName: serverNameForId(
+                                      deployment.config?.serverId ??
+                                          deployment.info?.serverId ??
+                                          '',
                                     ),
-                            );
+                                  );
                           },
                           loading: () => const DeploymentLoadingSurface(),
                           error: (error, _) => DeploymentMessageSurface(

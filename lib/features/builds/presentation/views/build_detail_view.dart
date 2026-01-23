@@ -187,20 +187,18 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                DetailSurface(
-                                  child: BuildConfigEditorContent(
-                                    key: _configEditorKey,
-                                    initialConfig: build.config,
-                                    builders: builders,
-                                    repos: repos,
-                                    onDirtyChanged: (dirty) {
-                                      syncDirtySnackBar(
-                                        dirty: dirty,
-                                        onDiscard: () => _discardConfig(build),
-                                        onSave: () => _saveConfig(build: build),
-                                      );
-                                    },
-                                  ),
+                                BuildConfigEditorContent(
+                                  key: _configEditorKey,
+                                  initialConfig: build.config,
+                                  builders: builders,
+                                  repos: repos,
+                                  onDirtyChanged: (dirty) {
+                                    syncDirtySnackBar(
+                                      dirty: dirty,
+                                      onDiscard: () => _discardConfig(build),
+                                      onSave: () => _saveConfig(build: build),
+                                    );
+                                  },
                                 ),
                                 if (build.info.latestHash != null ||
                                     build.info.builtHash != null) ...[
@@ -262,9 +260,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                               );
                             }
 
-                            return DetailSurface(
-                              child: BuildLogsContent(buildResource: build),
-                            );
+                            return BuildLogsContent(buildResource: build);
                           },
                           loading: () => const BuildLoadingSurface(),
                           error: (error, _) =>

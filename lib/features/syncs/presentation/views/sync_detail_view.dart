@@ -78,25 +78,21 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
                           children: [
                             _SyncHeroPanel(syncResource: sync),
                             const Gap(16),
-                            DetailSurface(
-                              child: SyncConfigEditorContent(
-                                key: _configEditorKey,
-                                initialConfig: sync.config,
-                                repos: repos,
-                                gitProviders: gitProviders,
-                                onDirtyChanged: (dirty) {
-                                  syncDirtySnackBar(
-                                    dirty: dirty,
-                                    onDiscard: () => _discardConfig(sync),
-                                    onSave: () => _saveConfig(sync: sync),
-                                  );
-                                },
-                              ),
+                            SyncConfigEditorContent(
+                              key: _configEditorKey,
+                              initialConfig: sync.config,
+                              repos: repos,
+                              gitProviders: gitProviders,
+                              onDirtyChanged: (dirty) {
+                                syncDirtySnackBar(
+                                  dirty: dirty,
+                                  onDiscard: () => _discardConfig(sync),
+                                  onSave: () => _saveConfig(sync: sync),
+                                );
+                              },
                             ),
                             const Gap(16),
-                            DetailSurface(
-                              child: _LastSyncContent(syncResource: sync),
-                            ),
+                            _LastSyncContent(syncResource: sync),
                             if (sync.info.pendingError != null &&
                                 sync.info.pendingError!.trim().isNotEmpty) ...[
                               const Gap(16),

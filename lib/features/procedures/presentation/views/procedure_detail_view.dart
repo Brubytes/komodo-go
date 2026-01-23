@@ -148,20 +148,18 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                               );
                             }
 
-                            return DetailSurface(
-                              child: ProcedureConfigEditorContent(
-                                key: _configEditorKey,
-                                initialConfig: procedure.config,
-                                onDirtyChanged: (dirty) {
-                                  syncDirtySnackBar(
-                                    dirty: dirty,
-                                    onDiscard: () => _discardConfig(procedure),
-                                    onSave: () =>
-                                        _saveConfig(procedure: procedure),
-                                    saveEnabled: !_configSaveInFlight,
-                                  );
-                                },
-                              ),
+                            return ProcedureConfigEditorContent(
+                              key: _configEditorKey,
+                              initialConfig: procedure.config,
+                              onDirtyChanged: (dirty) {
+                                syncDirtySnackBar(
+                                  dirty: dirty,
+                                  onDiscard: () => _discardConfig(procedure),
+                                  onSave: () =>
+                                      _saveConfig(procedure: procedure),
+                                  saveEnabled: !_configSaveInFlight,
+                                );
+                              },
                             );
                           },
                           loading: () => const _LoadingSurface(),
@@ -192,10 +190,8 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                               );
                             }
 
-                            return DetailSurface(
-                              child: _ProcedureStagesContent(
-                                config: procedure.config,
-                              ),
+                            return _ProcedureStagesContent(
+                              config: procedure.config,
                             );
                           },
                           loading: () => const _LoadingSurface(),

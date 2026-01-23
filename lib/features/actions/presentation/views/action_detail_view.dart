@@ -170,20 +170,18 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                                 _ensureFileContentsController(
                                   action.config.fileContents,
                                 );
-                            return DetailSurface(
-                              child: ActionConfigEditorContent(
-                                key: _configEditorKey,
-                                initialConfig: action.config,
-                                fileContentsController: fileController,
-                                onDirtyChanged: (dirty) {
-                                  syncDirtySnackBar(
-                                    dirty: dirty,
-                                    onDiscard: () => _discardConfig(action),
-                                    onSave: () => _saveConfig(action: action),
-                                    saveEnabled: !_configSaveInFlight,
-                                  );
-                                },
-                              ),
+                            return ActionConfigEditorContent(
+                              key: _configEditorKey,
+                              initialConfig: action.config,
+                              fileContentsController: fileController,
+                              onDirtyChanged: (dirty) {
+                                syncDirtySnackBar(
+                                  dirty: dirty,
+                                  onDiscard: () => _discardConfig(action),
+                                  onSave: () => _saveConfig(action: action),
+                                  saveEnabled: !_configSaveInFlight,
+                                );
+                              },
                             );
                           },
                           loading: () => const _LoadingSurface(),
@@ -218,11 +216,9 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                                 _ensureFileContentsController(
                                   action.config.fileContents,
                                 );
-                            return DetailSurface(
-                              child: DetailCodeEditor(
-                                controller: fileController,
-                                maxHeight: 420,
-                              ),
+                            return DetailCodeEditor(
+                              controller: fileController,
+                              maxHeight: 420,
                             );
                           },
                           loading: () => const _LoadingSurface(),

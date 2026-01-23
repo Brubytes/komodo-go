@@ -165,22 +165,20 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                       children: [
                         repoAsync.when(
                           data: (repo) => repo != null
-                              ? DetailSurface(
-                                  child: RepoConfigEditorContent(
-                                    key: _configEditorKey,
-                                    initialConfig: repo.config,
-                                    servers: servers,
-                                    builders: builders,
-                                    gitProviders: gitProviders,
-                                    onDirtyChanged: (dirty) {
-                                      syncDirtySnackBar(
-                                        dirty: dirty,
-                                        onDiscard: () => _discardConfig(repo),
-                                        onSave: () => _saveConfig(repo: repo),
-                                        saveEnabled: !_configSaveInFlight,
-                                      );
-                                    },
-                                  ),
+                              ? RepoConfigEditorContent(
+                                  key: _configEditorKey,
+                                  initialConfig: repo.config,
+                                  servers: servers,
+                                  builders: builders,
+                                  gitProviders: gitProviders,
+                                  onDirtyChanged: (dirty) {
+                                    syncDirtySnackBar(
+                                      dirty: dirty,
+                                      onDiscard: () => _discardConfig(repo),
+                                      onSave: () => _saveConfig(repo: repo),
+                                      saveEnabled: !_configSaveInFlight,
+                                    );
+                                  },
                                 )
                               : const _MessageSurface(
                                   message: 'Repo not found',
@@ -205,9 +203,7 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                       children: [
                         repoAsync.when(
                           data: (repo) => repo != null
-                              ? DetailSurface(
-                                  child: _RepoBuildContent(info: repo.info),
-                                )
+                              ? _RepoBuildContent(info: repo.info)
                               : const _MessageSurface(
                                   message: 'Repo not found',
                                 ),
