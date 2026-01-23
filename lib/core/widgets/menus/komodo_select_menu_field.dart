@@ -190,12 +190,9 @@ class KomodoSelectMenuField<T> extends StatelessWidget {
 
   KomodoSelectMenuItem<T>? _selectedItem() {
     final currentValue = value;
-    if (currentValue == null) return null;
-
     for (final item in items) {
       if (item.value == currentValue) return item;
     }
-
     return null;
   }
 
@@ -214,7 +211,7 @@ class KomodoSelectMenuField<T> extends StatelessWidget {
       ),
     );
 
-    final selectedValue = await _showAnchoredMenu(
+    final selectedItem = await _showAnchoredMenu(
       context: context,
       fieldRect: rect,
       overlaySize: overlay.size,
@@ -223,12 +220,12 @@ class KomodoSelectMenuField<T> extends StatelessWidget {
     );
 
     if (!context.mounted) return;
-    if (selectedValue == null) return;
+    if (selectedItem == null) return;
 
-    onChanged?.call(selectedValue);
+    onChanged?.call(selectedItem.value);
   }
 
-  Future<T?> _showAnchoredMenu({
+  Future<KomodoSelectMenuItem<T>?> _showAnchoredMenu({
     required BuildContext context,
     required Rect fieldRect,
     required Size overlaySize,
@@ -255,7 +252,7 @@ class KomodoSelectMenuField<T> extends StatelessWidget {
             overlaySize.height - estimatedHeight,
           );
 
-    return showGeneralDialog<T>(
+    return showGeneralDialog<KomodoSelectMenuItem<T>>(
       context: context,
       barrierDismissible: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
@@ -299,8 +296,7 @@ class KomodoSelectMenuField<T> extends StatelessWidget {
                     itemCount: items.length,
                     itemBuilder: (ctx, index) {
                       final item = items[index];
-                      final isSelected =
-                          currentValue != null && item.value == currentValue;
+                      final isSelected = item.value == currentValue;
                       final isDestructive = item.isDestructive;
 
                       // Selected row is a solid secondary fill (no border, no
@@ -325,8 +321,7 @@ class KomodoSelectMenuField<T> extends StatelessWidget {
                       return Material(
                         color: rowBackground,
                         child: InkWell(
-                          onTap: () =>
-                              Navigator.of(dialogContext).pop<T>(item.value),
+                          onTap: () => Navigator.of(dialogContext).pop(item),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: _rowHPadding,
