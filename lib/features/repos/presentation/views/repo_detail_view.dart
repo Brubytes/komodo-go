@@ -34,10 +34,25 @@ class RepoDetailView extends ConsumerStatefulWidget {
 }
 
 class _RepoDetailViewState extends ConsumerState<RepoDetailView>
-    with DetailDirtySnackBarMixin<RepoDetailView> {
+    with
+        SingleTickerProviderStateMixin,
+        DetailDirtySnackBarMixin<RepoDetailView> {
+  late final TabController _tabController;
   final _configEditorKey = GlobalKey<RepoConfigEditorContentState>();
 
   var _configSaveInFlight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -101,54 +116,108 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
       ),
       body: Stack(
         children: [
-          RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(repoDetailProvider(widget.repoId));
-            },
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              children: [
-                repoAsync.when(
-                  data: (repo) => repo != null
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _RepoHeroPanel(
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: repoAsync.when(
+                      data: (repo) => repo != null
+                          ? _RepoHeroPanel(
                               repo: repo,
                               serverName: serverNameForId(repo.config.serverId),
-                            ),
-                            const Gap(16),
-                            DetailSection(
-                              title: 'Config',
-                              icon: AppIcons.settings,
-                              child: RepoConfigEditorContent(
-                                key: _configEditorKey,
-                                initialConfig: repo.config,
-                                servers: servers,
-                                builders: builders,
-                                gitProviders: gitProviders,
-                                onDirtyChanged: (dirty) {
-                                  syncDirtySnackBar(
-                                    dirty: dirty,
-                                    onDiscard: () => _discardConfig(repo),
-                                    onSave: () => _saveConfig(repo: repo),
-                                    saveEnabled: !_configSaveInFlight,
-                                  );
-                                },
-                              ),
-                            ),
-                            const Gap(16),
-                            DetailSection(
-                              title: 'Build Status',
-                              icon: AppIcons.builds,
-                              child: _RepoBuildContent(info: repo.info),
-                            ),
-                          ],
-                        )
-                      : const _MessageSurface(message: 'Repo not found'),
-                  loading: () => const _LoadingSurface(),
-                  error: (error, _) =>
-                      _MessageSurface(message: 'Error: $error'),
+                            )
+                          : const _MessageSurface(message: 'Repo not found'),
+                      loading: () => const _LoadingSurface(),
+                      error: (error, _) =>
+                          _MessageSurface(message: 'Error: $error'),
+                    ),
+                  ),
+                ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _PinnedTabBarHeaderDelegate(
+                    backgroundColor: scheme.surface,
+                    tabBar: TabBar(
+                      controller: _tabController,
+                      tabs: const [
+                        Tab(text: 'Config'),
+                        Tab(text: 'Build Status'),
+                      ],
+                    ),
+                  ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(repoDetailProvider(widget.repoId));
+                    },
+                    child: ListView(
+                      key: PageStorageKey('repo_${widget.repoId}_config'),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        repoAsync.when(
+                          data: (repo) => repo != null
+                              ? DetailSurface(
+                                  child: RepoConfigEditorContent(
+                                    key: _configEditorKey,
+                                    initialConfig: repo.config,
+                                    servers: servers,
+                                    builders: builders,
+                                    gitProviders: gitProviders,
+                                    onDirtyChanged: (dirty) {
+                                      syncDirtySnackBar(
+                                        dirty: dirty,
+                                        onDiscard: () => _discardConfig(repo),
+                                        onSave: () => _saveConfig(repo: repo),
+                                        saveEnabled: !_configSaveInFlight,
+                                      );
+                                    },
+                                  ),
+                                )
+                              : const _MessageSurface(
+                                  message: 'Repo not found',
+                                ),
+                          loading: () => const _LoadingSurface(),
+                          error: (error, _) =>
+                              _MessageSurface(message: 'Error: $error'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(repoDetailProvider(widget.repoId));
+                    },
+                    child: ListView(
+                      key: PageStorageKey('repo_${widget.repoId}_build_status'),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        repoAsync.when(
+                          data: (repo) => repo != null
+                              ? DetailSurface(
+                                  child: _RepoBuildContent(info: repo.info),
+                                )
+                              : const _MessageSurface(
+                                  message: 'Repo not found',
+                                ),
+                          loading: () => const _LoadingSurface(),
+                          error: (error, _) =>
+                              _MessageSurface(message: 'Error: $error'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -452,6 +521,68 @@ class _RepoBuildContent extends StatelessWidget {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
         '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
+}
+
+class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedTabBarHeaderDelegate({
+    required this.tabBar,
+    required this.backgroundColor,
+  });
+
+  final TabBar tabBar;
+  final Color backgroundColor;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height + 1;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height + 1;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
+          ),
+        ),
+      ),
+      child: Align(alignment: Alignment.centerLeft, child: tabBar),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_PinnedTabBarHeaderDelegate oldDelegate) =>
+      tabBar != oldDelegate.tabBar ||
+      backgroundColor != oldDelegate.backgroundColor;
+}
+
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin<_KeepAlive> {
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 class _LoadingSurface extends StatelessWidget {
