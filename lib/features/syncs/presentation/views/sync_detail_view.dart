@@ -78,9 +78,7 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
                           children: [
                             _SyncHeroPanel(syncResource: sync),
                             const Gap(16),
-                            DetailSection(
-                              title: 'Configuration',
-                              icon: AppIcons.settings,
+                            DetailSurface(
                               child: SyncConfigEditorContent(
                                 key: _configEditorKey,
                                 initialConfig: sync.config,
@@ -96,9 +94,7 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
                               ),
                             ),
                             const Gap(16),
-                            DetailSection(
-                              title: 'Last Sync',
-                              icon: AppIcons.clock,
+                            DetailSurface(
                               child: _LastSyncContent(syncResource: sync),
                             ),
                             if (sync.info.pendingError != null &&
@@ -323,14 +319,14 @@ class _LastSyncContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DetailSubCard(
-          title: 'Info',
+          title: 'Last Sync',
           icon: AppIcons.clock,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DetailKeyValueRow(
                 label: 'Timestamp',
-                value: info.lastSyncTs.toString(),
+                value: _formatLocalTimestamp(info.lastSyncTs),
               ),
               if (info.lastSyncHash != null)
                 DetailKeyValueRow(label: 'Hash', value: info.lastSyncHash!),
@@ -345,6 +341,19 @@ class _LastSyncContent extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _formatLocalTimestamp(int timestamp) {
+    if (timestamp <= 0) return '—';
+    final ms = timestamp > 1000000000000 ? timestamp : timestamp * 1000;
+    final date = DateTime.fromMillisecondsSinceEpoch(ms).toLocal();
+    final y = date.year.toString().padLeft(4, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    final hh = date.hour.toString().padLeft(2, '0');
+    final mm = date.minute.toString().padLeft(2, '0');
+    final ss = date.second.toString().padLeft(2, '0');
+    return '$y-$m-$d $hh:$mm:$ss';
   }
 }
 
