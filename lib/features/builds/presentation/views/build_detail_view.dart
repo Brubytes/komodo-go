@@ -30,9 +30,24 @@ class BuildDetailView extends ConsumerStatefulWidget {
 }
 
 class _BuildDetailViewState extends ConsumerState<BuildDetailView>
-  with DetailDirtySnackBarMixin<BuildDetailView> {
+    with
+        SingleTickerProviderStateMixin,
+        DetailDirtySnackBarMixin<BuildDetailView> {
+  late final TabController _tabController;
   final _configEditorKey = GlobalKey<BuildConfigEditorContentState>();
   var _configSaveInFlight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,110 +92,187 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
       ),
       body: Stack(
         children: [
-          RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(buildDetailProvider(buildId));
-            },
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              children: [
-                buildAsync.when(
-                  data: (build) {
-                    if (build == null) {
-                      return const BuildMessageSurface(
-                        message: 'Build not found',
-                      );
-                    }
-
-                    BuildListItem? listItem;
-                    final list = buildsListAsync.asData?.value;
-                    if (list != null) {
-                      for (final item in list) {
-                        if (item.id == build.id) {
-                          listItem = item;
-                          break;
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: buildAsync.when(
+                      data: (build) {
+                        if (build == null) {
+                          return const BuildMessageSurface(
+                            message: 'Build not found',
+                          );
                         }
-                      }
-                    }
 
-                    final builderId = build.config.builderId;
-                    final builderNameAsync = builderId.isEmpty
-                        ? const AsyncValue<String?>.data(null)
-                        : ref.watch(builderNameProvider(builderId));
+                        BuildListItem? listItem;
+                        final list = buildsListAsync.asData?.value;
+                        if (list != null) {
+                          for (final item in list) {
+                            if (item.id == build.id) {
+                              listItem = item;
+                              break;
+                            }
+                          }
+                        }
 
-                    final builderLabel = builderNameAsync.when(
-                      data: (name) => (name != null && name.trim().isNotEmpty)
-                          ? name.trim()
-                          : (builderId.isNotEmpty ? builderId : null),
-                      loading: () => 'Loading…',
-                      error: (_, __) => builderId.isNotEmpty ? builderId : null,
-                    );
+                        final builderId = build.config.builderId;
+                        final builderNameAsync = builderId.isEmpty
+                            ? const AsyncValue<String?>.data(null)
+                            : ref.watch(builderNameProvider(builderId));
 
-                    final builders = buildersAsync.asData?.value ?? const [];
-                    final repos = reposAsync.asData?.value ?? const [];
+                        final builderLabel = builderNameAsync.when(
+                          data: (name) =>
+                              (name != null && name.trim().isNotEmpty)
+                              ? name.trim()
+                              : (builderId.isNotEmpty ? builderId : null),
+                          loading: () => 'Loading…',
+                          error: (_, __) =>
+                              builderId.isNotEmpty ? builderId : null,
+                        );
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        BuildHeroPanel(
+                        return BuildHeroPanel(
                           buildResource: build,
                           listItem: listItem,
                           builderLabel: builderLabel,
-                        ),
-                        const Gap(16),
-                        DetailSection(
-                          title: 'Build Configuration',
-                          icon: AppIcons.settings,
-                          child: BuildConfigEditorContent(
-                            key: _configEditorKey,
-                            initialConfig: build.config,
-                            builders: builders,
-                            repos: repos,
-                            onDirtyChanged: (dirty) {
-                              syncDirtySnackBar(
-                                dirty: dirty,
-                                onDiscard: () => _discardConfig(build),
-                                onSave: () => _saveConfig(build: build),
-                              );
-                            },
-                          ),
-                        ),
-                        const Gap(16),
-                        DetailSection(
-                          title: 'Source',
-                          icon: AppIcons.repos,
-                          child: BuildSourceContent(buildResource: build),
-                        ),
-                        if (build.info.latestHash != null ||
-                            build.info.builtHash != null) ...[
-                          const Gap(16),
-                          DetailSection(
-                            title: 'Commit Hashes',
-                            icon: AppIcons.tag,
-                            child: BuildHashesContent(buildResource: build),
-                          ),
-                        ],
-                        if ((build.info.remoteError != null &&
-                                build.info.remoteError!.trim().isNotEmpty) ||
-                            (build.info.remoteContents != null &&
-                                build.info.remoteContents!.trim().isNotEmpty) ||
-                            (build.info.builtContents != null &&
-                                build.info.builtContents!
-                                    .trim()
-                                    .isNotEmpty)) ...[
-                          const Gap(16),
-                          DetailSection(
-                            title: 'Logs',
-                            icon: AppIcons.package,
-                            child: BuildLogsContent(buildResource: build),
-                          ),
-                        ],
+                        );
+                      },
+                      loading: () => const BuildLoadingSurface(),
+                      error: (error, _) =>
+                          BuildErrorSurface(error: error.toString()),
+                    ),
+                  ),
+                ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _PinnedTabBarHeaderDelegate(
+                    backgroundColor: scheme.surface,
+                    tabBar: TabBar(
+                      controller: _tabController,
+                      tabs: const [
+                        Tab(text: 'Config'),
+                        Tab(text: 'Logs'),
                       ],
-                    );
-                  },
-                  loading: () => const BuildLoadingSurface(),
-                  error: (error, _) =>
-                      BuildErrorSurface(error: error.toString()),
+                    ),
+                  ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(buildDetailProvider(buildId));
+                    },
+                    child: ListView(
+                      key: PageStorageKey('build_${widget.buildId}_config'),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        buildAsync.when(
+                          data: (build) {
+                            if (build == null) {
+                              return const BuildMessageSurface(
+                                message: 'Build not found',
+                              );
+                            }
+
+                            final builders =
+                                buildersAsync.asData?.value ?? const [];
+                            final repos = reposAsync.asData?.value ?? const [];
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                DetailSurface(
+                                  child: BuildConfigEditorContent(
+                                    key: _configEditorKey,
+                                    initialConfig: build.config,
+                                    builders: builders,
+                                    repos: repos,
+                                    onDirtyChanged: (dirty) {
+                                      syncDirtySnackBar(
+                                        dirty: dirty,
+                                        onDiscard: () => _discardConfig(build),
+                                        onSave: () => _saveConfig(build: build),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                if (build.info.latestHash != null ||
+                                    build.info.builtHash != null) ...[
+                                  const Gap(16),
+                                  DetailSection(
+                                    title: 'Commit Hashes',
+                                    icon: AppIcons.tag,
+                                    child: BuildHashesContent(
+                                      buildResource: build,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
+                          loading: () => const BuildLoadingSurface(),
+                          error: (error, _) =>
+                              BuildErrorSurface(error: error.toString()),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(buildDetailProvider(buildId));
+                    },
+                    child: ListView(
+                      key: PageStorageKey('build_${widget.buildId}_logs'),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        buildAsync.when(
+                          data: (build) {
+                            if (build == null) {
+                              return const BuildMessageSurface(
+                                message: 'Build not found',
+                              );
+                            }
+
+                            final hasAnyLogs =
+                                (build.info.remoteError != null &&
+                                    build.info.remoteError!
+                                        .trim()
+                                        .isNotEmpty) ||
+                                (build.info.remoteContents != null &&
+                                    build.info.remoteContents!
+                                        .trim()
+                                        .isNotEmpty) ||
+                                (build.info.builtContents != null &&
+                                    build.info.builtContents!
+                                        .trim()
+                                        .isNotEmpty);
+
+                            if (!hasAnyLogs) {
+                              return const BuildMessageSurface(
+                                message: 'No log output',
+                              );
+                            }
+
+                            return DetailSurface(
+                              child: BuildLogsContent(buildResource: build),
+                            );
+                          },
+                          loading: () => const BuildLoadingSurface(),
+                          error: (error, _) =>
+                              BuildErrorSurface(error: error.toString()),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -293,6 +385,68 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
 
     AppSnackBar.show(context, 'Build updated', tone: AppSnackBarTone.success);
   }
+}
+
+class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedTabBarHeaderDelegate({
+    required this.tabBar,
+    required this.backgroundColor,
+  });
+
+  final TabBar tabBar;
+  final Color backgroundColor;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height + 1;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height + 1;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
+          ),
+        ),
+      ),
+      child: Align(alignment: Alignment.centerLeft, child: tabBar),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_PinnedTabBarHeaderDelegate oldDelegate) =>
+      tabBar != oldDelegate.tabBar ||
+      backgroundColor != oldDelegate.backgroundColor;
+}
+
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin<_KeepAlive> {
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 // Hero Panel
