@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'package:komodo_go/core/extensions/icon_data_x.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 abstract class AppIcons {
@@ -39,7 +38,7 @@ abstract class AppIcons {
   static const IconData factory = LucideIcons.factory;
 
   // Directional
-  static IconData chevron = LucideIcons.chevronRight.dir();
+  static const IconData chevron = LucideIcons.chevronRight;
 
   // Status / states
   static const IconData loading = LucideIcons.loader;
