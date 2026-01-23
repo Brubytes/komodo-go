@@ -28,9 +28,46 @@ class ActionDetailView extends ConsumerStatefulWidget {
 }
 
 class _ActionDetailViewState extends ConsumerState<ActionDetailView>
-    with DetailDirtySnackBarMixin<ActionDetailView> {
+    with
+        SingleTickerProviderStateMixin,
+        DetailDirtySnackBarMixin<ActionDetailView> {
+  late final TabController _tabController;
+  CodeEditorController? _fileContentsController;
   final _configEditorKey = GlobalKey<ActionConfigEditorContentState>();
   var _configSaveInFlight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _fileContentsController?.dispose();
+    _fileContentsController = null;
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  CodeEditorController _ensureFileContentsController(String text) {
+    if (_fileContentsController != null) {
+      return _fileContentsController!;
+    }
+
+    _fileContentsController = CodeEditorController(
+      text: text,
+      lightHighlighter: Highlighter(
+        language: 'typescript',
+        theme: AppSyntaxHighlight.lightTheme,
+      ),
+      darkHighlighter: Highlighter(
+        language: 'typescript',
+        theme: AppSyntaxHighlight.darkTheme,
+      ),
+    );
+    return _fileContentsController!;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,45 +105,133 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
       ),
       body: Stack(
         children: [
-          RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(actionDetailProvider(actionId));
-            },
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              children: [
-                actionAsync.when(
-                  data: (action) {
-                    if (action == null) {
-                      return const _MessageSurface(message: 'Action not found');
-                    }
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: actionAsync.when(
+                      data: (action) {
+                        if (action == null) {
+                          return const _MessageSurface(
+                            message: 'Action not found',
+                          );
+                        }
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                        return _ActionHeroPanel(
+                          action: action,
+                          listItem: listItem,
+                        );
+                      },
+                      loading: () => const _LoadingSurface(),
+                      error: (error, _) =>
+                          _ErrorSurface(error: error.toString()),
+                    ),
+                  ),
+                ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _PinnedTabBarHeaderDelegate(
+                    backgroundColor: scheme.surface,
+                    tabBar: TabBar(
+                      controller: _tabController,
+                      tabs: const [
+                        Tab(text: 'Config'),
+                        Tab(text: 'File content'),
+                      ],
+                    ),
+                  ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(actionDetailProvider(actionId));
+                    },
+                    child: ListView(
+                      key: PageStorageKey('action_${widget.actionId}_config'),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      physics: const AlwaysScrollableScrollPhysics(),
                       children: [
-                        _ActionHeroPanel(action: action, listItem: listItem),
-                        const Gap(16),
-                        DetailSection(
-                          title: 'Configuration',
-                          icon: AppIcons.settings,
-                          child: ActionConfigEditorContent(
-                            key: _configEditorKey,
-                            initialConfig: action.config,
-                            onDirtyChanged: (dirty) {
-                              syncDirtySnackBar(
-                                dirty: dirty,
-                                onDiscard: () => _discardConfig(action),
-                                onSave: () => _saveConfig(action: action),
-                                saveEnabled: !_configSaveInFlight,
+                        actionAsync.when(
+                          data: (action) {
+                            if (action == null) {
+                              return const _MessageSurface(
+                                message: 'Action not found',
                               );
-                            },
-                          ),
+                            }
+
+                            final fileController =
+                                _ensureFileContentsController(
+                                  action.config.fileContents,
+                                );
+                            return DetailSurface(
+                              child: ActionConfigEditorContent(
+                                key: _configEditorKey,
+                                initialConfig: action.config,
+                                fileContentsController: fileController,
+                                onDirtyChanged: (dirty) {
+                                  syncDirtySnackBar(
+                                    dirty: dirty,
+                                    onDiscard: () => _discardConfig(action),
+                                    onSave: () => _saveConfig(action: action),
+                                    saveEnabled: !_configSaveInFlight,
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                          loading: () => const _LoadingSurface(),
+                          error: (error, _) =>
+                              _ErrorSurface(error: error.toString()),
                         ),
                       ],
-                    );
-                  },
-                  loading: () => const _LoadingSurface(),
-                  error: (error, _) => _ErrorSurface(error: error.toString()),
+                    ),
+                  ),
+                ),
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(actionDetailProvider(actionId));
+                    },
+                    child: ListView(
+                      key: PageStorageKey(
+                        'action_${widget.actionId}_file_content',
+                      ),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        actionAsync.when(
+                          data: (action) {
+                            if (action == null) {
+                              return const _MessageSurface(
+                                message: 'Action not found',
+                              );
+                            }
+
+                            final fileController =
+                                _ensureFileContentsController(
+                                  action.config.fileContents,
+                                );
+                            return DetailSurface(
+                              child: DetailCodeEditor(
+                                controller: fileController,
+                                maxHeight: 420,
+                              ),
+                            );
+                          },
+                          loading: () => const _LoadingSurface(),
+                          error: (error, _) =>
+                              _ErrorSurface(error: error.toString()),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -219,11 +344,13 @@ class ActionConfigEditorContent extends StatefulWidget {
   const ActionConfigEditorContent({
     required this.initialConfig,
     this.onDirtyChanged,
+    this.fileContentsController,
     super.key,
   });
 
   final ActionConfig initialConfig;
   final ValueChanged<bool>? onDirtyChanged;
+  final CodeEditorController? fileContentsController;
 
   @override
   State<ActionConfigEditorContent> createState() =>
@@ -242,6 +369,8 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
 
   late final TextEditingController _arguments;
   late CodeEditorController _fileContentsController;
+  CodeEditorController get fileContentsController => _fileContentsController;
+  late final bool _ownsFileContentsController;
 
   var _runAtStartup = false;
   var _scheduleEnabled = false;
@@ -261,10 +390,17 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
     _scheduleTimezone = TextEditingController(text: _initial.scheduleTimezone);
     _webhookSecret = TextEditingController(text: _initial.webhookSecret);
     _arguments = TextEditingController(text: _initial.arguments);
-    _fileContentsController = _createCodeController(
-      language: 'typescript',
-      text: _initial.fileContents,
-    );
+    final externalController = widget.fileContentsController;
+    if (externalController != null) {
+      _fileContentsController = externalController;
+      _ownsFileContentsController = false;
+    } else {
+      _fileContentsController = _createCodeController(
+        language: 'typescript',
+        text: _initial.fileContents,
+      );
+      _ownsFileContentsController = true;
+    }
 
     _runAtStartup = _initial.runAtStartup;
     _scheduleEnabled = _initial.scheduleEnabled;
@@ -314,7 +450,9 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
     _scheduleTimezone.dispose();
     _webhookSecret.dispose();
     _arguments.dispose();
-    _fileContentsController.dispose();
+    if (_ownsFileContentsController) {
+      _fileContentsController.dispose();
+    }
     super.dispose();
   }
 
@@ -346,11 +484,15 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
       _arguments.text = config.arguments;
 
       _fileContentsController.removeListener(_notifyDirtyIfChanged);
-      _fileContentsController.dispose();
-      _fileContentsController = _createCodeController(
-        language: 'typescript',
-        text: config.fileContents,
-      );
+      if (_ownsFileContentsController) {
+        _fileContentsController.dispose();
+        _fileContentsController = _createCodeController(
+          language: 'typescript',
+          text: config.fileContents,
+        );
+      } else {
+        _fileContentsController.text = config.fileContents;
+      }
       _fileContentsController.addListener(_notifyDirtyIfChanged);
 
       _runAtStartup = config.runAtStartup;
@@ -623,22 +765,71 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
             ],
           ),
         ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'File contents',
-          icon: AppIcons.package,
-          child: Column(
-            children: [
-              DetailCodeEditor(
-                controller: _fileContentsController,
-                maxHeight: 420,
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
+}
+
+class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedTabBarHeaderDelegate({
+    required this.tabBar,
+    required this.backgroundColor,
+  });
+
+  final TabBar tabBar;
+  final Color backgroundColor;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height + 1;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height + 1;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
+          ),
+        ),
+      ),
+      child: Align(alignment: Alignment.centerLeft, child: tabBar),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_PinnedTabBarHeaderDelegate oldDelegate) =>
+      tabBar != oldDelegate.tabBar ||
+      backgroundColor != oldDelegate.backgroundColor;
+}
+
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin<_KeepAlive> {
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 class _ActionHeroPanel extends StatelessWidget {
