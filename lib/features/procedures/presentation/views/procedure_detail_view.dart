@@ -30,9 +30,24 @@ class ProcedureDetailView extends ConsumerStatefulWidget {
 }
 
 class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
-    with DetailDirtySnackBarMixin<ProcedureDetailView> {
+    with
+        SingleTickerProviderStateMixin,
+        DetailDirtySnackBarMixin<ProcedureDetailView> {
+  late final TabController _tabController;
   final _configEditorKey = GlobalKey<ProcedureConfigEditorContentState>();
   var _configSaveInFlight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,58 +85,126 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
       ),
       body: Stack(
         children: [
-          RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(procedureDetailProvider(procedureId));
-            },
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              children: [
-                procedureAsync.when(
-                  data: (procedure) {
-                    if (procedure == null) {
-                      return const _MessageSurface(
-                        message: 'Procedure not found',
-                      );
-                    }
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: procedureAsync.when(
+                      data: (procedure) {
+                        if (procedure == null) {
+                          return const _MessageSurface(
+                            message: 'Procedure not found',
+                          );
+                        }
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _ProcedureHeroPanel(
+                        return _ProcedureHeroPanel(
                           procedure: procedure,
                           listItem: listItem,
-                        ),
-                        const Gap(16),
-                        DetailSection(
-                          title: 'Configuration',
-                          icon: AppIcons.settings,
-                          child: ProcedureConfigEditorContent(
-                            key: _configEditorKey,
-                            initialConfig: procedure.config,
-                            onDirtyChanged: (dirty) {
-                              syncDirtySnackBar(
-                                dirty: dirty,
-                                onDiscard: () => _discardConfig(procedure),
-                                onSave: () => _saveConfig(procedure: procedure),
-                                saveEnabled: !_configSaveInFlight,
+                        );
+                      },
+                      loading: () => const _LoadingSurface(),
+                      error: (error, _) =>
+                          _ErrorSurface(error: error.toString()),
+                    ),
+                  ),
+                ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _PinnedTabBarHeaderDelegate(
+                    backgroundColor: scheme.surface,
+                    tabBar: TabBar(
+                      controller: _tabController,
+                      tabs: const [
+                        Tab(text: 'Config'),
+                        Tab(text: 'Stages'),
+                      ],
+                    ),
+                  ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(procedureDetailProvider(procedureId));
+                    },
+                    child: ListView(
+                      key: PageStorageKey(
+                        'procedure_${widget.procedureId}_config',
+                      ),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        procedureAsync.when(
+                          data: (procedure) {
+                            if (procedure == null) {
+                              return const _MessageSurface(
+                                message: 'Procedure not found',
                               );
-                            },
-                          ),
-                        ),
-                        const Gap(16),
-                        DetailSection(
-                          title: 'Stages',
-                          icon: AppIcons.stacks,
-                          child: _ProcedureStagesContent(
-                            config: procedure.config,
-                          ),
+                            }
+
+                            return DetailSurface(
+                              child: ProcedureConfigEditorContent(
+                                key: _configEditorKey,
+                                initialConfig: procedure.config,
+                                onDirtyChanged: (dirty) {
+                                  syncDirtySnackBar(
+                                    dirty: dirty,
+                                    onDiscard: () => _discardConfig(procedure),
+                                    onSave: () =>
+                                        _saveConfig(procedure: procedure),
+                                    saveEnabled: !_configSaveInFlight,
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                          loading: () => const _LoadingSurface(),
+                          error: (error, _) =>
+                              _ErrorSurface(error: error.toString()),
                         ),
                       ],
-                    );
-                  },
-                  loading: () => const _LoadingSurface(),
-                  error: (error, _) => _ErrorSurface(error: error.toString()),
+                    ),
+                  ),
+                ),
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(procedureDetailProvider(procedureId));
+                    },
+                    child: ListView(
+                      key: PageStorageKey(
+                        'procedure_${widget.procedureId}_stages',
+                      ),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        procedureAsync.when(
+                          data: (procedure) {
+                            if (procedure == null) {
+                              return const _MessageSurface(
+                                message: 'Procedure not found',
+                              );
+                            }
+
+                            return DetailSurface(
+                              child: _ProcedureStagesContent(
+                                config: procedure.config,
+                              ),
+                            );
+                          },
+                          loading: () => const _LoadingSurface(),
+                          error: (error, _) =>
+                              _ErrorSurface(error: error.toString()),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -231,6 +314,68 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
       saveEnabled: !_configSaveInFlight,
     );
   }
+}
+
+class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedTabBarHeaderDelegate({
+    required this.tabBar,
+    required this.backgroundColor,
+  });
+
+  final TabBar tabBar;
+  final Color backgroundColor;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height + 1;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height + 1;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
+          ),
+        ),
+      ),
+      child: Align(alignment: Alignment.centerLeft, child: tabBar),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_PinnedTabBarHeaderDelegate oldDelegate) =>
+      tabBar != oldDelegate.tabBar ||
+      backgroundColor != oldDelegate.backgroundColor;
+}
+
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin<_KeepAlive> {
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 class ProcedureConfigEditorContent extends StatefulWidget {
