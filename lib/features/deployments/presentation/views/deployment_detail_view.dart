@@ -1,12 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/polling_route_aware_state.dart';
+import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
+import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
+import 'package:komodo_go/features/builds/presentation/views/build_detail/build_detail_sections.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
 import 'package:komodo_go/features/deployments/presentation/views/deployment_detail/deployment_detail_sections.dart';
@@ -30,19 +36,93 @@ class DeploymentDetailView extends ConsumerStatefulWidget {
       _DeploymentDetailViewState();
 }
 
-class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView>
-  with DetailDirtySnackBarMixin<DeploymentDetailView> {
+class _DeploymentDetailViewState
+    extends PollingRouteAwareState<DeploymentDetailView>
+    with
+        SingleTickerProviderStateMixin,
+        DetailDirtySnackBarMixin<DeploymentDetailView> {
+  static const int _tabLogs = 1;
+
+  late final TabController _tabController;
+  Timer? _logRefreshTimer;
+  var _autoRefreshLogs = true;
+
   final _configEditorKey = GlobalKey<DeploymentConfigEditorContentState>();
   var _configSaveInFlight = false;
 
   @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onInnerTabChanged);
+  }
+
+  @override
+  void dispose() {
+    _logRefreshTimer?.cancel();
+    _logRefreshTimer = null;
+    _tabController
+      ..removeListener(_onInnerTabChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  void onVisibilityChanged() {
+    if (!mounted) return;
+    _syncLogPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
+    super.onVisibilityChanged();
+  }
+
+  void _onInnerTabChanged() {
+    if (!mounted) return;
+    _syncLogPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
+  }
+
+  void _startLogPolling() {
+    _logRefreshTimer?.cancel();
+    _logRefreshTimer = null;
+    if (!_autoRefreshLogs) return;
+
+    _logRefreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
+      final current = ref
+          .read(deploymentDetailProvider(widget.deploymentId))
+          .asData
+          ?.value;
+      final buildId = current?.info?.buildId?.trim() ?? '';
+      if (buildId.isEmpty) return;
+      ref.invalidate(buildDetailProvider(buildId));
+    });
+  }
+
+  void _stopLogPolling() {
+    _logRefreshTimer?.cancel();
+    _logRefreshTimer = null;
+  }
+
+  void _syncLogPolling({required bool isShellTabActive}) {
+    final isLogsTabActive = _tabController.index == _tabLogs;
+    final isActiveTab = isShellTabActive && isLogsTabActive;
+    if (shouldPoll(isActiveTab: isActiveTab, enabled: _autoRefreshLogs)) {
+      _startLogPolling();
+    } else {
+      _stopLogPolling();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isActiveTab = ref.watch(mainShellIndexProvider) == 1;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _syncLogPolling(isShellTabActive: isActiveTab);
+    });
+
     final deploymentId = widget.deploymentId;
     final deploymentAsync = ref.watch(deploymentDetailProvider(deploymentId));
     final actionsState = ref.watch(deploymentActionsProvider);
     final serversListAsync = ref.watch(serversProvider);
     final registryAccountsAsync = ref.watch(dockerRegistryAccountsProvider);
-
     final scheme = Theme.of(context).colorScheme;
 
     String? serverNameForId(String serverId) {
@@ -77,16 +157,21 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView>
       ),
       body: Stack(
         children: [
-          RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(deploymentDetailProvider(deploymentId));
-            },
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              children: [
-                deploymentAsync.when(
-                  data: (deployment) => deployment != null
-                      ? Column(
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: deploymentAsync.when(
+                      data: (deployment) {
+                        if (deployment == null) {
+                          return const DeploymentMessageSurface(
+                            message: 'Deployment not found',
+                          );
+                        }
+
+                        return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             DeploymentHeroPanel(
@@ -97,10 +182,55 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView>
                                     '',
                               ),
                             ),
-                            const Gap(16),
-                            DetailSection(
-                              title: 'Config',
-                              icon: AppIcons.settings,
+                            const Gap(12),
+                          ],
+                        );
+                      },
+                      loading: () => const DeploymentLoadingSurface(),
+                      error: (error, _) =>
+                          DeploymentMessageSurface(message: 'Error: $error'),
+                    ),
+                  ),
+                ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _PinnedTabBarHeaderDelegate(
+                    backgroundColor: scheme.surface,
+                    tabBar: TabBar(
+                      controller: _tabController,
+                      tabs: const [
+                        Tab(text: 'Config'),
+                        Tab(text: 'Logs'),
+                      ],
+                    ),
+                  ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(deploymentDetailProvider(deploymentId));
+                    },
+                    child: ListView(
+                      key: PageStorageKey(
+                        'deployment_${widget.deploymentId}_config',
+                      ),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      children: [
+                        deploymentAsync.when(
+                          data: (deployment) {
+                            if (deployment == null) {
+                              return const DeploymentMessageSurface(
+                                message: 'Deployment not found',
+                              );
+                            }
+
+                            return DetailSurface(
                               child: deployment.config != null
                                   ? DeploymentConfigEditorContent(
                                       key: _configEditorKey,
@@ -117,8 +247,9 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView>
                                           dirty: dirty,
                                           onDiscard: () =>
                                               _discardConfig(deployment),
-                                          onSave: () =>
-                                              _saveConfig(deployment: deployment),
+                                          onSave: () => _saveConfig(
+                                            deployment: deployment,
+                                          ),
                                           saveEnabled: !_configSaveInFlight,
                                         );
                                       },
@@ -131,15 +262,139 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView>
                                             '',
                                       ),
                                     ),
+                            );
+                          },
+                          loading: () => const DeploymentLoadingSurface(),
+                          error: (error, _) => DeploymentMessageSurface(
+                            message: 'Error: $error',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      final deployment = deploymentAsync.asData?.value;
+                      final buildId = deployment?.info?.buildId?.trim() ?? '';
+                      ref.invalidate(deploymentDetailProvider(deploymentId));
+                      if (buildId.isNotEmpty) {
+                        ref.invalidate(buildDetailProvider(buildId));
+                      }
+                    },
+                    child: ListView(
+                      key: PageStorageKey(
+                        'deployment_${widget.deploymentId}_logs',
+                      ),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      children: [
+                        Text(
+                          'Auto refresh logs',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const Gap(4),
+                        Text(
+                          'When enabled, logs refresh every 2.5 seconds while this tab is visible. Pull down to refresh once.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                        const Gap(10),
+                        Row(
+                          children: [
+                            Tooltip(
+                              message:
+                                  'When enabled, logs refresh every 2.5 seconds while this tab is visible.',
+                              child: Icon(
+                                AppIcons.refresh,
+                                size: 16,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const Gap(8),
+                            Expanded(
+                              child: Text(
+                                _autoRefreshLogs ? 'Enabled' : 'Disabled',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: scheme.onSurfaceVariant),
+                              ),
+                            ),
+                            Switch(
+                              value: _autoRefreshLogs,
+                              onChanged: (value) {
+                                setState(() => _autoRefreshLogs = value);
+                                _syncLogPolling(
+                                  isShellTabActive:
+                                      ref.read(mainShellIndexProvider) == 1,
+                                );
+                              },
                             ),
                           ],
-                        )
-                      : const DeploymentMessageSurface(
-                          message: 'Deployment not found',
                         ),
-                  loading: () => const DeploymentLoadingSurface(),
-                  error: (error, _) =>
-                      DeploymentMessageSurface(message: 'Error: $error'),
+                        const Gap(12),
+                        deploymentAsync.when(
+                          data: (deployment) {
+                            final buildId =
+                                deployment?.info?.buildId?.trim() ?? '';
+                            if (buildId.isEmpty) {
+                              return const DeploymentMessageSurface(
+                                message:
+                                    'No build logs available for this deployment',
+                              );
+                            }
+
+                            final buildAsync = ref.watch(
+                              buildDetailProvider(buildId),
+                            );
+                            return buildAsync.when(
+                              data: (build) {
+                                if (build == null) {
+                                  return const DeploymentMessageSurface(
+                                    message: 'Build not found',
+                                  );
+                                }
+
+                                final hasAnyLogs =
+                                    (build.info.remoteError
+                                            ?.trim()
+                                            .isNotEmpty ??
+                                        false) ||
+                                    (build.info.remoteContents
+                                            ?.trim()
+                                            .isNotEmpty ??
+                                        false) ||
+                                    (build.info.builtContents
+                                            ?.trim()
+                                            .isNotEmpty ??
+                                        false);
+
+                                if (!hasAnyLogs) {
+                                  return const DeploymentMessageSurface(
+                                    message: 'No log output',
+                                  );
+                                }
+
+                                return DetailSection(
+                                  title: 'Logs',
+                                  icon: AppIcons.package,
+                                  child: BuildLogsContent(buildResource: build),
+                                );
+                              },
+                              loading: () => const DeploymentLoadingSurface(),
+                              error: (error, _) => DeploymentMessageSurface(
+                                message: 'Logs unavailable: $error',
+                              ),
+                            );
+                          },
+                          loading: () => const DeploymentLoadingSurface(),
+                          error: (error, _) => DeploymentMessageSurface(
+                            message: 'Logs unavailable: $error',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -407,5 +662,61 @@ class _DeploymentDetailViewState extends ConsumerState<DeploymentDetailView>
         tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
       );
     }
+  }
+}
+
+class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedTabBarHeaderDelegate({
+    required this.tabBar,
+    required this.backgroundColor,
+  });
+
+  final TabBar tabBar;
+  final Color backgroundColor;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Material(
+      color: backgroundColor,
+      elevation: overlapsContent ? 1 : 0,
+      child: tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedTabBarHeaderDelegate oldDelegate) {
+    return oldDelegate.tabBar != tabBar ||
+        oldDelegate.backgroundColor != backgroundColor;
+  }
+}
+
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin<_KeepAlive> {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
