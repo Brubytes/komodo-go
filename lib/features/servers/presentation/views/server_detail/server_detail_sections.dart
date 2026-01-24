@@ -1367,7 +1367,7 @@ class StatsSample {
   final double egressBytesPerSecond;
 }
 
-class StatsHistoryContent extends StatelessWidget {
+class StatsHistoryContent extends StatefulWidget {
   const StatsHistoryContent({
     required this.history,
     required this.latestStats,
@@ -1378,18 +1378,26 @@ class StatsHistoryContent extends StatelessWidget {
   final SystemStats? latestStats;
 
   @override
+  State<StatsHistoryContent> createState() => _StatsHistoryContentState();
+}
+
+class _StatsHistoryContentState extends State<StatsHistoryContent> {
+  bool _useFixedPercentScale = true;
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final latestStats = widget.latestStats;
 
-    final uiRefreshSeconds = _estimateUiRefreshSeconds(history);
+    final uiRefreshSeconds = _estimateUiRefreshSeconds(widget.history);
     final cpu = latestStats?.cpuPercent;
     final mem = latestStats?.memPercent;
     final disk = latestStats?.diskPercent;
 
     const windowSamples = 60; // ~2.5 min @ 2.5s refresh
-    final visibleHistory = history.length > windowSamples
-        ? history.sublist(history.length - windowSamples)
-        : history;
+    final visibleHistory = widget.history.length > windowSamples
+        ? widget.history.sublist(widget.history.length - windowSamples)
+        : widget.history;
 
     final cpuSeries = visibleHistory
         .map((e) => e.cpuPercent)
@@ -1408,6 +1416,8 @@ class StatsHistoryContent extends StatelessWidget {
         .toList(growable: false);
 
     final textTheme = Theme.of(context).textTheme;
+    final percentMin = _useFixedPercentScale ? 0.0 : null;
+    final percentMax = _useFixedPercentScale ? 100.0 : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1435,12 +1445,42 @@ class StatsHistoryContent extends StatelessWidget {
               ),
           ],
         ),
+        const Gap(8),
+        Row(
+          children: [
+            Text(
+              'Scale',
+              style: textTheme.labelMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              _useFixedPercentScale ? '0-100%' : 'Auto',
+              style: textTheme.labelMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const Gap(8),
+            Switch.adaptive(
+              value: _useFixedPercentScale,
+              onChanged: (value) {
+                setState(() => _useFixedPercentScale = value);
+              },
+            ),
+          ],
+        ),
         const Gap(12),
         if (cpuSeries.isNotEmpty)
           DetailHistoryRow(
             label: 'CPU',
             value: cpu != null ? '${cpu.toStringAsFixed(0)}%' : '—',
-            child: SparklineChart(values: cpuSeries, color: scheme.primary),
+            child: SparklineChart(
+              values: cpuSeries,
+              color: scheme.primary,
+              capMinY: percentMin,
+              capMaxY: percentMax,
+            ),
           )
         else
           Text(
@@ -1454,7 +1494,12 @@ class StatsHistoryContent extends StatelessWidget {
           DetailHistoryRow(
             label: 'Memory',
             value: mem != null ? '${mem.toStringAsFixed(0)}%' : '—',
-            child: SparklineChart(values: memSeries, color: scheme.secondary),
+            child: SparklineChart(
+              values: memSeries,
+              color: scheme.secondary,
+              capMinY: percentMin,
+              capMaxY: percentMax,
+            ),
           )
         else
           Text(
@@ -1468,7 +1513,12 @@ class StatsHistoryContent extends StatelessWidget {
           DetailHistoryRow(
             label: 'Disk',
             value: disk != null ? '${disk.toStringAsFixed(0)}%' : '—',
-            child: SparklineChart(values: diskSeries, color: scheme.tertiary),
+            child: SparklineChart(
+              values: diskSeries,
+              color: scheme.tertiary,
+              capMinY: percentMin,
+              capMaxY: percentMax,
+            ),
           )
         else
           Text(
@@ -1480,8 +1530,8 @@ class StatsHistoryContent extends StatelessWidget {
         const Gap(12),
         DetailHistoryRow(
           label: 'In / Out',
-          value: history.isNotEmpty
-              ? '${formatBytesPerSecond(history.last.ingressBytesPerSecond)} / ${formatBytesPerSecond(history.last.egressBytesPerSecond)}'
+          value: widget.history.isNotEmpty
+              ? '${formatBytesPerSecond(widget.history.last.ingressBytesPerSecond)} / ${formatBytesPerSecond(widget.history.last.egressBytesPerSecond)}'
               : '—',
           child: DualSparklineChart(
             aValues: ingressSeries,
