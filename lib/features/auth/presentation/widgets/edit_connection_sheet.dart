@@ -46,6 +46,19 @@ class EditConnectionSheet extends HookConsumerWidget {
         final store = await ref.read(connectionsStoreProvider.future);
         final creds = await store.getCredentials(connection.id);
         hasExistingCredentials.value = creds != null;
+        if (creds == null) {
+          return;
+        }
+        if (apiKeyController.text.isEmpty) {
+          apiKeyController.text = creds.apiKey;
+        }
+        if (apiSecretController.text.isEmpty) {
+          apiSecretController.text = creds.apiSecret;
+        }
+        if (baseUrlController.text.isEmpty ||
+            baseUrlController.text == connection.baseUrl) {
+          baseUrlController.text = creds.baseUrl;
+        }
       }
 
       load();

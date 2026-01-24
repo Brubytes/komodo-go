@@ -10,6 +10,7 @@ import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
+import 'package:komodo_go/features/auth/presentation/widgets/edit_connection_sheet.dart';
 import 'package:komodo_go/features/settings/presentation/widgets/add_connection_sheet.dart';
 
 class ConnectionsView extends ConsumerWidget {
@@ -116,8 +117,11 @@ class ConnectionsView extends ConsumerWidget {
                     trailing: PopupMenuButton<_ConnectionAction>(
                       onSelected: (action) async {
                         switch (action) {
-                          case _ConnectionAction.rename:
-                            await _renameConnection(context, ref, connection);
+                          case _ConnectionAction.edit:
+                            await EditConnectionSheet.show(
+                              context,
+                              connection: connection,
+                            );
                           case _ConnectionAction.delete:
                             await _deleteConnection(context, ref, connection);
                         }
@@ -126,9 +130,9 @@ class ConnectionsView extends ConsumerWidget {
                         final scheme = Theme.of(context).colorScheme;
                         return [
                           komodoPopupMenuItem(
-                            value: _ConnectionAction.rename,
+                            value: _ConnectionAction.edit,
                             icon: AppIcons.edit,
-                            label: 'Rename',
+                            label: 'Edit',
                             iconColor: scheme.primary,
                           ),
                           komodoPopupMenuItem(
@@ -157,44 +161,6 @@ class ConnectionsView extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  Future<void> _renameConnection(
-    BuildContext context,
-    WidgetRef ref,
-    ConnectionProfile connection,
-  ) async {
-    final controller = TextEditingController(text: connection.name);
-
-    final nextName = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename connection'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'Name'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-
-    if (nextName == null || nextName.isEmpty) {
-      return;
-    }
-
-    await ref
-        .read(connectionsProvider.notifier)
-        .renameConnection(connectionId: connection.id, name: nextName);
   }
 
   Future<void> _deleteConnection(
@@ -228,4 +194,4 @@ class ConnectionsView extends ConsumerWidget {
   }
 }
 
-enum _ConnectionAction { rename, delete }
+enum _ConnectionAction { edit, delete }
