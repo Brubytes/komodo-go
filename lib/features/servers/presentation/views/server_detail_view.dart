@@ -6,6 +6,7 @@ import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
@@ -29,12 +30,16 @@ class ServerDetailView extends ConsumerStatefulWidget {
 }
 
 class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
-    with SingleTickerProviderStateMixin {
+    with
+        SingleTickerProviderStateMixin,
+        DetailDirtySnackBarMixin<ServerDetailView> {
   static const int _tabStats = 1;
 
   late final TabController _tabController;
   Timer? _statsRefreshTimer;
   ProviderSubscription<AsyncValue<SystemStats?>>? _statsSubscription;
+  final _configEditorKey = GlobalKey<ServerConfigEditorContentState>();
+  var _configSaveInFlight = false;
 
   DateTime? _previousSampleTs;
   double? _previousIngressBytes;
@@ -175,6 +180,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
       serverSystemInformationProvider(widget.serverId),
     );
     final serversListAsync = ref.watch(serversProvider);
+    ref.watch(serverActionsProvider);
 
     final server = serverAsync.asData?.value;
     final stats = statsAsync.asData?.value;
@@ -251,10 +257,18 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                   children: [
                     serverAsync.when(
                       data: (server) => server?.config != null
-                          ? DetailSurface(
-                              child: ServerConfigContent(
-                                config: server!.config!,
-                              ),
+                          ? ServerConfigEditorContent(
+                              key: _configEditorKey,
+                              initialConfig: server!.config!,
+                              onDirtyChanged: (dirty) {
+                                syncDirtySnackBar(
+                                  dirty: dirty,
+                                  onDiscard: () => _discardConfig(server),
+                                  onSave: () =>
+                                      _saveConfig(server: server),
+                                  saveEnabled: !_configSaveInFlight,
+                                );
+                              },
                             )
                           : const ServerMessageCard(
                               message: 'No config available',
@@ -333,6 +347,74 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
           ],
         ),
       ),
+    );
+  }
+
+  void _discardConfig(Server server) {
+    _configEditorKey.currentState?.resetTo(server.config!);
+    hideDirtySnackBar();
+  }
+
+  Future<void> _saveConfig({required Server server}) async {
+    if (_configSaveInFlight) return;
+
+    final draft = _configEditorKey.currentState;
+    if (draft == null) {
+      AppSnackBar.show(
+        context,
+        'Editor not ready. Please try again.',
+        tone: AppSnackBarTone.error,
+      );
+      return;
+    }
+
+    final partialConfig = draft.buildPartialConfigParams();
+    if (partialConfig.isEmpty) {
+      hideDirtySnackBar();
+      return;
+    }
+
+    final actions = ref.read(serverActionsProvider.notifier);
+    setState(() => _configSaveInFlight = true);
+    final updated = await actions.updateServerConfig(
+      serverId: server.id,
+      partialConfig: partialConfig,
+    );
+    if (!mounted) return;
+    setState(() => _configSaveInFlight = false);
+
+    if (updated != null) {
+      ref
+        ..invalidate(serverDetailProvider(server.id))
+        ..invalidate(serversProvider);
+
+      _configEditorKey.currentState?.resetTo(updated.config!);
+      hideDirtySnackBar();
+      AppSnackBar.show(
+        context,
+        'Server updated',
+        tone: AppSnackBarTone.success,
+      );
+      return;
+    }
+
+    final err = ref.read(serverActionsProvider).asError?.error;
+    AppSnackBar.show(
+      context,
+      err != null ? 'Failed: $err' : 'Failed to update server',
+      tone: AppSnackBarTone.error,
+    );
+
+    reShowDirtySnackBarIfStillDirty(
+      isStillDirty: () {
+        return _configEditorKey.currentState
+                ?.buildPartialConfigParams()
+                .isNotEmpty ??
+            false;
+      },
+      onDiscard: () => _discardConfig(server),
+      onSave: () => _saveConfig(server: server),
+      saveEnabled: !_configSaveInFlight,
     );
   }
 }

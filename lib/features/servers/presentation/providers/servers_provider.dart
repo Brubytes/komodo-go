@@ -1,3 +1,5 @@
+import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_information.dart';
@@ -73,4 +75,47 @@ Future<SystemInformation?> serverSystemInformation(
   final result = await repository.getSystemInformation(serverId);
 
   return unwrapOrThrow(result);
+}
+
+/// Action state for server operations.
+@riverpod
+class ServerActions extends _$ServerActions {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  Future<Server?> updateServerConfig({
+    required String serverId,
+    required Map<String, dynamic> partialConfig,
+  }) => _executeRequest(
+    (repo) => repo.updateServerConfig(
+      serverId: serverId,
+      partialConfig: partialConfig,
+    ),
+  );
+
+  Future<T?> _executeRequest<T>(
+    Future<Either<Failure, T>> Function(ServerRepository repo) request,
+  ) async {
+    final repository = ref.read(serverRepositoryProvider);
+    if (repository == null) {
+      state = AsyncValue.error('Not authenticated', StackTrace.current);
+      return null;
+    }
+
+    state = const AsyncValue.loading();
+
+    final result = await request(repository);
+
+    return result.fold(
+      (failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return null;
+      },
+      (value) {
+        state = const AsyncValue.data(null);
+        ref.invalidate(serversProvider);
+        return value;
+      },
+    );
+  }
 }

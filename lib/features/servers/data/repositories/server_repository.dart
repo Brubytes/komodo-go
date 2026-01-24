@@ -94,6 +94,39 @@ class ServerRepository {
       },
     );
   }
+
+  /// Updates a server configuration and returns the updated server.
+  ///
+  /// Uses the `/write` module `UpdateServer` RPC.
+  ///
+  /// Note: Only fields included in [partialConfig] will be updated.
+  Future<Either<Failure, Server>> updateServerConfig({
+    required String serverId,
+    required Map<String, dynamic> partialConfig,
+  }) async {
+    return apiCall(
+      () async {
+        final response = await _client.write(
+          RpcRequest(
+            type: 'UpdateServer',
+            params: <String, dynamic>{
+              'id': serverId,
+              'config': partialConfig,
+            },
+          ),
+        );
+
+        return Server.fromJson(response as Map<String, dynamic>);
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
+        if (e.isNotFound) {
+          return const Failure.server(message: 'Server not found');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+    );
+  }
 }
 
 @riverpod
