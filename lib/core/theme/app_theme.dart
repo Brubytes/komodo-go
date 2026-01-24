@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -56,6 +57,10 @@ class AppTheme {
       useMaterial3: true,
       brightness: colorScheme.brightness,
       colorScheme: colorScheme,
+      cupertinoOverrideTheme: CupertinoThemeData(
+        primaryColor: isDark ? colorScheme.secondary : colorScheme.primary,
+        applyThemeToAll: true,
+      ),
       typography: Typography.material2021(platform: defaultTargetPlatform),
       fontFamily: kIsWeb ? AppTokens.systemFontStack : null,
       scaffoldBackgroundColor: scaffoldSurface,
