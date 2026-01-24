@@ -21,6 +21,7 @@ class AppSecondaryFab extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isLightMode = theme.brightness == Brightness.light;
+    final isDarkMode = theme.brightness == Brightness.dark;
 
     return FloatingActionButton.extended(
       onPressed: onPressed,
@@ -28,8 +29,12 @@ class AppSecondaryFab extends StatelessWidget {
       label: label,
       tooltip: tooltip,
       heroTag: heroTag,
-      backgroundColor: isLightMode ? colorScheme.secondary : null,
-      foregroundColor: isLightMode ? colorScheme.onSecondary : null,
+      backgroundColor: isLightMode
+          ? colorScheme.primary
+          : (isDarkMode ? colorScheme.secondary : null),
+      foregroundColor: isLightMode
+          ? colorScheme.onPrimary
+          : (isDarkMode ? colorScheme.onSecondary : null),
     );
   }
 }
