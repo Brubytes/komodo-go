@@ -46,7 +46,7 @@ class SettingsView extends ConsumerWidget {
           const Gap(8),
           _SettingsCardTile(
             icon: AppIcons.theme,
-            accentColor: scheme.secondary,
+            accentColor: scheme.primary,
             title: 'Theme',
             subtitle: 'Customize the app appearance',
             trailing: _CardTrailing(
@@ -80,7 +80,7 @@ class SettingsView extends ConsumerWidget {
           const Gap(10),
           _SettingsCardTile(
             icon: AppIcons.tag,
-            accentColor: scheme.tertiary,
+            accentColor: scheme.primary,
             title: 'Tags',
             subtitle: 'View and edit tags',
             trailing: const _CardTrailing(showChevron: true),
@@ -89,7 +89,7 @@ class SettingsView extends ConsumerWidget {
           const Gap(10),
           _SettingsCardTile(
             icon: AppIcons.repos,
-            accentColor: scheme.secondary,
+            accentColor: scheme.primary,
             title: 'Providers',
             subtitle: 'Manage git and registry accounts',
             trailing: const _CardTrailing(showChevron: true),
@@ -98,7 +98,7 @@ class SettingsView extends ConsumerWidget {
           const Gap(10),
           _SettingsCardTile(
             icon: AppIcons.factory,
-            accentColor: scheme.secondary,
+            accentColor: scheme.primary,
             title: 'Builders',
             subtitle: 'View and manage builders',
             trailing: const _CardTrailing(showChevron: true),
@@ -241,14 +241,10 @@ class _SettingsCardTile extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: accentColor.withValues(alpha: 0.22),
-                    ),
+                    color: accentColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, size: 20, color: accentColor),
                 ),
@@ -440,12 +436,10 @@ class _ThemeChoiceTile extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: accent.withValues(alpha: 0.22)),
+                    color: accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, size: 20, color: accent),
                 ),
