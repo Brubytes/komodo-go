@@ -48,7 +48,9 @@ class AppTheme {
     final controlShape = RoundedRectangleBorder(borderRadius: radius);
     final isDark = colorScheme.brightness == Brightness.dark;
 
-    final cardSurface = colorScheme.surface;
+    final scaffoldSurface = colorScheme.surface;
+    final cardSurface =
+        isDark ? colorScheme.surfaceContainer : colorScheme.surface;
 
     return ThemeData(
       useMaterial3: true,
@@ -56,7 +58,7 @@ class AppTheme {
       colorScheme: colorScheme,
       typography: Typography.material2021(platform: defaultTargetPlatform),
       fontFamily: kIsWeb ? AppTokens.systemFontStack : null,
-      scaffoldBackgroundColor: colorScheme.surface,
+      scaffoldBackgroundColor: scaffoldSurface,
       iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
       dividerTheme: DividerThemeData(
         color: colorScheme.outlineVariant,
@@ -67,7 +69,7 @@ class AppTheme {
         centerTitle: true,
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: colorScheme.surface,
+        backgroundColor: scaffoldSurface,
         foregroundColor: colorScheme.onSurface,
         surfaceTintColor: _surfaceTint,
       ),

@@ -39,8 +39,7 @@ class AppCardSurface extends StatelessWidget {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final color =
-        theme.cardTheme.color ?? scheme.surface;
+    final color = theme.cardTheme.color ?? scheme.surface;
     final tint = tintColor ?? scheme.primary;
 
     final borderColor = scheme.outlineVariant.withValues(
