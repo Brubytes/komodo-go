@@ -80,4 +80,5 @@ abstract class AppIcons {
   static const IconData updateAvailable = LucideIcons.cloudDownload;
   static const IconData widgets = LucideIcons.blocks;
   static const IconData dot = LucideIcons.dot;
+  static const IconData expand = LucideIcons.maximize2;
 }
