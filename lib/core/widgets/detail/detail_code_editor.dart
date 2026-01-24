@@ -55,7 +55,10 @@ class DetailCodeEditor extends StatelessWidget {
                 child: IconButton(
                   tooltip: 'Open in full screen',
                   icon: const Icon(AppIcons.expand),
-                  onPressed: () => Navigator.of(context).push(
+                  onPressed: () => Navigator.of(
+                    context,
+                    rootNavigator: true,
+                  ).push(
                     MaterialPageRoute(
                       fullscreenDialog: true,
                       builder: (context) => _DetailCodeEditorFullscreen(
