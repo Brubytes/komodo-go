@@ -86,7 +86,7 @@ class _DetailMetricTile extends StatelessWidget {
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: scheme.surface.withValues(alpha: 0.85),
+                  color: iconColor.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(item.icon, size: 18, color: iconColor),
