@@ -719,9 +719,13 @@ class _ProcedureHeroPanel extends StatelessWidget {
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DetailPillList(items: procedure.tags, emptyLabel: 'No tags'),
+          if (procedure.tags.isNotEmpty)
+            DetailPillList(
+              items: procedure.tags,
+              showEmptyLabel: false,
+            ),
           if (description.isNotEmpty) ...[
-            const Gap(12),
+            if (procedure.tags.isNotEmpty) const Gap(12),
             Text(
               'Description',
               style: textTheme.labelMedium?.copyWith(

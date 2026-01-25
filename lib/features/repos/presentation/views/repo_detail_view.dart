@@ -385,9 +385,13 @@ class _RepoHeroPanel extends StatelessWidget {
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DetailPillList(items: repo.tags, emptyLabel: 'No tags'),
+          if (repo.tags.isNotEmpty)
+            DetailPillList(
+              items: repo.tags,
+              showEmptyLabel: false,
+            ),
           if (description.isNotEmpty) ...[
-            const Gap(12),
+            if (repo.tags.isNotEmpty) const Gap(12),
             Text(
               'Description',
               style: textTheme.labelMedium?.copyWith(

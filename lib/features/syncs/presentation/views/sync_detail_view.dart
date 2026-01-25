@@ -219,39 +219,49 @@ class _SyncHeroPanel extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final description = syncResource.description.trim();
+    final metrics = <DetailMetricTileData>[
+      if (syncResource.config.repo.isNotEmpty)
+        DetailMetricTileData(
+          label: 'Repository',
+          value: syncResource.config.branch.isNotEmpty
+              ? '${syncResource.config.repo} (${syncResource.config.branch})'
+              : syncResource.config.repo,
+          icon: AppIcons.repos,
+          tone: DetailMetricTone.neutral,
+        ),
+      if (syncResource.config.resourcePath.isNotEmpty)
+        DetailMetricTileData(
+          label: 'Path',
+          value: syncResource.config.resourcePath.join('/'),
+          icon: AppIcons.repos,
+          tone: DetailMetricTone.neutral,
+        ),
+      if (syncResource.info.lastSyncTs > 0)
+        DetailMetricTileData(
+          label: 'Last Synced',
+          value: _formatTimestamp(syncResource.info.lastSyncTs),
+          icon: AppIcons.clock,
+          tone: DetailMetricTone.neutral,
+        ),
+    ];
+    final hasTags = syncResource.tags.isNotEmpty;
+    final hasFooter = hasTags || description.isNotEmpty;
+    if (metrics.isEmpty && !hasFooter) {
+      return const SizedBox.shrink();
+    }
 
     return DetailHeroPanel(
-      metrics: [
-        if (syncResource.config.repo.isNotEmpty)
-          DetailMetricTileData(
-            label: 'Repository',
-            value: syncResource.config.branch.isNotEmpty
-                ? '${syncResource.config.repo} (${syncResource.config.branch})'
-                : syncResource.config.repo,
-            icon: AppIcons.repos,
-            tone: DetailMetricTone.neutral,
-          ),
-        if (syncResource.config.resourcePath.isNotEmpty)
-          DetailMetricTileData(
-            label: 'Path',
-            value: syncResource.config.resourcePath.join('/'),
-            icon: AppIcons.repos,
-            tone: DetailMetricTone.neutral,
-          ),
-        if (syncResource.info.lastSyncTs > 0)
-          DetailMetricTileData(
-            label: 'Last Synced',
-            value: _formatTimestamp(syncResource.info.lastSyncTs),
-            icon: AppIcons.clock,
-            tone: DetailMetricTone.neutral,
-          ),
-      ],
+      metrics: metrics,
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DetailPillList(items: syncResource.tags, emptyLabel: 'No tags'),
+          if (hasTags)
+            DetailPillList(
+              items: syncResource.tags,
+              showEmptyLabel: false,
+            ),
           if (description.isNotEmpty) ...[
-            const Gap(12),
+            if (hasTags) const Gap(12),
             Text(
               'Description',
               style: textTheme.labelMedium?.copyWith(

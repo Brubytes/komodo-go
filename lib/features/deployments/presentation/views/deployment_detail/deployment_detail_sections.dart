@@ -71,9 +71,13 @@ class DeploymentHeroPanel extends StatelessWidget {
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DetailPillList(items: deployment.tags, emptyLabel: 'No tags'),
+          if (deployment.tags.isNotEmpty)
+            DetailPillList(
+              items: deployment.tags,
+              showEmptyLabel: false,
+            ),
           if (description.isNotEmpty) ...[
-            const Gap(12),
+            if (deployment.tags.isNotEmpty) const Gap(12),
             Text(
               'Description',
               style: textTheme.labelMedium?.copyWith(

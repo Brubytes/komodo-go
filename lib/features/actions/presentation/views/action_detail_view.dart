@@ -889,9 +889,13 @@ class _ActionHeroPanel extends StatelessWidget {
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DetailPillList(items: action.tags, emptyLabel: 'No tags'),
+          if (action.tags.isNotEmpty)
+            DetailPillList(
+              items: action.tags,
+              showEmptyLabel: false,
+            ),
           if (description.isNotEmpty) ...[
-            const Gap(12),
+            if (action.tags.isNotEmpty) const Gap(12),
             Text(
               'Description',
               style: textTheme.labelMedium?.copyWith(
