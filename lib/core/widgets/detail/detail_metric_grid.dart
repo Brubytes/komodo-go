@@ -72,6 +72,7 @@ class _DetailMetricTile extends StatelessWidget {
       ),
       DetailMetricTone.alert => (scheme.error, scheme.errorContainer),
     };
+    final iconColor = scheme.primary;
 
     return AppCardSurface(
       padding: const EdgeInsets.all(12),
@@ -88,7 +89,7 @@ class _DetailMetricTile extends StatelessWidget {
                   color: scheme.surface.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(item.icon, size: 18, color: accent),
+                child: Icon(item.icon, size: 18, color: iconColor),
               ),
               const Gap(10),
               Expanded(
