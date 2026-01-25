@@ -140,11 +140,18 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                   pinned: true,
                   delegate: _PinnedTabBarHeaderDelegate(
                     backgroundColor: scheme.surface,
-                    tabBar: TabBar(
+                    tabBar: buildDetailTabBar(
+                      context: context,
                       controller: _tabController,
                       tabs: const [
-                        Tab(text: 'Config'),
-                        Tab(text: 'Build Status'),
+                        Tab(
+                          icon: Icon(AppIcons.bolt),
+                          text: 'Config',
+                        ),
+                        Tab(
+                          icon: Icon(AppIcons.builds),
+                          text: 'Build Status',
+                        ),
                       ],
                     ),
                   ),

@@ -10,4 +10,5 @@ export 'detail_rows.dart';
 export 'detail_section.dart';
 export 'detail_sub_card.dart';
 export 'detail_surface.dart';
+export 'detail_tab_bar.dart';
 export 'sparkline.dart';

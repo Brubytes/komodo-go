@@ -348,29 +348,9 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                   pinned: true,
                   delegate: _PinnedTabBarHeaderDelegate(
                     backgroundColor: scheme.surface,
-                    tabBar: TabBar(
+                    tabBar: buildDetailTabBar(
+                      context: context,
                       controller: _tabController,
-                      labelStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            fontSize: 10,
-                            height: 1.1,
-                          ),
-                      unselectedLabelStyle:
-                          Theme.of(context).textTheme.labelSmall?.copyWith(
-                                fontSize: 10,
-                                height: 1.1,
-                              ),
-                      labelColor: scheme.primary,
-                      unselectedLabelColor: scheme.onSurfaceVariant,
-                      indicator: UnderlineTabIndicator(
-                        borderSide: BorderSide(
-                          width: 3,
-                          color: scheme.primary,
-                        ),
-                        insets: const EdgeInsets.symmetric(horizontal: 14),
-                      ),
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      dividerColor: scheme.outlineVariant,
-                      labelPadding: const EdgeInsets.symmetric(horizontal: 8),
                       tabs: [
                         const Tab(
                           icon: Icon(AppIcons.bolt),

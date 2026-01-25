@@ -225,12 +225,22 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
               pinned: true,
               delegate: _PinnedTabBarHeaderDelegate(
                 backgroundColor: Theme.of(context).colorScheme.surface,
-                tabBar: TabBar(
+                tabBar: buildDetailTabBar(
+                  context: context,
                   controller: _tabController,
                   tabs: const [
-                    Tab(text: 'Config'),
-                    Tab(text: 'Stats'),
-                    Tab(text: 'System'),
+                    Tab(
+                      icon: Icon(AppIcons.bolt),
+                      text: 'Config',
+                    ),
+                    Tab(
+                      icon: Icon(AppIcons.activity),
+                      text: 'Stats',
+                    ),
+                    Tab(
+                      icon: Icon(AppIcons.cpu),
+                      text: 'System',
+                    ),
                   ],
                 ),
               ),

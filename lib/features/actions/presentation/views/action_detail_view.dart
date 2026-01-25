@@ -135,11 +135,18 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                   pinned: true,
                   delegate: _PinnedTabBarHeaderDelegate(
                     backgroundColor: scheme.surface,
-                    tabBar: TabBar(
+                    tabBar: buildDetailTabBar(
+                      context: context,
                       controller: _tabController,
                       tabs: const [
-                        Tab(text: 'Config'),
-                        Tab(text: 'File content'),
+                        Tab(
+                          icon: Icon(AppIcons.bolt),
+                          text: 'Config',
+                        ),
+                        Tab(
+                          icon: Icon(AppIcons.notepadText),
+                          text: 'File content',
+                        ),
                       ],
                     ),
                   ),
