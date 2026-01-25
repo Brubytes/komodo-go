@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -35,12 +36,16 @@ class SyncsListContent extends ConsumerWidget {
                 separatorBuilder: (context, index) => const Gap(12),
                 itemBuilder: (context, index) {
                   final sync = syncs[index];
-                  return SyncCard(
-                    sync: sync,
-                    onTap: () => context.push(
-                      '${AppRoutes.syncs}/${sync.id}?name=${Uri.encodeComponent(sync.name)}',
+                  return AppFadeSlide(
+                    delay: AppMotion.stagger(index),
+                    play: index < 10,
+                    child: SyncCard(
+                      sync: sync,
+                      onTap: () => context.push(
+                        '${AppRoutes.syncs}/${sync.id}?name=${Uri.encodeComponent(sync.name)}',
+                      ),
+                      onRun: () => _runSync(context, ref, sync.id),
                     ),
-                    onRun: () => _runSync(context, ref, sync.id),
                   );
                 },
               );

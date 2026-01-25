@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -35,13 +36,17 @@ class BuildsListContent extends ConsumerWidget {
                 separatorBuilder: (context, index) => const Gap(12),
                 itemBuilder: (context, index) {
                   final build = builds[index];
-                  return BuildCard(
-                    buildItem: build,
-                    onTap: () => context.push(
-                      '${AppRoutes.builds}/${build.id}?name=${Uri.encodeComponent(build.name)}',
+                  return AppFadeSlide(
+                    delay: AppMotion.stagger(index),
+                    play: index < 10,
+                    child: BuildCard(
+                      buildItem: build,
+                      onTap: () => context.push(
+                        '${AppRoutes.builds}/${build.id}?name=${Uri.encodeComponent(build.name)}',
+                      ),
+                      onAction: (action) =>
+                          _handleAction(context, ref, build.id, action),
                     ),
-                    onAction: (action) =>
-                        _handleAction(context, ref, build.id, action),
                   );
                 },
               );

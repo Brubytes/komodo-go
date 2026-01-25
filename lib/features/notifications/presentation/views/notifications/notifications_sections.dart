@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
@@ -55,7 +56,11 @@ class AlertsTab extends ConsumerWidget {
                 }
 
                 final alert = state.items[index];
-                return AlertTile(alert: alert);
+                return AppFadeSlide(
+                  delay: AppMotion.stagger(index),
+                  play: index < 10,
+                  child: AlertTile(alert: alert),
+                );
               },
             ),
           );
@@ -113,7 +118,11 @@ class UpdatesTab extends ConsumerWidget {
                 }
 
                 final update = state.items[index];
-                return UpdateTile(update: update);
+                return AppFadeSlide(
+                  delay: AppMotion.stagger(index),
+                  play: index < 10,
+                  child: UpdateTile(update: update),
+                );
               },
             ),
           );

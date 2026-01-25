@@ -8,6 +8,7 @@ import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -153,9 +154,9 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                       .toggleDirection(),
                 ),
                 AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
+                  duration: AppMotion.base,
+                  switchInCurve: AppMotion.enterCurve,
+                  switchOutCurve: AppMotion.exitCurve,
                   child: _isSearchVisible
                       ? Padding(
                           padding: const EdgeInsets.only(top: 12),
@@ -205,19 +206,28 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                           _PartialErrorBanner(errors: result.errors),
                           const Gap(12),
                         ],
-                        for (final item in filtered) ...[
-                          ContainerCard(
-                            item: item,
-                            onTap: () {
-                              final containerKey =
-                                  item.container.id ?? item.container.name;
-                              context.push(
-                                '${AppRoutes.containers}/${item.serverId}/${Uri.encodeComponent(containerKey)}',
-                                extra: item,
-                              );
-                            },
-                            onAction: (action) =>
-                                _handleAction(context, ref, item, action),
+                        for (var i = 0; i < filtered.length; i++) ...[
+                          AppFadeSlide(
+                            delay: AppMotion.stagger(i),
+                            play: i < 10,
+                            child: ContainerCard(
+                              item: filtered[i],
+                              onTap: () {
+                                final containerKey =
+                                    filtered[i].container.id ??
+                                    filtered[i].container.name;
+                                context.push(
+                                  '${AppRoutes.containers}/${filtered[i].serverId}/${Uri.encodeComponent(containerKey)}',
+                                  extra: filtered[i],
+                                );
+                              },
+                              onAction: (action) => _handleAction(
+                                context,
+                                ref,
+                                filtered[i],
+                                action,
+                              ),
+                            ),
                           ),
                           const Gap(12),
                         ],

@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
@@ -68,68 +69,74 @@ class VariablesView extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: variables.length,
                   separatorBuilder: (_, __) => const Gap(12),
-                  itemBuilder: (context, index) => _VariableTile(
-                    variable: variables[index],
-                    onEdit: () async {
-                      final variable = variables[index];
-                      final result = await VariableEditorSheet.show(
-                        context,
-                        initial: variable,
-                      );
-                      if (result == null) return;
+                  itemBuilder: (context, index) => AppFadeSlide(
+                    delay: AppMotion.stagger(index),
+                    play: index < 10,
+                    child: _VariableTile(
+                      variable: variables[index],
+                      onEdit: () async {
+                        final variable = variables[index];
+                        final result = await VariableEditorSheet.show(
+                          context,
+                          initial: variable,
+                        );
+                        if (result == null) return;
 
-                      final ok = await ref
-                          .read(variableActionsProvider.notifier)
-                          .update(
-                            original: variable,
-                            value: result.value,
-                            description: result.description,
-                            isSecret: result.isSecret,
-                          );
+                        final ok = await ref
+                            .read(variableActionsProvider.notifier)
+                            .update(
+                              original: variable,
+                              value: result.value,
+                              description: result.description,
+                              isSecret: result.isSecret,
+                            );
 
-                      if (!context.mounted) return;
-                      AppSnackBar.show(
-                        context,
-                        ok ? 'Variable updated' : 'Failed to update variable',
-                        tone: ok
-                            ? AppSnackBarTone.success
-                            : AppSnackBarTone.error,
-                      );
-                    },
-                    onDelete: () async {
-                      final variable = variables[index];
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Delete variable'),
-                          content: Text('Delete "${variable.name}"?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(false),
-                              child: const Text('Cancel'),
-                            ),
-                            FilledButton(
-                              onPressed: () => Navigator.of(context).pop(true),
-                              child: const Text('Delete'),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (confirmed != true) return;
+                        if (!context.mounted) return;
+                        AppSnackBar.show(
+                          context,
+                          ok ? 'Variable updated' : 'Failed to update variable',
+                          tone: ok
+                              ? AppSnackBarTone.success
+                              : AppSnackBarTone.error,
+                        );
+                      },
+                      onDelete: () async {
+                        final variable = variables[index];
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Delete variable'),
+                            content: Text('Delete "${variable.name}"?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              FilledButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(true),
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed != true) return;
 
-                      final ok = await ref
-                          .read(variableActionsProvider.notifier)
-                          .delete(variable.name);
+                        final ok = await ref
+                            .read(variableActionsProvider.notifier)
+                            .delete(variable.name);
 
-                      if (!context.mounted) return;
-                      AppSnackBar.show(
-                        context,
-                        ok ? 'Variable deleted' : 'Failed to delete variable',
-                        tone: ok
-                            ? AppSnackBarTone.success
-                            : AppSnackBarTone.error,
-                      );
-                    },
+                        if (!context.mounted) return;
+                        AppSnackBar.show(
+                          context,
+                          ok ? 'Variable deleted' : 'Failed to delete variable',
+                          tone: ok
+                              ? AppSnackBarTone.success
+                              : AppSnackBarTone.error,
+                        );
+                      },
+                    ),
                   ),
                 );
               },

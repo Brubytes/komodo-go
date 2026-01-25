@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
@@ -125,8 +126,16 @@ class ProvidersView extends ConsumerWidget {
 
   List<Widget> _buildCards(Iterable<Widget> tiles) {
     final items = <Widget>[];
+    var index = 0;
     for (final tile in tiles) {
-      items.add(tile);
+      items.add(
+        AppFadeSlide(
+          delay: AppMotion.stagger(index),
+          play: index < 10,
+          child: tile,
+        ),
+      );
+      index += 1;
       items.add(const Gap(12));
     }
     if (items.isNotEmpty) {

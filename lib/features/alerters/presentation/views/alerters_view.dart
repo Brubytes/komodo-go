@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pill_list.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
@@ -42,8 +43,11 @@ class AlertersView extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
                   separatorBuilder: (_, __) => const Gap(12),
-                  itemBuilder: (context, index) =>
-                      _AlerterTile(item: items[index]),
+                  itemBuilder: (context, index) => AppFadeSlide(
+                    delay: AppMotion.stagger(index),
+                    play: index < 10,
+                    child: _AlerterTile(item: items[index]),
+                  ),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),

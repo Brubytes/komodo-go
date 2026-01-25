@@ -5,6 +5,7 @@ import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
@@ -92,57 +93,65 @@ class ConnectionsView extends ConsumerWidget {
 
               final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-              return AppCardSurface(
-                padding: EdgeInsets.zero,
-                child: Material(
-                  color: Colors.transparent,
-                  borderRadius: cardRadius,
-                  clipBehavior: Clip.antiAlias,
-                  child: ListTile(
-                    leading: Icon(
-                      isActive ? AppIcons.ok : AppIcons.server,
-                      color: isActive
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    title: Text(connection.name),
-                    subtitle: Text(connection.baseUrl),
-                    onTap: authAsync.isLoading
-                        ? null
-                        : () async {
-                            await ref
-                                .read(authProvider.notifier)
-                                .selectConnection(connection.id);
-                          },
-                    trailing: PopupMenuButton<_ConnectionAction>(
-                      onSelected: (action) async {
-                        switch (action) {
-                          case _ConnectionAction.edit:
-                            await EditConnectionSheet.show(
-                              context,
-                              connection: connection,
-                            );
-                          case _ConnectionAction.delete:
-                            await _deleteConnection(context, ref, connection);
-                        }
-                      },
-                      itemBuilder: (context) {
-                        final scheme = Theme.of(context).colorScheme;
-                        return [
-                          komodoPopupMenuItem(
-                            value: _ConnectionAction.edit,
-                            icon: AppIcons.edit,
-                            label: 'Edit',
-                            iconColor: scheme.primary,
-                          ),
-                          komodoPopupMenuItem(
-                            value: _ConnectionAction.delete,
-                            icon: AppIcons.delete,
-                            label: 'Delete',
-                            destructive: true,
-                          ),
-                        ];
-                      },
+              return AppFadeSlide(
+                delay: AppMotion.stagger(index),
+                play: index < 10,
+                child: AppCardSurface(
+                  padding: EdgeInsets.zero,
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: cardRadius,
+                    clipBehavior: Clip.antiAlias,
+                    child: ListTile(
+                      leading: Icon(
+                        isActive ? AppIcons.ok : AppIcons.server,
+                        color: isActive
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      title: Text(connection.name),
+                      subtitle: Text(connection.baseUrl),
+                      onTap: authAsync.isLoading
+                          ? null
+                          : () async {
+                              await ref
+                                  .read(authProvider.notifier)
+                                  .selectConnection(connection.id);
+                            },
+                      trailing: PopupMenuButton<_ConnectionAction>(
+                        onSelected: (action) async {
+                          switch (action) {
+                            case _ConnectionAction.edit:
+                              await EditConnectionSheet.show(
+                                context,
+                                connection: connection,
+                              );
+                            case _ConnectionAction.delete:
+                              await _deleteConnection(
+                                context,
+                                ref,
+                                connection,
+                              );
+                          }
+                        },
+                        itemBuilder: (context) {
+                          final scheme = Theme.of(context).colorScheme;
+                          return [
+                            komodoPopupMenuItem(
+                              value: _ConnectionAction.edit,
+                              icon: AppIcons.edit,
+                              label: 'Edit',
+                              iconColor: scheme.primary,
+                            ),
+                            komodoPopupMenuItem(
+                              value: _ConnectionAction.delete,
+                              icon: AppIcons.delete,
+                              label: 'Delete',
+                              destructive: true,
+                            ),
+                          ];
+                        },
+                      ),
                     ),
                   ),
                 ),

@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -36,13 +37,17 @@ class DeploymentsListContent extends ConsumerWidget {
                 separatorBuilder: (context, index) => const Gap(12),
                 itemBuilder: (context, index) {
                   final deployment = deployments[index];
-                  return DeploymentCard(
-                    deployment: deployment,
-                    onTap: () => context.go(
-                      '${AppRoutes.deployments}/${deployment.id}?name=${Uri.encodeComponent(deployment.name)}',
+                  return AppFadeSlide(
+                    delay: AppMotion.stagger(index),
+                    play: index < 10,
+                    child: DeploymentCard(
+                      deployment: deployment,
+                      onTap: () => context.go(
+                        '${AppRoutes.deployments}/${deployment.id}?name=${Uri.encodeComponent(deployment.name)}',
+                      ),
+                      onAction: (action) =>
+                          _handleAction(context, ref, deployment.id, action),
                     ),
-                    onAction: (action) =>
-                        _handleAction(context, ref, deployment.id, action),
                   );
                 },
               );

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
@@ -50,6 +51,107 @@ class ResourcesView extends ConsumerWidget {
     final buildsAsync = ref.watch(buildsProvider);
     final proceduresAsync = ref.watch(proceduresProvider);
     final actionsAsync = ref.watch(actionsProvider);
+    final tiles = <Widget>[
+      HomeStatCard(
+        title: 'Servers',
+        icon: AppIcons.server,
+        asyncValue: serversAsync,
+        valueBuilder: (servers) => servers.length.toString(),
+        subtitleBuilder: (servers) {
+          final online = servers
+              .where((s) => s.info?.state == ServerState.ok)
+              .length;
+          return '$online online';
+        },
+        onTap: () => context.push(_routeFor(ResourceType.servers)),
+      ),
+      HomeStatCard(
+        key: const ValueKey('resources_stat_deployments'),
+        title: 'Deployments',
+        icon: AppIcons.deployments,
+        asyncValue: deploymentsAsync,
+        valueBuilder: (deployments) => deployments.length.toString(),
+        subtitleBuilder: (deployments) {
+          final running = deployments
+              .where((d) => d.info?.state == DeploymentState.running)
+              .length;
+          return '$running running';
+        },
+        onTap: () => context.push(_routeFor(ResourceType.deployments)),
+      ),
+      HomeStatCard(
+        title: 'Stacks',
+        icon: AppIcons.stacks,
+        asyncValue: stacksAsync,
+        valueBuilder: (stacks) => stacks.length.toString(),
+        subtitleBuilder: (stacks) {
+          final running =
+              stacks.where((s) => s.info.state == StackState.running).length;
+          return '$running running';
+        },
+        onTap: () => context.push(_routeFor(ResourceType.stacks)),
+      ),
+      HomeStatCard(
+        title: 'Repos',
+        icon: AppIcons.repos,
+        asyncValue: reposAsync,
+        valueBuilder: (repos) => repos.length.toString(),
+        subtitleBuilder: (repos) {
+          final busy = repos.where((r) => r.info.state.isBusy).length;
+          return '$busy busy';
+        },
+        onTap: () => context.push(_routeFor(ResourceType.repos)),
+      ),
+      HomeStatCard(
+        title: 'Syncs',
+        icon: AppIcons.syncs,
+        asyncValue: syncsAsync,
+        valueBuilder: (syncs) => syncs.length.toString(),
+        subtitleBuilder: (syncs) {
+          final running =
+              syncs.where((s) => s.info.state.isRunning).length;
+          return '$running running';
+        },
+        onTap: () => context.push(_routeFor(ResourceType.syncs)),
+      ),
+      HomeStatCard(
+        title: 'Builds',
+        icon: AppIcons.builds,
+        asyncValue: buildsAsync,
+        valueBuilder: (builds) => builds.length.toString(),
+        subtitleBuilder: (builds) {
+          final running =
+              builds.where((b) => b.info.state == BuildState.building).length;
+          return '$running running';
+        },
+        onTap: () => context.push(_routeFor(ResourceType.builds)),
+      ),
+      HomeStatCard(
+        title: 'Procedures',
+        icon: AppIcons.procedures,
+        asyncValue: proceduresAsync,
+        valueBuilder: (procedures) => procedures.length.toString(),
+        subtitleBuilder: (procedures) {
+          final running = procedures
+              .where((p) => p.info.state == ProcedureState.running)
+              .length;
+          return '$running running';
+        },
+        onTap: () => context.push(_routeFor(ResourceType.procedures)),
+      ),
+      HomeStatCard(
+        title: 'Actions',
+        icon: AppIcons.actions,
+        asyncValue: actionsAsync,
+        valueBuilder: (actions) => actions.length.toString(),
+        subtitleBuilder: (actions) {
+          final running =
+              actions.where((a) => a.info.state == ActionState.running).length;
+          return '$running running';
+        },
+        onTap: () => context.push(_routeFor(ResourceType.actions)),
+      ),
+    ];
 
     return Scaffold(
       appBar: const MainAppBar(title: 'Resources', icon: AppIcons.resources),
@@ -76,110 +178,11 @@ class ResourcesView extends ConsumerWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                HomeStatCard(
-                  title: 'Servers',
-                  icon: AppIcons.server,
-                  asyncValue: serversAsync,
-                  valueBuilder: (servers) => servers.length.toString(),
-                  subtitleBuilder: (servers) {
-                    final online = servers
-                        .where((s) => s.info?.state == ServerState.ok)
-                        .length;
-                    return '$online online';
-                  },
-                  onTap: () => context.push(_routeFor(ResourceType.servers)),
-                ),
-                HomeStatCard(
-                  key: const ValueKey('resources_stat_deployments'),
-                  title: 'Deployments',
-                  icon: AppIcons.deployments,
-                  asyncValue: deploymentsAsync,
-                  valueBuilder: (deployments) => deployments.length.toString(),
-                  subtitleBuilder: (deployments) {
-                    final running = deployments
-                        .where((d) => d.info?.state == DeploymentState.running)
-                        .length;
-                    return '$running running';
-                  },
-                  onTap: () =>
-                      context.push(_routeFor(ResourceType.deployments)),
-                ),
-                HomeStatCard(
-                  title: 'Stacks',
-                  icon: AppIcons.stacks,
-                  asyncValue: stacksAsync,
-                  valueBuilder: (stacks) => stacks.length.toString(),
-                  subtitleBuilder: (stacks) {
-                    final running = stacks
-                        .where((s) => s.info.state == StackState.running)
-                        .length;
-                    return '$running running';
-                  },
-                  onTap: () => context.push(_routeFor(ResourceType.stacks)),
-                ),
-                HomeStatCard(
-                  title: 'Repos',
-                  icon: AppIcons.repos,
-                  asyncValue: reposAsync,
-                  valueBuilder: (repos) => repos.length.toString(),
-                  subtitleBuilder: (repos) {
-                    final busy = repos.where((r) => r.info.state.isBusy).length;
-                    return '$busy busy';
-                  },
-                  onTap: () => context.push(_routeFor(ResourceType.repos)),
-                ),
-                HomeStatCard(
-                  title: 'Syncs',
-                  icon: AppIcons.syncs,
-                  asyncValue: syncsAsync,
-                  valueBuilder: (syncs) => syncs.length.toString(),
-                  subtitleBuilder: (syncs) {
-                    final running = syncs
-                        .where((s) => s.info.state.isRunning)
-                        .length;
-                    return '$running running';
-                  },
-                  onTap: () => context.push(_routeFor(ResourceType.syncs)),
-                ),
-                HomeStatCard(
-                  title: 'Builds',
-                  icon: AppIcons.builds,
-                  asyncValue: buildsAsync,
-                  valueBuilder: (builds) => builds.length.toString(),
-                  subtitleBuilder: (builds) {
-                    final running = builds
-                        .where((b) => b.info.state == BuildState.building)
-                        .length;
-                    return '$running running';
-                  },
-                  onTap: () => context.push(_routeFor(ResourceType.builds)),
-                ),
-                HomeStatCard(
-                  title: 'Procedures',
-                  icon: AppIcons.procedures,
-                  asyncValue: proceduresAsync,
-                  valueBuilder: (procedures) => procedures.length.toString(),
-                  subtitleBuilder: (procedures) {
-                    final running = procedures
-                        .where((p) => p.info.state == ProcedureState.running)
-                        .length;
-                    return '$running running';
-                  },
-                  onTap: () => context.push(_routeFor(ResourceType.procedures)),
-                ),
-                HomeStatCard(
-                  title: 'Actions',
-                  icon: AppIcons.actions,
-                  asyncValue: actionsAsync,
-                  valueBuilder: (actions) => actions.length.toString(),
-                  subtitleBuilder: (actions) {
-                    final running = actions
-                        .where((a) => a.info.state == ActionState.running)
-                        .length;
-                    return '$running running';
-                  },
-                  onTap: () => context.push(_routeFor(ResourceType.actions)),
-                ),
+                for (var i = 0; i < tiles.length; i++)
+                  AppFadeSlide(
+                    delay: AppMotion.stagger(i),
+                    child: tiles[i],
+                  ),
               ],
             ),
           ],

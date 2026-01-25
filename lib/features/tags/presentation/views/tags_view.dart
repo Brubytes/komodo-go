@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
@@ -64,72 +65,78 @@ class TagsView extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: tags.length,
                   separatorBuilder: (_, __) => const Gap(12),
-                  itemBuilder: (context, index) => _TagTile(
-                    tag: tags[index],
-                    onEdit: () async {
-                      final tag = tags[index];
-                      final result = await TagEditorSheet.show(
-                        context,
-                        initial: tag,
-                      );
-                      if (result == null) return;
+                  itemBuilder: (context, index) => AppFadeSlide(
+                    delay: AppMotion.stagger(index),
+                    play: index < 10,
+                    child: _TagTile(
+                      tag: tags[index],
+                      onEdit: () async {
+                        final tag = tags[index];
+                        final result = await TagEditorSheet.show(
+                          context,
+                          initial: tag,
+                        );
+                        if (result == null) return;
 
-                      final ok = await ref
-                          .read(tagActionsProvider.notifier)
-                          .update(
-                            original: tag,
-                            name: result.name,
-                            color: result.color,
-                          );
+                        final ok = await ref
+                            .read(tagActionsProvider.notifier)
+                            .update(
+                              original: tag,
+                              name: result.name,
+                              color: result.color,
+                            );
 
-                      if (!context.mounted) return;
-                      AppSnackBar.show(
-                        context,
-                        ok ? 'Tag updated' : 'Failed to update tag',
-                        tone: ok
-                            ? AppSnackBarTone.success
-                            : AppSnackBarTone.error,
-                      );
-                    },
-                    onDelete: () async {
-                      final tag = tags[index];
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          key: ValueKey('tag_delete_dialog_${tag.id}'),
-                          title: const Text('Delete tag'),
-                          content: Text(
-                            'Delete "${tag.name}"? This removes it from all resources.',
+                        if (!context.mounted) return;
+                        AppSnackBar.show(
+                          context,
+                          ok ? 'Tag updated' : 'Failed to update tag',
+                          tone: ok
+                              ? AppSnackBarTone.success
+                              : AppSnackBarTone.error,
+                        );
+                      },
+                      onDelete: () async {
+                        final tag = tags[index];
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            key: ValueKey('tag_delete_dialog_${tag.id}'),
+                            title: const Text('Delete tag'),
+                            content: Text(
+                              'Delete "${tag.name}"? This removes it from all resources.',
+                            ),
+                            actions: [
+                              TextButton(
+                                key: ValueKey('tag_delete_cancel_${tag.id}'),
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              FilledButton(
+                                key: ValueKey('tag_delete_confirm_${tag.id}'),
+                                onPressed: () =>
+                                    Navigator.of(context).pop(true),
+                                child: const Text('Delete'),
+                              ),
+                            ],
                           ),
-                          actions: [
-                            TextButton(
-                              key: ValueKey('tag_delete_cancel_${tag.id}'),
-                              onPressed: () => Navigator.of(context).pop(false),
-                              child: const Text('Cancel'),
-                            ),
-                            FilledButton(
-                              key: ValueKey('tag_delete_confirm_${tag.id}'),
-                              onPressed: () => Navigator.of(context).pop(true),
-                              child: const Text('Delete'),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (confirmed != true) return;
+                        );
+                        if (confirmed != true) return;
 
-                      final ok = await ref
-                          .read(tagActionsProvider.notifier)
-                          .delete(tag.id);
+                        final ok = await ref
+                            .read(tagActionsProvider.notifier)
+                            .delete(tag.id);
 
-                      if (!context.mounted) return;
-                      AppSnackBar.show(
-                        context,
-                        ok ? 'Tag deleted' : 'Failed to delete tag',
-                        tone: ok
-                            ? AppSnackBarTone.success
-                            : AppSnackBarTone.error,
-                      );
-                    },
+                        if (!context.mounted) return;
+                        AppSnackBar.show(
+                          context,
+                          ok ? 'Tag deleted' : 'Failed to delete tag',
+                          tone: ok
+                              ? AppSnackBarTone.success
+                              : AppSnackBarTone.error,
+                        );
+                      },
+                    ),
                   ),
                 );
               },
