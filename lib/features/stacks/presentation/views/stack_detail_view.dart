@@ -350,12 +350,38 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                     backgroundColor: scheme.surface,
                     tabBar: TabBar(
                       controller: _tabController,
+                      labelStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            fontSize: 10,
+                            height: 1.1,
+                          ),
+                      unselectedLabelStyle:
+                          Theme.of(context).textTheme.labelSmall?.copyWith(
+                                fontSize: 10,
+                                height: 1.1,
+                              ),
+                      labelPadding: const EdgeInsets.symmetric(horizontal: 8),
                       tabs: [
-                        const Tab(text: 'Config'),
-                        if (hasInfoTab) const Tab(text: 'Info'),
-                        const Tab(text: 'Services'),
-                        const Tab(text: 'Updates'),
-                        const Tab(text: 'Logs'),
+                        const Tab(
+                          icon: Icon(Icons.tune_outlined),
+                          text: 'Config',
+                        ),
+                        if (hasInfoTab)
+                          const Tab(
+                            icon: Icon(Icons.info_outline),
+                            text: 'Info',
+                          ),
+                        const Tab(
+                          icon: Icon(Icons.grid_view_outlined),
+                          text: 'Services',
+                        ),
+                        const Tab(
+                          icon: Icon(Icons.system_update_outlined),
+                          text: 'Updates',
+                        ),
+                        const Tab(
+                          icon: Icon(Icons.receipt_long_outlined),
+                          text: 'Logs',
+                        ),
                       ],
                     ),
                   ),
