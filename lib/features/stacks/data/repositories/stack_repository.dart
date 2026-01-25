@@ -188,6 +188,29 @@ class StackRepository {
     });
   }
 
+  /// Writes file contents for a stack in files-on-host or git mode.
+  Future<Either<Failure, void>> writeStackFileContents({
+    required String stackIdOrName,
+    required String filePath,
+    required String contents,
+  }) async {
+    return apiCall(
+      () async {
+        await _client.write(
+          RpcRequest(
+            type: 'WriteStackFileContents',
+            params: <String, dynamic>{
+              'stack': stackIdOrName,
+              'file_path': filePath,
+              'contents': contents,
+            },
+          ),
+        );
+        return;
+      },
+    );
+  }
+
   /// Updates a stack configuration and returns the updated stack.
   ///
   /// Uses the `/write` module `UpdateStack` RPC.

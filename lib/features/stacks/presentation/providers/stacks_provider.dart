@@ -97,6 +97,18 @@ class StackActions extends _$StackActions {
   Future<bool> destroy(String stackIdOrName) =>
       _executeAction((repo) => repo.destroyStack(stackIdOrName));
 
+  Future<bool> writeStackFileContents({
+    required String stackIdOrName,
+    required String filePath,
+    required String contents,
+  }) => _executeAction(
+    (repo) => repo.writeStackFileContents(
+      stackIdOrName: stackIdOrName,
+      filePath: filePath,
+      contents: contents,
+    ),
+  );
+
   Future<KomodoStack?> updateStackConfig({
     required String stackId,
     required Map<String, dynamic> partialConfig,

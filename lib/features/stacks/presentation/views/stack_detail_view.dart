@@ -39,17 +39,18 @@ class StackDetailView extends ConsumerStatefulWidget {
 
 class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     with
-        SingleTickerProviderStateMixin,
+        TickerProviderStateMixin,
         DetailDirtySnackBarMixin<StackDetailView> {
-  static const int _tabLogs = 2;
-
-  late final TabController _tabController;
+  late TabController _tabController;
 
   Timer? _logRefreshTimer;
   var _autoRefreshLogs = true;
   final _configEditorKey = GlobalKey<StackConfigEditorContentState>();
+  final _infoEditorKey = GlobalKey<StackInfoTabContentState>();
 
   var _configSaveInFlight = false;
+  var _infoSaveInFlight = false;
+  var _hasInfoTab = false;
 
   @override
   void initState() {
@@ -96,12 +97,67 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
   }
 
   void _syncLogPolling({required bool isShellTabActive}) {
-    final isLogsTabActive = _tabController.index == _tabLogs;
+    final isLogsTabActive = _tabController.index == _logsTabIndex;
     final isActiveTab = isShellTabActive && isLogsTabActive;
     if (shouldPoll(isActiveTab: isActiveTab, enabled: _autoRefreshLogs)) {
       _startLogPolling();
     } else {
       _stopLogPolling();
+    }
+  }
+
+  int get _logsTabIndex => _hasInfoTab ? 3 : 2;
+
+  bool _shouldShowInfoTab(KomodoStack? stack) {
+    if (stack == null) return false;
+    if (stack.config.filesOnHost) return true;
+    return stack.config.linkedRepo.trim().isNotEmpty ||
+        stack.config.repo.trim().isNotEmpty;
+  }
+
+  int _mapTabIndex({
+    required int oldIndex,
+    required bool oldHasInfoTab,
+    required bool newHasInfoTab,
+  }) {
+    if (oldHasInfoTab == newHasInfoTab) return oldIndex;
+    if (!oldHasInfoTab && newHasInfoTab) {
+      return switch (oldIndex) {
+        0 => 0,
+        1 => 2,
+        _ => 3,
+      };
+    }
+    return switch (oldIndex) {
+      0 => 0,
+      1 => 1,
+      2 => 1,
+      _ => 2,
+    };
+  }
+
+  void _updateTabController({required bool hasInfoTab}) {
+    if (_hasInfoTab == hasInfoTab) return;
+    final oldIndex = _tabController.index;
+    final oldHasInfoTab = _hasInfoTab;
+    final nextLength = hasInfoTab ? 4 : 3;
+    final nextIndex = _mapTabIndex(
+      oldIndex: oldIndex,
+      oldHasInfoTab: oldHasInfoTab,
+      newHasInfoTab: hasInfoTab,
+    ).clamp(0, nextLength - 1);
+
+    _tabController
+      ..removeListener(_onInnerTabChanged)
+      ..dispose();
+    _hasInfoTab = hasInfoTab;
+    _tabController = TabController(length: nextLength, vsync: this)
+      ..index = nextIndex
+      ..addListener(_onInnerTabChanged);
+
+    if (mounted) {
+      setState(() {});
+      _syncLogPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
     }
   }
 
@@ -152,6 +208,14 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     final servers = serversListAsync.asData?.value ?? const [];
     final repos = reposListAsync.asData?.value ?? const [];
     final registryAccounts = registryAccountsAsync.asData?.value ?? const [];
+    final hasInfoTab = _hasInfoTab;
+    final desiredHasInfoTab = _shouldShowInfoTab(stackAsync.asData?.value);
+    if (desiredHasInfoTab != _hasInfoTab) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _updateTabController(hasInfoTab: desiredHasInfoTab);
+      });
+    }
 
     return Scaffold(
       appBar: MainAppBar(
@@ -263,10 +327,11 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                     backgroundColor: scheme.surface,
                     tabBar: TabBar(
                       controller: _tabController,
-                      tabs: const [
-                        Tab(text: 'Config'),
-                        Tab(text: 'Services'),
-                        Tab(text: 'Logs'),
+                      tabs: [
+                        const Tab(text: 'Config'),
+                        if (hasInfoTab) const Tab(text: 'Info'),
+                        const Tab(text: 'Services'),
+                        const Tab(text: 'Logs'),
                       ],
                     ),
                   ),
@@ -319,6 +384,55 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                     ),
                   ),
                 ),
+                if (hasInfoTab)
+                  _KeepAlive(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        ref.invalidate(stackDetailProvider(widget.stackId));
+                      },
+                      child: ListView(
+                        key: PageStorageKey('stack_${widget.stackId}_info'),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                        children: [
+                          stackAsync.when(
+                            data: (stack) => stack != null
+                                ? StackInfoTabContent(
+                                    key: _infoEditorKey,
+                                    info: stack.info,
+                                    onSaveFile:
+                                        (
+                                          path,
+                                          contents, {
+                                          bool showSnackBar = true,
+                                        }) =>
+                                        _saveStackFile(
+                                          stackId: stack.id,
+                                          filePath: path,
+                                          contents: contents,
+                                          showSnackBar: showSnackBar,
+                                        ),
+                                    onDirtyChanged: (dirty) {
+                                      syncDirtySnackBar(
+                                        dirty: dirty,
+                                        onDiscard: _discardInfoChanges,
+                                        onSave: _saveInfoChanges,
+                                        saveEnabled: !_infoSaveInFlight,
+                                      );
+                                    },
+                                  )
+                                : const StackMessageSurface(
+                                    message: 'Stack not found',
+                                  ),
+                            loading: () => const StackLoadingSurface(),
+                            error: (error, _) => StackMessageSurface(
+                              message: 'Error: $error',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 _KeepAlive(
                   child: RefreshIndicator(
                     onRefresh: () async {
@@ -557,6 +671,11 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     hideDirtySnackBar();
   }
 
+  void _discardInfoChanges() {
+    _infoEditorKey.currentState?.resetAll();
+    hideDirtySnackBar();
+  }
+
   Future<void> _saveConfig({required KomodoStack stack}) async {
     if (_configSaveInFlight) return;
 
@@ -614,6 +733,90 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       onSave: () => _saveConfig(stack: stack),
       saveEnabled: !_configSaveInFlight,
     );
+  }
+
+  Future<void> _saveInfoChanges() async {
+    if (_infoSaveInFlight) return;
+    final editor = _infoEditorKey.currentState;
+    if (editor == null) return;
+
+    setState(() => _infoSaveInFlight = true);
+    final success = await editor.saveAll();
+    if (!mounted) return;
+    setState(() => _infoSaveInFlight = false);
+
+    if (success) {
+      hideDirtySnackBar();
+      AppSnackBar.show(
+        context,
+        'Files updated',
+        tone: AppSnackBarTone.success,
+      );
+      return;
+    }
+
+    AppSnackBar.show(
+      context,
+      'Failed to update files',
+      tone: AppSnackBarTone.error,
+    );
+
+    reShowDirtySnackBarIfStillDirty(
+      isStillDirty: () {
+        return _infoEditorKey.currentState?.isDirty ?? false;
+      },
+      onDiscard: _discardInfoChanges,
+      onSave: _saveInfoChanges,
+      saveEnabled: !_infoSaveInFlight,
+    );
+  }
+
+  Future<bool> _saveStackFile({
+    required String stackId,
+    required String filePath,
+    required String contents,
+    bool showSnackBar = true,
+  }) async {
+    final trimmedPath = filePath.trim();
+    if (trimmedPath.isEmpty) {
+      if (showSnackBar) {
+        AppSnackBar.show(
+          context,
+          'File path is required.',
+          tone: AppSnackBarTone.error,
+        );
+      }
+      return false;
+    }
+
+    final actions = ref.read(stackActionsProvider.notifier);
+    final success = await actions.writeStackFileContents(
+      stackIdOrName: stackId,
+      filePath: trimmedPath,
+      contents: contents,
+    );
+
+    if (success) {
+      ref.invalidate(stackDetailProvider(stackId));
+      if (context.mounted && showSnackBar) {
+        AppSnackBar.show(
+          context,
+          'File updated',
+          tone: AppSnackBarTone.success,
+        );
+      }
+      return true;
+    }
+
+    final err = ref.read(stackActionsProvider).asError?.error;
+    if (context.mounted && showSnackBar) {
+      AppSnackBar.show(
+        context,
+        err != null ? 'Failed: $err' : 'Failed to update file',
+        tone: AppSnackBarTone.error,
+      );
+    }
+    return false;
   }
 }
 

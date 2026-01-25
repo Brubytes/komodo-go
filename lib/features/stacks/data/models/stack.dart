@@ -173,6 +173,10 @@ String _stackFileRequiresToJson(StackFileRequires value) {
 sealed class StackInfo with _$StackInfo {
   const factory StackInfo({
     @JsonKey(name: 'missing_files') @Default([]) List<String> missingFiles,
+    @JsonKey(name: 'deployed_config') String? deployedConfig,
+    @JsonKey(name: 'remote_contents')
+    List<StackRemoteFileContents>? remoteContents,
+    @JsonKey(name: 'remote_errors') List<FileContents>? remoteErrors,
     @JsonKey(name: 'deployed_hash') String? deployedHash,
     @JsonKey(name: 'latest_hash') String? latestHash,
     @JsonKey(name: 'latest_message') String? latestMessage,
@@ -181,6 +185,37 @@ sealed class StackInfo with _$StackInfo {
 
   factory StackInfo.fromJson(Map<String, dynamic> json) =>
       _$StackInfoFromJson(json);
+}
+
+/// Remote file contents returned by `GetStack` (`StackRemoteFileContents` in `komodo_client`).
+@freezed
+sealed class StackRemoteFileContents with _$StackRemoteFileContents {
+  const factory StackRemoteFileContents({
+    @Default('') String path,
+    @Default('') String contents,
+    @Default([]) List<String> services,
+    @JsonKey(
+      fromJson: _stackFileRequiresFromJson,
+      toJson: _stackFileRequiresToJson,
+    )
+    @Default(StackFileRequires.none)
+    StackFileRequires requires,
+  }) = _StackRemoteFileContents;
+
+  factory StackRemoteFileContents.fromJson(Map<String, dynamic> json) =>
+      _$StackRemoteFileContentsFromJson(json);
+}
+
+/// Simple file contents returned by stack info (`FileContents` in `komodo_client`).
+@freezed
+sealed class FileContents with _$FileContents {
+  const factory FileContents({
+    @Default('') String path,
+    @Default('') String contents,
+  }) = _FileContents;
+
+  factory FileContents.fromJson(Map<String, dynamic> json) =>
+      _$FileContentsFromJson(json);
 }
 
 /// Container summary nested inside `StackService` (`ContainerListItem` in `komodo_client`).
