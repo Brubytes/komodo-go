@@ -6,6 +6,7 @@ part 'stack.g.dart';
 /// Stack list item returned by `ListStacks` (`StackListItem` in `komodo_client`).
 @freezed
 sealed class StackListItem with _$StackListItem {
+  const StackListItem._();
   const factory StackListItem({
     required String id,
     required String name,
@@ -16,6 +17,18 @@ sealed class StackListItem with _$StackListItem {
 
   factory StackListItem.fromJson(Map<String, dynamic> json) =>
       _$StackListItemFromJson(json);
+
+  bool get hasPendingUpdate =>
+      info.services.any((service) => service.updateAvailable);
+
+  String get sourceLabel {
+    if (info.fileContents) return 'UI Defined';
+    if (info.filesOnHost) return 'Files on Server';
+    if (info.linkedRepo.isNotEmpty || info.repo.isNotEmpty) {
+      return 'Git';
+    }
+    return 'Unknown';
+  }
 }
 
 /// Stack info returned by `ListStacks` (`StackListItemInfo` in `komodo_client`).
@@ -23,6 +36,9 @@ sealed class StackListItem with _$StackListItem {
 sealed class StackListItemInfo with _$StackListItemInfo {
   const factory StackListItemInfo({
     @JsonKey(name: 'server_id') @Default('') String serverId,
+    @JsonKey(name: 'files_on_host') @Default(false) bool filesOnHost,
+    @JsonKey(name: 'file_contents') @Default(false) bool fileContents,
+    @JsonKey(name: 'git_provider') @Default('') String gitProvider,
     @JsonKey(fromJson: _stackStateFromJson, toJson: _stackStateToJson)
     @Default(StackState.unknown)
     StackState state,
@@ -30,11 +46,28 @@ sealed class StackListItemInfo with _$StackListItemInfo {
     @Default('') String repo,
     @Default('') String branch,
     @Default('') String linkedRepo,
+    @JsonKey(name: 'repo_link') @Default('') String repoLink,
+    @Default([]) List<StackServiceWithUpdate> services,
+    @JsonKey(name: 'missing_files') @Default([]) List<String> missingFiles,
+    @JsonKey(name: 'deployed_hash') String? deployedHash,
+    @JsonKey(name: 'latest_hash') String? latestHash,
     @JsonKey(name: 'project_missing') @Default(false) bool projectMissing,
   }) = _StackListItemInfo;
 
   factory StackListItemInfo.fromJson(Map<String, dynamic> json) =>
       _$StackListItemInfoFromJson(json);
+}
+
+@freezed
+sealed class StackServiceWithUpdate with _$StackServiceWithUpdate {
+  const factory StackServiceWithUpdate({
+    @Default('') String service,
+    @Default('') String image,
+    @JsonKey(name: 'update_available') @Default(false) bool updateAvailable,
+  }) = _StackServiceWithUpdate;
+
+  factory StackServiceWithUpdate.fromJson(Map<String, dynamic> json) =>
+      _$StackServiceWithUpdateFromJson(json);
 }
 
 /// Stack returned by `GetStack` (`Stack` in `komodo_client`).
