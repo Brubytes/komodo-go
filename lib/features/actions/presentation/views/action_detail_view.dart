@@ -830,10 +830,12 @@ class _ActionHeroPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final status = listItem?.info.state;
+    final description = action.description.trim();
 
     return DetailHeroPanel(
-      header: _ActionHeader(action: action),
       metrics: [
         if (status != null)
           DetailMetricTileData(
@@ -884,39 +886,27 @@ class _ActionHeroPanel extends StatelessWidget {
             tone: DetailMetricTone.neutral,
           ),
       ],
-    );
-  }
-}
-
-class _ActionHeader extends StatelessWidget {
-  const _ActionHeader({required this.action});
-
-  final KomodoAction action;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final description = action.description.trim();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          action.name,
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        if (description.isNotEmpty) ...[
-          const Gap(4),
-          Text(
-            description,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+      footer: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DetailPillList(items: action.tags, emptyLabel: 'No tags'),
+          if (description.isNotEmpty) ...[
+            const Gap(12),
+            Text(
+              'Description',
+              style: textTheme.labelMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
+            const Gap(6),
+            Text(
+              description,
+              style: textTheme.bodyMedium,
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

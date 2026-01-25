@@ -23,8 +23,11 @@ class BuildHeroPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final description = buildResource.description.trim();
     return DetailHeroPanel(
-      header: BuildHeader(buildResource: buildResource),
+      tintColor: scheme.primary,
       metrics: [
         if (listItem != null)
           DetailMetricTileData(
@@ -77,6 +80,27 @@ class BuildHeroPanel extends StatelessWidget {
                 : DetailMetricTone.tertiary,
           ),
       ],
+      footer: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DetailPillList(items: buildResource.tags, emptyLabel: 'No tags'),
+          if (description.isNotEmpty) ...[
+            const Gap(12),
+            Text(
+              'Description',
+              style: textTheme.labelMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Gap(6),
+            Text(
+              description,
+              style: textTheme.bodyMedium,
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -94,38 +118,6 @@ class BuildHeroPanel extends StatelessWidget {
     } else {
       return 'Just now';
     }
-  }
-}
-
-class BuildHeader extends StatelessWidget {
-  const BuildHeader({required this.buildResource, super.key});
-
-  final KomodoBuild buildResource;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          buildResource.name,
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        if (buildResource.description.isNotEmpty) ...[
-          const Gap(4),
-          Text(
-            buildResource.description,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
-      ],
-    );
   }
 }
 

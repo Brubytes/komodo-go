@@ -13,6 +13,13 @@ import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/stack_updates_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/views/notifications/notifications_sections.dart'
+  show
+    NotificationsEmptyState,
+    NotificationsErrorState,
+    PaginationFooter,
+    UpdateTile;
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
@@ -56,7 +63,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(_onInnerTabChanged);
   }
 
@@ -107,7 +114,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     }
   }
 
-  int get _logsTabIndex => _hasInfoTab ? 3 : 2;
+  int get _logsTabIndex => _hasInfoTab ? 4 : 3;
 
   bool _shouldShowInfoTab(KomodoStack? stack) {
     if (stack == null) return false;
@@ -126,14 +133,16 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       return switch (oldIndex) {
         0 => 0,
         1 => 2,
-        _ => 3,
+        2 => 3,
+        _ => 4,
       };
     }
     return switch (oldIndex) {
       0 => 0,
       1 => 1,
       2 => 1,
-      _ => 2,
+      3 => 2,
+      _ => 3,
     };
   }
 
@@ -141,7 +150,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     if (_hasInfoTab == hasInfoTab) return;
     final oldIndex = _tabController.index;
     final oldHasInfoTab = _hasInfoTab;
-    final nextLength = hasInfoTab ? 4 : 3;
+    final nextLength = hasInfoTab ? 5 : 4;
     final nextIndex = _mapTabIndex(
       oldIndex: oldIndex,
       oldHasInfoTab: oldHasInfoTab,
@@ -174,6 +183,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     final coreInfoAsync = ref.watch(coreInfoProvider);
     final servicesAsync = ref.watch(stackServicesProvider(widget.stackId));
     final logAsync = ref.watch(stackLogProvider(widget.stackId));
+    final stackUpdatesAsync = ref.watch(stackUpdatesProvider(widget.stackId));
     final stacksListAsync = ref.watch(stacksProvider);
     final serversListAsync = ref.watch(serversProvider);
     final reposListAsync = ref.watch(reposProvider);
@@ -344,6 +354,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                         const Tab(text: 'Config'),
                         if (hasInfoTab) const Tab(text: 'Info'),
                         const Tab(text: 'Services'),
+                        const Tab(text: 'Updates'),
                         const Tab(text: 'Logs'),
                       ],
                     ),
@@ -473,6 +484,79 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      await ref
+                          .read(stackUpdatesProvider(widget.stackId).notifier)
+                          .refresh();
+                    },
+                    child: stackUpdatesAsync.when(
+                      data: (state) {
+                        if (state.items.isEmpty) {
+                          return const NotificationsEmptyState(
+                            icon: AppIcons.updateAvailable,
+                            title: 'No updates',
+                            description: 'No recent activity for this stack.',
+                          );
+                        }
+
+                        return NotificationListener<ScrollNotification>(
+                          onNotification: (notification) {
+                            if (notification.metrics.pixels >=
+                                notification.metrics.maxScrollExtent - 200) {
+                              ref
+                                  .read(
+                                    stackUpdatesProvider(widget.stackId)
+                                        .notifier,
+                                  )
+                                  .fetchNextPage();
+                            }
+                            return false;
+                          },
+                          child: ListView.separated(
+                            key: PageStorageKey(
+                              'stack_${widget.stackId}_updates',
+                            ),
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                            itemCount:
+                                state.items.length +
+                                (state.nextPage == null ? 0 : 1),
+                            separatorBuilder: (_, __) => const Gap(12),
+                            itemBuilder: (context, index) {
+                              final isFooter = index >= state.items.length;
+                              if (isFooter) {
+                                return PaginationFooter(
+                                  isLoading: state.isLoadingMore,
+                                  onLoadMore: () => ref
+                                      .read(
+                                        stackUpdatesProvider(widget.stackId)
+                                            .notifier,
+                                      )
+                                      .fetchNextPage(),
+                                );
+                              }
+
+                              final update = state.items[index];
+                              return UpdateTile(update: update);
+                            },
+                          ),
+                        );
+                      },
+                      loading: () => const AppSkeletonList(
+                        padding: EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      ),
+                      error: (error, _) => NotificationsErrorState(
+                        title: 'Failed to load updates',
+                        message: error.toString(),
+                        onRetry: () => ref.invalidate(
+                          stackUpdatesProvider(widget.stackId),
+                        ),
+                      ),
                     ),
                   ),
                 ),

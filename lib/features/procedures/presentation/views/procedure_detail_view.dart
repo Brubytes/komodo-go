@@ -661,11 +661,13 @@ class _ProcedureHeroPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final status = listItem?.info.state;
     final stagesCount = procedure.config.stages.length;
+    final description = procedure.description.trim();
 
     return DetailHeroPanel(
-      header: _ProcedureHeader(procedure: procedure),
       metrics: [
         if (status != null)
           DetailMetricTileData(
@@ -714,39 +716,27 @@ class _ProcedureHeroPanel extends StatelessWidget {
             tone: DetailMetricTone.neutral,
           ),
       ],
-    );
-  }
-}
-
-class _ProcedureHeader extends StatelessWidget {
-  const _ProcedureHeader({required this.procedure});
-
-  final KomodoProcedure procedure;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final description = procedure.description.trim();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          procedure.name,
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        if (description.isNotEmpty) ...[
-          const Gap(4),
-          Text(
-            description,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+      footer: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DetailPillList(items: procedure.tags, emptyLabel: 'No tags'),
+          if (description.isNotEmpty) ...[
+            const Gap(12),
+            Text(
+              'Description',
+              style: textTheme.labelMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
+            const Gap(6),
+            Text(
+              description,
+              style: textTheme.bodyMedium,
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

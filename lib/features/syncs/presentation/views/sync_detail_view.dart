@@ -216,8 +216,11 @@ class _SyncHeroPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final description = syncResource.description.trim();
+
     return DetailHeroPanel(
-      header: _SyncHeader(syncResource: syncResource),
       metrics: [
         if (syncResource.config.repo.isNotEmpty)
           DetailMetricTileData(
@@ -243,6 +246,27 @@ class _SyncHeroPanel extends StatelessWidget {
             tone: DetailMetricTone.neutral,
           ),
       ],
+      footer: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DetailPillList(items: syncResource.tags, emptyLabel: 'No tags'),
+          if (description.isNotEmpty) ...[
+            const Gap(12),
+            Text(
+              'Description',
+              style: textTheme.labelMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Gap(6),
+            Text(
+              description,
+              style: textTheme.bodyMedium,
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -260,38 +284,6 @@ class _SyncHeroPanel extends StatelessWidget {
     } else {
       return 'Just now';
     }
-  }
-}
-
-class _SyncHeader extends StatelessWidget {
-  const _SyncHeader({required this.syncResource});
-
-  final KomodoResourceSync syncResource;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          syncResource.name,
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        if (syncResource.description.isNotEmpty) ...[
-          const Gap(4),
-          Text(
-            syncResource.description,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
-      ],
-    );
   }
 }
 
