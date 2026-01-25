@@ -381,87 +381,93 @@ class _FiltersPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final tagLabel = selectedTags.isEmpty
         ? 'Tags'
         : 'Tags (${selectedTags.length})';
+    final templateLabel = switch (templateFilter) {
+      StacksTemplateFilter.exclude => 'Exclude',
+      StacksTemplateFilter.include => 'Include',
+      StacksTemplateFilter.only => 'Only',
+    };
 
     return AppCardSurface(
       padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(AppIcons.updateAvailable, size: 16, color: scheme.primary),
-              const Gap(8),
-              Expanded(
-                child: Text(
-                  'Pending updates only',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              Switch(
-                value: pendingUpdate,
-                onChanged: onPendingUpdateChanged,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ],
-          ),
-          const Gap(12),
-          KomodoSelectMenuFormField<StacksTemplateFilter>(
-            initialValue: templateFilter,
-            decoration: const InputDecoration(
-              labelText: 'Templates',
-              prefixIcon: Icon(AppIcons.factory),
+          _FilterRow(
+            icon: AppIcons.updateAvailable,
+            label: 'Pending updates',
+            trailing: Switch(
+              value: pendingUpdate,
+              onChanged: onPendingUpdateChanged,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            items: const [
-              KomodoSelectMenuItem(
-                value: StacksTemplateFilter.exclude,
-                label: 'Exclude templates',
-              ),
-              KomodoSelectMenuItem(
-                value: StacksTemplateFilter.include,
-                label: 'Include templates',
-              ),
-              KomodoSelectMenuItem(
-                value: StacksTemplateFilter.only,
-                label: 'Only templates',
-              ),
-            ],
-            onChanged: (value) {
-              if (value == null) return;
-              onTemplateFilterChanged(value);
-            },
           ),
-          const Gap(12),
-          Row(
-            children: [
-              TextButton.icon(
-                icon: const Icon(AppIcons.tag, size: 16),
-                label: Text(tagLabel),
-                onPressed: () async {
-                  final next = await StackTagFilterSheet.show(
-                    context,
-                    availableTags: availableTags,
-                    selected: selectedTags,
-                  );
-                  if (next != null) {
-                    onSelectTags(next);
-                  }
-                },
-              ),
-              const Spacer(),
-              if (selectedTags.isNotEmpty)
-                IconButton(
-                  tooltip: 'Clear tags',
-                  icon: const Icon(AppIcons.close),
-                  onPressed: onClearTags,
+          Divider(
+            height: 20,
+            color: scheme.outlineVariant.withValues(alpha: 0.35),
+          ),
+          _FilterRow(
+            icon: AppIcons.factory,
+            label: 'Templates',
+            trailing: PopupMenuButton<StacksTemplateFilter>(
+              onSelected: onTemplateFilterChanged,
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: StacksTemplateFilter.exclude,
+                  child: Text('Exclude templates'),
                 ),
-            ],
+                PopupMenuItem(
+                  value: StacksTemplateFilter.include,
+                  child: Text('Include templates'),
+                ),
+                PopupMenuItem(
+                  value: StacksTemplateFilter.only,
+                  child: Text('Only templates'),
+                ),
+              ],
+              child: _FilterValueButton(
+                label: templateLabel,
+                icon: Icons.expand_more,
+              ),
+            ),
+          ),
+          Divider(
+            height: 20,
+            color: scheme.outlineVariant.withValues(alpha: 0.35),
+          ),
+          _FilterRow(
+            icon: AppIcons.tag,
+            label: tagLabel,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _FilterValueButton(
+                  label: 'Select',
+                  icon: Icons.tune,
+                  onPressed: () async {
+                    final next = await StackTagFilterSheet.show(
+                      context,
+                      availableTags: availableTags,
+                      selected: selectedTags,
+                    );
+                    if (next != null) {
+                      onSelectTags(next);
+                    }
+                  },
+                ),
+                if (selectedTags.isNotEmpty) ...[
+                  const Gap(6),
+                  IconButton(
+                    tooltip: 'Clear tags',
+                    icon: const Icon(AppIcons.close),
+                    onPressed: onClearTags,
+                  ),
+                ],
+              ],
+            ),
           ),
           if (selectedTags.isNotEmpty) ...[
             const Gap(8),
@@ -489,6 +495,87 @@ class _FiltersPanel extends StatelessWidget {
       for (final tag in capped) TextPill(label: tag),
       if (remaining > 0) ValuePill(label: 'More', value: '+$remaining'),
     ];
+  }
+}
+
+class _FilterRow extends StatelessWidget {
+  const _FilterRow({
+    required this.icon,
+    required this.label,
+    required this.trailing,
+  });
+
+  final IconData icon;
+  final String label;
+  final Widget trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: scheme.onSurfaceVariant),
+        const Gap(8),
+        Expanded(
+          child: Text(
+            label,
+            style: textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        trailing,
+      ],
+    );
+  }
+}
+
+class _FilterValueButton extends StatelessWidget {
+  const _FilterValueButton({
+    required this.label,
+    required this.icon,
+    this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark
+        ? scheme.surfaceContainerHigh
+        : scheme.surfaceContainerHighest;
+
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
+              ),
+              const Gap(6),
+              Icon(icon, size: 16, color: scheme.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
