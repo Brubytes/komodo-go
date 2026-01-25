@@ -20,6 +20,7 @@ import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
 import 'package:komodo_go/features/stacks/presentation/views/stack_detail/stack_detail_sections.dart';
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
+import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 
 /// View displaying detailed stack information.
@@ -177,6 +178,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     final serversListAsync = ref.watch(serversProvider);
     final reposListAsync = ref.watch(reposProvider);
     final registryAccountsAsync = ref.watch(dockerRegistryAccountsProvider);
+    final tagsAsync = ref.watch(tagsProvider);
     final actionsState = ref.watch(stackActionsProvider);
 
     final scheme = Theme.of(context).colorScheme;
@@ -208,6 +210,13 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     final servers = serversListAsync.asData?.value ?? const [];
     final repos = reposListAsync.asData?.value ?? const [];
     final registryAccounts = registryAccountsAsync.asData?.value ?? const [];
+    final tagNameById = tagsAsync.maybeWhen(
+      data: (tags) => {
+        for (final tag in tags)
+          if (tag.name.trim().isNotEmpty) tag.id: tag.name.trim(),
+      },
+      orElse: () => <String, String>{},
+    );
     final hasInfoTab = _hasInfoTab;
     final desiredHasInfoTab = _shouldShowInfoTab(stackAsync.asData?.value);
     if (desiredHasInfoTab != _hasInfoTab) {
@@ -307,6 +316,10 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                     stack: stack,
                                     listItem: listItem,
                                     repos: repos,
+                                  ),
+                                  displayTags: _displayTags(
+                                    stack.tags,
+                                    tagNameById,
                                   ),
                                 ),
                                 const Gap(12),
@@ -607,6 +620,16 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     }
 
     return '';
+  }
+
+  List<String> _displayTags(
+    List<String> tags,
+    Map<String, String> tagNameById,
+  ) {
+    if (tags.isEmpty) return const [];
+    return [
+      for (final tag in tags) tagNameById[tag] ?? tag,
+    ];
   }
 
   Future<void> _handleAction(

@@ -21,6 +21,7 @@ class StackHeroPanel extends StatelessWidget {
     required this.serverName,
     required this.sourceLabel,
     required this.sourceIcon,
+    required this.displayTags,
     super.key,
   });
 
@@ -31,6 +32,7 @@ class StackHeroPanel extends StatelessWidget {
   final String? serverName;
   final String sourceLabel;
   final IconData sourceIcon;
+  final List<String> displayTags;
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +159,7 @@ class StackHeroPanel extends StatelessWidget {
           ),
       ],
       footer: DetailPillList(
-        items: stack.tags,
+        items: displayTags,
         showEmptyLabel: false,
         leading: [
           if (projectMissing)
