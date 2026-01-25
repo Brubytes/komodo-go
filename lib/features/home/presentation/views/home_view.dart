@@ -338,7 +338,12 @@ class HomeView extends ConsumerWidget {
                 return Column(
                   children: state.items
                       .take(3)
-                      .map((update) => HomeUpdatePreviewTile(update: update))
+                      .map(
+                        (update) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: HomeUpdatePreviewTile(update: update),
+                        ),
+                      )
                       .toList(),
                 );
               },
