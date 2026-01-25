@@ -37,6 +37,7 @@ class StackHeroPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final config = stack.config;
     final info = stack.info;
 
@@ -45,129 +46,115 @@ class StackHeroPanel extends StatelessWidget {
         (config.linkedRepo.trim().isNotEmpty || config.repo.trim().isNotEmpty);
 
     final state = listItem?.info.state;
-    final status = listItem?.info.status;
     final projectMissing = listItem?.info.projectMissing ?? false;
 
     final missingCount = info.missingFiles.length;
     final hasGitMeta = info.latestHash != null || info.deployedHash != null;
     final upToDate =
         info.latestHash != null && info.deployedHash == info.latestHash;
+    final description = stack.description.trim();
+    final serverLabel = serverName ?? config.serverId;
+    final runDirectory = config.runDirectory.trim();
+    final directoryLabel = _formatDirectory(runDirectory);
+    final metrics = <DetailMetricTileData>[
+      DetailMetricTileData(
+        icon: _stateIcon(state),
+        label: 'State',
+        value: state?.displayName ?? '—',
+        tone: _stateTone(state),
+      ),
+      DetailMetricTileData(
+        icon: sourceIcon,
+        label: 'Source',
+        value: sourceLabel,
+        tone: DetailMetricTone.neutral,
+      ),
+      if (config.serverId.isNotEmpty)
+        DetailMetricTileData(
+          icon: AppIcons.server,
+          label: 'Server',
+          value: serverLabel,
+          tone: DetailMetricTone.neutral,
+        ),
+      if (runDirectory.isNotEmpty)
+        DetailMetricTileData(
+          icon: AppIcons.package,
+          label: 'Directory',
+          value: directoryLabel,
+          tone: DetailMetricTone.neutral,
+        ),
+      DetailMetricTileData(
+        icon: AppIcons.widgets,
+        label: 'Services',
+        value: serviceCount?.toString() ?? '—',
+        tone: DetailMetricTone.neutral,
+      ),
+      DetailMetricTileData(
+        icon: AppIcons.updateAvailable,
+        label: 'Updates',
+        value: updateCount?.toString() ?? '—',
+        tone: (updateCount ?? 0) > 0
+            ? DetailMetricTone.tertiary
+            : DetailMetricTone.success,
+      ),
+      DetailMetricTileData(
+        icon: AppIcons.warning,
+        label: 'Missing',
+        value: missingCount.toString(),
+        tone: missingCount > 0
+            ? DetailMetricTone.tertiary
+            : DetailMetricTone.success,
+      ),
+      if (isRepoDefined)
+        DetailMetricTileData(
+          icon: !hasGitMeta
+              ? AppIcons.widgets
+              : (upToDate ? AppIcons.ok : AppIcons.warning),
+          label: 'Git',
+          value: !hasGitMeta
+              ? '—'
+              : (upToDate ? 'Up to date' : 'Out of date'),
+          tone: !hasGitMeta
+              ? DetailMetricTone.neutral
+              : (upToDate
+                    ? DetailMetricTone.success
+                    : DetailMetricTone.tertiary),
+        ),
+    ];
 
     return DetailHeroPanel(
       tintColor: scheme.surface,
-      header: Column(
+      metrics: metrics,
+      footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (stack.description.trim().isNotEmpty) ...[
-            DetailIconInfoRow(
-              icon: AppIcons.tag,
-              label: 'Description',
-              value: stack.description.trim(),
-            ),
-            const Gap(10),
-          ],
-          DetailIconInfoRow(
-            icon: sourceIcon,
-            label: 'Source',
-            value: sourceLabel,
+          DetailPillList(
+            items: displayTags,
+            showEmptyLabel: false,
+            leading: [
+              if (projectMissing)
+                const StatusPill(
+                  label: 'Project missing',
+                  icon: AppIcons.warning,
+                  tone: PillTone.warning,
+                ),
+            ],
           ),
-          const Gap(10),
-          if (config.serverId.isNotEmpty) ...[
-            DetailIconInfoRow(
-              icon: AppIcons.server,
-              label: 'Server',
-              value: serverName ?? config.serverId,
+          if (description.isNotEmpty) ...[
+            const Gap(12),
+            Text(
+              'Description',
+              style: textTheme.labelMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const Gap(10),
+            const Gap(6),
+            Text(
+              description,
+              style: textTheme.bodyMedium,
+            ),
           ],
-          if (status?.trim().isNotEmpty ?? false) ...[
-            DetailIconInfoRow(
-              icon: AppIcons.activity,
-              label: 'Status',
-              value: status!.trim(),
-            ),
-            const Gap(10),
-          ],
-          if (config.repo.isNotEmpty) ...[
-            DetailIconInfoRow(
-              icon: AppIcons.repos,
-              label: 'Repo',
-              value: config.branch.isNotEmpty
-                  ? '${config.repo} (${config.branch})'
-                  : config.repo,
-            ),
-            const Gap(10),
-          ],
-          if (config.runDirectory.isNotEmpty)
-            DetailIconInfoRow(
-              icon: AppIcons.package,
-              label: 'Directory',
-              value: config.runDirectory,
-            ),
-        ],
-      ),
-      metrics: [
-        DetailMetricTileData(
-          icon: _stateIcon(state),
-          label: 'State',
-          value: state?.displayName ?? '—',
-          tone: _stateTone(state),
-        ),
-        if (isRepoDefined)
-          DetailMetricTileData(
-            icon: AppIcons.repos,
-            label: 'Branch',
-            value: config.branch.isNotEmpty ? config.branch : '—',
-            tone: DetailMetricTone.neutral,
-          ),
-        DetailMetricTileData(
-          icon: AppIcons.widgets,
-          label: 'Services',
-          value: serviceCount?.toString() ?? '—',
-          tone: DetailMetricTone.neutral,
-        ),
-        DetailMetricTileData(
-          icon: AppIcons.updateAvailable,
-          label: 'Updates',
-          value: updateCount?.toString() ?? '—',
-          tone: (updateCount ?? 0) > 0
-              ? DetailMetricTone.tertiary
-              : DetailMetricTone.success,
-        ),
-        DetailMetricTileData(
-          icon: AppIcons.warning,
-          label: 'Missing',
-          value: missingCount.toString(),
-          tone: missingCount > 0
-              ? DetailMetricTone.tertiary
-              : DetailMetricTone.success,
-        ),
-        if (isRepoDefined)
-          DetailMetricTileData(
-            icon: !hasGitMeta
-                ? AppIcons.widgets
-                : (upToDate ? AppIcons.ok : AppIcons.warning),
-            label: 'Git',
-            value: !hasGitMeta
-                ? '—'
-                : (upToDate ? 'Up to date' : 'Out of date'),
-            tone: !hasGitMeta
-                ? DetailMetricTone.neutral
-                : (upToDate
-                      ? DetailMetricTone.success
-                      : DetailMetricTone.tertiary),
-          ),
-      ],
-      footer: DetailPillList(
-        items: displayTags,
-        showEmptyLabel: false,
-        leading: [
-          if (projectMissing)
-            const StatusPill(
-              label: 'Project missing',
-              icon: AppIcons.warning,
-              tone: PillTone.warning,
-            ),
         ],
       ),
     );
@@ -200,6 +187,17 @@ class StackHeroPanel extends StatelessWidget {
       StackState.paused => DetailMetricTone.secondary,
       _ => DetailMetricTone.neutral,
     };
+  }
+
+  String _formatDirectory(String path) {
+    if (path.isEmpty) return path;
+    final normalized = path.replaceAll('\\', '/');
+    final parts =
+        normalized.split('/').where((segment) => segment.isNotEmpty).toList();
+    if (parts.isEmpty) return path;
+    if (parts.length <= 2) return normalized;
+    final tail = parts.sublist(parts.length - 2).join('/');
+    return '…/$tail';
   }
 }
 
