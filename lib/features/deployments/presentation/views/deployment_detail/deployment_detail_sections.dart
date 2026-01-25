@@ -26,66 +26,69 @@ class DeploymentHeroPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final state = deployment.info?.state ?? DeploymentState.unknown;
-    final status = deployment.info?.status;
     final updateAvailable = deployment.info?.updateAvailable ?? false;
     final image = deployment.imageLabel;
     final serverId =
         deployment.config?.serverId ?? deployment.info?.serverId ?? '';
+    final description = deployment.description?.trim() ?? '';
+    final serverLabel = serverName ?? serverId;
+    final metrics = <DetailMetricTileData>[
+      DetailMetricTileData(
+        icon: _stateIcon(state),
+        label: 'State',
+        value: state.displayName,
+        tone: _stateTone(state),
+      ),
+      if (image.isNotEmpty)
+        DetailMetricTileData(
+          icon: AppIcons.deployments,
+          label: 'Image',
+          value: image,
+          tone: DetailMetricTone.neutral,
+        ),
+      if (serverId.isNotEmpty)
+        DetailMetricTileData(
+          icon: AppIcons.server,
+          label: 'Server',
+          value: serverLabel,
+          tone: DetailMetricTone.neutral,
+        ),
+      DetailMetricTileData(
+        icon: updateAvailable ? AppIcons.updateAvailable : AppIcons.ok,
+        label: 'Updates',
+        value: updateAvailable ? 'Available' : 'Up to date',
+        tone: updateAvailable
+            ? DetailMetricTone.tertiary
+            : DetailMetricTone.success,
+      ),
+    ];
 
     return DetailHeroPanel(
       tintColor: scheme.primary,
-      header: Column(
+      metrics: metrics,
+      footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (deployment.description?.trim().isNotEmpty ?? false) ...[
-            DetailIconInfoRow(
-              icon: AppIcons.tag,
-              label: 'Description',
-              value: deployment.description!.trim(),
+          DetailPillList(items: deployment.tags, emptyLabel: 'No tags'),
+          if (description.isNotEmpty) ...[
+            const Gap(12),
+            Text(
+              'Description',
+              style: textTheme.labelMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const Gap(10),
+            const Gap(6),
+            Text(
+              description,
+              style: textTheme.bodyMedium,
+            ),
           ],
-          if (image.isNotEmpty) ...[
-            DetailIconInfoRow(
-              icon: AppIcons.deployments,
-              label: 'Image',
-              value: image,
-            ),
-            const Gap(10),
-          ],
-          if (serverId.isNotEmpty)
-            DetailIconInfoRow(
-              icon: AppIcons.server,
-              label: 'Server',
-              value: serverName ?? serverId,
-            ),
         ],
       ),
-      metrics: [
-        DetailMetricTileData(
-          icon: _stateIcon(state),
-          label: 'State',
-          value: state.displayName,
-          tone: _stateTone(state),
-        ),
-        if (status?.trim().isNotEmpty ?? false)
-          DetailMetricTileData(
-            icon: AppIcons.activity,
-            label: 'Status',
-            value: status!.trim(),
-            tone: DetailMetricTone.neutral,
-          ),
-        DetailMetricTileData(
-          icon: updateAvailable ? AppIcons.updateAvailable : AppIcons.ok,
-          label: 'Updates',
-          value: updateAvailable ? 'Available' : 'Up to date',
-          tone: updateAvailable
-              ? DetailMetricTone.tertiary
-              : DetailMetricTone.success,
-        ),
-      ],
-      footer: DetailPillList(items: deployment.tags, emptyLabel: 'No tags'),
     );
   }
 

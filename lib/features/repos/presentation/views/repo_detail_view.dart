@@ -332,86 +332,80 @@ class _RepoHeroPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final config = repo.config;
     final info = repo.info;
 
     final latest = info.latestHash;
     final built = info.builtHash;
     final upToDate = latest != null && built == latest;
+    final description = repo.description.trim();
+    final serverLabel = serverName ?? config.serverId;
+    final repoLabel = config.repo.isNotEmpty ? config.repo : '—';
+    final branchLabel = config.branch.isNotEmpty ? config.branch : '—';
+    final metrics = <DetailMetricTileData>[
+      DetailMetricTileData(
+        icon: AppIcons.repos,
+        label: 'Repo',
+        value: repoLabel,
+        tone: DetailMetricTone.neutral,
+      ),
+      DetailMetricTileData(
+        icon: AppIcons.repos,
+        label: 'Branch',
+        value: branchLabel,
+        tone: DetailMetricTone.neutral,
+      ),
+      if (config.serverId.isNotEmpty)
+        DetailMetricTileData(
+          icon: AppIcons.server,
+          label: 'Server',
+          value: serverLabel,
+          tone: DetailMetricTone.neutral,
+        ),
+      DetailMetricTileData(
+        icon: config.webhookEnabled ? AppIcons.ok : AppIcons.pause,
+        label: 'Webhook',
+        value: config.webhookEnabled ? 'Enabled' : 'Disabled',
+        tone: config.webhookEnabled
+            ? DetailMetricTone.success
+            : DetailMetricTone.neutral,
+      ),
+      DetailMetricTileData(
+        icon: upToDate ? AppIcons.ok : AppIcons.warning,
+        label: 'Git',
+        value: upToDate ? 'Up to date' : 'Out of date',
+        tone: upToDate ? DetailMetricTone.success : DetailMetricTone.tertiary,
+      ),
+    ];
 
     return DetailHeroPanel(
       tintColor: scheme.primary,
-      header: Column(
+      metrics: metrics,
+      footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (repo.description.trim().isNotEmpty) ...[
-            DetailIconInfoRow(
-              icon: AppIcons.tag,
-              label: 'Description',
-              value: repo.description.trim(),
+          DetailPillList(items: repo.tags, emptyLabel: 'No tags'),
+          if (description.isNotEmpty) ...[
+            const Gap(12),
+            Text(
+              'Description',
+              style: textTheme.labelMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const Gap(10),
+            const Gap(6),
+            Text(
+              description,
+              style: textTheme.bodyMedium,
+            ),
           ],
-          if (config.repo.isNotEmpty) ...[
-            DetailIconInfoRow(
-              icon: AppIcons.repos,
-              label: 'Repo',
-              value: config.branch.isNotEmpty
-                  ? '${config.repo} (${config.branch})'
-                  : config.repo,
-            ),
-            const Gap(10),
-          ],
-          if (config.serverId.isNotEmpty)
-            DetailIconInfoRow(
-              icon: AppIcons.server,
-              label: 'Server',
-              value: serverName ?? config.serverId,
-            ),
         ],
       ),
-      metrics: [
-        DetailMetricTileData(
-          icon: _stateIcon(RepoState.unknown),
-          label: 'Status',
-          value: '—',
-          tone: DetailMetricTone.neutral,
-        ),
-        DetailMetricTileData(
-          icon: AppIcons.repos,
-          label: 'Branch',
-          value: config.branch.isNotEmpty ? config.branch : '—',
-          tone: DetailMetricTone.neutral,
-        ),
-        DetailMetricTileData(
-          icon: config.webhookEnabled ? AppIcons.ok : AppIcons.pause,
-          label: 'Webhook',
-          value: config.webhookEnabled ? 'Enabled' : 'Disabled',
-          tone: config.webhookEnabled
-              ? DetailMetricTone.success
-              : DetailMetricTone.neutral,
-        ),
-        DetailMetricTileData(
-          icon: upToDate ? AppIcons.ok : AppIcons.warning,
-          label: 'Git',
-          value: upToDate ? 'Up to date' : 'Out of date',
-          tone: upToDate ? DetailMetricTone.success : DetailMetricTone.tertiary,
-        ),
-      ],
-      footer: DetailPillList(items: repo.tags, emptyLabel: 'No tags'),
     );
   }
 
-  IconData _stateIcon(RepoState state) {
-    return switch (state) {
-      RepoState.ok => AppIcons.ok,
-      RepoState.cloning ||
-      RepoState.pulling ||
-      RepoState.building => AppIcons.loading,
-      RepoState.failed => AppIcons.error,
-      _ => AppIcons.unknown,
-    };
-  }
 }
 
 class _RepoBuildContent extends StatelessWidget {
