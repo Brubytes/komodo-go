@@ -212,9 +212,16 @@ class StackCard extends StatelessWidget {
   }
 
   String _sourceLabel(StackListItem stack) {
-    if (stack.sourceLabel == 'Git' &&
-        stack.info.gitProvider.trim().isNotEmpty) {
-      return stack.info.gitProvider.trim();
+    if (stack.sourceLabel == 'Git') {
+      if (stack.info.linkedRepo.trim().isNotEmpty) {
+        return stack.info.linkedRepo.trim();
+      }
+      if (stack.info.repo.trim().isNotEmpty) {
+        return stack.info.repo.trim();
+      }
+      if (stack.info.gitProvider.trim().isNotEmpty) {
+        return stack.info.gitProvider.trim();
+      }
     }
     return stack.sourceLabel;
   }
