@@ -8,9 +8,12 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
 import 'package:komodo_go/features/builds/presentation/widgets/build_card.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class BuildsListContent extends ConsumerWidget {
   const BuildsListContent({super.key});
@@ -51,7 +54,7 @@ class BuildsListContent extends ConsumerWidget {
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const _BuildsSkeletonList(),
             error: (error, stack) => ErrorStateView(
               title: 'Failed to load builds',
               message: error.toString(),
@@ -62,14 +65,7 @@ class BuildsListContent extends ConsumerWidget {
         if (actionsState.isLoading)
           const ColoredBox(
             color: Colors.black26,
-            child: Center(
-              child: Card(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-            ),
+            child: Center(child: AppSkeletonCard()),
           ),
       ],
     );
@@ -114,6 +110,56 @@ class BuildsListView extends StatelessWidget {
         centerTitle: true,
       ),
       body: BuildsListContent(),
+    );
+  }
+}
+
+class _BuildsSkeletonList extends StatelessWidget {
+  const _BuildsSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        separatorBuilder: (_, __) => const Gap(12),
+        itemBuilder: (_, __) => AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(radius: 16),
+                    const Gap(10),
+                    Expanded(
+                      child: Text('Build name', style: textTheme.titleSmall),
+                    ),
+                    const Gap(8),
+                    const CircleAvatar(radius: 6),
+                  ],
+                ),
+                const Gap(10),
+                Text('Repo • Commit • Builder', style: textTheme.bodySmall),
+                const Gap(10),
+                Row(
+                  children: const [
+                    Chip(label: Text('Queued')),
+                    Gap(8),
+                    Chip(label: Text('Duration 3m')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

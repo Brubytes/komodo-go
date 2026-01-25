@@ -7,6 +7,7 @@ import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/auth/presentation/providers/connection_draft_provider.dart';
@@ -426,9 +427,7 @@ class LoginView extends HookConsumerWidget {
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
+                                child: AppInlineSkeleton(size: 20),
                               )
                             : const Text('Save connection'),
                       ),

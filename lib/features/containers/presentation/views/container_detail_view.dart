@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/features/containers/presentation/providers/container_log_provider.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
@@ -59,12 +60,7 @@ class ContainerDetailView extends ConsumerWidget {
             itemAsync.when(
               data: (item) =>
                   item == null ? const _NotFound() : ContainerCard(item: item),
-              loading: () => const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              ),
+              loading: () => const AppSkeletonCard(),
               error: (error, stack) => _ErrorState(
                 title: 'Failed to load container',
                 message: error.toString(),
@@ -196,11 +192,7 @@ class _LogBox extends StatelessWidget {
         child: isLoading
             ? Row(
                 children: [
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
+                  const AppInlineSkeleton(size: 16),
                   const Gap(10),
                   Text(content, style: textTheme.bodySmall),
                 ],

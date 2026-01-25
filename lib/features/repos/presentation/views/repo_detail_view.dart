@@ -5,6 +5,7 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
@@ -221,14 +222,7 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
           if (actionsState.isLoading)
             ColoredBox(
               color: scheme.scrim.withValues(alpha: 0.25),
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-              ),
+              child: const Center(child: AppSkeletonCard()),
             ),
         ],
       ),
@@ -586,9 +580,7 @@ class _LoadingSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DetailSurface(
-      child: Center(child: CircularProgressIndicator()),
-    );
+    return const AppSkeletonSurface();
   }
 }
 

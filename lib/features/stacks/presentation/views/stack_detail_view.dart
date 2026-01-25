@@ -10,6 +10,7 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/providers/core_info_provider.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
@@ -418,14 +419,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
           if (actionsState.isLoading)
             ColoredBox(
               color: scheme.scrim.withValues(alpha: 0.25),
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-              ),
+              child: const Center(child: AppSkeletonCard()),
             ),
         ],
       ),

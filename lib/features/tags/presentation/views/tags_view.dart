@@ -8,12 +8,14 @@ import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/features/tags/presentation/widgets/tag_editor_sheet.dart';
 import 'package:komodo_go/features/users/presentation/providers/username_provider.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class TagsView extends ConsumerWidget {
   const TagsView({super.key});
@@ -140,7 +142,7 @@ class TagsView extends ConsumerWidget {
                   ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const _TagsSkeletonList(),
               error: (error, _) => ErrorStateView(
                 title: 'Failed to load tags',
                 message: error.toString(),
@@ -153,7 +155,7 @@ class TagsView extends ConsumerWidget {
               color: Theme.of(
                 context,
               ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: CircularProgressIndicator()),
+              child: const Center(child: AppSkeletonCard()),
             ),
         ],
       ),
@@ -254,6 +256,48 @@ class _TagTile extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _TagsSkeletonList extends StatelessWidget {
+  const _TagsSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        separatorBuilder: (_, __) => const Gap(12),
+        itemBuilder: (_, __) => AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                const CircleAvatar(radius: 16),
+                const Gap(10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Tag label', style: textTheme.titleSmall),
+                      const Gap(6),
+                      Text('Owner • Usage', style: textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                const Gap(8),
+                const Chip(label: Text('3')),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

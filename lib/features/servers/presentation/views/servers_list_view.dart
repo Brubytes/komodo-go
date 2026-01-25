@@ -8,8 +8,10 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/servers/presentation/widgets/server_card.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class ServersListContent extends ConsumerWidget {
   const ServersListContent({super.key});
@@ -45,7 +47,7 @@ class ServersListContent extends ConsumerWidget {
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _ServersSkeletonList(),
         error: (error, stack) => ErrorStateView(
           title: 'Failed to load servers',
           message: error.toString(),
@@ -104,6 +106,61 @@ class _EmptyState extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ServersSkeletonList extends StatelessWidget {
+  const _ServersSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        separatorBuilder: (_, __) => const Gap(12),
+        itemBuilder: (_, __) => AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(radius: 16),
+                    const Gap(10),
+                    Expanded(
+                      child: Text(
+                        'Server name',
+                        style: textTheme.titleSmall,
+                      ),
+                    ),
+                    const Gap(8),
+                    const CircleAvatar(radius: 6),
+                  ],
+                ),
+                const Gap(10),
+                Text('Status • Region • Provider', style: textTheme.bodySmall),
+                const Gap(10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: const [
+                    Chip(label: Text('Online')),
+                    Chip(label: Text('CPU 45%')),
+                    Chip(label: Text('Mem 62%')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

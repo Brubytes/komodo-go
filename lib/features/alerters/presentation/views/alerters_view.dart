@@ -11,11 +11,13 @@ import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pill_list.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class AlertersView extends ConsumerWidget {
   const AlertersView({super.key});
@@ -50,7 +52,7 @@ class AlertersView extends ConsumerWidget {
                   ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const _AlertersSkeletonList(),
               error: (error, _) => ErrorStateView(
                 title: 'Failed to load alerters',
                 message: error.toString(),
@@ -63,7 +65,7 @@ class AlertersView extends ConsumerWidget {
               color: Theme.of(
                 context,
               ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: CircularProgressIndicator()),
+              child: const Center(child: AppSkeletonCard()),
             ),
         ],
       ),
@@ -329,6 +331,57 @@ class _AlerterTile extends ConsumerWidget {
       context,
       ok ? 'Alerter deleted' : 'Failed to delete alerter',
       tone: ok ? AppSnackBarTone.success : AppSnackBarTone.error,
+    );
+  }
+}
+
+class _AlertersSkeletonList extends StatelessWidget {
+  const _AlertersSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        separatorBuilder: (_, __) => const Gap(12),
+        itemBuilder: (_, __) => AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(radius: 18),
+                    const Gap(10),
+                    Expanded(
+                      child: Text('Alerter name', style: textTheme.titleSmall),
+                    ),
+                    const Gap(8),
+                    const CircleAvatar(radius: 6),
+                  ],
+                ),
+                const Gap(10),
+                Text('Endpoint • Level • Targets', style: textTheme.bodySmall),
+                const Gap(10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: const [
+                    Chip(label: Text('Enabled')),
+                    Chip(label: Text('Alerts 5')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

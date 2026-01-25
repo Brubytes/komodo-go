@@ -9,6 +9,7 @@ import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
@@ -17,6 +18,7 @@ import 'package:komodo_go/features/providers/presentation/providers/docker_regis
 import 'package:komodo_go/features/providers/presentation/providers/git_providers_provider.dart';
 import 'package:komodo_go/features/providers/presentation/widgets/docker_registry_editor_sheet.dart';
 import 'package:komodo_go/features/providers/presentation/widgets/git_provider_editor_sheet.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class ProvidersView extends ConsumerWidget {
   const ProvidersView({super.key});
@@ -97,14 +99,14 @@ class ProvidersView extends ConsumerWidget {
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const _ProvidersSkeletonList(),
                 error: (error, _) => ErrorStateView(
                   title: 'Failed to load registries',
                   message: error.toString(),
                   onRetry: () => ref.invalidate(dockerRegistryAccountsProvider),
                 ),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const _ProvidersSkeletonList(),
               error: (error, _) => ErrorStateView(
                 title: 'Failed to load providers',
                 message: error.toString(),
@@ -117,7 +119,7 @@ class ProvidersView extends ConsumerWidget {
               color: Theme.of(
                 context,
               ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: CircularProgressIndicator()),
+              child: const Center(child: AppSkeletonCard()),
             ),
         ],
       ),
@@ -315,6 +317,89 @@ class ProvidersView extends ConsumerWidget {
       context,
       ok ? 'Registry deleted' : 'Failed to delete registry',
       tone: ok ? AppSnackBarTone.success : AppSnackBarTone.error,
+    );
+  }
+}
+
+class _ProvidersSkeletonList extends StatelessWidget {
+  const _ProvidersSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text('Git Providers', style: textTheme.titleSmall),
+          const Gap(8),
+          ...List.generate(
+            3,
+            (_) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AppCardSurface(
+                padding: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      const CircleAvatar(radius: 16),
+                      const Gap(10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Provider name', style: textTheme.titleSmall),
+                            const Gap(6),
+                            Text('Username • Host', style: textTheme.bodySmall),
+                          ],
+                        ),
+                      ),
+                      const Gap(8),
+                      const Chip(label: Text('Active')),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const Gap(8),
+          Text('Registry Accounts', style: textTheme.titleSmall),
+          const Gap(8),
+          ...List.generate(
+            3,
+            (_) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AppCardSurface(
+                padding: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      const CircleAvatar(radius: 16),
+                      const Gap(10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Registry name', style: textTheme.titleSmall),
+                            const Gap(6),
+                            Text('Username • Host', style: textTheme.bodySmall),
+                          ],
+                        ),
+                      ),
+                      const Gap(8),
+                      const Chip(label: Text('Active')),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

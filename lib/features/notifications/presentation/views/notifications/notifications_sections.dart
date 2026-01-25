@@ -6,6 +6,7 @@ import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
@@ -13,6 +14,7 @@ import 'package:komodo_go/features/notifications/data/models/update_list_item.da
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/target_display_name_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class AlertsTab extends ConsumerWidget {
   const AlertsTab({super.key});
@@ -65,7 +67,7 @@ class AlertsTab extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _AlertsSkeletonList(),
         error: (error, stack) => NotificationsErrorState(
           title: 'Failed to load alerts',
           message: error.toString(),
@@ -127,7 +129,7 @@ class UpdatesTab extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _UpdatesSkeletonList(),
         error: (error, stack) => NotificationsErrorState(
           title: 'Failed to load updates',
           message: error.toString(),
@@ -345,7 +347,7 @@ class PaginationFooter extends StatelessWidget {
     if (isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 8),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: AppInlineSkeleton(size: 20)),
       );
     }
 
@@ -398,6 +400,96 @@ class NotificationsEmptyState extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AlertsSkeletonList extends StatelessWidget {
+  const _AlertsSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        separatorBuilder: (_, __) => const Gap(12),
+        itemBuilder: (_, __) => AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const CircleAvatar(radius: 16),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Alert title', style: textTheme.titleSmall),
+                      const Gap(6),
+                      Text('Primary detail', style: textTheme.bodySmall),
+                      const Gap(6),
+                      Text('Target • Time', style: textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                const Gap(8),
+                const Chip(label: Text('OPEN')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UpdatesSkeletonList extends StatelessWidget {
+  const _UpdatesSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        separatorBuilder: (_, __) => const Gap(12),
+        itemBuilder: (_, __) => AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const CircleAvatar(radius: 16),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Update title', style: textTheme.titleSmall),
+                      const Gap(6),
+                      Text('Detail line', style: textTheme.bodySmall),
+                      const Gap(6),
+                      Text('Resource • Time', style: textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                const Gap(8),
+                const Chip(label: Text('NEW')),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

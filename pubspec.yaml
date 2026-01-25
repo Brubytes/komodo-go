@@ -24,6 +24,7 @@ dependencies:
   riverpod_annotation: ^3.0.0
   shared_preferences: ^2.5.3
   syntax_highlight: ^0.5.0
+  skeletonizer: ^2.1.2
 
 dev_dependencies:
   build_runner: ^2.4.15

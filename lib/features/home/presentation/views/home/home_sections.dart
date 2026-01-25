@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class HomeSectionHeader extends StatelessWidget {
   const HomeSectionHeader({required this.title, this.onSeeAll, super.key});
@@ -33,11 +34,48 @@ class HomeLoadingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(child: CircularProgressIndicator()),
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const CircleAvatar(radius: 18),
+                  const Gap(12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Loading status', style: textTheme.titleMedium),
+                        const Gap(6),
+                        Text('Preparing overview', style: textTheme.bodySmall),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const Gap(12),
+              Text('Loading details', style: textTheme.bodyMedium),
+              const Gap(8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: const [
+                  Chip(label: Text('Loading')),
+                  Chip(label: Text('Loading')),
+                  Chip(label: Text('Loading')),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

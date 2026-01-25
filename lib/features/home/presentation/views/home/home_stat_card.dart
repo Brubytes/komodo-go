@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 class HomeStatCard<T> extends StatelessWidget {
@@ -161,7 +162,7 @@ class HomeStatCard<T> extends StatelessWidget {
                       },
                       loading: () => SizedBox(
                         height: isTight ? 32 : 40,
-                        child: const Center(child: CircularProgressIndicator()),
+                        child: const Center(child: AppInlineSkeleton(size: 18)),
                       ),
                       error: (_, __) => SizedBox(
                         height: isTight ? 32 : 40,

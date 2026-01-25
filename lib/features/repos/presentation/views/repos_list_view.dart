@@ -8,9 +8,12 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
 import 'package:komodo_go/features/repos/presentation/widgets/repo_card.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class ReposListContent extends ConsumerWidget {
   const ReposListContent({super.key});
@@ -51,7 +54,7 @@ class ReposListContent extends ConsumerWidget {
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const _ReposSkeletonList(),
             error: (error, stack) => ErrorStateView(
               title: 'Failed to load repos',
               message: error.toString(),
@@ -62,14 +65,7 @@ class ReposListContent extends ConsumerWidget {
         if (actionsState.isLoading)
           const ColoredBox(
             color: Colors.black26,
-            child: Center(
-              child: Card(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-            ),
+            child: Center(child: AppSkeletonCard()),
           ),
       ],
     );
@@ -115,6 +111,56 @@ class ReposListView extends StatelessWidget {
         centerTitle: true,
       ),
       body: ReposListContent(),
+    );
+  }
+}
+
+class _ReposSkeletonList extends StatelessWidget {
+  const _ReposSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        separatorBuilder: (_, __) => const Gap(12),
+        itemBuilder: (_, __) => AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(radius: 16),
+                    const Gap(10),
+                    Expanded(
+                      child: Text('Repo name', style: textTheme.titleSmall),
+                    ),
+                    const Gap(8),
+                    const CircleAvatar(radius: 6),
+                  ],
+                ),
+                const Gap(10),
+                Text('Provider • Branch • Server', style: textTheme.bodySmall),
+                const Gap(10),
+                Row(
+                  children: const [
+                    Chip(label: Text('Synced')),
+                    Gap(8),
+                    Chip(label: Text('Builds 12')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

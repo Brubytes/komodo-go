@@ -11,11 +11,14 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_filters_provider.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 
@@ -236,8 +239,8 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                     );
                   },
                   loading: () => const Padding(
-                    padding: EdgeInsets.only(top: 48),
-                    child: Center(child: CircularProgressIndicator()),
+                    padding: EdgeInsets.only(top: 16),
+                    child: _ContainersSkeletonBlock(),
                   ),
                   error: (error, stack) => ErrorStateView(
                     title: 'Failed to load containers',
@@ -253,14 +256,7 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
               color: Theme.of(
                 context,
               ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-              ),
+              child: const Center(child: AppSkeletonCard()),
             ),
         ],
       ),
@@ -603,6 +599,62 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContainersSkeletonBlock extends StatelessWidget {
+  const _ContainersSkeletonBlock();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: Column(
+        children: List.generate(
+          3,
+          (index) => Padding(
+            padding: EdgeInsets.only(bottom: index == 2 ? 0 : 12),
+            child: AppCardSurface(
+              padding: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const CircleAvatar(radius: 16),
+                        const Gap(10),
+                        Expanded(
+                          child: Text(
+                            'Container name',
+                            style: textTheme.titleSmall,
+                          ),
+                        ),
+                        const Gap(8),
+                        const CircleAvatar(radius: 6),
+                      ],
+                    ),
+                    const Gap(10),
+                    Text('Image • Status • Server', style: textTheme.bodySmall),
+                    const Gap(10),
+                    Row(
+                      children: const [
+                        Chip(label: Text('Running')),
+                        Gap(8),
+                        Chip(label: Text('CPU 12%')),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

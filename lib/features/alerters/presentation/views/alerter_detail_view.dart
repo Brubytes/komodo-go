@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
@@ -109,13 +110,13 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
               ? const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: AppInlineSkeleton(size: 18),
                 )
               : const Text('Save'),
         ),
       ),
       body: alerterAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const AppSkeletonCentered(),
         error: (error, _) => ErrorStateView(
           title: 'Failed to load alerter',
           message: error.toString(),

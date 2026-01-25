@@ -7,12 +7,14 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/auth/presentation/widgets/edit_connection_sheet.dart';
 import 'package:komodo_go/features/settings/presentation/widgets/add_connection_sheet.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class ConnectionsView extends ConsumerWidget {
   const ConnectionsView({super.key});
@@ -161,7 +163,7 @@ class ConnectionsView extends ConsumerWidget {
             itemCount: connections.length,
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _ConnectionsSkeletonList(),
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -204,3 +206,45 @@ class ConnectionsView extends ConsumerWidget {
 }
 
 enum _ConnectionAction { edit, delete }
+
+class _ConnectionsSkeletonList extends StatelessWidget {
+  const _ConnectionsSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: 4,
+        separatorBuilder: (_, __) => const Gap(8),
+        itemBuilder: (_, __) => AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                const CircleAvatar(radius: 16),
+                const Gap(10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Connection name', style: textTheme.titleSmall),
+                      const Gap(6),
+                      Text('Base URL • User', style: textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                const Gap(8),
+                const Chip(label: Text('Active')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
