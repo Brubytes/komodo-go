@@ -359,27 +359,38 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                 fontSize: 10,
                                 height: 1.1,
                               ),
+                      labelColor: scheme.primary,
+                      unselectedLabelColor: scheme.onSurfaceVariant,
+                      indicator: UnderlineTabIndicator(
+                        borderSide: BorderSide(
+                          width: 3,
+                          color: scheme.primary,
+                        ),
+                        insets: const EdgeInsets.symmetric(horizontal: 14),
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      dividerColor: scheme.outlineVariant,
                       labelPadding: const EdgeInsets.symmetric(horizontal: 8),
                       tabs: [
                         const Tab(
-                          icon: Icon(Icons.tune_outlined),
+                          icon: Icon(AppIcons.bolt),
                           text: 'Config',
                         ),
                         if (hasInfoTab)
                           const Tab(
-                            icon: Icon(Icons.info_outline),
+                            icon: Icon(AppIcons.info),
                             text: 'Info',
                           ),
                         const Tab(
-                          icon: Icon(Icons.grid_view_outlined),
+                          icon: Icon(AppIcons.toolbox),
                           text: 'Services',
                         ),
                         const Tab(
-                          icon: Icon(Icons.system_update_outlined),
+                          icon: Icon(AppIcons.history),
                           text: 'Updates',
                         ),
                         const Tab(
-                          icon: Icon(Icons.receipt_long_outlined),
+                          icon: Icon(AppIcons.logs),
                           text: 'Logs',
                         ),
                       ],
