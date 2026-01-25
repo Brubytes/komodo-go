@@ -240,7 +240,7 @@ class StackCard extends StatelessWidget {
 }
 
 final _containerCountPattern = RegExp(
-  r'^(running|stopped|paused|deploying|restarting|removing|down|dead|unhealthy)\s*\(\d+\)$',
+  r'^(running|stopped|paused|deploying|restarting|removing|down|dead|unhealthy|exited)\s*\(\d+\)$',
 );
 
 class _StatusBadge extends StatelessWidget {
@@ -254,7 +254,7 @@ class _StatusBadge extends StatelessWidget {
       StackState.deploying => (Colors.blue, AppIcons.loading),
       StackState.running => (Colors.green, AppIcons.ok),
       StackState.paused => (Colors.grey, AppIcons.paused),
-      StackState.stopped => (Colors.orange, AppIcons.stopped),
+      StackState.stopped => (Colors.red, AppIcons.stopped),
       StackState.created => (Colors.grey, AppIcons.pending),
       StackState.restarting => (Colors.blue, AppIcons.loading),
       StackState.removing => (Colors.grey, AppIcons.waiting),
