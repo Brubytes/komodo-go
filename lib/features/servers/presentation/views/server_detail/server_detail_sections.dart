@@ -36,6 +36,7 @@ class ServerHeroPanel extends StatelessWidget {
     final systemInformation = this.systemInformation;
 
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     final version = (listServer?.info?.version.isNotEmpty ?? false)
         ? listServer!.info!.version
@@ -64,26 +65,14 @@ class ServerHeroPanel extends StatelessWidget {
 
     return DetailHeroPanel(
       tintColor: scheme.primary,
-      header: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (address?.isNotEmpty ?? false) ...[
-            DetailIconInfoRow(
-              icon: AppIcons.network,
-              label: 'Address',
-              value: address!,
-            ),
-            const Gap(10),
-          ],
-          if (description?.isNotEmpty ?? false)
-            DetailIconInfoRow(
-              icon: AppIcons.tag,
-              label: 'Description',
-              value: description!,
-            ),
-        ],
-      ),
       metrics: [
+        if (address?.isNotEmpty ?? false)
+          DetailMetricTileData(
+            icon: AppIcons.network,
+            label: 'Address',
+            value: address!,
+            tone: DetailMetricTone.neutral,
+          ),
         DetailMetricTileData(
           icon: AppIcons.ok,
           label: 'Version',
@@ -130,8 +119,33 @@ class ServerHeroPanel extends StatelessWidget {
           tone: DetailMetricTone.neutral,
         ),
       ],
-      footer: server?.tags.isNotEmpty ?? false
-          ? DetailPillList(items: server!.tags, emptyLabel: 'No tags')
+      footer: (server?.tags.isNotEmpty ?? false) ||
+              (description?.isNotEmpty ?? false)
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (server?.tags.isNotEmpty ?? false)
+                  DetailPillList(
+                    items: server!.tags,
+                    emptyLabel: 'No tags',
+                  ),
+                if (description?.isNotEmpty ?? false) ...[
+                  if (server?.tags.isNotEmpty ?? false) const Gap(12),
+                  Text(
+                    'Description',
+                    style: textTheme.labelMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Gap(6),
+                  Text(
+                    description!,
+                    style: textTheme.bodyMedium,
+                  ),
+                ],
+              ],
+            )
           : null,
     );
   }
