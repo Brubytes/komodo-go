@@ -5,7 +5,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/route_observer.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/adaptive_bottom_navigation_bar.dart';
 import 'package:komodo_go/features/actions/presentation/views/action_detail_view.dart';
 import 'package:komodo_go/features/actions/presentation/views/actions_list_view.dart';
@@ -48,28 +47,8 @@ part 'app_router.g.dart';
 Page<void> _noTransitionTabPage(Widget child) =>
     NoTransitionPage<void>(child: child);
 
-Page<void> _appStackPage(BuildContext context, Widget child) {
-  return CustomTransitionPage<void>(
-    transitionDuration: AppMotion.slow,
-    reverseTransitionDuration: AppMotion.base,
-    child: child,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: AppMotion.enterCurve,
-        reverseCurve: AppMotion.exitCurve,
-      );
-      final slide = Tween<Offset>(
-        begin: const Offset(0.03, 0),
-        end: Offset.zero,
-      ).animate(curved);
-      return FadeTransition(
-        opacity: curved,
-        child: SlideTransition(position: slide, child: child),
-      );
-    },
-  );
-}
+Page<void> _appStackPage(GoRouterState state, Widget child) =>
+    MaterialPage<void>(key: state.pageKey, child: child);
 
 /// Route paths
 abstract class AppRoutes {
@@ -289,8 +268,8 @@ GoRouter appRouter(Ref ref) {
                 routes: [
                   GoRoute(
                     path: 'servers',
-                pageBuilder: (context, state) =>
-                    _appStackPage(context, const ServersListView()),
+                    pageBuilder: (context, state) =>
+                        _appStackPage(state, const ServersListView()),
                     routes: [
                       GoRoute(
                         path: ':id',
@@ -299,7 +278,7 @@ GoRouter appRouter(Ref ref) {
                           final name =
                               state.uri.queryParameters['name'] ?? 'Server';
                           return _appStackPage(
-                            context,
+                            state,
                             ServerDetailView(serverId: id, serverName: name),
                           );
                         },
@@ -309,7 +288,7 @@ GoRouter appRouter(Ref ref) {
                   GoRoute(
                     path: 'deployments',
                     pageBuilder: (context, state) => _appStackPage(
-                      context,
+                      state,
                       const DeploymentsListView(),
                     ),
                     routes: [
@@ -320,7 +299,7 @@ GoRouter appRouter(Ref ref) {
                           final name =
                               state.uri.queryParameters['name'] ?? 'Deployment';
                           return _appStackPage(
-                            context,
+                            state,
                             DeploymentDetailView(
                               deploymentId: id,
                               deploymentName: name,
@@ -333,7 +312,7 @@ GoRouter appRouter(Ref ref) {
                   GoRoute(
                     path: 'stacks',
                     pageBuilder: (context, state) =>
-                        _appStackPage(context, const StacksListView()),
+                        _appStackPage(state, const StacksListView()),
                     routes: [
                       GoRoute(
                         path: ':id',
@@ -342,7 +321,7 @@ GoRouter appRouter(Ref ref) {
                           final name =
                               state.uri.queryParameters['name'] ?? 'Stack';
                           return _appStackPage(
-                            context,
+                            state,
                             StackDetailView(stackId: id, stackName: name),
                           );
                         },
@@ -352,7 +331,7 @@ GoRouter appRouter(Ref ref) {
                   GoRoute(
                     path: 'repos',
                     pageBuilder: (context, state) =>
-                        _appStackPage(context, const ReposListView()),
+                        _appStackPage(state, const ReposListView()),
                     routes: [
                       GoRoute(
                         path: ':id',
@@ -361,7 +340,7 @@ GoRouter appRouter(Ref ref) {
                           final name =
                               state.uri.queryParameters['name'] ?? 'Repo';
                           return _appStackPage(
-                            context,
+                            state,
                             RepoDetailView(repoId: id, repoName: name),
                           );
                         },
@@ -371,7 +350,7 @@ GoRouter appRouter(Ref ref) {
                   GoRoute(
                     path: 'syncs',
                     pageBuilder: (context, state) =>
-                        _appStackPage(context, const SyncsListView()),
+                        _appStackPage(state, const SyncsListView()),
                     routes: [
                       GoRoute(
                         path: ':id',
@@ -380,7 +359,7 @@ GoRouter appRouter(Ref ref) {
                           final name =
                               state.uri.queryParameters['name'] ?? 'Sync';
                           return _appStackPage(
-                            context,
+                            state,
                             SyncDetailView(syncId: id, syncName: name),
                           );
                         },
@@ -390,7 +369,7 @@ GoRouter appRouter(Ref ref) {
                   GoRoute(
                     path: 'builds',
                     pageBuilder: (context, state) =>
-                        _appStackPage(context, const BuildsListView()),
+                        _appStackPage(state, const BuildsListView()),
                     routes: [
                       GoRoute(
                         path: ':id',
@@ -399,7 +378,7 @@ GoRouter appRouter(Ref ref) {
                           final name =
                               state.uri.queryParameters['name'] ?? 'Build';
                           return _appStackPage(
-                            context,
+                            state,
                             BuildDetailView(buildId: id, buildName: name),
                           );
                         },
@@ -409,7 +388,7 @@ GoRouter appRouter(Ref ref) {
                   GoRoute(
                     path: 'procedures',
                     pageBuilder: (context, state) =>
-                        _appStackPage(context, const ProceduresListView()),
+                        _appStackPage(state, const ProceduresListView()),
                     routes: [
                       GoRoute(
                         path: ':id',
@@ -418,7 +397,7 @@ GoRouter appRouter(Ref ref) {
                           final name =
                               state.uri.queryParameters['name'] ?? 'Procedure';
                           return _appStackPage(
-                            context,
+                            state,
                             ProcedureDetailView(
                               procedureId: id,
                               procedureName: name,
@@ -431,7 +410,7 @@ GoRouter appRouter(Ref ref) {
                   GoRoute(
                     path: 'actions',
                     pageBuilder: (context, state) =>
-                        _appStackPage(context, const ActionsListView()),
+                        _appStackPage(state, const ActionsListView()),
                     routes: [
                       GoRoute(
                         path: ':id',
@@ -440,7 +419,7 @@ GoRouter appRouter(Ref ref) {
                           final name =
                               state.uri.queryParameters['name'] ?? 'Action';
                           return _appStackPage(
-                            context,
+                            state,
                             ActionDetailView(actionId: id, actionName: name),
                           );
                         },
@@ -464,7 +443,7 @@ GoRouter appRouter(Ref ref) {
                       final serverId = state.pathParameters['serverId']!;
                       final container = state.pathParameters['container']!;
                       return _appStackPage(
-                        context,
+                        state,
                         ContainerDetailView(
                           serverId: serverId,
                           containerIdOrName: container,
@@ -498,39 +477,39 @@ GoRouter appRouter(Ref ref) {
                   GoRoute(
                     path: 'connections',
                     pageBuilder: (context, state) =>
-                        _appStackPage(context, const ConnectionsView()),
+                        _appStackPage(state, const ConnectionsView()),
                   ),
                   GoRoute(
                     path: 'komodo/variables',
                     pageBuilder: (context, state) =>
-                        _appStackPage(context, const VariablesView()),
+                        _appStackPage(state, const VariablesView()),
                   ),
                   GoRoute(
                     path: 'komodo/tags',
                     pageBuilder: (context, state) =>
-                        _appStackPage(context, const TagsView()),
+                        _appStackPage(state, const TagsView()),
                   ),
                   GoRoute(
                     path: 'komodo/providers',
                     pageBuilder: (context, state) =>
-                        _appStackPage(context, const ProvidersView()),
+                        _appStackPage(state, const ProvidersView()),
                   ),
                   GoRoute(
                     path: 'komodo/builders',
                     pageBuilder: (context, state) =>
-                        _appStackPage(context, const BuildersView()),
+                        _appStackPage(state, const BuildersView()),
                   ),
                   GoRoute(
                     path: 'komodo/alerters',
                     pageBuilder: (context, state) =>
-                        _appStackPage(context, const AlertersView()),
+                        _appStackPage(state, const AlertersView()),
                     routes: [
                       GoRoute(
                         path: ':id',
                         pageBuilder: (context, state) {
                           final id = state.pathParameters['id']!;
                           return _appStackPage(
-                            context,
+                            state,
                             AlerterDetailView(alerterIdOrName: id),
                           );
                         },
