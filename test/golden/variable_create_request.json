@@ -1,0 +1,9 @@
+{
+  "type": "CreateVariable",
+  "params": {
+    "name": "Contract Variable",
+    "value": "Contract Value",
+    "description": "Contract Description",
+    "is_secret": false
+  }
+}
