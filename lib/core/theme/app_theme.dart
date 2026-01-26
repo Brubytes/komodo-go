@@ -100,16 +100,13 @@ class AppTheme {
         color: isDark
             ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.985)
             : colorScheme.surface,
-        elevation: 0,
-        shadowColor: Colors.black.withValues(alpha: 0.3),
+        elevation: 6,
+        shadowColor: Colors.black.withValues(
+          alpha: isDark ? 0.30 : 0.12,
+        ),
         surfaceTintColor: _surfaceTint,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusMd + 4),
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(
-              alpha: isDark ? 0.6 : 1,
-            ),
-          ),
         ),
         textStyle: TextStyle(
           color: colorScheme.onSurface,
