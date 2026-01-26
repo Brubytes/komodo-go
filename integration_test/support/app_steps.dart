@@ -26,9 +26,11 @@ Future<void> ensureOnLoginAddForm(PatrolIntegrationTester $) async {
   if (!$(find.byKey(const Key('login_serverUrl'))).exists) {
     if ($(find.text('Add connection')).exists) {
       await $(find.text('Add connection')).tap();
+      await $.pumpAndSettle();
     }
   }
 
+  await $(find.byKey(const Key('login_serverUrl'))).scrollTo();
   await $(find.byKey(const Key('login_serverUrl'))).waitUntilVisible();
 }
 
