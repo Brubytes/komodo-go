@@ -127,6 +127,55 @@ final List<Map<String, dynamic>> _variables = [
   ),
 ];
 
+final List<Map<String, dynamic>> _alerts = [
+  _alertItem(
+    id: 'alert-1',
+    level: 'Warning',
+    timestamp: DateTime.now().millisecondsSinceEpoch - 900000,
+    resolved: false,
+    target: _targetVariant('Server', 'server-2'),
+    variant: 'ServerUnreachable',
+    data: <String, dynamic>{'server_name': 'Edge Node'},
+  ),
+  _alertItem(
+    id: 'alert-2',
+    level: 'Critical',
+    timestamp: DateTime.now().millisecondsSinceEpoch - 5400000,
+    resolved: true,
+    resolvedTs: DateTime.now().millisecondsSinceEpoch - 3600000,
+    target: _targetVariant('Deployment', 'deployment-2'),
+    variant: 'DeploymentAutoUpdated',
+    data: <String, dynamic>{'name': 'API'},
+  ),
+];
+
+final List<Map<String, dynamic>> _updates = [
+  _updateItem(
+    id: 'update-1',
+    operation: 'DeployStack',
+    startTs: DateTime.now().millisecondsSinceEpoch - 7200000,
+    success: true,
+    username: 'demo',
+    operatorName: 'Demo User',
+    status: 'Success',
+    version: const <String, dynamic>{'major': 1, 'minor': 2, 'patch': 3},
+    otherData: 'stack=Production Stack',
+    target: _targetVariant('Stack', 'stack-1'),
+  ),
+  _updateItem(
+    id: 'update-2',
+    operation: 'BuildImage',
+    startTs: DateTime.now().millisecondsSinceEpoch - 3600000,
+    success: true,
+    username: 'demo',
+    operatorName: 'Demo User',
+    status: 'Success',
+    version: const <String, dynamic>{'major': 1, 'minor': 3, 'patch': 0},
+    otherData: 'build=API Image',
+    target: _targetVariant('Build', 'build-1'),
+  ),
+];
+
 class DemoBackend {
   DemoBackend({required this.apiKey, required this.apiSecret, this.port = 0});
 
@@ -252,7 +301,7 @@ class DemoBackend {
       case 'ListStackServices':
         return _stackServices();
       case 'GetStackLog':
-        return _stackLogs();
+        return _stackLog();
 
       case 'ListRepos':
         return List<Map<String, dynamic>>.from(_repos);
@@ -290,6 +339,10 @@ class DemoBackend {
         return List<Map<String, dynamic>>.from(_tags);
       case 'ListVariables':
         return List<Map<String, dynamic>>.from(_variables);
+      case 'ListAlerts':
+        return _alertsPage(params);
+      case 'ListUpdates':
+        return _updatesPage(params);
       case 'ListGitProviderAccounts':
       case 'ListDockerRegistryAccounts':
       case 'ListBuilders':
@@ -616,18 +669,90 @@ List<Map<String, dynamic>> _stackServices() {
   ];
 }
 
-List<Map<String, dynamic>> _stackLogs() {
-  return [
-    <String, dynamic>{
-      'stage': 'deploy',
-      'command': 'docker compose up -d',
-      'stdout': 'Services started',
-      'stderr': '',
-      'success': true,
-      'start_ts': DateTime.now().millisecondsSinceEpoch - 5000,
-      'end_ts': DateTime.now().millisecondsSinceEpoch - 1000,
-    },
-  ];
+Map<String, dynamic> _stackLog() {
+  return <String, dynamic>{
+    'stage': 'deploy',
+    'command': 'docker compose up -d',
+    'stdout': 'Services started',
+    'stderr': '',
+    'success': true,
+    'start_ts': DateTime.now().millisecondsSinceEpoch - 5000,
+    'end_ts': DateTime.now().millisecondsSinceEpoch - 1000,
+  };
+}
+
+Map<String, dynamic> _alertItem({
+  required String id,
+  required String level,
+  required int timestamp,
+  required bool resolved,
+  required Map<String, dynamic> target,
+  required String variant,
+  required Map<String, dynamic> data,
+  int? resolvedTs,
+}) {
+  return <String, dynamic>{
+    'id': id,
+    'ts': timestamp,
+    'resolved': resolved,
+    'level': level,
+    'target': target,
+    'data': <String, dynamic>{variant: data},
+    if (resolvedTs != null) 'resolved_ts': resolvedTs,
+  };
+}
+
+Map<String, dynamic> _updateItem({
+  required String id,
+  required String operation,
+  required int startTs,
+  required bool success,
+  required String username,
+  required String operatorName,
+  required String status,
+  required Map<String, dynamic> version,
+  required String otherData,
+  required Map<String, dynamic> target,
+}) {
+  return <String, dynamic>{
+    'id': id,
+    'operation': operation,
+    'start_ts': startTs,
+    'success': success,
+    'username': username,
+    'operator': operatorName,
+    'status': status,
+    'version': version,
+    'other_data': otherData,
+    'target': target,
+  };
+}
+
+Map<String, dynamic> _targetVariant(String variant, String id) {
+  return <String, dynamic>{variant: id};
+}
+
+Map<String, dynamic> _alertsPage(Map<String, dynamic> params) {
+  final page = _readPage(params['page']);
+  if (page > 0) {
+    return <String, dynamic>{'alerts': <Object>[], 'next_page': null};
+  }
+  return <String, dynamic>{'alerts': _alerts, 'next_page': null};
+}
+
+Map<String, dynamic> _updatesPage(Map<String, dynamic> params) {
+  final page = _readPage(params['page']);
+  if (page > 0) {
+    return <String, dynamic>{'updates': <Object>[], 'next_page': null};
+  }
+  return <String, dynamic>{'updates': _updates, 'next_page': null};
+}
+
+int _readPage(Object? value) {
+  if (value is int) return value;
+  if (value is double) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
 }
 
 Map<String, dynamic> _repoListItem({
