@@ -201,6 +201,7 @@ Goal: guarantee CRUD correctness and request/response contract stability without
 - **Property-based coverage**: generate many valid inputs and assert invariants.
 - **Golden snapshots**: lock request/response JSON shape for key endpoints.
 - **Deterministic reset**: clean backend state per test or per group to avoid flakiness.
+- **Eventual consistency handling**: poll list endpoints after create and retry write/delete calls (short backoff) to tolerate backend indexing delays.
 
 ### Environment configuration (test-only)
 

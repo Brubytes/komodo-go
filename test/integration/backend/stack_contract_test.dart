@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/data/repositories/stack_repository.dart';
@@ -19,11 +20,13 @@ void registerStackContractTests() {
   group('Stack contract CRUD-ish (real backend)', () {
     late StackRepository repository;
     late RpcRecorder recorder;
+    late KomodoApiClient client;
 
     setUp(() async {
       await resetBackendIfConfigured(config!);
       recorder = RpcRecorder();
-      repository = StackRepository(buildTestClient(config!, recorder));
+      client = buildTestClient(config!, recorder);
+      repository = StackRepository(client);
     });
 
     test('list/get/update stack config + golden request', () async {
@@ -61,6 +64,64 @@ void registerStackContractTests() {
         stackId: stack.id,
         partialConfig: <String, dynamic>{'environment': originalEnvironment},
       );
+    });
+
+    test('create/delete stack', () async {
+      KomodoStack? created;
+      String? createdId;
+      var deleted = false;
+
+      try {
+        final stacks = expectRight(await repository.listStacks());
+        expect(stacks, isNotEmpty);
+
+        final seed = stacks.first;
+        final seedDetail = expectRight(await repository.getStack(seed.id));
+
+        final name = 'contract-stack-${_randomToken(Random(21021))}';
+        final createdJson = await client.write(
+          RpcRequest(
+            type: 'CreateStack',
+            params: <String, dynamic>{
+              'name': name,
+              'config': seedDetail.config.toJson(),
+            },
+          ),
+        );
+        created = KomodoStack.fromJson(createdJson as Map<String, dynamic>);
+
+        createdId = await waitForListItemId(
+          listItems: () async {
+            final listed = expectRight(await repository.listStacks());
+            return listed.map((item) => item.toJson()).toList();
+          },
+          name: name,
+        );
+
+        await retryAsync(() async {
+          await client.write(
+            RpcRequest(
+              type: 'DeleteStack',
+              params: <String, dynamic>{'id': createdId},
+            ),
+          );
+        });
+        deleted = true;
+        final afterDelete = expectRight(await repository.listStacks());
+        expect(afterDelete.any((s) => s.id == createdId), isFalse);
+      } finally {
+        final idToDelete = createdId ?? created?.id;
+        if (!deleted && idToDelete != null) {
+          await retryAsync(() async {
+            await client.write(
+              RpcRequest(
+                type: 'DeleteStack',
+                params: <String, dynamic>{'id': idToDelete},
+              ),
+            );
+          });
+        }
+      }
     });
   },
       skip: missingConfigReason ??
