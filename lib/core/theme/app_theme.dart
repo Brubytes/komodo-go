@@ -100,9 +100,9 @@ class AppTheme {
         color: isDark
             ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.985)
             : colorScheme.surface,
-        elevation: 6,
+        elevation: 12,
         shadowColor: Colors.black.withValues(
-          alpha: isDark ? 0.30 : 0.12,
+          alpha: isDark ? 0.38 : 0.20,
         ),
         surfaceTintColor: _surfaceTint,
         shape: RoundedRectangleBorder(
