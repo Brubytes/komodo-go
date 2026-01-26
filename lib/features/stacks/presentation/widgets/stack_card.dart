@@ -48,9 +48,11 @@ class StackCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: cardRadius,
-          child: SizedBox(
-            width: double.infinity,
-            child: Stack(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 96),
+            child: SizedBox(
+              width: double.infinity,
+              child: Stack(
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
@@ -147,6 +149,7 @@ class StackCard extends StatelessWidget {
                     ),
                   ),
               ],
+              ),
             ),
           ),
         ),
