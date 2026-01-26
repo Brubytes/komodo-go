@@ -55,7 +55,7 @@ class HomeServerStatTile extends StatelessWidget {
                 // This tile is rendered inside a fixed-height horizontal list (currently 130).
                 // Use a compact layout to prevent vertical overflow.
                 final isCompact = constraints.maxHeight <= 132;
-                final padding = isCompact ? 7.0 : 12.0;
+                final padding = isCompact ? 10.0 : 14.0;
                 final headerGap = isCompact ? 3.0 : 10.0;
 
                 return Padding(
