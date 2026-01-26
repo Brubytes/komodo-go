@@ -48,96 +48,104 @@ class StackCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: cardRadius,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: SizedBox(
+            width: double.infinity,
+            child: Stack(
               children: [
-                Row(
-                  children: [
-                    _StatusBadge(state: state),
-                    const Gap(12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                    Text(
+                      stack.name,
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    if (repo.isNotEmpty) ...[
+                      const Gap(4),
+                      Text(
+                        branch.isNotEmpty ? '$repo · $branch' : repo,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                    if (sourceLabel.isNotEmpty || serverLabel.isNotEmpty) ...[
+                      const Gap(10),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
                         children: [
-                          Text(
-                            stack.name,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          if (repo.isNotEmpty) ...[
-                            const Gap(4),
-                            Text(
-                              branch.isNotEmpty ? '$repo · $branch' : repo,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.7),
-                                  ),
+                          if (sourceLabel.isNotEmpty)
+                            _IconLabel(icon: sourceIcon, label: sourceLabel),
+                          if (serverLabel.isNotEmpty)
+                            _IconLabel(
+                              icon: AppIcons.server,
+                              label: serverLabel,
                             ),
-                          ],
                         ],
                       ),
-                    ),
-                    if (onAction != null)
-                      PopupMenuButton<StackAction>(
+                    ],
+                    if (hasPendingUpdate ||
+                        stack.template ||
+                        tagPills.isNotEmpty) ...[
+                      const Gap(10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (stack.template) const TextPill(label: 'Template'),
+                          if (hasPendingUpdate)
+                            const TextPill(
+                              label: 'Update available',
+                              icon: AppIcons.updateAvailable,
+                              tone: PillTone.warning,
+                            ),
+                          ...tagPills,
+                        ],
+                      ),
+                    ],
+                    if (status.isNotEmpty) ...[
+                      const Gap(8),
+                      Text(
+                        status,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 12,
+                  child: _StatusBadge(state: state, compact: true),
+                ),
+                if (onAction != null)
+                  Positioned(
+                    right: 6,
+                    top: 0,
+                    bottom: 0,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: PopupMenuButton<StackAction>(
                         key: const ValueKey('stack_card_menu'),
                         icon: const Icon(AppIcons.moreVertical),
                         onSelected: onAction,
                         itemBuilder: (context) =>
                             _buildMenuItems(context, state),
                       ),
-                  ],
-                ),
-                if (sourceLabel.isNotEmpty || serverLabel.isNotEmpty) ...[
-                  const Gap(10),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
-                      if (sourceLabel.isNotEmpty)
-                        _IconLabel(icon: sourceIcon, label: sourceLabel),
-                      if (serverLabel.isNotEmpty)
-                        _IconLabel(icon: AppIcons.server, label: serverLabel),
-                    ],
-                  ),
-                ],
-                if (hasPendingUpdate ||
-                    stack.template ||
-                    tagPills.isNotEmpty) ...[
-                  const Gap(10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (stack.template)
-                        const TextPill(label: 'Template'),
-                      if (hasPendingUpdate)
-                        const TextPill(
-                          label: 'Update available',
-                          icon: AppIcons.updateAvailable,
-                          tone: PillTone.warning,
-                        ),
-                      ...tagPills,
-                    ],
-                  ),
-                ],
-                if (status.isNotEmpty) ...[
-                  const Gap(8),
-                  Text(
-                    status,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
               ],
             ),
           ),
@@ -251,9 +259,10 @@ final _containerCountPattern = RegExp(
 );
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.state});
+  const _StatusBadge({required this.state, this.compact = false});
 
   final StackState state;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -271,8 +280,15 @@ class _StatusBadge extends StatelessWidget {
       StackState.unknown => (Colors.orange, AppIcons.unknown),
     };
 
+    final padding =
+        compact
+            ? const EdgeInsets.symmetric(horizontal: 5, vertical: 1)
+            : const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
+    final iconSize = compact ? 11.0 : 14.0;
+    final fontSize = compact ? 10.0 : 12.0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: padding,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -281,12 +297,12 @@ class _StatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
-          const Gap(4),
+          Icon(icon, size: iconSize, color: color),
+          Gap(compact ? 2 : 4),
           Text(
             state.displayName,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: fontSize,
               fontWeight: FontWeight.w500,
               color: color,
             ),
