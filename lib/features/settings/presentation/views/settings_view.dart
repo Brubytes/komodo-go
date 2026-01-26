@@ -332,7 +332,6 @@ class _ThemePickerSheet extends StatelessWidget {
       context: context,
       useSafeArea: true,
       showDragHandle: true,
-      isScrollControlled: true,
       builder: (context) => _ThemePickerSheet(currentMode: currentMode),
     );
   }
@@ -345,6 +344,8 @@ class _ThemePickerSheet extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
       child: Center(
+        widthFactor: 1,
+        heightFactor: 1,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: Column(
