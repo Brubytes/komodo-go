@@ -9,7 +9,7 @@ import 'package:komodo_go/features/tags/data/repositories/tag_repository.dart';
 import '../../support/backend_test_config.dart';
 import '../../support/backend_test_helpers.dart';
 
-void main() {
+void registerTagContractTests() {
   final config = BackendTestConfig.fromEnvironment();
   final missingConfigReason = config == null
       ? 'Set KOMODO_TEST_BASE_URL, KOMODO_TEST_API_KEY, and '
@@ -168,6 +168,8 @@ void main() {
           config?.skipReason() ??
           config?.requireResetReason());
 }
+
+void main() => registerTagContractTests();
 
 T expectRight<T>(Either<Failure, T> result) {
   return result.fold(

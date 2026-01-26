@@ -9,7 +9,7 @@ import 'package:komodo_go/features/variables/data/repositories/variable_reposito
 import '../../support/backend_test_config.dart';
 import '../../support/backend_test_helpers.dart';
 
-void main() {
+void registerVariableContractTests() {
   final config = BackendTestConfig.fromEnvironment();
   final missingConfigReason = config == null
       ? 'Set KOMODO_TEST_BASE_URL, KOMODO_TEST_API_KEY, and '
@@ -170,6 +170,8 @@ void main() {
           config?.skipReason() ??
           config?.requireResetReason());
 }
+
+void main() => registerVariableContractTests();
 
 T expectRight<T>(Either<Failure, T> result) {
   return result.fold(

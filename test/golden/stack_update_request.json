@@ -1,0 +1,9 @@
+{
+  "type": "UpdateStack",
+  "params": {
+    "id": "<id>",
+    "config": {
+      "environment": "komodo-test"
+    }
+  }
+}
