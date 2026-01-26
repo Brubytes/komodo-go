@@ -14,7 +14,6 @@ import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/features/tags/presentation/widgets/tag_editor_sheet.dart';
-import 'package:komodo_go/features/users/presentation/providers/username_provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class TagsView extends ConsumerWidget {
@@ -184,13 +183,6 @@ class _TagTile extends StatelessWidget {
       padding: EdgeInsets.zero,
       child: Consumer(
         builder: (context, ref, _) {
-          final ownerNameAsync = ref.watch(usernameProvider(tag.owner));
-          final ownerLabel = ownerNameAsync.maybeWhen(
-            data: (name) =>
-                (name == null || name.trim().isEmpty) ? tag.owner : name,
-            orElse: () => tag.owner,
-          );
-
           return Material(
             color: Colors.transparent,
             borderRadius: cardRadius,
@@ -211,11 +203,6 @@ class _TagTile extends StatelessWidget {
                 style: Theme.of(
                   context,
                 ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              subtitle: Text(
-                'Owner: $ownerLabel',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
               trailing: PopupMenuButton<_TagAction>(
                 key: ValueKey('tag_tile_menu_${tag.id}'),
