@@ -468,14 +468,13 @@ class _ThemeChoiceTile extends StatelessWidget {
                 const Gap(12),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 160),
-                  width: 34,
-                  height: 34,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: isSelected
                         ? scheme.secondaryContainer.withValues(alpha: 0.55)
-                        : scheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: scheme.outlineVariant),
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     isSelected ? AppIcons.check : AppIcons.chevron,
