@@ -11,6 +11,8 @@ class DetailMetricTileData {
     required this.value,
     required this.tone,
     this.progress,
+    this.showFullValueOnTap = true,
+    this.fullValue,
   });
 
   final IconData icon;
@@ -18,6 +20,8 @@ class DetailMetricTileData {
   final String value;
   final double? progress;
   final DetailMetricTone tone;
+  final bool showFullValueOnTap;
+  final String? fullValue;
 }
 
 class DetailMetricGrid extends StatelessWidget {
@@ -57,6 +61,7 @@ class _DetailMetricTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final fullValue = (item.fullValue ?? item.value).trim();
 
     final (Color accent, Color _) = switch (item.tone) {
       DetailMetricTone.primary => (scheme.primary, scheme.primaryContainer),
@@ -74,7 +79,7 @@ class _DetailMetricTile extends StatelessWidget {
     };
     final iconColor = scheme.primary;
 
-    return AppCardSurface(
+    final content = AppCardSurface(
       padding: const EdgeInsets.all(12),
       radius: 18,
       child: Column(
@@ -129,6 +134,41 @@ class _DetailMetricTile extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+
+    if (!item.showFullValueOnTap || fullValue.isEmpty) return content;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => _showFullValueDialog(
+          context,
+          title: item.label,
+          value: fullValue,
+        ),
+        child: content,
+      ),
+    );
+  }
+
+  void _showFullValueDialog(
+    BuildContext context, {
+    required String title,
+    required String value,
+  }) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: SelectableText(value),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
