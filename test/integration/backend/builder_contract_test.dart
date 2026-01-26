@@ -68,6 +68,9 @@ void registerBuilderContractTests() {
         expect(renamed.name, '$name-renamed');
 
         expectRight(await repository.deleteBuilder(id: createdId));
+        await expectEventuallyServerFailure(
+          () => repository.getBuilderJson(builderIdOrName: createdId),
+        );
         final afterDelete = expectRight(await repository.listBuilders());
         expect(afterDelete.any((item) => item.id == createdId), isFalse);
       } finally {

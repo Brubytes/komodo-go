@@ -98,6 +98,15 @@ void registerVariableContractTests() {
         }
       }
     });
+
+    test('update missing variable returns server failure', () async {
+      final missingName = 'missing-var-${_randomToken(Random(991))}';
+      final result = await repository.updateVariableValue(
+        name: missingName,
+        value: 'noop',
+      );
+      expectServerFailure(result);
+    });
   },
       skip: missingConfigReason ??
           config?.skipReason() ??

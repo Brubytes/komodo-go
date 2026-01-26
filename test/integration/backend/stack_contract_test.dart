@@ -127,6 +127,9 @@ void registerStackContractTests() {
           );
         });
         deleted = true;
+        await expectEventuallyServerFailure(
+          () => repository.getStack(createdId!),
+        );
         final afterDelete = expectRight(await repository.listStacks());
         expect(afterDelete.any((s) => s.id == createdId), isFalse);
       } finally {

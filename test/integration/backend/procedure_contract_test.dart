@@ -97,6 +97,9 @@ void registerProcedureContractTests() {
           );
         });
         deleted = true;
+        await expectEventuallyServerFailure(
+          () => repository.getProcedure(createdId!),
+        );
         final afterDelete = expectRight(await repository.listProcedures());
         expect(afterDelete.any((p) => p.id == createdId), isFalse);
       } finally {

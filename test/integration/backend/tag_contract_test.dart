@@ -100,6 +100,15 @@ void registerTagContractTests() {
         }
       }
     });
+
+    test('rename missing tag returns server failure', () async {
+      final missingId = 'missing-tag-${_randomToken(Random(901))}';
+      final result = await repository.renameTag(
+        id: missingId,
+        name: 'Should Fail',
+      );
+      expectServerFailure(result);
+    });
   },
       skip: missingConfigReason ??
           config?.skipReason() ??

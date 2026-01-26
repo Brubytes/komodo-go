@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/error/failures.dart';
 
 import 'backend_test_config.dart';
 
@@ -70,6 +72,55 @@ Future<void> resetBackendIfConfigured(BackendTestConfig config) async {
       'stderr: ${result.stderr}',
     );
   }
+}
+
+T expectRight<T>(Either<Failure, T> result) {
+  return result.fold(
+    (failure) => fail('Expected success, got $failure'),
+    (value) => value,
+  );
+}
+
+Failure expectLeft<T>(Either<Failure, T> result) {
+  return result.fold(
+    (failure) => failure,
+    (value) => fail('Expected failure, got $value'),
+  );
+}
+
+ServerFailure expectServerFailure<T>(
+  Either<Failure, T> result, {
+  String? messageContains,
+}) {
+  final failure = expectLeft(result);
+  expect(failure, isA<ServerFailure>());
+  final serverFailure = failure as ServerFailure;
+  if (messageContains != null && messageContains.isNotEmpty) {
+    expect(serverFailure.message, contains(messageContains));
+  }
+  return serverFailure;
+}
+
+AuthFailure expectAuthFailure<T>(Either<Failure, T> result) {
+  final failure = expectLeft(result);
+  expect(failure, isA<AuthFailure>());
+  return failure as AuthFailure;
+}
+
+Future<ServerFailure> expectEventuallyServerFailure<T>(
+  Future<Either<Failure, T>> Function() action, {
+  String? messageContains,
+  int attempts = 6,
+  Duration delay = const Duration(milliseconds: 300),
+}) async {
+  for (var attempt = 0; attempt < attempts; attempt++) {
+    final result = await action();
+    if (result.isLeft()) {
+      return expectServerFailure(result, messageContains: messageContains);
+    }
+    await Future<void>.delayed(delay);
+  }
+  fail('Expected server failure, but action kept succeeding.');
 }
 
 Map<String, dynamic> loadGoldenJson(String relativePath) {

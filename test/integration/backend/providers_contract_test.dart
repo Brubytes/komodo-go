@@ -71,6 +71,15 @@ void registerProviderContractTests() {
         }
       }
     });
+
+    test('update missing account returns server failure', () async {
+      final missingId = 'missing-git-${_randomToken(Random(7777))}';
+      final result = await repository.updateAccount(
+        id: missingId,
+        domain: 'example.com',
+      );
+      expectServerFailure(result);
+    });
   },
       skip: missingConfigReason ??
           config?.skipReason() ??
@@ -130,6 +139,12 @@ void registerProviderContractTests() {
           await repository.deleteAccount(id: created.id);
         }
       }
+    });
+
+    test('delete missing account returns server failure', () async {
+      final missingId = 'missing-docker-${_randomToken(Random(8888))}';
+      final result = await repository.deleteAccount(id: missingId);
+      expectServerFailure(result);
     });
   },
       skip: missingConfigReason ??

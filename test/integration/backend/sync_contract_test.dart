@@ -101,6 +101,9 @@ void registerSyncContractTests() {
           );
         });
         deleted = true;
+        await expectEventuallyServerFailure(
+          () => repository.getSync(createdId!),
+        );
         final afterDelete = expectRight(await repository.listSyncs());
         expect(afterDelete.any((s) => s.id == createdId), isFalse);
       } finally {

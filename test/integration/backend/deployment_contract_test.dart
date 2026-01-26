@@ -99,6 +99,9 @@ void registerDeploymentContractTests() {
           );
         });
         deleted = true;
+        await expectEventuallyServerFailure(
+          () => repository.getDeployment(createdId!),
+        );
         final afterDelete = expectRight(await repository.listDeployments());
         expect(afterDelete.any((d) => d.id == createdId), isFalse);
       } finally {

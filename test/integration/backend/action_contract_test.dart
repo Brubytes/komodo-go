@@ -100,6 +100,9 @@ void registerActionContractTests() {
           );
         });
         deleted = true;
+        await expectEventuallyServerFailure(
+          () => repository.getAction(createdId!),
+        );
         final afterDelete = expectRight(await repository.listActions());
         expect(afterDelete.any((a) => a.id == createdId), isFalse);
       } finally {

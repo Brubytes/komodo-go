@@ -1,5 +1,6 @@
 import 'action_contract_test.dart';
 import 'alerter_contract_test.dart';
+import 'auth_contract_test.dart';
 import 'build_contract_test.dart';
 import 'builder_contract_test.dart';
 import 'deployment_contract_test.dart';
@@ -15,6 +16,7 @@ import 'procedure_contract_test.dart';
 void main() {
   registerActionContractTests();
   registerAlerterContractTests();
+  registerAuthContractTests();
   registerBuildContractTests();
   registerBuilderContractTests();
   registerDeploymentContractTests();

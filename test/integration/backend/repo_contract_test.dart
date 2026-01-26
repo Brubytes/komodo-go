@@ -102,6 +102,9 @@ void registerRepoContractTests() {
           );
         });
         deleted = true;
+        await expectEventuallyServerFailure(
+          () => repository.getRepo(createdId!),
+        );
         final afterDelete = expectRight(await repository.listRepos());
         expect(afterDelete.any((r) => r.id == createdId), isFalse);
       } finally {

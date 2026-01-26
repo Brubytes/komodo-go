@@ -73,6 +73,9 @@ void registerAlerterContractTests() {
         expect(updated.name, '$name-renamed');
 
         expectRight(await repository.deleteAlerter(id: createdId));
+        await expectEventuallyServerFailure(
+          () => repository.getAlerterDetail(alerterIdOrName: createdId),
+        );
         final afterDelete = expectRight(await repository.listAlerters());
         expect(afterDelete.any((item) => item.id == createdId), isFalse);
       } finally {

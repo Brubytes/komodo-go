@@ -98,6 +98,9 @@ void registerBuildContractTests() {
           );
         });
         deleted = true;
+        await expectEventuallyServerFailure(
+          () => repository.getBuild(createdId!),
+        );
         final afterDelete = expectRight(await repository.listBuilds());
         expect(afterDelete.any((b) => b.id == createdId), isFalse);
       } finally {
