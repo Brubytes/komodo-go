@@ -45,8 +45,6 @@ class ContainerCard extends StatelessWidget {
 
     return AppCardSurface(
       padding: EdgeInsets.zero,
-      enableGradientInDark: true,
-      tintColor: scheme.secondary,
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(AppTokens.radiusLg),
@@ -421,7 +419,6 @@ class _IoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final netLabel = stats?.netIo.trim() ?? '';
     final blockLabel = stats?.blockIo.trim() ?? '';
 
@@ -429,24 +426,29 @@ class _IoRow extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return Row(
-      children: [
-        Expanded(
-          child: _IoMetric(
-            icon: AppIcons.network,
-            label: 'Net I/O',
-            value: netLabel.isNotEmpty ? netLabel : '-',
+    return AppCardSurface(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      radius: AppTokens.radiusMd,
+      enableGradientInDark: false,
+      child: Row(
+        children: [
+          Expanded(
+            child: _IoMetric(
+              icon: AppIcons.network,
+              label: 'Net I/O',
+              value: netLabel.isNotEmpty ? netLabel : '-',
+            ),
           ),
-        ),
-        const Gap(12),
-        Expanded(
-          child: _IoMetric(
-            icon: AppIcons.hardDrive,
-            label: 'Drive I/O',
-            value: blockLabel.isNotEmpty ? blockLabel : '-',
+          const Gap(12),
+          Expanded(
+            child: _IoMetric(
+              icon: AppIcons.hardDrive,
+              label: 'Drive I/O',
+              value: blockLabel.isNotEmpty ? blockLabel : '-',
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
