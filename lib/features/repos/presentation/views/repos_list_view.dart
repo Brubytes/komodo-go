@@ -220,6 +220,10 @@ class _ReposListViewState extends ConsumerState<ReposListView> {
                             play: i < 10,
                             child: RepoCard(
                               repo: filtered[i],
+                              displayTags: _displayTags(
+                                filtered[i].tags,
+                                tagNameById,
+                              ),
                               onTap: () => context.push(
                                 '${AppRoutes.repos}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
                               ),

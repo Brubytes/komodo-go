@@ -223,6 +223,10 @@ class _ActionsListViewState extends ConsumerState<ActionsListView> {
                             play: i < 10,
                             child: ActionCard(
                               action: filtered[i],
+                              displayTags: _displayTags(
+                                filtered[i].tags,
+                                tagNameById,
+                              ),
                               onTap: () => context.push(
                                 '${AppRoutes.actions}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
                               ),

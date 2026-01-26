@@ -259,6 +259,12 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                             play: i < 10,
                             child: DeploymentCard(
                               deployment: filtered[i],
+                              serverName:
+                                  serverNames[filtered[i].info?.serverId],
+                              displayTags: _displayTags(
+                                filtered[i].tags,
+                                tagNameById,
+                              ),
                               onTap: () => context.push(
                                 '${AppRoutes.deployments}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
                               ),

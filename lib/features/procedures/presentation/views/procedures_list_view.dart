@@ -235,6 +235,10 @@ class _ProceduresListViewState extends ConsumerState<ProceduresListView> {
                             play: i < 10,
                             child: ProcedureCard(
                               procedure: filtered[i],
+                              displayTags: _displayTags(
+                                filtered[i].tags,
+                                tagNameById,
+                              ),
                               onTap: () => context.push(
                                 '${AppRoutes.procedures}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
                               ),

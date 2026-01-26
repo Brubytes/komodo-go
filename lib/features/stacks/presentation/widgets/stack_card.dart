@@ -211,7 +211,7 @@ class StackCard extends StatelessWidget {
   }
 
   String _statusLabel(String status) {
-    final normalized = status.trim();
+    final normalized = _stripHashes(status.trim());
     if (normalized.isEmpty) return '';
     if (_containerCountPattern.hasMatch(normalized.toLowerCase())) {
       return '';
@@ -258,6 +258,14 @@ final _containerCountPattern = RegExp(
   r'^(running|stopped|paused|deploying|restarting|removing|down|dead|unhealthy|exited)\s*\(\d+\)$',
 );
 
+final _hashPattern =
+    RegExp(r'\b(?:sha256:)?[a-f0-9]{7,64}\b', caseSensitive: false);
+
+String _stripHashes(String value) {
+  final cleaned = value.replaceAll(_hashPattern, '').replaceAll('  ', ' ');
+  return cleaned.trim();
+}
+
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.state, this.compact = false});
 
@@ -292,7 +300,6 @@ class _StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

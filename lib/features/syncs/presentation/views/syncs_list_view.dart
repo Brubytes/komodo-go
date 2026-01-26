@@ -220,6 +220,10 @@ class _SyncsListViewState extends ConsumerState<SyncsListView> {
                             play: i < 10,
                             child: SyncCard(
                               sync: filtered[i],
+                              displayTags: _displayTags(
+                                filtered[i].tags,
+                                tagNameById,
+                              ),
                               onTap: () => context.push(
                                 '${AppRoutes.syncs}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
                               ),

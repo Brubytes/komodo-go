@@ -223,6 +223,10 @@ class _BuildsListViewState extends ConsumerState<BuildsListView> {
                             play: i < 10,
                             child: BuildCard(
                               buildItem: filtered[i],
+                              displayTags: _displayTags(
+                                filtered[i].tags,
+                                tagNameById,
+                              ),
                               onTap: () => context.push(
                                 '${AppRoutes.builds}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
                               ),

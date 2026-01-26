@@ -210,15 +210,19 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
                 return Column(
                   children: [
                     for (var i = 0; i < filtered.length; i++) ...[
-                      AppFadeSlide(
-                        delay: AppMotion.stagger(i),
-                        play: i < 10,
-                        child: ServerCard(
-                          server: filtered[i],
-                          onTap: () => context.push(
-                            '${AppRoutes.servers}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
-                          ),
-                        ),
+                          AppFadeSlide(
+                            delay: AppMotion.stagger(i),
+                            play: i < 10,
+                            child: ServerCard(
+                              server: filtered[i],
+                              displayTags: _displayTags(
+                                filtered[i].tags,
+                                tagNameById,
+                              ),
+                              onTap: () => context.push(
+                                '${AppRoutes.servers}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
+                              ),
+                            ),
                       ),
                       const Gap(12),
                     ],
