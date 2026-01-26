@@ -78,6 +78,21 @@ void registerRepoContractTests() {
         });
         expect(updated.name, name);
 
+        final updatedHttps = await retryAsync(() async {
+          return expectRight(
+            await repository.updateRepoConfig(
+              repoId: createdId!,
+              partialConfig: <String, dynamic>{
+                'git_https': !seedDetail.config.gitHttps,
+              },
+            ),
+          );
+        });
+        expect(updatedHttps.id, createdId);
+
+        final refreshed = expectRight(await repository.getRepo(createdId!));
+        expect(refreshed.config.gitHttps, updatedHttps.config.gitHttps);
+
         await retryAsync(() async {
           await client.write(
             RpcRequest(

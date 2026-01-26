@@ -57,12 +57,32 @@ void registerStackContractTests() {
         loadGoldenJson('test/golden/stack_update_request.json'),
       );
 
+      final toggled = expectRight(
+        await repository.updateStackConfig(
+          stackId: stack.id,
+          partialConfig: <String, dynamic>{
+            'poll_for_updates': !stack.config.pollForUpdates,
+            'auto_update': !stack.config.autoUpdate,
+          },
+        ),
+      );
+      expect(toggled.id, stack.id);
+
       final refreshed = expectRight(await repository.getStack(target.id));
       expect(refreshed.config.environment.trim(), 'komodo-test');
+      expect(
+        refreshed.config.pollForUpdates,
+        toggled.config.pollForUpdates,
+      );
+      expect(refreshed.config.autoUpdate, toggled.config.autoUpdate);
 
       await repository.updateStackConfig(
         stackId: stack.id,
-        partialConfig: <String, dynamic>{'environment': originalEnvironment},
+        partialConfig: <String, dynamic>{
+          'environment': originalEnvironment,
+          'poll_for_updates': stack.config.pollForUpdates,
+          'auto_update': stack.config.autoUpdate,
+        },
       );
     });
 

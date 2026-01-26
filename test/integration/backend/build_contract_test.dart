@@ -72,6 +72,23 @@ void registerBuildContractTests() {
         });
         expect(updated.id, createdId);
 
+        final updatedFields = await retryAsync(() async {
+          return expectRight(
+            await repository.updateBuildConfig(
+              buildId: createdId!,
+              partialConfig: <String, dynamic>{
+                'use_buildx': !seedDetail.config.useBuildx,
+                'image_tag': 'test-${_randomToken(Random(13022))}',
+              },
+            ),
+          );
+        });
+        expect(updatedFields.id, createdId);
+
+        final refreshed = expectRight(await repository.getBuild(createdId!));
+        expect(refreshed.config.useBuildx, updatedFields.config.useBuildx);
+        expect(refreshed.config.imageTag, updatedFields.config.imageTag);
+
         await retryAsync(() async {
           await client.write(
             RpcRequest(

@@ -98,6 +98,36 @@ void registerServerContractTests() {
         }
       }
     });
+
+    test('read system stats and system information', () async {
+      final servers = expectRight(await repository.listServers());
+      expect(servers, isNotEmpty);
+
+      final target = servers.first;
+
+      try {
+        final stats = expectRight(await repository.getSystemStats(target.id));
+        expect(stats.cpuPercent, greaterThanOrEqualTo(0));
+        expect(stats.memTotalGb, greaterThanOrEqualTo(0));
+      } on TestFailure catch (error) {
+        if ((error.message ?? '').contains('server stats not available')) {
+          return;
+        }
+        rethrow;
+      }
+
+      try {
+        final info = expectRight(
+          await repository.getSystemInformation(target.id),
+        );
+        expect(info.cpuBrand, isA<String>());
+      } on TestFailure catch (error) {
+        if ((error.message ?? '').contains('server info not available')) {
+          return;
+        }
+        rethrow;
+      }
+    });
   },
       skip: missingConfigReason ??
           config?.skipReason() ??

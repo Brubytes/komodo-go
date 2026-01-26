@@ -72,6 +72,26 @@ void registerSyncContractTests() {
         });
         expect(updated.id, createdId);
 
+        final updatedFlags = await retryAsync(() async {
+          return expectRight(
+            await repository.updateSyncConfig(
+              syncId: createdId!,
+              partialConfig: <String, dynamic>{
+                'include_variables': !seedDetail.config.includeVariables,
+                'pending_alert': !seedDetail.config.pendingAlert,
+              },
+            ),
+          );
+        });
+        expect(updatedFlags.id, createdId);
+
+        final refreshed = expectRight(await repository.getSync(createdId!));
+        expect(
+          refreshed.config.includeVariables,
+          updatedFlags.config.includeVariables,
+        );
+        expect(refreshed.config.pendingAlert, updatedFlags.config.pendingAlert);
+
         await retryAsync(() async {
           await client.write(
             RpcRequest(

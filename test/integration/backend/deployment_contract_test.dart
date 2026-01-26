@@ -73,6 +73,23 @@ void registerDeploymentContractTests() {
         });
         expect(updated.name, name);
 
+        final updatedFields = await retryAsync(() async {
+          return expectRight(
+            await repository.updateDeploymentConfig(
+              deploymentId: createdId!,
+              partialConfig: <String, dynamic>{
+                'environment': 'FOO=bar\nHELLO=world',
+                'labels': 'app=komodo-test',
+              },
+            ),
+          );
+        });
+        expect(updatedFields.id, createdId);
+
+        final refreshed = expectRight(await repository.getDeployment(createdId!));
+        expect(refreshed.config?.environment.trim(), 'FOO=bar\nHELLO=world');
+        expect(refreshed.config?.labels.trim(), 'app=komodo-test');
+
         await retryAsync(() async {
           await client.write(
             RpcRequest(

@@ -44,10 +44,17 @@ void registerProviderContractTests() {
         final listed = expectRight(await repository.listAccounts());
         expect(listed.any((a) => a.id == created!.id), isTrue);
 
+        final filtered = expectRight(
+          await repository.listAccounts(domain: 'example.com', username: username),
+        );
+        expect(filtered.any((a) => a.id == created!.id), isTrue);
+
         final updated = expectRight(
           await repository.updateAccount(
             id: created!.id,
             domain: 'example.org',
+            username: '$username-updated',
+            token: 'token-$suffix-updated',
             https: false,
           ),
         );
@@ -96,10 +103,20 @@ void registerProviderContractTests() {
         final listed = expectRight(await repository.listAccounts());
         expect(listed.any((a) => a.id == created!.id), isTrue);
 
+        final filtered = expectRight(
+          await repository.listAccounts(
+            domain: 'registry.example.com',
+            username: username,
+          ),
+        );
+        expect(filtered.any((a) => a.id == created!.id), isTrue);
+
         final updated = expectRight(
           await repository.updateAccount(
             id: created!.id,
             domain: 'registry.example.org',
+            username: '$username-updated',
+            token: 'token-$suffix-updated',
           ),
         );
         expect(updated.id, created!.id);

@@ -75,6 +75,22 @@ void registerActionContractTests() {
         });
         expect(updated.id, createdId);
 
+        final updatedArgs = await retryAsync(() async {
+          return expectRight(
+            await repository.updateActionConfig(
+              actionId: createdId!,
+              partialConfig: <String, dynamic>{
+                'arguments_format': 'key_value',
+                'arguments': 'FOO=bar\nBAZ=qux',
+              },
+            ),
+          );
+        });
+        expect(updatedArgs.config.arguments, contains('FOO=bar'));
+
+        final refreshed = expectRight(await repository.getAction(createdId!));
+        expect(refreshed.config.arguments, contains('FOO=bar'));
+
         await retryAsync(() async {
           await client.write(
             RpcRequest(

@@ -71,6 +71,23 @@ void registerProcedureContractTests() {
         });
         expect(updated.id, createdId);
 
+        final alertsUpdated = await retryAsync(() async {
+          return expectRight(
+            await repository.updateProcedureConfig(
+              procedureId: createdId!,
+              partialConfig: <String, dynamic>{
+                'schedule_alert': !seedDetail.config.scheduleAlert,
+                'failure_alert': !seedDetail.config.failureAlert,
+              },
+            ),
+          );
+        });
+        expect(alertsUpdated.id, createdId);
+
+        final refreshed = expectRight(await repository.getProcedure(createdId!));
+        expect(refreshed.config.scheduleAlert, alertsUpdated.config.scheduleAlert);
+        expect(refreshed.config.failureAlert, alertsUpdated.config.failureAlert);
+
         await retryAsync(() async {
           await client.write(
             RpcRequest(
