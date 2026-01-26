@@ -107,39 +107,43 @@ class ContainerCard extends StatelessWidget {
                         backgroundColor: neutralPillBg,
                         foregroundColor: scheme.onSurface,
                       ),
+                    if (portsLabel.isNotEmpty)
+                      _InfoPill(
+                        icon: AppIcons.plug,
+                        label: 'Ports: $portsLabel',
+                        backgroundColor: neutralPillBg,
+                        foregroundColor: scheme.onSurface,
+                      ),
                   ],
                 ),
-                if (stats != null || portsLabel.isNotEmpty) ...[
+                if (stats != null) ...[
                   const Gap(14),
-                  if (stats != null) ...[
-                    _UsageRow(
-                      icon: AppIcons.cpu,
-                      label: 'CPU',
-                      value: stats.cpuPerc.trim().isNotEmpty
-                          ? stats.cpuPerc
-                          : '-',
-                      progress: stats.cpuPercentValue != null
-                          ? stats.cpuPercentValue! / 100.0
-                          : null,
-                      accent: scheme.primary,
-                    ),
-                    const Gap(10),
-                    _UsageRow(
-                      icon: AppIcons.memory,
-                      label: 'Memory',
-                      value: stats.memUsage.trim().isNotEmpty
-                          ? stats.memUsage
-                          : (stats.memPerc.trim().isNotEmpty
-                                ? stats.memPerc
-                                : '-'),
-                      progress: stats.memPercentValue != null
-                          ? stats.memPercentValue! / 100.0
-                          : null,
-                      accent: scheme.secondary,
-                    ),
-                    const Gap(10),
-                  ],
-                  _StatsChips(stats: stats, portsLabel: portsLabel),
+                  _UsageRow(
+                    icon: AppIcons.cpu,
+                    label: 'CPU',
+                    value:
+                        stats.cpuPerc.trim().isNotEmpty ? stats.cpuPerc : '-',
+                    progress: stats.cpuPercentValue != null
+                        ? stats.cpuPercentValue! / 100.0
+                        : null,
+                    accent: scheme.primary,
+                  ),
+                  const Gap(10),
+                  _UsageRow(
+                    icon: AppIcons.memory,
+                    label: 'Memory',
+                    value: stats.memUsage.trim().isNotEmpty
+                        ? stats.memUsage
+                        : (stats.memPerc.trim().isNotEmpty
+                              ? stats.memPerc
+                              : '-'),
+                    progress: stats.memPercentValue != null
+                        ? stats.memPercentValue! / 100.0
+                        : null,
+                    accent: scheme.secondary,
+                  ),
+                  const Gap(10),
+                  _IoRow(stats: stats),
                 ],
               ],
             ),
@@ -410,54 +414,82 @@ class _UsageRow extends StatelessWidget {
   }
 }
 
-class _StatsChips extends StatelessWidget {
-  const _StatsChips({required this.stats, required this.portsLabel});
+class _IoRow extends StatelessWidget {
+  const _IoRow({required this.stats});
 
   final ContainerStats? stats;
-  final String portsLabel;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final pillBg = scheme.surfaceContainerHigh.withValues(
-      alpha: isDark ? 0.7 : 0.9,
-    );
-    final pillFg = scheme.onSurface;
-
     final netLabel = stats?.netIo.trim() ?? '';
     final blockLabel = stats?.blockIo.trim() ?? '';
-    final portsValue = portsLabel.trim();
 
-    final chips = <Widget>[
-      if (netLabel.isNotEmpty)
-        _InfoPill(
-          icon: AppIcons.network,
-          label: 'Net I/O: $netLabel',
-          backgroundColor: pillBg,
-          foregroundColor: pillFg,
-        ),
-      if (blockLabel.isNotEmpty)
-        _InfoPill(
-          icon: AppIcons.hardDrive,
-          label: 'Drive I/O: $blockLabel',
-          backgroundColor: pillBg,
-          foregroundColor: pillFg,
-        ),
-      if (portsValue.isNotEmpty)
-        _InfoPill(
-          icon: AppIcons.plug,
-          label: 'Ports: $portsValue',
-          backgroundColor: pillBg,
-          foregroundColor: pillFg,
-        ),
-    ];
-
-    if (chips.isEmpty) {
+    if (netLabel.isEmpty && blockLabel.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    return Wrap(spacing: 10, runSpacing: 10, children: chips);
+    return Row(
+      children: [
+        Expanded(
+          child: _IoMetric(
+            icon: AppIcons.network,
+            label: 'Net I/O',
+            value: netLabel.isNotEmpty ? netLabel : '-',
+          ),
+        ),
+        const Gap(12),
+        Expanded(
+          child: _IoMetric(
+            icon: AppIcons.hardDrive,
+            label: 'Drive I/O',
+            value: blockLabel.isNotEmpty ? blockLabel : '-',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _IoMetric extends StatelessWidget {
+  const _IoMetric({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: scheme.onSurfaceVariant),
+            const Gap(6),
+            Text(
+              label,
+              style: textTheme.labelMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const Gap(4),
+        Text(
+          value,
+          style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
   }
 }
 
