@@ -37,6 +37,8 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
 
   String? _loadedMarker;
   String _name = '';
+  String _initialName = '';
+  late final TextEditingController _nameController;
 
   bool _enabled = false;
   String _endpointType = _endpointTypes.first;
@@ -61,12 +63,14 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
   @override
   void initState() {
     super.initState();
+    _nameController = TextEditingController();
     _endpointUrlController = TextEditingController();
     _endpointEmailController = TextEditingController();
   }
 
   @override
   void dispose() {
+    _nameController.dispose();
     _endpointUrlController.dispose();
     _endpointEmailController.dispose();
     super.dispose();
@@ -176,6 +180,11 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    AlerterNameSection(
+                      controller: _nameController,
+                      onChanged: (value) => setState(() => _name = value),
+                    ),
+                    const Gap(16),
                     AlerterEnabledSection(
                       enabled: _enabled,
                       onChanged: (v) => setState(() => _enabled = v),
@@ -234,6 +243,8 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     _loadedMarker = marker;
 
     _name = detail.name;
+    _initialName = detail.name;
+    _nameController.text = detail.name;
 
     final config = detail.config;
 
@@ -326,6 +337,23 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final nextName = _nameController.text.trim();
+    final renameOk = nextName != _initialName
+        ? await ref
+              .read(alerterActionsProvider.notifier)
+              .rename(id: widget.alerterIdOrName, name: nextName)
+        : true;
+
+    if (!context.mounted) return;
+    if (!renameOk) {
+      AppSnackBar.show(
+        context,
+        'Failed to rename alerter',
+        tone: AppSnackBarTone.error,
+      );
+      return;
+    }
+
     final endpointUrl = _endpointUrlController.text.trim();
     final endpointEmail = _endpointEmailController.text.trim();
     final currentEndpoint = AlerterEndpoint(
@@ -351,7 +379,15 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     };
 
     if (config.isEmpty) {
-      AppSnackBar.show(context, 'No changes to save');
+      AppSnackBar.show(
+        context,
+        nextName != _initialName ? 'Alerter renamed' : 'No changes to save',
+      );
+      if (nextName != _initialName) {
+        ref
+          ..invalidate(alerterDetailProvider(widget.alerterIdOrName))
+          ..invalidate(alertersProvider);
+      }
       return;
     }
 

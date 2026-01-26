@@ -48,6 +48,50 @@ class AlerterSummaryPanel extends StatelessWidget {
   }
 }
 
+class AlerterNameSection extends StatelessWidget {
+  const AlerterNameSection({
+    required this.controller,
+    required this.onChanged,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'Name',
+          subtitle: 'Displayed name for this alerter.',
+        ),
+        const Gap(8),
+        DetailSurface(
+          padding: const EdgeInsets.all(14),
+          radius: 16,
+          enableGradientInDark: false,
+          child: TextFormField(
+            controller: controller,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'Alerter name',
+              prefixIcon: Icon(AppIcons.notifications),
+            ),
+            validator: (value) {
+              final name = (value ?? '').trim();
+              if (name.isEmpty) return 'Name is required';
+              return null;
+            },
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class AlerterEnabledSection extends StatelessWidget {
   const AlerterEnabledSection({
     required this.enabled,

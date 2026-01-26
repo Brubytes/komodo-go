@@ -204,9 +204,6 @@ class _AlerterTile extends ConsumerWidget {
                               case _AlerterAction.test:
                                 await _test(context, ref);
                                 return;
-                              case _AlerterAction.rename:
-                                await _rename(context, ref);
-                                return;
                               case _AlerterAction.delete:
                                 await _delete(context, ref);
                                 return;
@@ -238,20 +235,6 @@ class _AlerterTile extends ConsumerWidget {
                                   ),
                                   const Gap(10),
                                   const Text('Test'),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: _AlerterAction.rename,
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    AppIcons.edit,
-                                    color: scheme.primary,
-                                    size: 18,
-                                  ),
-                                  const Gap(10),
-                                  const Text('Rename'),
                                 ],
                               ),
                             ),
@@ -292,43 +275,6 @@ class _AlerterTile extends ConsumerWidget {
     AppSnackBar.show(
       context,
       ok ? 'Test triggered' : 'Failed to trigger test',
-      tone: ok ? AppSnackBarTone.success : AppSnackBarTone.error,
-    );
-  }
-
-  Future<void> _rename(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController(text: item.name);
-    final nextName = await showDialog<String?>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename alerter'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-
-    if (nextName == null || nextName.isEmpty) return;
-    final ok = await ref
-        .read(alerterActionsProvider.notifier)
-        .rename(id: item.id, name: nextName);
-
-    if (!context.mounted) return;
-    AppSnackBar.show(
-      context,
-      ok ? 'Alerter renamed' : 'Failed to rename alerter',
       tone: ok ? AppSnackBarTone.success : AppSnackBarTone.error,
     );
   }
@@ -416,7 +362,7 @@ class _AlertersSkeletonList extends StatelessWidget {
   }
 }
 
-enum _AlerterAction { edit, test, rename, delete }
+enum _AlerterAction { edit, test, delete }
 
 class _IconLabel extends StatelessWidget {
   const _IconLabel({required this.icon, required this.label});
