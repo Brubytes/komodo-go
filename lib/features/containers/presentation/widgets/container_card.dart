@@ -107,44 +107,39 @@ class ContainerCard extends StatelessWidget {
                         backgroundColor: neutralPillBg,
                         foregroundColor: scheme.onSurface,
                       ),
-                    if (portsLabel.isNotEmpty)
-                      _InfoPill(
-                        icon: AppIcons.plug,
-                        label: portsLabel,
-                        backgroundColor: neutralPillBg,
-                        foregroundColor: scheme.onSurface,
-                      ),
                   ],
                 ),
-                if (stats != null) ...[
+                if (stats != null || portsLabel.isNotEmpty) ...[
                   const Gap(14),
-                  _UsageRow(
-                    icon: AppIcons.cpu,
-                    label: 'CPU',
-                    value: stats.cpuPerc.trim().isNotEmpty
-                        ? stats.cpuPerc
-                        : '-',
-                    progress: stats.cpuPercentValue != null
-                        ? stats.cpuPercentValue! / 100.0
-                        : null,
-                    accent: scheme.primary,
-                  ),
-                  const Gap(10),
-                  _UsageRow(
-                    icon: AppIcons.memory,
-                    label: 'Memory',
-                    value: stats.memUsage.trim().isNotEmpty
-                        ? stats.memUsage
-                        : (stats.memPerc.trim().isNotEmpty
-                              ? stats.memPerc
-                              : '-'),
-                    progress: stats.memPercentValue != null
-                        ? stats.memPercentValue! / 100.0
-                        : null,
-                    accent: scheme.secondary,
-                  ),
-                  const Gap(10),
-                  _StatsChips(stats: stats),
+                  if (stats != null) ...[
+                    _UsageRow(
+                      icon: AppIcons.cpu,
+                      label: 'CPU',
+                      value: stats.cpuPerc.trim().isNotEmpty
+                          ? stats.cpuPerc
+                          : '-',
+                      progress: stats.cpuPercentValue != null
+                          ? stats.cpuPercentValue! / 100.0
+                          : null,
+                      accent: scheme.primary,
+                    ),
+                    const Gap(10),
+                    _UsageRow(
+                      icon: AppIcons.memory,
+                      label: 'Memory',
+                      value: stats.memUsage.trim().isNotEmpty
+                          ? stats.memUsage
+                          : (stats.memPerc.trim().isNotEmpty
+                                ? stats.memPerc
+                                : '-'),
+                      progress: stats.memPercentValue != null
+                          ? stats.memPercentValue! / 100.0
+                          : null,
+                      accent: scheme.secondary,
+                    ),
+                    const Gap(10),
+                  ],
+                  _StatsChips(stats: stats, portsLabel: portsLabel),
                 ],
               ],
             ),
@@ -416,9 +411,10 @@ class _UsageRow extends StatelessWidget {
 }
 
 class _StatsChips extends StatelessWidget {
-  const _StatsChips({required this.stats});
+  const _StatsChips({required this.stats, required this.portsLabel});
 
-  final ContainerStats stats;
+  final ContainerStats? stats;
+  final String portsLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -429,9 +425,9 @@ class _StatsChips extends StatelessWidget {
     );
     final pillFg = scheme.onSurface;
 
-    final netLabel = stats.netIo.trim();
-    final blockLabel = stats.blockIo.trim();
-    final pidsLabel = stats.pids.trim();
+    final netLabel = stats?.netIo.trim() ?? '';
+    final blockLabel = stats?.blockIo.trim() ?? '';
+    final portsValue = portsLabel.trim();
 
     final chips = <Widget>[
       if (netLabel.isNotEmpty)
@@ -448,10 +444,10 @@ class _StatsChips extends StatelessWidget {
           backgroundColor: pillBg,
           foregroundColor: pillFg,
         ),
-      if (pidsLabel.isNotEmpty)
+      if (portsValue.isNotEmpty)
         _InfoPill(
-          icon: AppIcons.activity,
-          label: 'PIDs: $pidsLabel',
+          icon: AppIcons.plug,
+          label: 'Ports: $portsValue',
           backgroundColor: pillBg,
           foregroundColor: pillFg,
         ),

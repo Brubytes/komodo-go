@@ -16,7 +16,7 @@ sealed class ContainerListItem with _$ContainerListItem {
     @Default(ContainerState.unknown)
     ContainerState state,
     @Default([]) List<String> networks,
-    @Default([]) List<ContainerPort> ports,
+    @JsonKey(readValue: _readPorts) @Default([]) List<ContainerPort> ports,
     ContainerStats? stats,
   }) = _ContainerListItem;
 
@@ -27,10 +27,14 @@ sealed class ContainerListItem with _$ContainerListItem {
 @freezed
 sealed class ContainerPort with _$ContainerPort {
   const factory ContainerPort({
-    String? ip,
-    @JsonKey(name: 'private_port') @Default(0) int privatePort,
-    @JsonKey(name: 'public_port') int? publicPort,
-    @JsonKey(name: 'typ', fromJson: _portTypeFromJson, toJson: _portTypeToJson)
+    @JsonKey(readValue: _readPortIp) String? ip,
+    @JsonKey(readValue: _readPortPrivate) @Default(0) int privatePort,
+    @JsonKey(readValue: _readPortPublic) int? publicPort,
+    @JsonKey(
+      readValue: _readPortType,
+      fromJson: _portTypeFromJson,
+      toJson: _portTypeToJson,
+    )
     @Default(PortType.unknown)
     PortType type,
   }) = _ContainerPort;
@@ -195,4 +199,24 @@ double? _parseBytePairTotal(String raw) {
   final total = parsed.total;
   if (used == null && total == null) return null;
   return (used ?? 0) + (total ?? 0);
+}
+
+Object? _readPorts(Map<dynamic, dynamic> json, String key) {
+  return json['ports'] ?? json['Ports'];
+}
+
+Object? _readPortIp(Map<dynamic, dynamic> json, String key) {
+  return json['ip'] ?? json['IP'];
+}
+
+Object? _readPortPrivate(Map<dynamic, dynamic> json, String key) {
+  return json['private_port'] ?? json['PrivatePort'] ?? json['privatePort'];
+}
+
+Object? _readPortPublic(Map<dynamic, dynamic> json, String key) {
+  return json['public_port'] ?? json['PublicPort'] ?? json['publicPort'];
+}
+
+Object? _readPortType(Map<dynamic, dynamic> json, String key) {
+  return json['typ'] ?? json['type'] ?? json['Type'];
 }
