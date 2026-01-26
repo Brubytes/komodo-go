@@ -204,7 +204,7 @@ class _TagFilterSheetState extends State<TagFilterSheet> {
                                   ),
                                 ),
                               ),
-                              Switch(
+                              Switch.adaptive(
                                 value: _selected.contains(tag.id),
                                 onChanged: (next) => _toggleTag(tag.id, next),
                                 materialTapTargetSize:

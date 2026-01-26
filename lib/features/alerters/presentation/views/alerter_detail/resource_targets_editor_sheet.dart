@@ -452,7 +452,7 @@ class _ResourceTargetsEditorSheetState
                                 width: 84,
                                 child: Align(
                                   alignment: Alignment.centerRight,
-                                  child: Switch(
+                                    child: Switch.adaptive(
                                     value: selectedKeys.contains(option.key),
                                     onChanged: (next) =>
                                         _toggleOption(option, next),

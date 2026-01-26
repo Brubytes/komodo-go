@@ -174,7 +174,7 @@ class _AlerterTile extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Switch(
+                        Switch.adaptive(
                           value: info.enabled,
                           onChanged: (value) async {
                             final ok = await ref

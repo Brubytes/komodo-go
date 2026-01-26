@@ -181,7 +181,7 @@ class _AlertTypesPickerSheetState extends State<AlertTypesPickerSheet> {
                                   ),
                                 ),
                               ),
-                              Switch(
+                              Switch.adaptive(
                                 value: _selected.contains(type),
                                 onChanged: (next) => _toggleType(type, next),
                                 materialTapTargetSize:

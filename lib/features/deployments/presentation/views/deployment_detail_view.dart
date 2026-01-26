@@ -325,7 +325,7 @@ class _DeploymentDetailViewState
                                     ?.copyWith(color: scheme.onSurfaceVariant),
                               ),
                             ),
-                            Switch(
+                            Switch.adaptive(
                               value: _autoRefreshLogs,
                               onChanged: (value) {
                                 setState(() => _autoRefreshLogs = value);

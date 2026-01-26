@@ -116,7 +116,7 @@ class AlerterEnabledSection extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           radius: 16,
           enableGradientInDark: false,
-          child: SwitchListTile(
+          child: SwitchListTile.adaptive(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 8,
               vertical: 2,

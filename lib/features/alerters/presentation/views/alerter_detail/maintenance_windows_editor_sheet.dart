@@ -352,7 +352,7 @@ class _MaintenanceWindowEditorDialogState
                 decoration: const InputDecoration(labelText: 'Timezone'),
               ),
               const Gap(8),
-              SwitchListTile(
+              SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Enabled'),
                 value: _enabled,

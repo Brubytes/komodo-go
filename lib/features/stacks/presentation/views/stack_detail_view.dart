@@ -617,7 +617,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                     ?.copyWith(color: scheme.onSurfaceVariant),
                               ),
                             ),
-                            Switch(
+                            Switch.adaptive(
                               value: _autoRefreshLogs,
                               onChanged: (value) {
                                 setState(() => _autoRefreshLogs = value);

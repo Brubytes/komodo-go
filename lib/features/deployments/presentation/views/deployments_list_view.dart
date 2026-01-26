@@ -403,7 +403,7 @@ class _FiltersPanel extends StatelessWidget {
           _FilterRow(
             icon: AppIcons.updateAvailable,
             label: 'Pending updates',
-            trailing: Switch(
+            trailing: Switch.adaptive(
               value: pendingUpdate,
               onChanged: onPendingUpdateChanged,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

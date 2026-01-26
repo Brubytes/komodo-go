@@ -288,19 +288,19 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
             ],
           ),
           const Gap(12),
-          SwitchListTile(
+          SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             title: const Text('Use HTTPS'),
             value: _awsUseHttps,
             onChanged: (v) => setState(() => _awsUseHttps = v),
           ),
-          SwitchListTile(
+          SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             title: const Text('Assign public IP'),
             value: _awsAssignPublicIp,
             onChanged: (v) => setState(() => _awsAssignPublicIp = v),
           ),
-          SwitchListTile(
+          SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             title: const Text('Use public IP'),
             value: _awsUsePublicIp,
