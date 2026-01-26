@@ -319,6 +319,177 @@ final List<Map<String, dynamic>> _variables = [
   ),
 ];
 
+final List<Map<String, dynamic>> _gitProviderAccounts = [
+  _gitProviderAccount(
+    id: 'git-1',
+    domain: 'github.com',
+    username: 'demo',
+    https: true,
+    token: '••••••••',
+  ),
+  _gitProviderAccount(
+    id: 'git-2',
+    domain: 'gitlab.com',
+    username: 'ops-bot',
+    https: true,
+    token: '••••••••',
+  ),
+  _gitProviderAccount(
+    id: 'git-3',
+    domain: 'git.company.local',
+    username: 'build',
+    https: false,
+    token: '••••••••',
+  ),
+];
+
+final List<Map<String, dynamic>> _dockerRegistryAccounts = [
+  _dockerRegistryAccount(
+    id: 'registry-1',
+    domain: 'ghcr.io',
+    username: 'demo',
+    token: '••••••••',
+  ),
+  _dockerRegistryAccount(
+    id: 'registry-2',
+    domain: 'docker.io',
+    username: 'demo-bot',
+    token: '••••••••',
+  ),
+  _dockerRegistryAccount(
+    id: 'registry-3',
+    domain: 'registry.company.local',
+    username: 'deploy',
+    token: '••••••••',
+  ),
+];
+
+final List<Map<String, dynamic>> _builders = [
+  _builderListItem(
+    id: 'builder-1',
+    name: 'Default Builder',
+    builderType: 'Url',
+    instanceType: null,
+    tags: ['Production'],
+    config: <String, dynamic>{
+      'Url': <String, dynamic>{
+        'address': 'https://builders.komodo.dev',
+        'passkey': 'demo-passkey',
+      },
+    },
+  ),
+  _builderListItem(
+    id: 'builder-2',
+    name: 'Staging Builder',
+    builderType: 'Server',
+    instanceType: null,
+    tags: ['Staging'],
+    config: <String, dynamic>{
+      'Server': <String, dynamic>{'server_id': 'server-3'},
+    },
+  ),
+  _builderListItem(
+    id: 'builder-3',
+    name: 'AWS Build Pool',
+    builderType: 'Aws',
+    instanceType: 't3.medium',
+    tags: ['Experimental'],
+    config: <String, dynamic>{
+      'Aws': <String, dynamic>{
+        'region': 'us-east-1',
+        'instance_type': 't3.medium',
+        'volume_gb': 50,
+        'port': 2376,
+        'use_https': true,
+        'assign_public_ip': true,
+        'use_public_ip': false,
+      },
+    },
+  ),
+];
+
+final List<Map<String, dynamic>> _alerters = [
+  _alerterListItem(
+    id: 'alerter-1',
+    name: 'Ops Slack',
+    enabled: true,
+    endpointType: 'Slack',
+    tags: ['Production'],
+    config: <String, dynamic>{
+      'enabled': true,
+      'endpoint': <String, dynamic>{
+        'type': 'Slack',
+        'params': <String, dynamic>{
+          'url': 'https://hooks.slack.com/services/demo/demo/demo',
+        },
+      },
+      'alert_types': <String>['ServerUnreachable', 'BuildFailed'],
+      'resources': <Map<String, dynamic>>[
+        _targetVariant('Server', 'server-2'),
+      ],
+      'except_resources': <Map<String, dynamic>>[],
+      'maintenance_windows': <Map<String, dynamic>>[],
+    },
+  ),
+  _alerterListItem(
+    id: 'alerter-2',
+    name: 'Email Fallback',
+    enabled: false,
+    endpointType: 'Email',
+    tags: ['Staging'],
+    config: <String, dynamic>{
+      'enabled': false,
+      'endpoint': <String, dynamic>{
+        'type': 'Email',
+        'params': <String, dynamic>{'email': 'ops@komodo.dev'},
+      },
+      'alert_types': <String>['DeploymentAutoUpdated'],
+      'resources': <Map<String, dynamic>>[
+        _targetVariant('Deployment', 'deployment-2'),
+      ],
+      'except_resources': <Map<String, dynamic>>[],
+      'maintenance_windows': <Map<String, dynamic>>[],
+    },
+  ),
+  _alerterListItem(
+    id: 'alerter-3',
+    name: 'Ntfy Alerts',
+    enabled: true,
+    endpointType: 'Ntfy',
+    tags: ['Incident'],
+    config: <String, dynamic>{
+      'enabled': true,
+      'endpoint': <String, dynamic>{
+        'type': 'Ntfy',
+        'params': <String, dynamic>{
+          'url': 'https://ntfy.sh/komodo-demo',
+          'email': 'demo@komodo.dev',
+        },
+      },
+      'alert_types': <String>['ServerUnreachable', 'BuildFailed'],
+      'resources': <Map<String, dynamic>>[
+        _targetVariant('Server', 'server-2'),
+        _targetVariant('Build', 'build-3'),
+      ],
+      'except_resources': <Map<String, dynamic>>[
+        _targetVariant('Server', 'server-4'),
+      ],
+      'maintenance_windows': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'name': 'Nightly Maintenance',
+          'description': 'No alerts during nightly maintenance',
+          'schedule_type': 'Daily',
+          'hour': 2,
+          'minute': 0,
+          'duration_minutes': 90,
+          'timezone': 'UTC',
+          'enabled': true,
+        },
+      ],
+    },
+  ),
+];
+
 final List<Map<String, dynamic>> _alerts = [
   _alertItem(
     id: 'alert-1',
@@ -591,12 +762,15 @@ class DemoBackend {
       case 'ListUpdates':
         return _updatesPage(params);
       case 'ListGitProviderAccounts':
+        return List<Map<String, dynamic>>.from(_gitProviderAccounts);
       case 'ListDockerRegistryAccounts':
+        return List<Map<String, dynamic>>.from(_dockerRegistryAccounts);
       case 'ListBuilders':
+        return List<Map<String, dynamic>>.from(_builders);
       case 'ListAlerters':
-        return <Object>[];
+        return List<Map<String, dynamic>>.from(_alerters);
       case 'GetAlerter':
-        return <String, dynamic>{};
+        return _alerterDetail(id: params['alerter']?.toString());
 
       default:
         if (type.startsWith('List')) {
@@ -641,6 +815,141 @@ class DemoBackend {
         }
         return <String, dynamic>{};
 
+      case 'CreateGitProviderAccount':
+        final account = params['account'];
+        if (account is Map) {
+          final id = 'git-${_gitProviderAccounts.length + 1}';
+          final created = _gitProviderAccount(
+            id: id,
+            domain: account['domain']?.toString() ?? '',
+            username: account['username']?.toString() ?? '',
+            https: account['https'] == true,
+            token: account['token']?.toString() ?? '',
+          );
+          _gitProviderAccounts.add(created);
+          return created;
+        }
+        return <String, dynamic>{};
+      case 'UpdateGitProviderAccount':
+        final id = params['id']?.toString() ?? '';
+        final account = params['account'];
+        final index = _gitProviderAccounts.indexWhere((a) => a['id'] == id);
+        if (index != -1 && account is Map) {
+          _gitProviderAccounts[index] = {
+            ..._gitProviderAccounts[index],
+            if (account['domain'] != null) 'domain': account['domain'],
+            if (account['username'] != null) 'username': account['username'],
+            if (account['https'] != null) 'https': account['https'],
+            if (account['token'] != null) 'token': account['token'],
+          };
+          return _gitProviderAccounts[index];
+        }
+        return <String, dynamic>{};
+      case 'DeleteGitProviderAccount':
+        final id = params['id']?.toString() ?? '';
+        final index = _gitProviderAccounts.indexWhere((a) => a['id'] == id);
+        if (index != -1) {
+          final removed = _gitProviderAccounts.removeAt(index);
+          return removed;
+        }
+        return <String, dynamic>{};
+
+      case 'CreateDockerRegistryAccount':
+        final account = params['account'];
+        if (account is Map) {
+          final id = 'registry-${_dockerRegistryAccounts.length + 1}';
+          final created = _dockerRegistryAccount(
+            id: id,
+            domain: account['domain']?.toString() ?? '',
+            username: account['username']?.toString() ?? '',
+            token: account['token']?.toString() ?? '',
+          );
+          _dockerRegistryAccounts.add(created);
+          return created;
+        }
+        return <String, dynamic>{};
+      case 'UpdateDockerRegistryAccount':
+        final id = params['id']?.toString() ?? '';
+        final account = params['account'];
+        final index = _dockerRegistryAccounts.indexWhere((a) => a['id'] == id);
+        if (index != -1 && account is Map) {
+          _dockerRegistryAccounts[index] = {
+            ..._dockerRegistryAccounts[index],
+            if (account['domain'] != null) 'domain': account['domain'],
+            if (account['username'] != null) 'username': account['username'],
+            if (account['token'] != null) 'token': account['token'],
+          };
+          return _dockerRegistryAccounts[index];
+        }
+        return <String, dynamic>{};
+      case 'DeleteDockerRegistryAccount':
+        final id = params['id']?.toString() ?? '';
+        final index = _dockerRegistryAccounts.indexWhere((a) => a['id'] == id);
+        if (index != -1) {
+          final removed = _dockerRegistryAccounts.removeAt(index);
+          return removed;
+        }
+        return <String, dynamic>{};
+
+      case 'RenameBuilder':
+        final id = params['id']?.toString() ?? '';
+        final name = params['name']?.toString() ?? '';
+        final index = _builders.indexWhere((b) => b['id'] == id);
+        if (index != -1 && name.isNotEmpty) {
+          _builders[index] = {..._builders[index], 'name': name};
+        }
+        return <String, dynamic>{};
+      case 'DeleteBuilder':
+        final id = params['id']?.toString() ?? '';
+        _builders.removeWhere((b) => b['id'] == id);
+        return <String, dynamic>{};
+      case 'UpdateBuilder':
+        final id = params['id']?.toString() ?? '';
+        final config = params['config'];
+        final index = _builders.indexWhere((b) => b['id'] == id);
+        if (index != -1 && config is Map) {
+          _builders[index] = {
+            ..._builders[index],
+            'config': config.map((k, v) => MapEntry(k.toString(), v)),
+          };
+        }
+        return <String, dynamic>{};
+
+      case 'RenameAlerter':
+        final id = params['id']?.toString() ?? '';
+        final name = params['name']?.toString() ?? '';
+        final index = _alerters.indexWhere((a) => a['id'] == id);
+        if (index != -1 && name.isNotEmpty) {
+          _alerters[index] = {..._alerters[index], 'name': name};
+        }
+        return <String, dynamic>{};
+      case 'DeleteAlerter':
+        final id = params['id']?.toString() ?? '';
+        _alerters.removeWhere((a) => a['id'] == id);
+        return <String, dynamic>{};
+      case 'UpdateAlerter':
+        final id = params['id']?.toString() ?? '';
+        final config = params['config'];
+        final index = _alerters.indexWhere((a) => a['id'] == id);
+        if (index != -1 && config is Map) {
+          final enabled = config['enabled'];
+          final existingInfo = _alerters[index]['info'];
+          final infoMap = existingInfo is Map
+              ? existingInfo.map((k, v) => MapEntry(k.toString(), v))
+              : <String, dynamic>{};
+          _alerters[index] = {
+            ..._alerters[index],
+            if (enabled is bool)
+              'info': <String, dynamic>{
+                ...infoMap,
+                'enabled': enabled,
+              },
+            'config': config.map((k, v) => MapEntry(k.toString(), v)),
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          };
+        }
+        return <String, dynamic>{};
+
       default:
         return <String, dynamic>{};
     }
@@ -666,6 +975,8 @@ class DemoBackend {
         return <String, dynamic>{};
       case 'StopContainer':
       case 'RestartContainer':
+        return <String, dynamic>{};
+      case 'TestAlerter':
         return <String, dynamic>{};
       default:
         return <String, dynamic>{};
@@ -1138,7 +1449,200 @@ Map<String, dynamic> _buildDetail({required String? id}) {
 }
 
 Map<String, dynamic> _builderDetail({required String? id}) {
-  return <String, dynamic>{'id': id ?? 'builder-1', 'name': 'Default Builder'};
+  final match = id == null ? null : _builderById(id) ?? _builderByName(id);
+  final builder = match ?? _builders.first;
+  final builderType =
+      (builder['info']?['builder_type'] ?? builder['builder_type'] ?? 'Url')
+          .toString();
+
+  final storedConfig = builder['config'];
+  final config = storedConfig is Map
+      ? storedConfig.map((k, v) => MapEntry(k.toString(), v))
+      : switch (builderType) {
+          'Server' => <String, dynamic>{
+              'Server': <String, dynamic>{'server_id': 'server-2'},
+            },
+          'Aws' => <String, dynamic>{
+              'Aws': <String, dynamic>{
+                'region': 'us-east-1',
+                'instance_type': 't3.medium',
+                'volume_gb': 50,
+                'port': 2376,
+                'use_https': true,
+                'assign_public_ip': true,
+                'use_public_ip': false,
+              },
+            },
+          _ => <String, dynamic>{
+              'Url': <String, dynamic>{
+                'address': 'https://builders.komodo.dev',
+                'passkey': 'demo-passkey',
+              },
+            },
+        };
+
+  return <String, dynamic>{
+    'id': builder['id'],
+    'name': builder['name'],
+    'description': 'Demo builder for $builderType workloads',
+    'template': builder['template'] ?? false,
+    'tags': builder['tags'] ?? <String>[],
+    'config': config,
+  };
+}
+
+Map<String, dynamic> _builderListItem({
+  required String id,
+  required String name,
+  required String builderType,
+  required String? instanceType,
+  Map<String, dynamic>? config,
+  List<String> tags = const <String>[],
+  bool template = false,
+}) {
+  return <String, dynamic>{
+    'id': id,
+    'name': name,
+    'template': template,
+    'tags': tags,
+    if (config != null) 'config': config,
+    'info': <String, dynamic>{
+      'builder_type': builderType,
+      'instance_type': instanceType,
+    },
+  };
+}
+
+Map<String, dynamic> _alerterListItem({
+  required String id,
+  required String name,
+  required bool enabled,
+  required String endpointType,
+  Map<String, dynamic>? config,
+  List<String> tags = const <String>[],
+  bool template = false,
+}) {
+  return <String, dynamic>{
+    'id': id,
+    'name': name,
+    'template': template,
+    'tags': tags,
+    if (config != null) 'config': config,
+    'updated_at': DateTime.now().toUtc().toIso8601String(),
+    'info': <String, dynamic>{
+      'enabled': enabled,
+      'endpoint_type': endpointType,
+    },
+  };
+}
+
+Map<String, dynamic> _gitProviderAccount({
+  required String id,
+  required String domain,
+  required String username,
+  required bool https,
+  required String token,
+}) {
+  return <String, dynamic>{
+    'id': id,
+    'domain': domain,
+    'username': username,
+    'https': https,
+    'token': token,
+  };
+}
+
+Map<String, dynamic> _dockerRegistryAccount({
+  required String id,
+  required String domain,
+  required String username,
+  required String token,
+}) {
+  return <String, dynamic>{
+    'id': id,
+    'domain': domain,
+    'username': username,
+    'token': token,
+  };
+}
+
+Map<String, dynamic> _alerterDetail({required String? id}) {
+  final match = id == null ? null : _alerterById(id) ?? _alerterByName(id);
+  final alerter = match ?? _alerters.first;
+  final now = DateTime.now().toUtc().toIso8601String();
+  final endpointType =
+      (alerter['info']?['endpoint_type'] ?? 'Slack').toString();
+
+  final storedConfig = alerter['config'];
+  if (storedConfig is Map) {
+    final configMap = storedConfig.map((k, v) => MapEntry(k.toString(), v));
+    return <String, dynamic>{
+      'alerter': <String, dynamic>{
+        'id': alerter['id'],
+        'name': alerter['name'],
+        'updated_at': alerter['updated_at'] ?? now,
+      },
+      'updated_at': alerter['updated_at'] ?? now,
+      'config': configMap,
+    };
+  }
+
+  final endpoint = switch (endpointType) {
+    'Email' => <String, dynamic>{
+        'type': 'Email',
+        'params': <String, dynamic>{'email': 'ops@komodo.dev'},
+      },
+    'Ntfy' => <String, dynamic>{
+        'type': 'Ntfy',
+        'params': <String, dynamic>{
+          'url': 'https://ntfy.sh/komodo-demo',
+          'email': 'demo@komodo.dev',
+        },
+      },
+    _ => <String, dynamic>{
+        'type': 'Slack',
+        'params': <String, dynamic>{
+          'url': 'https://hooks.slack.com/services/demo/demo/demo',
+        },
+      },
+  };
+
+  return <String, dynamic>{
+    'alerter': <String, dynamic>{
+      'id': alerter['id'],
+      'name': alerter['name'],
+      'updated_at': now,
+    },
+    'updated_at': now,
+    'config': <String, dynamic>{
+      'enabled': alerter['info']?['enabled'] ?? false,
+      'endpoint': endpoint,
+      'alert_types': <String>[
+        'ServerUnreachable',
+        'BuildFailed',
+        'DeploymentAutoUpdated',
+      ],
+      'resources': <Map<String, dynamic>>[
+        _targetVariant('Server', 'server-2'),
+        _targetVariant('Build', 'build-3'),
+      ],
+      'except_resources': <Map<String, dynamic>>[
+        _targetVariant('Server', 'server-4'),
+      ],
+      'maintenance_windows': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'name': 'Nightly Maintenance',
+          'description': 'No alerts during nightly maintenance',
+          'schedule_type': 'Daily',
+          'hour': 2,
+          'minute': 0,
+          'duration_minutes': 90,
+          'timezone': 'UTC',
+          'enabled': true,
+        },
+      ],
+    },
+  };
 }
 
 Map<String, dynamic> _syncListItem({
@@ -1482,6 +1986,20 @@ Map<String, dynamic>? _buildByName(String name) {
   );
 }
 
+Map<String, dynamic>? _builderById(String id) {
+  return _builders.cast<Map<String, dynamic>?>().firstWhere(
+    (b) => b?['id'] == id,
+    orElse: () => null,
+  );
+}
+
+Map<String, dynamic>? _builderByName(String name) {
+  return _builders.cast<Map<String, dynamic>?>().firstWhere(
+    (b) => b?['name'] == name,
+    orElse: () => null,
+  );
+}
+
 Map<String, dynamic>? _syncById(String id) {
   return _syncs.cast<Map<String, dynamic>?>().firstWhere(
     (s) => s?['id'] == id,
@@ -1519,6 +2037,20 @@ Map<String, dynamic>? _actionById(String id) {
 
 Map<String, dynamic>? _actionByName(String name) {
   return _actions.cast<Map<String, dynamic>?>().firstWhere(
+    (a) => a?['name'] == name,
+    orElse: () => null,
+  );
+}
+
+Map<String, dynamic>? _alerterById(String id) {
+  return _alerters.cast<Map<String, dynamic>?>().firstWhere(
+    (a) => a?['id'] == id,
+    orElse: () => null,
+  );
+}
+
+Map<String, dynamic>? _alerterByName(String name) {
+  return _alerters.cast<Map<String, dynamic>?>().firstWhere(
     (a) => a?['name'] == name,
     orElse: () => null,
   );
