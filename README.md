@@ -25,13 +25,15 @@ Note: Xcode UI tests often run on a temporary cloned simulator instance, which m
 
 ## Demo mode
 
-Demo mode spins up an in-process fake backend and auto-connects the app with seeded demo data.
+The app always exposes a demo connection backed by an in-process fake backend.
+It is available as an option on the login screen.
 
-- Enable: `--dart-define=KOMODO_DEMO_MODE=true`
+- Auto-connect on startup: `--dart-define=KOMODO_DEMO_MODE=true`
 - Optional overrides:
   - `KOMODO_DEMO_NAME` (default: `Komodo Demo`)
   - `KOMODO_DEMO_API_KEY` (default: `demo-key`)
   - `KOMODO_DEMO_API_SECRET` (default: `demo-secret`)
+  - `KOMODO_DEMO_AVAILABLE` (default: `true`)
 
 ## Design system / theming
 

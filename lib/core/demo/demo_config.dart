@@ -1,4 +1,9 @@
-const bool demoModeEnabled = bool.fromEnvironment(
+const bool demoAvailable = bool.fromEnvironment(
+  'KOMODO_DEMO_AVAILABLE',
+  defaultValue: true,
+);
+
+const bool demoAutoConnect = bool.fromEnvironment(
   'KOMODO_DEMO_MODE',
   defaultValue: false,
 );

@@ -1,6 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/connections/connections_store.dart';
 import 'package:komodo_go/core/demo/demo_backend.dart';
 import 'package:komodo_go/core/demo/demo_config.dart';
@@ -10,7 +11,7 @@ class DemoBootstrapImpl {
   static bool _initialized = false;
 
   static Future<void> ensureInitialized() async {
-    if (!demoModeEnabled || _initialized) return;
+    if (!demoAvailable || _initialized) return;
 
     final backend = DemoBackend(apiKey: demoApiKey, apiSecret: demoApiSecret);
     await backend.start();
@@ -33,20 +34,23 @@ class DemoBootstrapImpl {
         )
         .toList();
 
+    late final ConnectionProfile profile;
     if (existing.isEmpty) {
-      final profile = await store.addConnection(
+      profile = await store.addConnection(
         name: demoConnectionName,
         credentials: credentials,
       );
-      await store.setActiveConnectionId(profile.id);
     } else {
-      final profile = existing.first.copyWith(
+      profile = existing.first.copyWith(
         name: demoConnectionName,
         baseUrl: credentials.baseUrl,
         lastUsedAt: DateTime.now(),
       );
       await store.updateConnection(profile);
       await store.saveCredentials(profile.id, credentials);
+    }
+
+    if (demoAutoConnect) {
       await store.setActiveConnectionId(profile.id);
     }
 

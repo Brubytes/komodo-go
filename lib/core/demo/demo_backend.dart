@@ -17,6 +17,20 @@ final List<Map<String, dynamic>> _servers = [
     region: 'eu-west-1',
     state: 'Ok',
   ),
+  _serverItem(
+    id: 'server-3',
+    name: 'Staging Node',
+    address: '10.0.1.12',
+    region: 'us-west-2',
+    state: 'NotOk',
+  ),
+  _serverItem(
+    id: 'server-4',
+    name: 'DR Node',
+    address: '10.0.2.5',
+    region: 'ap-southeast-1',
+    state: 'Disabled',
+  ),
 ];
 
 final List<Map<String, dynamic>> _deployments = [
@@ -36,6 +50,38 @@ final List<Map<String, dynamic>> _deployments = [
     image: 'ghcr.io/komodo/api:1.2.3',
     serverId: 'server-1',
   ),
+  _deployment(
+    id: 'deployment-3',
+    name: 'Worker',
+    description: 'Background jobs',
+    state: 'Paused',
+    image: 'ghcr.io/komodo/worker:2.0.1',
+    serverId: 'server-2',
+  ),
+  _deployment(
+    id: 'deployment-4',
+    name: 'Billing',
+    description: 'Invoice pipeline',
+    state: 'Exited',
+    image: 'ghcr.io/komodo/billing:2.3.0',
+    serverId: 'server-3',
+  ),
+  _deployment(
+    id: 'deployment-5',
+    name: 'Docs',
+    description: 'Documentation site',
+    state: 'not_deployed',
+    image: 'nginx:alpine',
+    serverId: 'server-4',
+  ),
+  _deployment(
+    id: 'deployment-6',
+    name: 'Metrics',
+    description: 'Observability stack',
+    state: 'Restarting',
+    image: 'grafana/grafana:10.2.2',
+    serverId: 'server-2',
+  ),
 ];
 
 final List<Map<String, dynamic>> _stacks = [
@@ -46,6 +92,30 @@ final List<Map<String, dynamic>> _stacks = [
     repo: 'komodo/production-stack',
     branch: 'main',
     state: 'Running',
+  ),
+  _stackListItem(
+    id: 'stack-2',
+    name: 'Staging Stack',
+    serverId: 'server-3',
+    repo: 'komodo/staging-stack',
+    branch: 'develop',
+    state: 'Deploying',
+  ),
+  _stackListItem(
+    id: 'stack-3',
+    name: 'Edge Stack',
+    serverId: 'server-2',
+    repo: 'komodo/edge-stack',
+    branch: 'main',
+    state: 'Paused',
+  ),
+  _stackListItem(
+    id: 'stack-4',
+    name: 'Sandbox Stack',
+    serverId: 'server-4',
+    repo: 'komodo/sandbox-stack',
+    branch: 'experiment',
+    state: 'Stopped',
   ),
 ];
 
@@ -59,6 +129,33 @@ final List<Map<String, dynamic>> _repos = [
     branch: 'main',
     state: 'Ok',
   ),
+  _repoListItem(
+    id: 'repo-2',
+    name: 'Komodo Web',
+    serverId: 'server-2',
+    builderId: 'builder-1',
+    repo: 'komodo/web',
+    branch: 'main',
+    state: 'Pulling',
+  ),
+  _repoListItem(
+    id: 'repo-3',
+    name: 'Ops Config',
+    serverId: 'server-3',
+    builderId: 'builder-1',
+    repo: 'komodo/ops-config',
+    branch: 'main',
+    state: 'Failed',
+  ),
+  _repoListItem(
+    id: 'repo-4',
+    name: 'Billing Service',
+    serverId: 'server-3',
+    builderId: 'builder-1',
+    repo: 'komodo/billing',
+    branch: 'release',
+    state: 'Building',
+  ),
 ];
 
 final List<Map<String, dynamic>> _builds = [
@@ -70,6 +167,22 @@ final List<Map<String, dynamic>> _builds = [
     branch: 'main',
     state: 'Ok',
   ),
+  _buildListItem(
+    id: 'build-2',
+    name: 'Web Image',
+    builderId: 'builder-1',
+    repo: 'komodo/web',
+    branch: 'main',
+    state: 'Building',
+  ),
+  _buildListItem(
+    id: 'build-3',
+    name: 'Billing Image',
+    builderId: 'builder-1',
+    repo: 'komodo/billing',
+    branch: 'release',
+    state: 'Failed',
+  ),
 ];
 
 final List<Map<String, dynamic>> _syncs = [
@@ -80,6 +193,27 @@ final List<Map<String, dynamic>> _syncs = [
     branch: 'main',
     state: 'Ok',
   ),
+  _syncListItem(
+    id: 'sync-2',
+    name: 'Staging Sync',
+    repo: 'komodo/staging-stack',
+    branch: 'develop',
+    state: 'Syncing',
+  ),
+  _syncListItem(
+    id: 'sync-3',
+    name: 'Edge Config',
+    repo: 'komodo/edge-stack',
+    branch: 'main',
+    state: 'Failed',
+  ),
+  _syncListItem(
+    id: 'sync-4',
+    name: 'Sandbox Sync',
+    repo: 'komodo/sandbox-stack',
+    branch: 'experiment',
+    state: 'Pending',
+  ),
 ];
 
 final List<Map<String, dynamic>> _procedures = [
@@ -89,10 +223,24 @@ final List<Map<String, dynamic>> _procedures = [
     stages: 3,
     state: 'Ok',
   ),
+  _procedureListItem(
+    id: 'procedure-2',
+    name: 'Rotate Secrets',
+    stages: 5,
+    state: 'Running',
+  ),
+  _procedureListItem(
+    id: 'procedure-3',
+    name: 'Incident Drill',
+    stages: 2,
+    state: 'Failed',
+  ),
 ];
 
 final List<Map<String, dynamic>> _actions = [
   _actionListItem(id: 'action-1', name: 'Restart Web', state: 'Ok'),
+  _actionListItem(id: 'action-2', name: 'Flush Cache', state: 'Running'),
+  _actionListItem(id: 'action-3', name: 'Rollback Release', state: 'Failed'),
 ];
 
 final List<Map<String, dynamic>> _containers = [
@@ -110,11 +258,41 @@ final List<Map<String, dynamic>> _containers = [
     status: 'Up 2 hours',
     state: 'Running',
   ),
+  _containerListItem(
+    serverId: 'server-2',
+    name: 'worker',
+    image: 'ghcr.io/komodo/worker:2.0.1',
+    status: 'Up 10 minutes',
+    state: 'Paused',
+  ),
+  _containerListItem(
+    serverId: 'server-2',
+    name: 'metrics',
+    image: 'grafana/grafana:10.2.2',
+    status: 'Restarting (3)',
+    state: 'Restarting',
+  ),
+  _containerListItem(
+    serverId: 'server-3',
+    name: 'billing',
+    image: 'ghcr.io/komodo/billing:2.3.0',
+    status: 'Exited (1) 2 hours ago',
+    state: 'Exited',
+  ),
+  _containerListItem(
+    serverId: 'server-4',
+    name: 'docs',
+    image: 'nginx:alpine',
+    status: 'Created',
+    state: 'Created',
+  ),
 ];
 
 final List<Map<String, dynamic>> _tags = [
   _tag(id: 'tag-1', name: 'Production', colorToken: 'Emerald'),
   _tag(id: 'tag-2', name: 'Staging', colorToken: 'Blue'),
+  _tag(id: 'tag-3', name: 'Experimental', colorToken: 'Purple'),
+  _tag(id: 'tag-4', name: 'Incident', colorToken: 'Red'),
 ];
 
 final List<Map<String, dynamic>> _variables = [
@@ -124,6 +302,20 @@ final List<Map<String, dynamic>> _variables = [
     description: 'Default region for deployments',
     value: 'us-east-1',
     isSecret: false,
+  ),
+  _variable(
+    id: 'var-2',
+    name: 'LOG_LEVEL',
+    description: 'Default application log level',
+    value: 'INFO',
+    isSecret: false,
+  ),
+  _variable(
+    id: 'var-3',
+    name: 'BILLING_TOKEN',
+    description: 'Billing service token',
+    value: '••••••••',
+    isSecret: true,
   ),
 ];
 
@@ -146,6 +338,25 @@ final List<Map<String, dynamic>> _alerts = [
     target: _targetVariant('Deployment', 'deployment-2'),
     variant: 'DeploymentAutoUpdated',
     data: <String, dynamic>{'name': 'API'},
+  ),
+  _alertItem(
+    id: 'alert-3',
+    level: 'Warning',
+    timestamp: DateTime.now().millisecondsSinceEpoch - 1800000,
+    resolved: false,
+    target: _targetVariant('Build', 'build-3'),
+    variant: 'BuildFailed',
+    data: <String, dynamic>{'name': 'Billing Image'},
+  ),
+  _alertItem(
+    id: 'alert-4',
+    level: 'Ok',
+    timestamp: DateTime.now().millisecondsSinceEpoch - 300000,
+    resolved: true,
+    resolvedTs: DateTime.now().millisecondsSinceEpoch - 240000,
+    target: _targetVariant('Server', 'server-1'),
+    variant: 'ServerRecovered',
+    data: <String, dynamic>{'server_name': 'Primary Node'},
   ),
 ];
 
@@ -173,6 +384,42 @@ final List<Map<String, dynamic>> _updates = [
     version: const <String, dynamic>{'major': 1, 'minor': 3, 'patch': 0},
     otherData: 'build=API Image',
     target: _targetVariant('Build', 'build-1'),
+  ),
+  _updateItem(
+    id: 'update-3',
+    operation: 'SyncResources',
+    startTs: DateTime.now().millisecondsSinceEpoch - 2400000,
+    success: false,
+    username: 'demo',
+    operatorName: 'Demo User',
+    status: 'Failed',
+    version: const <String, dynamic>{'major': 1, 'minor': 2, 'patch': 8},
+    otherData: 'sync=Edge Config',
+    target: _targetVariant('ResourceSync', 'sync-3'),
+  ),
+  _updateItem(
+    id: 'update-4',
+    operation: 'PullRepo',
+    startTs: DateTime.now().millisecondsSinceEpoch - 1200000,
+    success: false,
+    username: 'automation',
+    operatorName: 'Scheduler',
+    status: 'Running',
+    version: const <String, dynamic>{'major': 1, 'minor': 4, 'patch': 1},
+    otherData: 'repo=Komodo Web',
+    target: _targetVariant('Repo', 'repo-2'),
+  ),
+  _updateItem(
+    id: 'update-5',
+    operation: 'DeployStack',
+    startTs: DateTime.now().millisecondsSinceEpoch - 600000,
+    success: false,
+    username: 'demo',
+    operatorName: 'Demo User',
+    status: 'Queued',
+    version: const <String, dynamic>{'major': 1, 'minor': 4, 'patch': 2},
+    otherData: 'stack=Staging Stack',
+    target: _targetVariant('Stack', 'stack-2'),
   ),
 ];
 
@@ -657,7 +904,7 @@ List<Map<String, dynamic>> _stackServices() {
     <String, dynamic>{
       'service': 'api',
       'image': 'ghcr.io/komodo/api:1.2.3',
-      'update_available': false,
+      'update_available': true,
       'container': <String, dynamic>{
         'name': 'api-1',
         'state': 'running',
