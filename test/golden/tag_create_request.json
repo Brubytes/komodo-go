@@ -1,0 +1,7 @@
+{
+  "type": "CreateTag",
+  "params": {
+    "name": "Contract Tag",
+    "color": "Slate"
+  }
+}

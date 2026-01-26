@@ -190,6 +190,57 @@ These are not under the Resources tab, but they’re the highest ROI for **true 
 
 ---
 
+## Systematic Backend Communication Tests (Contract + CRUD)
+
+Goal: guarantee CRUD correctness and request/response contract stability without exploding UI integration tests. These tests run at the repository layer against a real Komodo backend (local sandbox), and are systematic across resources.
+
+### Core components
+
+- **Contract tests**: send real RPC requests via repositories and validate request/response shape + invariants.
+- **CRUD invariants**: create → read/list → update → read/list → delete → read/list (missing).
+- **Property-based coverage**: generate many valid inputs and assert invariants.
+- **Golden snapshots**: lock request/response JSON shape for key endpoints.
+- **Deterministic reset**: clean backend state per test or per group to avoid flakiness.
+
+### Environment configuration (test-only)
+
+These tests are opt-in and should be driven by environment variables:
+
+- `KOMODO_TEST_BASE_URL`
+- `KOMODO_TEST_API_KEY`
+- `KOMODO_TEST_API_SECRET`
+- `KOMODO_TEST_ALLOW_DESTRUCTIVE=true`
+- `KOMODO_TEST_RESET_COMMAND` (optional but recommended; tests will skip if not set)
+
+### Phases
+
+**Phase 1 (start here)**
+- Add backend reset hook and config helper.
+- Add one full CRUD contract test (Tags).
+- Add one property-based CRUD test (Tags).
+- Add golden snapshots for CreateTag request/response.
+
+**Phase 2**
+- Expand CRUD contract + property tests to stacks, deployments, servers, builds, repos.
+- Add negative/error contract tests (unauthorized, not found, invalid payload).
+
+**Phase 3**
+- Add mutation testing for critical repository logic.
+- Add concurrency/race tests for update/delete and list refreshes.
+
+### Coverage checklist (template)
+
+For each CRUD-capable resource:
+
+- Create (valid + invalid)
+- Read/list (contains created)
+- Update (partial changes only)
+- Delete (removed)
+- Error mapping (Unauthorized, NotFound, Server)
+- Request/response golden snapshots
+
+---
+
 ## Step 2: Patrol Scaffolding + Test Architecture (Android + iOS)
 
 Goal: make integration tests first-class (fast to run locally, stable in CI, and able to switch between fake and real backends).
