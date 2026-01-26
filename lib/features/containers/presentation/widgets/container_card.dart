@@ -34,12 +34,8 @@ class ContainerCard extends StatelessWidget {
     final stateColor = _stateColor(item.container.state, scheme);
     final portsLabel = _formatPorts(item.container.ports);
 
-    final serverPillBg = scheme.secondaryContainer.withValues(
-      alpha: isDark ? 0.22 : 0.45,
-    );
-    final neutralPillBg = scheme.surfaceContainerHigh.withValues(
-      alpha: isDark ? 0.70 : 0.90,
-    );
+    final pillBg = scheme.surfaceContainerHigh;
+    final pillFg = scheme.onSurface;
 
     final hasActions = _hasActions(item.container.state);
 
@@ -87,30 +83,30 @@ class ContainerCard extends StatelessWidget {
                     _InfoPill(
                       icon: AppIcons.server,
                       label: item.serverName,
-                      backgroundColor: serverPillBg,
-                      foregroundColor: scheme.onSecondaryContainer,
+                      backgroundColor: pillBg,
+                      foregroundColor: pillFg,
                     ),
                     if (image.isNotEmpty)
                       _InfoPill(
                         icon: AppIcons.package,
                         label: image,
-                        backgroundColor: neutralPillBg,
-                        foregroundColor: scheme.onSurface,
+                        backgroundColor: pillBg,
+                        foregroundColor: pillFg,
                       ),
                     if (networks.isNotEmpty)
                       _InfoPill(
                         icon: AppIcons.network,
                         label:
                             '${networks.take(2).join(', ')}${networks.length > 2 ? '…' : ''}',
-                        backgroundColor: neutralPillBg,
-                        foregroundColor: scheme.onSurface,
+                        backgroundColor: pillBg,
+                        foregroundColor: pillFg,
                       ),
                     if (portsLabel.isNotEmpty)
                       _InfoPill(
                         icon: AppIcons.plug,
                         label: 'Ports: $portsLabel',
-                        backgroundColor: neutralPillBg,
-                        foregroundColor: scheme.onSurface,
+                        backgroundColor: pillBg,
+                        foregroundColor: pillFg,
                       ),
                   ],
                 ),
@@ -313,6 +309,8 @@ class _InfoPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
       color: foregroundColor,
       fontWeight: FontWeight.w600,
@@ -324,6 +322,14 @@ class _InfoPill extends StatelessWidget {
         decoration: ShapeDecoration(
           color: backgroundColor,
           shape: const StadiumBorder(),
+          shadows: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.08),
+              blurRadius: isDark ? 16 : 12,
+              offset: const Offset(0, 6),
+              spreadRadius: isDark ? -6 : -7,
+            ),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
