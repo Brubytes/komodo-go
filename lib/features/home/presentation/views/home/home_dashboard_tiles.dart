@@ -242,13 +242,21 @@ class HomeAlertPreviewTile extends StatelessWidget {
         borderRadius: cardRadius,
         clipBehavior: Clip.antiAlias,
         child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 6,
+          ),
+          dense: true,
+          visualDensity: const VisualDensity(vertical: -1),
+          minLeadingWidth: 0,
+          horizontalTitleGap: 12,
           leading: Icon(_alertIcon(alert.level), color: color),
           title: Text(title),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (primary != null && primary.isNotEmpty) Text(primary),
-              const Gap(4),
+              const Gap(2),
               Text(
                 _formatTimestamp(alert.timestamp.toLocal()),
                 style: Theme.of(
@@ -278,6 +286,105 @@ class HomeAlertPreviewTile extends StatelessWidget {
       SeverityLevel.ok => scheme.primary,
       SeverityLevel.unknown => scheme.onSurfaceVariant,
     };
+  }
+}
+
+class HomeAlertSummaryCard extends StatelessWidget {
+  const HomeAlertSummaryCard({
+    required this.count,
+    required this.summary,
+    this.color,
+    this.onTap,
+    super.key,
+  });
+
+  final int count;
+  final String summary;
+  final Color? color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final accent = color ?? scheme.primary;
+
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(AppIcons.warning, color: accent, size: 18),
+                ),
+                const Gap(10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Unresolved alerts',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Gap(4),
+                      Text(
+                        summary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.labelMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Gap(10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      count.toString(),
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        height: 1.0,
+                      ),
+                    ),
+                    const Gap(2),
+                    Text(
+                      'open',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

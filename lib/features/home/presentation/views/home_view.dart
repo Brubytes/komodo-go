@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -317,22 +318,29 @@ class HomeView extends ConsumerWidget {
                       final summaryText = summaryParts.isEmpty
                           ? 'No severity data'
                           : summaryParts.join(' · ');
+                      final scheme = Theme.of(context).colorScheme;
+                      final summaryColor = criticalCount > 0
+                          ? scheme.error
+                          : warningCount > 0
+                              ? AppTokens.statusOrange
+                              : scheme.onSurfaceVariant;
 
                       return Column(
                         children: [
-                          HomeMetricCard(
-                            title: 'Unresolved alerts',
-                            value: unresolved.length.toString(),
-                            subtitle: summaryText,
-                            icon: AppIcons.warning,
+                          HomeAlertSummaryCard(
+                            count: unresolved.length,
+                            summary: summaryText,
+                            color: summaryColor,
                             onTap: () => context.go(AppRoutes.notifications),
                           ),
                           const Gap(8),
                           ...unresolved
                               .take(3)
                               .map(
-                                (alert) =>
-                                    HomeAlertPreviewTile(alert: alert),
+                                (alert) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: HomeAlertPreviewTile(alert: alert),
+                                ),
                               ),
                         ],
                       );
