@@ -4,9 +4,10 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 
 class BuilderConfigEditorResult {
-  const BuilderConfigEditorResult({required this.config});
+  const BuilderConfigEditorResult({required this.config, required this.name});
 
   final Map<String, dynamic> config;
+  final String name;
 }
 
 class BuilderConfigEditorSheet extends StatefulWidget {
@@ -49,6 +50,7 @@ class BuilderConfigEditorSheet extends StatefulWidget {
 class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
   late final _BuilderConfigShape _shape;
 
+  late final TextEditingController _nameController;
   late final TextEditingController _addressController;
   late final TextEditingController _passkeyController;
   late final TextEditingController _serverIdController;
@@ -73,6 +75,7 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
     );
 
     final inner = _shape.inner;
+    _nameController = TextEditingController(text: widget.builderName);
     _addressController = TextEditingController(
       text: (inner['address'] ?? '').toString(),
     );
@@ -103,6 +106,7 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _addressController.dispose();
     _passkeyController.dispose();
     _serverIdController.dispose();
@@ -151,14 +155,12 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
             ],
           ),
           const Gap(6),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              widget.builderName,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurfaceVariant,
-              ),
+          TextField(
+            controller: _nameController,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              prefixIcon: Icon(AppIcons.tag),
             ),
           ),
           const Gap(12),
@@ -336,7 +338,12 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
       };
     });
 
-    Navigator.of(context).pop(BuilderConfigEditorResult(config: next));
+    Navigator.of(context).pop(
+      BuilderConfigEditorResult(
+        config: next,
+        name: _nameController.text.trim(),
+      ),
+    );
   }
 }
 
