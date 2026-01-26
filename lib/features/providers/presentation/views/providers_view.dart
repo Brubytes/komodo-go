@@ -415,6 +415,7 @@ class _ProviderTypeSheet extends StatelessWidget {
     return showModalBottomSheet<_ProviderType>(
       context: context,
       useSafeArea: true,
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (context) => const _ProviderTypeSheet(),
     );
