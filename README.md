@@ -23,6 +23,16 @@ Run the Patrol iOS integration test suite on the iPhone 17 Pro simulator:
 
 Note: Xcode UI tests often run on a temporary cloned simulator instance, which may shut down when the run finishes. The VS Code task re-opens Simulator and boots the target device afterwards.
 
+## Demo mode
+
+Demo mode spins up an in-process fake backend and auto-connects the app with seeded demo data.
+
+- Enable: `--dart-define=KOMODO_DEMO_MODE=true`
+- Optional overrides:
+  - `KOMODO_DEMO_NAME` (default: `Komodo Demo`)
+  - `KOMODO_DEMO_API_KEY` (default: `demo-key`)
+  - `KOMODO_DEMO_API_SECRET` (default: `demo-secret`)
+
 ## Design system / theming
 
 The app uses a single unified Material 3 theme on both iOS and Android (no platform-specific split).
