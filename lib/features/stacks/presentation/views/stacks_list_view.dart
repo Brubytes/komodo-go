@@ -625,6 +625,8 @@ class _StacksSkeletonList extends StatelessWidget {
     return Skeletonizer(
       enabled: true,
       child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         itemCount: 6,
         separatorBuilder: (_, __) => const Gap(12),
