@@ -4,9 +4,16 @@ import 'package:hooks_riverpod/misc.dart';
 
 ProviderContainer createProviderContainer({
   List<Override> overrides = const [],
+  Duration? Function(int retryCount, Object error)? retry,
 }) {
-  return ProviderContainer(overrides: overrides);
+  return ProviderContainer(
+    overrides: overrides,
+    // Disable retries in tests to surface errors immediately.
+    retry: retry ?? _noRetry,
+  );
 }
+
+Duration? _noRetry(int retryCount, Object error) => null;
 
 ProviderSubscription<AsyncValue<T>> listenProvider<T>(
   ProviderContainer container,

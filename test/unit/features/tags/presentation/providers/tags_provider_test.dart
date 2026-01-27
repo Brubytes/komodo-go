@@ -21,8 +21,18 @@ void main() {
       final repository = _MockTagRepository();
       when(repository.listTags).thenAnswer(
         (_) async => Right([
-          KomodoTag.fromJson({'id': 't2', 'name': 'beta', 'color': 'Slate'}),
-          KomodoTag.fromJson({'id': 't1', 'name': 'alpha', 'color': 'Slate'}),
+          KomodoTag.fromJson(<String, dynamic>{
+            'id': 't2',
+            'name': 'beta',
+            'owner': 'test',
+            'color': 'Slate',
+          }),
+          KomodoTag.fromJson(<String, dynamic>{
+            'id': 't1',
+            'name': 'alpha',
+            'owner': 'test',
+            'color': 'Slate',
+          }),
         ]),
       );
 
@@ -30,7 +40,11 @@ void main() {
         overrides: [tagRepositoryProvider.overrideWithValue(repository)],
       );
       addTearDown(container.dispose);
-      final subscription = listenProvider(container, tagsProvider);
+      final subscription = container.listen(
+        tagsProvider.future,
+        (_, __) {},
+        fireImmediately: true,
+      );
       addTearDown(subscription.close);
 
       final tags = await readAsyncProvider(container, tagsProvider.future);
@@ -66,10 +80,12 @@ void main() {
       final subscription = listenProvider(container, tagsProvider);
       addTearDown(subscription.close);
 
-      expect(
-        () => readAsyncProvider(container, tagsProvider.future),
+      await expectLater(
+        container.read(tagsProvider.future),
         throwsA(isA<Exception>()),
       );
+
+      expectAsyncError(container.read(tagsProvider));
     });
   });
 
@@ -111,7 +127,12 @@ void main() {
       when(() => repository.createTag(name: any(named: 'name'), color: any(named: 'color')))
           .thenAnswer(
         (_) async => Right(
-          KomodoTag.fromJson({'id': 't1', 'name': 'test', 'color': 'Slate'}),
+          KomodoTag.fromJson(<String, dynamic>{
+            'id': 't1',
+            'name': 'test',
+            'owner': 'test',
+            'color': 'Slate',
+          }),
         ),
       );
 
