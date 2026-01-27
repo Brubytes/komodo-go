@@ -40,6 +40,7 @@ class StackCard extends StatelessWidget {
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
     return AppCardSurface(
+      key: ValueKey('stack_card_${stack.id}'),
       padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,
@@ -140,11 +141,11 @@ class StackCard extends StatelessWidget {
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: PopupMenuButton<StackAction>(
-                        key: const ValueKey('stack_card_menu'),
+                        key: ValueKey('stack_card_menu_${stack.id}'),
                         icon: const Icon(AppIcons.moreVertical),
                         onSelected: onAction,
                         itemBuilder: (context) =>
-                            _buildMenuItems(context, state),
+                            _buildMenuItems(context, state, stack.id),
                       ),
                     ),
                   ),
@@ -160,16 +161,19 @@ class StackCard extends StatelessWidget {
   List<PopupMenuEntry<StackAction>> _buildMenuItems(
     BuildContext context,
     StackState state,
+    String stackId,
   ) {
     final scheme = Theme.of(context).colorScheme;
     return [
       komodoPopupMenuItem(
+        key: ValueKey('stack_card_redeploy_$stackId'),
         value: StackAction.redeploy,
         icon: AppIcons.deployments,
         label: 'Redeploy',
         iconColor: scheme.primary,
       ),
       komodoPopupMenuItem(
+        key: ValueKey('stack_card_pull_$stackId'),
         value: StackAction.pullImages,
         icon: AppIcons.download,
         label: 'Pull images',
@@ -177,6 +181,7 @@ class StackCard extends StatelessWidget {
       ),
       if (state.isRunning)
         komodoPopupMenuItem(
+          key: ValueKey('stack_card_restart_$stackId'),
           value: StackAction.restart,
           icon: AppIcons.refresh,
           label: 'Restart',
@@ -184,6 +189,7 @@ class StackCard extends StatelessWidget {
         ),
       if (state.isRunning)
         komodoPopupMenuItem(
+          key: ValueKey('stack_card_pause_$stackId'),
           value: StackAction.pause,
           icon: AppIcons.pause,
           label: 'Pause',
@@ -192,6 +198,7 @@ class StackCard extends StatelessWidget {
       komodoPopupMenuDivider(),
       if (!state.isRunning)
         komodoPopupMenuItem(
+          key: ValueKey('stack_card_start_$stackId'),
           value: StackAction.start,
           icon: AppIcons.play,
           label: 'Start',
@@ -199,12 +206,14 @@ class StackCard extends StatelessWidget {
         ),
       if (state.isRunning)
         komodoPopupMenuItem(
+          key: ValueKey('stack_card_stop_$stackId'),
           value: StackAction.stop,
           icon: AppIcons.stop,
           label: 'Stop',
           iconColor: scheme.tertiary,
         ),
       komodoPopupMenuItem(
+        key: ValueKey('stack_card_destroy_$stackId'),
         value: StackAction.destroy,
         icon: AppIcons.delete,
         label: 'Destroy',

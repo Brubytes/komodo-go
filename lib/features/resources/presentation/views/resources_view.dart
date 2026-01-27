@@ -53,6 +53,7 @@ class ResourcesView extends ConsumerWidget {
     final actionsAsync = ref.watch(actionsProvider);
     final tiles = <Widget>[
       HomeStatCard(
+        key: const ValueKey('resources_stat_servers'),
         title: 'Servers',
         icon: AppIcons.server,
         asyncValue: serversAsync,
@@ -80,6 +81,7 @@ class ResourcesView extends ConsumerWidget {
         onTap: () => context.push(_routeFor(ResourceType.deployments)),
       ),
       HomeStatCard(
+        key: const ValueKey('resources_stat_stacks'),
         title: 'Stacks',
         icon: AppIcons.stacks,
         asyncValue: stacksAsync,
@@ -92,6 +94,7 @@ class ResourcesView extends ConsumerWidget {
         onTap: () => context.push(_routeFor(ResourceType.stacks)),
       ),
       HomeStatCard(
+        key: const ValueKey('resources_stat_repos'),
         title: 'Repos',
         icon: AppIcons.repos,
         asyncValue: reposAsync,
@@ -103,6 +106,7 @@ class ResourcesView extends ConsumerWidget {
         onTap: () => context.push(_routeFor(ResourceType.repos)),
       ),
       HomeStatCard(
+        key: const ValueKey('resources_stat_syncs'),
         title: 'Syncs',
         icon: AppIcons.syncs,
         asyncValue: syncsAsync,
@@ -115,6 +119,7 @@ class ResourcesView extends ConsumerWidget {
         onTap: () => context.push(_routeFor(ResourceType.syncs)),
       ),
       HomeStatCard(
+        key: const ValueKey('resources_stat_builds'),
         title: 'Builds',
         icon: AppIcons.builds,
         asyncValue: buildsAsync,
@@ -127,6 +132,7 @@ class ResourcesView extends ConsumerWidget {
         onTap: () => context.push(_routeFor(ResourceType.builds)),
       ),
       HomeStatCard(
+        key: const ValueKey('resources_stat_procedures'),
         title: 'Procedures',
         icon: AppIcons.procedures,
         asyncValue: proceduresAsync,
@@ -140,6 +146,7 @@ class ResourcesView extends ConsumerWidget {
         onTap: () => context.push(_routeFor(ResourceType.procedures)),
       ),
       HomeStatCard(
+        key: const ValueKey('resources_stat_actions'),
         title: 'Actions',
         icon: AppIcons.actions,
         asyncValue: actionsAsync,

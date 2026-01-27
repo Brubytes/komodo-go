@@ -1,13 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:komodo_go/features/stacks/presentation/views/stack_detail/stack_detail_sections.dart';
 import 'package:komodo_go/main.dart' as app;
 import 'package:patrol/patrol.dart';
 
 import '../support/app_steps.dart';
 import '../support/fake_komodo_backend.dart';
 
-void registerStacksDestroyTests() {
-  patrolTest('login → stacks → destroy stack (fake backend)', ($) async {
+void registerStacksServicesLogsTests() {
+  patrolTest('login → stacks → services + logs (fake backend)', ($) async {
     final backend = FakeKomodoBackend(
       expectedApiKey: 'test-key',
       expectedApiSecret: 'test-secret',
@@ -29,30 +30,34 @@ void registerStacksDestroyTests() {
       await $(find.byKey(const ValueKey('bottom_nav_resources')))
           .waitUntilVisible();
       await $(find.byKey(const ValueKey('bottom_nav_resources'))).tap();
+
       await $(find.byKey(const ValueKey('resources_stat_stacks')))
           .waitUntilVisible();
       await $(find.byKey(const ValueKey('resources_stat_stacks'))).tap();
 
       await $(find.text('Test Stack')).waitUntilVisible();
+      await $(find.byKey(const ValueKey('stack_card_stack-1'))).tap();
 
-      // Open overflow menu for the first stack card.
-      await $(find.byKey(const ValueKey('stack_card_menu_stack-1'))).tap();
-      await $(find.byKey(const ValueKey('stack_card_destroy_stack-1'))).tap();
-      await $(find.text('Destroy')).tap(); // confirm dialog
-
+      await $(find.byKey(const ValueKey('stack_tab_services'))).scrollTo();
+      await $(find.byKey(const ValueKey('stack_tab_services'))).tap();
       await $.pumpAndSettle();
 
-      // Stack should be gone after refresh.
-      expect(find.text('Test Stack'), findsNothing);
-
-      final destroyCalls = backend.calls
-          .where((c) => c.path == '/execute' && c.type == 'DestroyStack')
+      final serviceCalls = backend.calls
+          .where((c) => c.path == '/read' && c.type == 'ListStackServices')
           .toList();
-      expect(destroyCalls.length, 1);
+      expect(serviceCalls, isNotEmpty);
+
+      await $(find.byKey(const ValueKey('stack_tab_logs'))).scrollTo();
+      await $(find.byKey(const ValueKey('stack_tab_logs'))).tap();
+
+      final logCalls = backend.calls
+          .where((c) => c.path == '/read' && c.type == 'GetStackLog')
+          .toList();
+      expect(logCalls, isNotEmpty);
     } finally {
       await backend.stop();
     }
   });
 }
 
-void main() => registerStacksDestroyTests();
+void main() => registerStacksServicesLogsTests();

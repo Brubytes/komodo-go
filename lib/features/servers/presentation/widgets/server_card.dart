@@ -30,6 +30,7 @@ class ServerCard extends StatelessWidget {
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
     return AppCardSurface(
+      key: ValueKey('server_card_${server.id}'),
       padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,

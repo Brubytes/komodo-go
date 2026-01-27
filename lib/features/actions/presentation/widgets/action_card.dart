@@ -32,6 +32,7 @@ class ActionCard extends StatelessWidget {
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
     return AppCardSurface(
+      key: ValueKey('action_card_${action.id}'),
       padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,
@@ -107,6 +108,7 @@ class ActionCard extends StatelessWidget {
                       alignment: Alignment.centerRight,
                       child: IconButton(
                         icon: const Icon(AppIcons.play),
+                        key: ValueKey('action_card_run_${action.id}'),
                         onPressed: onRun,
                         tooltip: 'Run',
                       ),

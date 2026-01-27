@@ -37,6 +37,7 @@ class BuildCard extends StatelessWidget {
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
     return AppCardSurface(
+      key: ValueKey('build_card_${buildItem.id}'),
       padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,
@@ -106,12 +107,14 @@ class BuildCard extends StatelessWidget {
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: PopupMenuButton<BuildAction>(
+                        key: ValueKey('build_card_menu_${buildItem.id}'),
                         icon: const Icon(AppIcons.moreVertical),
                         onSelected: onAction,
                         itemBuilder: (context) {
                           final scheme = Theme.of(context).colorScheme;
                           return [
                             komodoPopupMenuItem(
+                              key: ValueKey('build_card_run_${buildItem.id}'),
                               value: BuildAction.run,
                               icon: AppIcons.play,
                               label: 'Run build',
@@ -119,6 +122,9 @@ class BuildCard extends StatelessWidget {
                             ),
                             if (state == BuildState.building)
                               komodoPopupMenuItem(
+                                key: ValueKey(
+                                  'build_card_cancel_${buildItem.id}',
+                                ),
                                 value: BuildAction.cancel,
                                 icon: AppIcons.stop,
                                 label: 'Cancel',

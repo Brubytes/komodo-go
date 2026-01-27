@@ -6,14 +6,20 @@ import 'package:patrol/patrol.dart';
 import '../support/app_steps.dart';
 import '../support/fake_komodo_backend.dart';
 
-void registerStacksDestroyTests() {
-  patrolTest('login → stacks → destroy stack (fake backend)', ($) async {
+void registerStackNotFoundTests() {
+  patrolTest('unhappy: stack detail not found shows message', ($) async {
     final backend = FakeKomodoBackend(
       expectedApiKey: 'test-key',
       expectedApiSecret: 'test-secret',
       port: 57868,
     );
     await backend.start();
+    backend.queueError(
+      path: '/read',
+      type: 'GetStack',
+      statusCode: 404,
+      message: 'Stack not found',
+    );
 
     try {
       await app.main();
@@ -29,30 +35,19 @@ void registerStacksDestroyTests() {
       await $(find.byKey(const ValueKey('bottom_nav_resources')))
           .waitUntilVisible();
       await $(find.byKey(const ValueKey('bottom_nav_resources'))).tap();
+
       await $(find.byKey(const ValueKey('resources_stat_stacks')))
           .waitUntilVisible();
       await $(find.byKey(const ValueKey('resources_stat_stacks'))).tap();
 
       await $(find.text('Test Stack')).waitUntilVisible();
+      await $(find.byKey(const ValueKey('stack_card_stack-1'))).tap();
 
-      // Open overflow menu for the first stack card.
-      await $(find.byKey(const ValueKey('stack_card_menu_stack-1'))).tap();
-      await $(find.byKey(const ValueKey('stack_card_destroy_stack-1'))).tap();
-      await $(find.text('Destroy')).tap(); // confirm dialog
-
-      await $.pumpAndSettle();
-
-      // Stack should be gone after refresh.
-      expect(find.text('Test Stack'), findsNothing);
-
-      final destroyCalls = backend.calls
-          .where((c) => c.path == '/execute' && c.type == 'DestroyStack')
-          .toList();
-      expect(destroyCalls.length, 1);
+      await $(find.textContaining('Stack not found')).waitUntilVisible();
     } finally {
       await backend.stop();
     }
   });
 }
 
-void main() => registerStacksDestroyTests();
+void main() => registerStackNotFoundTests();

@@ -353,23 +353,28 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                       controller: _tabController,
                       tabs: [
                         const Tab(
+                          key: ValueKey('stack_tab_config'),
                           icon: Icon(AppIcons.bolt),
                           text: 'Config',
                         ),
                         if (hasInfoTab)
                           const Tab(
+                            key: ValueKey('stack_tab_info'),
                             icon: Icon(AppIcons.info),
                             text: 'Info',
                           ),
                         const Tab(
+                          key: ValueKey('stack_tab_services'),
                           icon: Icon(AppIcons.toolbox),
                           text: 'Services',
                         ),
                         const Tab(
+                          key: ValueKey('stack_tab_updates'),
                           icon: Icon(AppIcons.history),
                           text: 'Updates',
                         ),
                         const Tab(
+                          key: ValueKey('stack_tab_logs'),
                           icon: Icon(AppIcons.logs),
                           text: 'Logs',
                         ),

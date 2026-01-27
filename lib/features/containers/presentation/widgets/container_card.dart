@@ -38,8 +38,15 @@ class ContainerCard extends StatelessWidget {
     final pillFg = scheme.onSurface;
 
     final hasActions = _hasActions(item.container.state);
+    final keyId =
+        (item.container.id?.trim().isNotEmpty ?? false)
+            ? item.container.id!.trim()
+            : (item.container.name.trim().isNotEmpty
+                  ? item.container.name.trim()
+                  : 'unknown');
 
     return AppCardSurface(
+      key: ValueKey('container_card_$keyId'),
       padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,
@@ -65,13 +72,14 @@ class ContainerCard extends StatelessWidget {
                       ),
                     ),
                     const Gap(12),
-                    _StateChip(
+                      _StateChip(
                       state: item.container.state,
                       color: stateColor,
                       showMenu: onAction != null && hasActions,
                       onAction: onAction,
                       itemsBuilder: (context) =>
-                          _buildMenuItems(context, item.container.state),
+                          _buildMenuItems(context, item.container.state, keyId),
+                      menuKey: ValueKey('container_card_menu_$keyId'),
                     ),
                   ],
                 ),
@@ -164,6 +172,7 @@ class ContainerCard extends StatelessWidget {
   List<PopupMenuEntry<ContainerAction>> _buildMenuItems(
     BuildContext context,
     ContainerState state,
+    String keyId,
   ) {
     final scheme = Theme.of(context).colorScheme;
     final items = <PopupMenuEntry<ContainerAction>>[];
@@ -182,6 +191,7 @@ class ContainerCard extends StatelessWidget {
     if (canRestart) {
       items.add(
         komodoPopupMenuItem(
+          key: ValueKey('container_card_restart_$keyId'),
           value: ContainerAction.restart,
           icon: AppIcons.refresh,
           label: 'Restart',
@@ -192,6 +202,7 @@ class ContainerCard extends StatelessWidget {
     if (canStop) {
       items.add(
         komodoPopupMenuItem(
+          key: ValueKey('container_card_stop_$keyId'),
           value: ContainerAction.stop,
           icon: AppIcons.stop,
           label: 'Stop',
@@ -233,6 +244,7 @@ class _StateChip extends StatelessWidget {
     required this.showMenu,
     this.onAction,
     this.itemsBuilder,
+    this.menuKey,
   });
 
   final ContainerState state;
@@ -241,6 +253,7 @@ class _StateChip extends StatelessWidget {
   final void Function(ContainerAction action)? onAction;
   final List<PopupMenuEntry<ContainerAction>> Function(BuildContext context)?
   itemsBuilder;
+  final Key? menuKey;
 
   @override
   Widget build(BuildContext context) {
@@ -287,6 +300,7 @@ class _StateChip extends StatelessWidget {
     }
 
     return PopupMenuButton<ContainerAction>(
+      key: menuKey,
       onSelected: onAction,
       itemBuilder: itemsBuilder!,
       child: chip,

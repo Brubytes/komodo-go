@@ -33,6 +33,7 @@ class RepoCard extends StatelessWidget {
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
     return AppCardSurface(
+      key: ValueKey('repo_card_${repo.id}'),
       padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,
@@ -112,24 +113,28 @@ class RepoCard extends StatelessWidget {
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: PopupMenuButton<RepoAction>(
+                        key: ValueKey('repo_card_menu_${repo.id}'),
                         icon: const Icon(AppIcons.moreVertical),
                         onSelected: onAction,
                         itemBuilder: (context) {
                           final scheme = Theme.of(context).colorScheme;
                           return [
                             komodoPopupMenuItem(
+                              key: ValueKey('repo_card_clone_${repo.id}'),
                               value: RepoAction.clone,
                               icon: AppIcons.download,
                               label: 'Clone',
                               iconColor: scheme.primary,
                             ),
                             komodoPopupMenuItem(
+                              key: ValueKey('repo_card_pull_${repo.id}'),
                               value: RepoAction.pull,
                               icon: AppIcons.refresh,
                               label: 'Pull',
                               iconColor: scheme.secondary,
                             ),
                             komodoPopupMenuItem(
+                              key: ValueKey('repo_card_build_${repo.id}'),
                               value: RepoAction.build,
                               icon: AppIcons.builds,
                               label: 'Build',

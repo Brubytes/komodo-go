@@ -32,6 +32,7 @@ class ProcedureCard extends StatelessWidget {
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
     return AppCardSurface(
+      key: ValueKey('procedure_card_${procedure.id}'),
       padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,
@@ -107,6 +108,7 @@ class ProcedureCard extends StatelessWidget {
                       alignment: Alignment.centerRight,
                       child: IconButton(
                         icon: const Icon(AppIcons.play),
+                        key: ValueKey('procedure_card_run_${procedure.id}'),
                         onPressed: onRun,
                         tooltip: 'Run',
                       ),
