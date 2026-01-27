@@ -1,51 +1,59 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/main.dart' as app;
 import 'package:patrol/patrol.dart';
 
 import '../support/app_steps.dart';
-import '../support/fake_komodo_backend.dart';
+import '../support/patrol_test_config.dart';
 
 void registerActionsRunTests() {
-  patrolTest('login → actions → run action (fake backend)', ($) async {
-    final backend = FakeKomodoBackend(
-      expectedApiKey: 'test-key',
-      expectedApiSecret: 'test-secret',
-      port: 57868,
-    );
-    await backend.start();
+  final config = PatrolTestConfig.fromEnvironment();
+  patrolTest(
+    'login → actions → run action (fake backend)',
+    ($) async {
+      final backend = await PatrolTestBackend.start(config);
 
-    try {
-      await app.main();
-      await $.pumpAndSettle();
+      try {
+        await app.main();
+        await $.pumpAndSettle();
 
-      await loginWith(
-        $,
-        baseUrl: backend.baseUrl,
-        apiKey: 'test-key',
-        apiSecret: 'test-secret',
-      );
+        await loginWith(
+          $,
+          baseUrl: backend.baseUrl,
+          apiKey: backend.apiKey,
+          apiSecret: backend.apiSecret,
+        );
 
-      await $(find.byKey(const ValueKey('bottom_nav_resources')))
-          .waitUntilVisible();
-      await $(find.byKey(const ValueKey('bottom_nav_resources'))).tap();
+        await $(find.byKey(const ValueKey('bottom_nav_resources')))
+            .waitUntilVisible();
+        await $(find.byKey(const ValueKey('bottom_nav_resources'))).tap();
 
-      await $(find.byKey(const ValueKey('resources_stat_actions')))
-          .waitUntilVisible();
-      await $(find.byKey(const ValueKey('resources_stat_actions'))).tap();
+        await $(find.byKey(const ValueKey('resources_stat_actions')))
+            .waitUntilVisible();
+        await $(find.byKey(const ValueKey('resources_stat_actions'))).tap();
 
-      await $(find.text('Test Action')).waitUntilVisible();
-      await $(find.byKey(const ValueKey('action_card_run_action-1'))).tap();
-      await $.pumpAndSettle();
+        final actionName = config.isFake ? 'Test Action' : config.actionName;
+        await $(find.text(actionName)).waitUntilVisible();
+        await $(find.text(actionName)).tap();
+        await $(find.byIcon(AppIcons.play)).tap();
+        await $.pumpAndSettle();
 
-      final runCalls = backend.calls
-          .where((c) => c.path == '/execute' && c.type == 'RunAction')
-          .toList();
-      expect(runCalls.length, 1);
-    } finally {
-      await backend.stop();
-    }
-  });
+        if (backend.isFake) {
+          final runCalls = backend.fake!.calls
+              .where((c) => c.path == '/execute' && c.type == 'RunAction')
+              .toList();
+          expect(runCalls.length, 1);
+        }
+      } finally {
+        await backend.stop();
+      }
+    },
+    skip: config.skipReason(
+      requiredResourceLabel: 'KOMODO_TEST_ACTION_NAME',
+      requiredResourceValue: config.actionName,
+    ) != null,
+  );
 }
 
 void main() => registerActionsRunTests();
