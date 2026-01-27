@@ -151,6 +151,93 @@ void registerStackContractTests() {
           config?.skipReason() ??
           config?.requireResetReason());
 
+  group('Stack CRUD property-based (real backend)', () {
+    late StackRepository repository;
+    late KomodoApiClient client;
+
+    setUp(() async {
+      await resetBackendIfConfigured(config!);
+      client = buildTestClient(config!, RpcRecorder());
+      repository = StackRepository(client);
+    });
+
+    test('randomized stacks survive CRUD roundtrip', () async {
+      final stacks = expectRight(await repository.listStacks());
+      expect(stacks, isNotEmpty);
+
+      final seed = stacks.first;
+      final seedDetail = expectRight(await repository.getStack(seed.id));
+      final createConfig = seedDetail.config.toJson();
+
+      final random = Random(21031);
+      final pendingDeletes = <String>{};
+
+      try {
+        for (var i = 0; i < 5; i++) {
+          final name = 'prop-stack-$i-${_randomToken(random)}';
+          final createdJson = await client.write(
+            RpcRequest(
+              type: 'CreateStack',
+              params: <String, dynamic>{
+                'name': name,
+                'config': createConfig,
+              },
+            ),
+          );
+          KomodoStack.fromJson(createdJson as Map<String, dynamic>);
+
+          final createdId = await waitForListItemId(
+            listItems: () async {
+              final listed = expectRight(await repository.listStacks());
+              return listed.map((item) => item.toJson()).toList();
+            },
+            name: name,
+          );
+          pendingDeletes.add(createdId);
+
+          final environment = 'prop-env-$i-${_randomToken(random)}';
+          final updated = expectRight(
+            await repository.updateStackConfig(
+              stackId: createdId,
+              partialConfig: <String, dynamic>{'environment': environment},
+            ),
+          );
+          expect(updated.config.environment.trim(), environment);
+
+          final refreshed = expectRight(await repository.getStack(createdId));
+          expect(refreshed.config.environment.trim(), environment);
+
+          await retryAsync(() async {
+            await client.write(
+              RpcRequest(
+                type: 'DeleteStack',
+                params: <String, dynamic>{'id': createdId},
+              ),
+            );
+          });
+          pendingDeletes.remove(createdId);
+          await expectEventuallyServerFailure(
+            () => repository.getStack(createdId),
+          );
+        }
+      } finally {
+        for (final id in pendingDeletes) {
+          await retryAsync(() async {
+            await client.write(
+              RpcRequest(
+                type: 'DeleteStack',
+                params: <String, dynamic>{'id': id},
+              ),
+            );
+          });
+        }
+      }
+    });
+  },
+      skip: missingConfigReason ??
+          config?.skipReason() ??
+          config?.requireResetReason());
+
   group('Stack config property-based (real backend)', () {
     late StackRepository repository;
 

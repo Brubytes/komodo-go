@@ -122,6 +122,99 @@ void registerDeploymentContractTests() {
       skip: missingConfigReason ??
           config?.skipReason() ??
           config?.requireResetReason());
+
+  group('Deployment CRUD property-based (real backend)', () {
+    late DeploymentRepository repository;
+    late KomodoApiClient client;
+
+    setUp(() async {
+      await resetBackendIfConfigured(config!);
+      client = buildTestClient(config!, RpcRecorder());
+      repository = DeploymentRepository(client);
+    });
+
+    test('randomized deployments survive CRUD roundtrip', () async {
+      final deployments = expectRight(await repository.listDeployments());
+      expect(deployments, isNotEmpty);
+
+      final seed = deployments.first;
+      final seedDetail = expectRight(await repository.getDeployment(seed.id));
+      final seedConfig = seedDetail.config;
+      expect(seedConfig, isNotNull);
+
+      final random = Random(8031);
+      final pendingDeletes = <String>{};
+
+      try {
+        for (var i = 0; i < 5; i++) {
+          final name = 'prop-deploy-$i-${_randomToken(random)}';
+          final createdJson = await client.write(
+            RpcRequest(
+              type: 'CreateDeployment',
+              params: <String, dynamic>{
+                'name': name,
+                'config': seedConfig!.toJson(),
+              },
+            ),
+          );
+          Deployment.fromJson(createdJson as Map<String, dynamic>);
+
+          final createdId = await waitForListItemId(
+            listItems: () async {
+              final listed = expectRight(await repository.listDeployments());
+              return listed.map((item) => item.toJson()).toList();
+            },
+            name: name,
+          );
+          pendingDeletes.add(createdId);
+
+          final environment = 'FOO=bar-${_randomToken(random)}';
+          final labels = 'app=prop-${_randomToken(random)}';
+          final updated = expectRight(
+            await repository.updateDeploymentConfig(
+              deploymentId: createdId,
+              partialConfig: <String, dynamic>{
+                'environment': environment,
+                'labels': labels,
+              },
+            ),
+          );
+          expect(updated.id, createdId);
+
+          final refreshed = expectRight(await repository.getDeployment(createdId));
+          expect(refreshed.config?.environment.trim(), environment);
+          expect(refreshed.config?.labels.trim(), labels);
+
+          await retryAsync(() async {
+            await client.write(
+              RpcRequest(
+                type: 'DeleteDeployment',
+                params: <String, dynamic>{'id': createdId},
+              ),
+            );
+          });
+          pendingDeletes.remove(createdId);
+          await expectEventuallyServerFailure(
+            () => repository.getDeployment(createdId),
+          );
+        }
+      } finally {
+        for (final id in pendingDeletes) {
+          await retryAsync(() async {
+            await client.write(
+              RpcRequest(
+                type: 'DeleteDeployment',
+                params: <String, dynamic>{'id': id},
+              ),
+            );
+          });
+        }
+      }
+    });
+  },
+      skip: missingConfigReason ??
+          config?.skipReason() ??
+          config?.requireResetReason());
 }
 
 void main() => registerDeploymentContractTests();

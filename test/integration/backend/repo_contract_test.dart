@@ -125,6 +125,110 @@ void registerRepoContractTests() {
       skip: missingConfigReason ??
           config?.skipReason() ??
           config?.requireResetReason());
+
+  group('Repo CRUD property-based (real backend)', () {
+    late RepoRepository repository;
+    late KomodoApiClient client;
+
+    setUp(() async {
+      await resetBackendIfConfigured(config!);
+      client = buildTestClient(config!, RpcRecorder());
+      repository = RepoRepository(client);
+    });
+
+    test('randomized repos survive CRUD roundtrip', () async {
+      final repos = expectRight(await repository.listRepos());
+      expect(repos, isNotEmpty);
+
+      final seed = repos.first;
+      final seedDetail = expectRight(await repository.getRepo(seed.id));
+      final random = Random(7031);
+      final pendingDeletes = <String>{};
+
+      try {
+        for (var i = 0; i < 5; i++) {
+          final name = 'prop-repo-$i-${_randomToken(random)}';
+          final createConfig = seedDetail.config.toJson();
+          createConfig['server_id'] = '';
+          createConfig['builder_id'] = '';
+          createConfig['repo'] = 'contract/$name';
+          if ((createConfig['branch'] as String?)?.isEmpty ?? true) {
+            createConfig['branch'] = 'main';
+          }
+
+          final createdJson = await client.write(
+            RpcRequest(
+              type: 'CreateRepo',
+              params: <String, dynamic>{
+                'name': name,
+                'config': createConfig,
+              },
+            ),
+          );
+          KomodoRepo.fromJson(createdJson as Map<String, dynamic>);
+
+          final createdId = await waitForListItemId(
+            listItems: () async {
+              final listed = expectRight(await repository.listRepos());
+              return listed.map((repo) => repo.toJson()).toList();
+            },
+            name: name,
+          );
+          pendingDeletes.add(createdId);
+
+          final updated = expectRight(
+            await repository.updateRepoConfig(
+              repoId: createdId,
+              partialConfig: <String, dynamic>{
+                'skip_secret_interp': !seedDetail.config.skipSecretInterp,
+              },
+            ),
+          );
+          expect(updated.id, createdId);
+
+          final updatedHttps = expectRight(
+            await repository.updateRepoConfig(
+              repoId: createdId,
+              partialConfig: <String, dynamic>{
+                'git_https': !seedDetail.config.gitHttps,
+              },
+            ),
+          );
+          expect(updatedHttps.id, createdId);
+
+          final refreshed = expectRight(await repository.getRepo(createdId));
+          expect(refreshed.config.gitHttps, updatedHttps.config.gitHttps);
+
+          await retryAsync(() async {
+            await client.write(
+              RpcRequest(
+                type: 'DeleteRepo',
+                params: <String, dynamic>{'id': createdId},
+              ),
+            );
+          });
+          pendingDeletes.remove(createdId);
+          await expectEventuallyServerFailure(
+            () => repository.getRepo(createdId),
+          );
+        }
+      } finally {
+        for (final id in pendingDeletes) {
+          await retryAsync(() async {
+            await client.write(
+              RpcRequest(
+                type: 'DeleteRepo',
+                params: <String, dynamic>{'id': id},
+              ),
+            );
+          });
+        }
+      }
+    });
+  },
+      skip: missingConfigReason ??
+          config?.skipReason() ??
+          config?.requireResetReason());
 }
 
 void main() => registerRepoContractTests();
