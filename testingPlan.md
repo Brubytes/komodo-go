@@ -218,6 +218,52 @@ These tests are opt-in and should be driven by environment variables:
 **Phase 1 (start here)**
 - Add backend reset hook and config helper.
 - Add one full CRUD contract test (Tags).
+
+---
+
+## UI Handling Coverage (Providers + Widgets + Thin E2E)
+
+Goal: prove that repository results are translated into correct UI state without requiring Patrol coverage for every CRUD permutation.
+
+### Provider contract tests (fast, high coverage)
+
+For every resource provider under `lib/features/**/presentation/providers/`:
+
+- Success path returns data (and ordering rules are respected).
+- Unauthenticated path (repository null) returns empty or error state as designed.
+- Failure path surfaces `Failure.displayMessage` via `AsyncValue.error`.
+- Action providers (create/update/delete) set loading, then success/error and invalidate list providers.
+
+Template lives in `test/support/provider_test_templates.dart` and is used by:
+
+- `test/unit/features/tags/presentation/providers/tags_provider_test.dart`
+
+### Widget tests (state → UI mapping)
+
+Pick the highest-traffic screens and validate:
+
+- loading state renders skeletons/spinners
+- empty state renders empty-state widget
+- error state renders retry UI
+- success state renders list and detail UI
+- action buttons call the right provider methods and show snackbars
+
+Start with:
+
+- Tags list + editor sheet
+- Stacks list + detail config section
+- Deployments list + detail config section
+
+### Thin Patrol layer (only critical flows)
+
+Keep Patrol to a minimal set of high-value flows:
+
+- Login + load resources list
+- Create/edit/delete a tag
+- Update a stack config
+- Update a deployment config
+
+This keeps E2E flake low while still validating the full UI → repo → backend chain.
 - Add one property-based CRUD test (Tags).
 - Add golden snapshots for CreateTag request/response.
 

@@ -177,7 +177,7 @@ Future<T> retryAsync<T>(
   for (var attempt = 0; attempt < attempts; attempt++) {
     try {
       return await action();
-    } catch (error) {
+    } on Object catch (error) {
       lastError = error;
       if (attempt == attempts - 1) break;
       await Future<void>.delayed(delay);

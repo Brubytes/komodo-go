@@ -46,7 +46,7 @@ void registerVariableContractTests() {
         expect(responseData, isA<Map>());
 
         final normalizedRequest = normalizeJson(
-          (requestData as Map).cast<String, dynamic>(),
+          requestData as Map<String, dynamic>,
         );
         expect(
           normalizedRequest,
@@ -54,7 +54,7 @@ void registerVariableContractTests() {
         );
 
         final normalizedResponse = normalizeVariableResponse(
-          (responseData as Map).cast<String, dynamic>(),
+          responseData as Map<String, dynamic>,
         );
         expect(
           normalizedResponse,
@@ -116,9 +116,10 @@ void registerVariableContractTests() {
     late VariableRepository repository;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
+      final testConfig = config ?? (throw StateError('Missing test config'));
+      await resetBackendIfConfigured(testConfig);
       repository = VariableRepository(
-        buildTestClient(config!, RpcRecorder()),
+        buildTestClient(testConfig, RpcRecorder()),
       );
     });
 
