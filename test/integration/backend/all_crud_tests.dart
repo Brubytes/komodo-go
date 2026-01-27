@@ -4,6 +4,7 @@ import 'auth_contract_test.dart';
 import 'build_contract_test.dart';
 import 'builder_contract_test.dart';
 import 'deployment_contract_test.dart';
+import 'negative_contract_tests.dart';
 import 'providers_contract_test.dart';
 import 'repo_contract_test.dart';
 import 'server_contract_test.dart';
@@ -20,6 +21,7 @@ void main() {
   registerBuildContractTests();
   registerBuilderContractTests();
   registerDeploymentContractTests();
+  registerNegativeContractTests();
   registerProviderContractTests();
   registerRepoContractTests();
   registerServerContractTests();
