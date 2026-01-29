@@ -36,6 +36,58 @@ It is available as an option on the login screen.
   - `KOMODO_DEMO_API_SECRET` (default: `demo-secret`)
   - `KOMODO_DEMO_AVAILABLE` (default: `true`)
 
+## App Store screenshots (Maestro + Storepix)
+
+The project includes a Maestro flow for capturing iOS screenshots and a Storepix
+configuration for producing App Store-ready assets.
+
+### Prerequisites
+
+- Maestro installed globally
+- Storepix installed globally
+- Xcode + iOS Simulator
+- FVM Flutter (`fvm`)
+
+### Generate raw screenshots (Maestro)
+
+Run the mixed flow (dark for 1-3, light for 4-6):
+
+```bash
+.maestro/run_screenshots.sh mixed
+```
+
+Outputs are saved to:
+
+- `.maestro/screenshots/`
+
+### Prepare Storepix inputs
+
+Copy the Maestro outputs into Storepix inputs:
+
+```bash
+cp .maestro/screenshots/*.png storepix/screenshots/iPhone/
+```
+
+### Generate App Store assets (Storepix)
+
+```bash
+cd storepix
+storepix
+```
+
+Outputs are saved to:
+
+- `storepix/output/iphone-6.5/`
+
+### Screenshot set
+
+1. Home dashboard (dark)
+2. Servers list (dark)
+3. Server detail (dark)
+4. Containers (light)
+5. Deployments (light)
+6. Settings (light)
+
 ## Design system / theming
 
 The app uses a single unified Material 3 theme on both iOS and Android (no platform-specific split).
