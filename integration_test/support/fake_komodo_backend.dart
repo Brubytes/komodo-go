@@ -24,8 +24,8 @@ class FakeRpcOverride {
     required this.type,
     this.body,
     this.delay,
-  })  : statusCode = 200,
-        message = null;
+  }) : statusCode = 200,
+       message = null;
 
   FakeRpcOverride.error({
     required this.path,
@@ -133,13 +133,9 @@ class FakeKomodoBackend {
         ),
       };
   final Map<String, Map<String, dynamic>> _serverStats =
-      <String, Map<String, dynamic>>{
-        'server-1': _systemStats(),
-      };
+      <String, Map<String, dynamic>>{'server-1': _systemStats()};
   final Map<String, Map<String, dynamic>> _serverSystemInfo =
-      <String, Map<String, dynamic>>{
-        'server-1': _systemInfo(),
-      };
+      <String, Map<String, dynamic>>{'server-1': _systemInfo()};
 
   final List<Map<String, dynamic>> _builds = <Map<String, dynamic>>[
     _buildListItem(
@@ -162,10 +158,26 @@ class FakeKomodoBackend {
   ];
 
   final List<Map<String, dynamic>> _actions = <Map<String, dynamic>>[
-    _actionListItem(
-      id: 'action-1',
-      name: 'Test Action',
+    _actionListItem(id: 'action-1', name: 'Test Action', state: 'Ok'),
+  ];
+
+  final List<Map<String, dynamic>> _repos = <Map<String, dynamic>>[
+    _repoListItem(
+      id: 'repo-1',
+      name: 'Test Repo',
       state: 'Ok',
+      repo: 'org/repo',
+      branch: 'main',
+    ),
+  ];
+
+  final List<Map<String, dynamic>> _syncs = <Map<String, dynamic>>[
+    _syncListItem(
+      id: 'sync-1',
+      name: 'Test Sync',
+      state: 'Ok',
+      repo: 'org/repo',
+      branch: 'main',
     ),
   ];
 
@@ -243,12 +255,7 @@ class FakeKomodoBackend {
     Duration? delay,
   }) {
     _queueOverride(
-      FakeRpcOverride.success(
-        path: path,
-        type: type,
-        body: body,
-        delay: delay,
-      ),
+      FakeRpcOverride.success(path: path, type: type, body: body, delay: delay),
     );
   }
 
@@ -377,7 +384,8 @@ class FakeKomodoBackend {
 
       case 'GetStack':
         final idOrName = (params['stack'] as String?)?.trim() ?? '';
-        final detail = _stackDetails[idOrName] ??
+        final detail =
+            _stackDetails[idOrName] ??
             _stackDetails.values.firstWhere(
               (item) => item['name'] == idOrName,
               orElse: () => <String, dynamic>{},
@@ -389,10 +397,10 @@ class FakeKomodoBackend {
 
       case 'ListStackServices':
         final idOrName = (params['stack'] as String?)?.trim() ?? '';
-        final services = _stackServices[idOrName] ??
+        final services =
+            _stackServices[idOrName] ??
             _stackServices.values.firstWhere(
-              (items) => items
-                  .any((service) => service['service'] == idOrName),
+              (items) => items.any((service) => service['service'] == idOrName),
               orElse: () => <Map<String, dynamic>>[],
             );
         return List<Map<String, dynamic>>.from(services);
@@ -408,6 +416,16 @@ class FakeKomodoBackend {
 
       case 'ListDeployments':
         return List<Map<String, dynamic>>.from(_deployments);
+      case 'GetDeployment':
+        final idOrName = (params['deployment'] as String?)?.trim() ?? '';
+        final deployment = _deployments.firstWhere(
+          (d) => d['id'] == idOrName || d['name'] == idOrName,
+          orElse: () => <String, dynamic>{},
+        );
+        if (deployment.isEmpty) {
+          throw FakeRpcResponseException(404, 'Deployment not found');
+        }
+        return _deploymentDetail(deployment);
       case 'ListServers':
         return List<Map<String, dynamic>>.from(_servers);
       case 'ListBuilds':
@@ -427,7 +445,8 @@ class FakeKomodoBackend {
             _containerLog(stdout: 'Container log: (missing container)');
       case 'GetServer':
         final idOrName = (params['server'] as String?)?.trim() ?? '';
-        final detail = _serverDetails[idOrName] ??
+        final detail =
+            _serverDetails[idOrName] ??
             _serverDetails.values.firstWhere(
               (item) => item['name'] == idOrName,
               orElse: () => <String, dynamic>{},
@@ -444,8 +463,9 @@ class FakeKomodoBackend {
         return _serverSystemInfo[idOrName] ?? _systemInfo();
 
       case 'ListRepos':
+        return List<Map<String, dynamic>>.from(_repos);
       case 'ListResourceSyncs':
-        return <Object>[];
+        return List<Map<String, dynamic>>.from(_syncs);
 
       default:
         throw StateError('Unhandled /read RPC: $type');
@@ -535,7 +555,8 @@ class FakeKomodoBackend {
         if (deploymentIdOrName is String) {
           _deployments.removeWhere(
             (d) =>
-                d['id'] == deploymentIdOrName || d['name'] == deploymentIdOrName,
+                d['id'] == deploymentIdOrName ||
+                d['name'] == deploymentIdOrName,
           );
         }
         return <String, dynamic>{};
@@ -557,6 +578,20 @@ class FakeKomodoBackend {
 
       case 'RestartContainer':
       case 'StopContainer':
+        return <String, dynamic>{};
+
+      case 'PullRepo':
+      case 'CloneRepo':
+      case 'BuildRepo':
+        return <String, dynamic>{};
+
+      case 'RunSync':
+        return <String, dynamic>{};
+
+      case 'DeployStack':
+        return <String, dynamic>{};
+
+      case 'Deploy':
         return <String, dynamic>{};
 
       default:
@@ -653,6 +688,36 @@ Map<String, dynamic> _deployment({
       'update_available': false,
       'server_id': serverId,
       'build_id': null,
+    },
+  };
+}
+
+Map<String, dynamic> _deploymentDetail(Map<String, dynamic> deployment) {
+  final info =
+      deployment['info'] as Map<String, dynamic>? ?? <String, dynamic>{};
+  return <String, dynamic>{
+    ...deployment,
+    'config': <String, dynamic>{
+      'server_id': info['server_id'] ?? 'server-1',
+      'image': info['image'] ?? 'nginx:latest',
+      'image_registry_account': '',
+      'skip_secret_interp': false,
+      'redeploy_on_build': false,
+      'poll_for_updates': true,
+      'auto_update': false,
+      'send_alerts': true,
+      'links': <String>[],
+      'network': '',
+      'restart': 'Always',
+      'command': '',
+      'termination_signal': null,
+      'termination_timeout': 10,
+      'extra_args': <String>[],
+      'term_signal_labels': '',
+      'ports': '80:80',
+      'volumes': '',
+      'environment': 'ENV=test',
+      'labels': '',
     },
   };
 }
@@ -977,6 +1042,61 @@ Map<String, dynamic> _containerLog({required String stdout}) {
   };
 }
 
+Map<String, dynamic> _repoListItem({
+  required String id,
+  required String name,
+  required String state,
+  required String repo,
+  required String branch,
+}) {
+  return <String, dynamic>{
+    'id': id,
+    'name': name,
+    'template': false,
+    'tags': <Object>[],
+    'info': <String, dynamic>{
+      'state': state,
+      'repo': repo,
+      'branch': branch,
+      'git_provider': '',
+      'repo_link': '',
+      'latest_hash': null,
+      'latest_message': null,
+      'built_hash': null,
+      'built_message': null,
+      'last_pulled_at': 0,
+      'last_built_at': 0,
+    },
+  };
+}
+
+Map<String, dynamic> _syncListItem({
+  required String id,
+  required String name,
+  required String state,
+  required String repo,
+  required String branch,
+}) {
+  return <String, dynamic>{
+    'id': id,
+    'name': name,
+    'template': false,
+    'tags': <Object>[],
+    'info': <String, dynamic>{
+      'state': state,
+      'repo': repo,
+      'branch': branch,
+      'git_provider': '',
+      'linked_repo': '',
+      'resource_path': <String>[],
+      'last_sync_ts': 0,
+      'last_sync_hash': null,
+      'last_sync_message': null,
+      'pending_error': null,
+    },
+  };
+}
+
 Future<void> _jsonOk(HttpRequest request, Object body) async {
   request.response.statusCode = 200;
   request.response.headers.contentType = ContentType.json;
@@ -987,9 +1107,8 @@ Future<void> _jsonOk(HttpRequest request, Object body) async {
 void _jsonError(HttpRequest request, int statusCode, String message) {
   request.response.statusCode = statusCode;
   request.response.headers.contentType = ContentType.json;
-  request.response.write(jsonEncode(<String, dynamic>{
-    'error': message,
-    'trace': null,
-  }));
+  request.response.write(
+    jsonEncode(<String, dynamic>{'error': message, 'trace': null}),
+  );
   request.response.close();
 }

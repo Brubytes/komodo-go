@@ -19,6 +19,8 @@ class PatrolTestConfig {
     required this.containerName,
     required this.containerId,
     required this.deploymentName,
+    required this.repoName,
+    required this.syncName,
   });
 
   final PatrolBackendMode mode;
@@ -34,6 +36,8 @@ class PatrolTestConfig {
   final String containerName;
   final String containerId;
   final String deploymentName;
+  final String repoName;
+  final String syncName;
 
   static PatrolTestConfig fromEnvironment() {
     const modeRaw = String.fromEnvironment(
@@ -88,6 +92,14 @@ class PatrolTestConfig {
       'KOMODO_TEST_DEPLOYMENT_NAME',
       defaultValue: '',
     );
+    const repoNameRaw = String.fromEnvironment(
+      'KOMODO_TEST_REPO_NAME',
+      defaultValue: '',
+    );
+    const syncNameRaw = String.fromEnvironment(
+      'KOMODO_TEST_SYNC_NAME',
+      defaultValue: '',
+    );
 
     final normalizedMode = modeRaw.trim().toLowerCase();
     final mode = normalizedMode == 'real'
@@ -108,6 +120,8 @@ class PatrolTestConfig {
       containerName: containerNameRaw.trim(),
       containerId: containerIdRaw.trim(),
       deploymentName: deploymentNameRaw.trim(),
+      repoName: repoNameRaw.trim(),
+      syncName: syncNameRaw.trim(),
     );
   }
 

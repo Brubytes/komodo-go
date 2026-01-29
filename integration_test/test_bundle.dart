@@ -10,6 +10,23 @@ import 'package:test_api/src/backend/invoker.dart';
 
 // START: GENERATED TEST IMPORTS
 import 'app_test.dart' as app_test;
+import 'resource_flows/actions_run_test.dart' as resource_flows__actions_run_test;
+import 'resource_flows/builds_run_cancel_test.dart' as resource_flows__builds_run_cancel_test;
+import 'resource_flows/containers_logs_actions_test.dart' as resource_flows__containers_logs_actions_test;
+import 'resource_flows/deployments_deploy_test.dart' as resource_flows__deployments_deploy_test;
+import 'resource_flows/deployments_destroy_test.dart' as resource_flows__deployments_destroy_test;
+import 'resource_flows/procedures_run_test.dart' as resource_flows__procedures_run_test;
+import 'resource_flows/repos_pull_test.dart' as resource_flows__repos_pull_test;
+import 'resource_flows/servers_detail_test.dart' as resource_flows__servers_detail_test;
+import 'resource_flows/stacks_deploy_test.dart' as resource_flows__stacks_deploy_test;
+import 'resource_flows/stacks_destroy_test.dart' as resource_flows__stacks_destroy_test;
+import 'resource_flows/stacks_list_loads_test.dart' as resource_flows__stacks_list_loads_test;
+import 'resource_flows/stacks_services_logs_test.dart' as resource_flows__stacks_services_logs_test;
+import 'resource_flows/syncs_run_test.dart' as resource_flows__syncs_run_test;
+import 'resource_flows/tags_crud_test.dart' as resource_flows__tags_crud_test;
+import 'unhappy/login_unauthorized_test.dart' as unhappy__login_unauthorized_test;
+import 'unhappy/login_unreachable_server_test.dart' as unhappy__login_unreachable_server_test;
+import 'unhappy/stack_not_found_test.dart' as unhappy__stack_not_found_test;
 // END: GENERATED TEST IMPORTS
 
 Future<void> main() async {
@@ -73,6 +90,23 @@ Future<void> main() async {
 
   // START: GENERATED TEST GROUPS
   group('app_test', app_test.main);
+  group('resource_flows.actions_run_test', resource_flows__actions_run_test.main);
+  group('resource_flows.builds_run_cancel_test', resource_flows__builds_run_cancel_test.main);
+  group('resource_flows.containers_logs_actions_test', resource_flows__containers_logs_actions_test.main);
+  group('resource_flows.deployments_deploy_test', resource_flows__deployments_deploy_test.main);
+  group('resource_flows.deployments_destroy_test', resource_flows__deployments_destroy_test.main);
+  group('resource_flows.procedures_run_test', resource_flows__procedures_run_test.main);
+  group('resource_flows.repos_pull_test', resource_flows__repos_pull_test.main);
+  group('resource_flows.servers_detail_test', resource_flows__servers_detail_test.main);
+  group('resource_flows.stacks_deploy_test', resource_flows__stacks_deploy_test.main);
+  group('resource_flows.stacks_destroy_test', resource_flows__stacks_destroy_test.main);
+  group('resource_flows.stacks_list_loads_test', resource_flows__stacks_list_loads_test.main);
+  group('resource_flows.stacks_services_logs_test', resource_flows__stacks_services_logs_test.main);
+  group('resource_flows.syncs_run_test', resource_flows__syncs_run_test.main);
+  group('resource_flows.tags_crud_test', resource_flows__tags_crud_test.main);
+  group('unhappy.login_unauthorized_test', unhappy__login_unauthorized_test.main);
+  group('unhappy.login_unreachable_server_test', unhappy__login_unreachable_server_test.main);
+  group('unhappy.stack_not_found_test', unhappy__stack_not_found_test.main);
   // END: GENERATED TEST GROUPS
 
   final dartTestGroup = await testExplorationCompleter.future;
