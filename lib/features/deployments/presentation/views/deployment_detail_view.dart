@@ -113,10 +113,10 @@ class _DeploymentDetailViewState
 
   @override
   Widget build(BuildContext context) {
-    final isActiveTab = ref.watch(mainShellIndexProvider) == 1;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _syncLogPolling(isShellTabActive: isActiveTab);
+    // Use ref.listen to sync polling when shell tab changes, instead of
+    // addPostFrameCallback on every build.
+    ref.listen<int>(mainShellIndexProvider, (previous, next) {
+      _syncLogPolling(isShellTabActive: next == 1);
     });
 
     final deploymentId = widget.deploymentId;
@@ -201,14 +201,8 @@ class _DeploymentDetailViewState
                       context: context,
                       controller: _tabController,
                       tabs: const [
-                        Tab(
-                          icon: Icon(AppIcons.bolt),
-                          text: 'Config',
-                        ),
-                        Tab(
-                          icon: Icon(AppIcons.logs),
-                          text: 'Logs',
-                        ),
+                        Tab(icon: Icon(AppIcons.bolt), text: 'Config'),
+                        Tab(icon: Icon(AppIcons.logs), text: 'Logs'),
                       ],
                     ),
                   ),
@@ -243,19 +237,19 @@ class _DeploymentDetailViewState
                                     key: _configEditorKey,
                                     initialConfig: deployment.config!,
                                     imageLabel: deployment.imageLabel,
-                                    servers: serversListAsync.asData?.value ??
+                                    servers:
+                                        serversListAsync.asData?.value ??
                                         const [],
                                     registryAccounts:
                                         registryAccountsAsync.asData?.value ??
-                                            const [],
+                                        const [],
                                     onDirtyChanged: (dirty) {
                                       syncDirtySnackBar(
                                         dirty: dirty,
                                         onDiscard: () =>
                                             _discardConfig(deployment),
-                                        onSave: () => _saveConfig(
-                                          deployment: deployment,
-                                        ),
+                                        onSave: () =>
+                                            _saveConfig(deployment: deployment),
                                         saveEnabled: !_configSaveInFlight,
                                       );
                                     },

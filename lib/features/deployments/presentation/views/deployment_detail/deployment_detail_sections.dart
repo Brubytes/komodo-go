@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:komodo_go/core/api/api_client.dart';
-import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
@@ -11,6 +9,7 @@ import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
+import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
 
 class DeploymentHeroPanel extends StatelessWidget {
@@ -72,10 +71,7 @@ class DeploymentHeroPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (deployment.tags.isNotEmpty)
-            DetailPillList(
-              items: deployment.tags,
-              showEmptyLabel: false,
-            ),
+            DetailPillList(items: deployment.tags, showEmptyLabel: false),
           if (description.isNotEmpty) ...[
             if (deployment.tags.isNotEmpty) const Gap(12),
             Text(
@@ -86,10 +82,7 @@ class DeploymentHeroPanel extends StatelessWidget {
               ),
             ),
             const Gap(6),
-            Text(
-              description,
-              style: textTheme.bodyMedium,
-            ),
+            Text(description, style: textTheme.bodyMedium),
           ],
         ],
       ),
@@ -359,7 +352,7 @@ class DeploymentConfigContent extends StatelessWidget {
   }
 }
 
-class DeploymentConfigEditorContent extends StatefulWidget {
+class DeploymentConfigEditorContent extends ConsumerStatefulWidget {
   const DeploymentConfigEditorContent({
     required this.initialConfig,
     required this.imageLabel,
@@ -376,12 +369,12 @@ class DeploymentConfigEditorContent extends StatefulWidget {
   final ValueChanged<bool>? onDirtyChanged;
 
   @override
-  State<DeploymentConfigEditorContent> createState() =>
+  ConsumerState<DeploymentConfigEditorContent> createState() =>
       DeploymentConfigEditorContentState();
 }
 
 class DeploymentConfigEditorContentState
-    extends State<DeploymentConfigEditorContent> {
+    extends ConsumerState<DeploymentConfigEditorContent> {
   static const _builtinNetworkOptions = <String>['bridge', 'host'];
 
   // Komodo expects docker-style restart strings:
@@ -647,7 +640,7 @@ class DeploymentConfigEditorContentState
     _refreshNetworkOptions(serverId);
   }
 
-  Future<void> _refreshNetworkOptions(String serverId) async {
+  void _refreshNetworkOptions(String serverId) {
     final trimmed = serverId.trim();
     if (!mounted) return;
 
@@ -665,56 +658,16 @@ class DeploymentConfigEditorContentState
       _loadingNetworkOptions = true;
     });
 
-    final container = ProviderScope.containerOf(context, listen: false);
-    final api = container.read(apiClientProvider);
-    if (api == null) {
-      if (!mounted) return;
-      setState(() {
-        _loadingNetworkOptions = false;
-        _networkOptions = <String>['', ..._builtinNetworkOptions];
-      });
-      return;
+    // Invalidate the provider to trigger a fresh fetch and listen for updates.
+    ref.invalidate(dockerNetworksProvider(trimmed));
+  }
+
+  static bool _listsEqual(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
     }
-
-    try {
-      final response = await api.read(
-        RpcRequest(type: 'ListDockerNetworks', params: {'server': trimmed}),
-      );
-
-      final names = <String>[];
-      if (response is List) {
-        for (final item in response) {
-          if (item is Map) {
-            final name = item['name'];
-            if (name is String && name.trim().isNotEmpty) {
-              names.add(name.trim());
-            }
-          }
-        }
-      }
-
-      final custom = names.toSet().toList()
-        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-      final options = <String>[
-        '',
-        ..._builtinNetworkOptions,
-        ...custom.where((n) => !_builtinNetworkOptions.contains(n)),
-      ];
-
-      if (!mounted) return;
-      if (_serverId.text.trim() != trimmed) return;
-      setState(() {
-        _loadingNetworkOptions = false;
-        _networkOptions = options;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      if (_serverId.text.trim() != trimmed) return;
-      setState(() {
-        _loadingNetworkOptions = false;
-        _networkOptions = <String>['', ..._builtinNetworkOptions];
-      });
-    }
+    return true;
   }
 
   static String? _stringOrNull(Object? value) {
@@ -937,6 +890,26 @@ class DeploymentConfigEditorContentState
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
+    // Watch Docker networks provider and update local state when it changes.
+    final serverId = _serverId.text.trim();
+    if (serverId.isNotEmpty) {
+      final networksAsync = ref.watch(dockerNetworksProvider(serverId));
+      networksAsync.whenData((List<String> networks) {
+        final options = <String>['', ...networks];
+        if (_loadingNetworkOptions || !_listsEqual(options, _networkOptions)) {
+          // Use a post-frame callback to avoid calling setState during build.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            if (_serverId.text.trim() != serverId) return;
+            setState(() {
+              _loadingNetworkOptions = false;
+              _networkOptions = options;
+            });
+          });
+        }
+      });
+    }
 
     final sortedServers = [...widget.servers]
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));

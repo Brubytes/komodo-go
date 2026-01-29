@@ -80,9 +80,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
     final templateFilter = ref.watch(deploymentsTemplateFilterStateProvider);
 
     final serverNames = serversAsync.maybeWhen(
-      data: (servers) => {
-        for (final server in servers) server.id: server.name,
-      },
+      data: (servers) => {for (final server in servers) server.id: server.name},
       orElse: () => <String, String>{},
     );
 
@@ -95,15 +93,13 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
       orElse: () => <TagOption>[],
     );
     final fallbackTags = deploymentsAsync.maybeWhen(
-      data: (deployments) => _collectTags(deployments)
-          .map((name) => TagOption(id: name, name: name))
-          .toList(),
+      data: (deployments) => _collectTags(
+        deployments,
+      ).map((name) => TagOption(id: name, name: name)).toList(),
       orElse: () => <TagOption>[],
     );
     final availableTags = tagOptions.isNotEmpty ? tagOptions : fallbackTags;
-    final tagNameById = {
-      for (final tag in availableTags) tag.id: tag.name,
-    };
+    final tagNameById = {for (final tag in availableTags) tag.id: tag.name};
 
     return Scaffold(
       appBar: MainAppBar(
@@ -129,9 +125,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
           ),
           IconButton(
             tooltip: _isFiltersVisible ? 'Hide filters' : 'Filters',
-            icon: Icon(
-              _isFiltersVisible ? Icons.tune : Icons.tune_outlined,
-            ),
+            icon: Icon(_isFiltersVisible ? Icons.tune : Icons.tune_outlined),
             onPressed: () => setState(() {
               _isFiltersVisible = !_isFiltersVisible;
             }),
@@ -142,68 +136,96 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
         children: [
           RefreshIndicator(
             onRefresh: () => ref.read(deploymentsProvider.notifier).refresh(),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                AnimatedSwitcher(
-                  duration: AppMotion.base,
-                  switchInCurve: AppMotion.enterCurve,
-                  switchOutCurve: AppMotion.exitCurve,
-                  child: _isFiltersVisible
-                      ? _FiltersPanel(
-                          pendingUpdate: pendingUpdate,
-                          templateFilter: templateFilter,
-                          selectedTags: selectedTags,
-                          availableTags: availableTags,
-                          tagNameById: tagNameById,
-                          onPendingUpdateChanged: (value) => ref
-                              .read(
-                                deploymentsPendingUpdateFilterProvider.notifier,
-                              )
-                              .enabled = value,
-                          onTemplateFilterChanged: (value) => ref
-                              .read(
-                                deploymentsTemplateFilterStateProvider.notifier,
-                              )
-                              .value = value,
-                          onSelectTags: (value) => ref
-                              .read(deploymentsTagFilterProvider.notifier)
-                              .selected = value,
-                          onClearTags: () => ref
-                              .read(deploymentsTagFilterProvider.notifier)
-                              .clear(),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                if (_isFiltersVisible) const Gap(12),
-                AnimatedSwitcher(
-                  duration: AppMotion.base,
-                  switchInCurve: AppMotion.enterCurve,
-                  switchOutCurve: AppMotion.exitCurve,
-                  child: _isSearchVisible
-                      ? Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: _SearchField(
-                            focusNode: _searchFocusNode,
-                            controller: _searchController,
-                            onChanged: (value) => ref
-                                .read(
-                                  deploymentsSearchQueryProvider.notifier,
+            child: CustomScrollView(
+              slivers: [
+                // Header: filters and search
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        AnimatedSwitcher(
+                          duration: AppMotion.base,
+                          switchInCurve: AppMotion.enterCurve,
+                          switchOutCurve: AppMotion.exitCurve,
+                          child: _isFiltersVisible
+                              ? _FiltersPanel(
+                                  pendingUpdate: pendingUpdate,
+                                  templateFilter: templateFilter,
+                                  selectedTags: selectedTags,
+                                  availableTags: availableTags,
+                                  tagNameById: tagNameById,
+                                  onPendingUpdateChanged: (value) =>
+                                      ref
+                                              .read(
+                                                deploymentsPendingUpdateFilterProvider
+                                                    .notifier,
+                                              )
+                                              .enabled =
+                                          value,
+                                  onTemplateFilterChanged: (value) =>
+                                      ref
+                                              .read(
+                                                deploymentsTemplateFilterStateProvider
+                                                    .notifier,
+                                              )
+                                              .value =
+                                          value,
+                                  onSelectTags: (value) =>
+                                      ref
+                                              .read(
+                                                deploymentsTagFilterProvider
+                                                    .notifier,
+                                              )
+                                              .selected =
+                                          value,
+                                  onClearTags: () => ref
+                                      .read(
+                                        deploymentsTagFilterProvider.notifier,
+                                      )
+                                      .clear(),
                                 )
-                                .query = value,
-                            onClear: () {
-                              _searchController.clear();
-                              ref
-                                  .read(
-                                    deploymentsSearchQueryProvider.notifier,
-                                  )
-                                  .query = '';
-                            },
-                          ),
-                        )
-                      : const SizedBox.shrink(),
+                              : const SizedBox.shrink(),
+                        ),
+                        if (_isFiltersVisible) const Gap(12),
+                        AnimatedSwitcher(
+                          duration: AppMotion.base,
+                          switchInCurve: AppMotion.enterCurve,
+                          switchOutCurve: AppMotion.exitCurve,
+                          child: _isSearchVisible
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: _SearchField(
+                                    focusNode: _searchFocusNode,
+                                    controller: _searchController,
+                                    onChanged: (value) =>
+                                        ref
+                                                .read(
+                                                  deploymentsSearchQueryProvider
+                                                      .notifier,
+                                                )
+                                                .query =
+                                            value,
+                                    onClear: () {
+                                      _searchController.clear();
+                                      ref
+                                              .read(
+                                                deploymentsSearchQueryProvider
+                                                    .notifier,
+                                              )
+                                              .query =
+                                          '';
+                                    },
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                        const Gap(12),
+                      ],
+                    ),
+                  ),
                 ),
-                const Gap(12),
+                // Deployment list (virtualized)
                 deploymentsAsync.when(
                   skipLoadingOnRefresh: true,
                   skipLoadingOnReload: true,
@@ -218,75 +240,97 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                       tagNameById: tagNameById,
                     );
                     if (filtered.isEmpty) {
-                      return _EmptyState(
-                        hasFilters: _hasActiveFilters(
-                          query: searchQuery,
-                          selectedTags: selectedTags,
-                          pendingUpdate: pendingUpdate,
-                          templateFilter: templateFilter,
+                      return SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _EmptyState(
+                          hasFilters: _hasActiveFilters(
+                            query: searchQuery,
+                            selectedTags: selectedTags,
+                            pendingUpdate: pendingUpdate,
+                            templateFilter: templateFilter,
+                          ),
+                          onClearFilters: () {
+                            _searchController.clear();
+                            ref
+                                    .read(
+                                      deploymentsSearchQueryProvider.notifier,
+                                    )
+                                    .query =
+                                '';
+                            ref
+                                .read(deploymentsTagFilterProvider.notifier)
+                                .clear();
+                            ref
+                                    .read(
+                                      deploymentsPendingUpdateFilterProvider
+                                          .notifier,
+                                    )
+                                    .enabled =
+                                false;
+                            ref
+                                    .read(
+                                      deploymentsTemplateFilterStateProvider
+                                          .notifier,
+                                    )
+                                    .value =
+                                TemplateFilter.exclude;
+                          },
+                          tagOptions: availableTags,
+                          onSelectTags: (value) =>
+                              ref
+                                      .read(
+                                        deploymentsTagFilterProvider.notifier,
+                                      )
+                                      .selected =
+                                  value,
                         ),
-                        onClearFilters: () {
-                          _searchController.clear();
-                          ref
-                              .read(deploymentsSearchQueryProvider.notifier)
-                              .query = '';
-                          ref
-                              .read(deploymentsTagFilterProvider.notifier)
-                              .clear();
-                          ref
-                              .read(
-                                deploymentsPendingUpdateFilterProvider.notifier,
-                              )
-                              .enabled = false;
-                          ref
-                              .read(
-                                deploymentsTemplateFilterStateProvider.notifier,
-                              )
-                              .value = TemplateFilter.exclude;
-                        },
-                        tagOptions: availableTags,
-                        onSelectTags: (value) => ref
-                            .read(deploymentsTagFilterProvider.notifier)
-                            .selected = value,
                       );
                     }
 
-                    return Column(
-                      children: [
-                        for (var i = 0; i < filtered.length; i++) ...[
-                          AppFadeSlide(
+                    return SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+                      sliver: SliverList.separated(
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, __) => const Gap(12),
+                        itemBuilder: (context, i) {
+                          final deployment = filtered[i];
+                          return AppFadeSlide(
                             delay: AppMotion.stagger(i),
                             play: i < 10,
                             child: DeploymentCard(
-                              deployment: filtered[i],
+                              deployment: deployment,
                               serverName:
-                                  serverNames[filtered[i].info?.serverId],
+                                  serverNames[deployment.info?.serverId],
                               displayTags: _displayTags(
-                                filtered[i].tags,
+                                deployment.tags,
                                 tagNameById,
                               ),
                               onTap: () => context.push(
-                                '${AppRoutes.deployments}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
+                                '${AppRoutes.deployments}/${deployment.id}?name=${Uri.encodeComponent(deployment.name)}',
                               ),
                               onAction: (action) => _handleAction(
                                 context,
                                 ref,
-                                filtered[i].id,
+                                deployment.id,
                                 action,
                               ),
                             ),
-                          ),
-                          const Gap(12),
-                        ],
-                        const SizedBox(height: 12),
-                      ],
+                          );
+                        },
+                      ),
                     );
                   },
-                  loading: () => const _DeploymentsSkeletonList(),
-                  error: (error, stack) => ErrorStateView(
-                    title: 'Failed to load deployments',
-                    message: error.toString(),
-                    onRetry: () => ref.invalidate(deploymentsProvider),
+                  loading: () => const SliverPadding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    sliver: _DeploymentsSkeletonSliver(),
+                  ),
+                  error: (error, stack) => SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: ErrorStateView(
+                      title: 'Failed to load deployments',
+                      message: error.toString(),
+                      onRetry: () => ref.invalidate(deploymentsProvider),
+                    ),
                   ),
                 ),
               ],
@@ -491,9 +535,7 @@ class _FiltersPanel extends StatelessWidget {
     Set<String> tags,
     Map<String, String> tagNameById,
   ) {
-    final labels = [
-      for (final tag in tags) tagNameById[tag] ?? tag,
-    ]..sort();
+    final labels = [for (final tag in tags) tagNameById[tag] ?? tag]..sort();
     final capped = labels.take(6).toList();
     final remaining = labels.length - capped.length;
     return [
@@ -675,6 +717,59 @@ class _DeploymentsSkeletonList extends StatelessWidget {
   }
 }
 
+/// Sliver version of skeleton list for use in CustomScrollView.
+class _DeploymentsSkeletonSliver extends StatelessWidget {
+  const _DeploymentsSkeletonSliver();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer.sliver(
+      enabled: true,
+      child: SliverList.separated(
+        itemCount: 6,
+        separatorBuilder: (_, __) => const Gap(12),
+        itemBuilder: (_, __) => AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(radius: 16),
+                    const Gap(10),
+                    Expanded(
+                      child: Text(
+                        'Deployment name',
+                        style: textTheme.titleSmall,
+                      ),
+                    ),
+                    const Gap(8),
+                    const CircleAvatar(radius: 6),
+                  ],
+                ),
+                const Gap(10),
+                Text('Image • Server', style: textTheme.bodySmall),
+                const Gap(10),
+                Row(
+                  children: const [
+                    Chip(label: Text('Running')),
+                    Gap(8),
+                    Chip(label: Text('Healthy')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _EmptyState extends StatelessWidget {
   const _EmptyState({
     required this.hasFilters,
@@ -708,10 +803,7 @@ class _EmptyState extends StatelessWidget {
               color: scheme.primary.withValues(alpha: 0.5),
             ),
             const Gap(16),
-            Text(
-              'No deployments found',
-              style: textTheme.titleMedium,
-            ),
+            Text('No deployments found', style: textTheme.titleMedium),
             const Gap(8),
             Text(
               message,
@@ -791,8 +883,8 @@ List<Deployment> _applyFilters(
 
     final name = deployment.name.toLowerCase();
     final image = deployment.imageLabel.toLowerCase();
-    final serverName =
-        (serverNames[deployment.info?.serverId] ?? '').toLowerCase();
+    final serverName = (serverNames[deployment.info?.serverId] ?? '')
+        .toLowerCase();
     final displayTags = _displayTags(deployment.tags, tagNameById);
     final tagMatch = displayTags.any(
       (tag) => tag.trim().toLowerCase().contains(normalizedQuery),
@@ -830,12 +922,7 @@ List<String> _collectTags(List<Deployment> deployments) {
   return sorted;
 }
 
-List<String> _displayTags(
-  List<String> tags,
-  Map<String, String> tagNameById,
-) {
+List<String> _displayTags(List<String> tags, Map<String, String> tagNameById) {
   if (tags.isEmpty) return const [];
-  return [
-    for (final tag in tags) tagNameById[tag] ?? tag,
-  ];
+  return [for (final tag in tags) tagNameById[tag] ?? tag];
 }

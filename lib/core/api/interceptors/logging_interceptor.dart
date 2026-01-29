@@ -4,10 +4,23 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 /// Interceptor that logs HTTP requests and responses for debugging.
+///
+/// Sensitive headers (X-Api-Key, X-Api-Secret, Authorization, etc.) and
+/// body fields containing secrets are automatically redacted.
 class LoggingInterceptor extends Interceptor {
   LoggingInterceptor({this.enabled = kDebugMode});
 
   final bool enabled;
+
+  /// Header names that should be redacted from logs.
+  static const _sensitiveHeaders = <String>{
+    'x-api-key',
+    'x-api-secret',
+    'authorization',
+    'cookie',
+    'set-cookie',
+    'x-auth-token',
+  };
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
@@ -15,6 +28,11 @@ class LoggingInterceptor extends Interceptor {
       developer.log('→ ${options.method} ${options.uri}', name: 'HTTP');
       if (options.data != null) {
         developer.log('  Body: ${_sanitize(options.data)}', name: 'HTTP');
+      }
+      // Log redacted headers for debugging connectivity issues.
+      final safeHeaders = _redactHeaders(options.headers);
+      if (safeHeaders.isNotEmpty) {
+        developer.log('  Headers: $safeHeaders', name: 'HTTP');
       }
     }
     handler.next(options);
@@ -51,6 +69,21 @@ class LoggingInterceptor extends Interceptor {
       }
     }
     handler.next(err);
+  }
+
+  /// Redacts sensitive header values while preserving header names.
+  Map<String, String> _redactHeaders(Map<String, dynamic> headers) {
+    final result = <String, String>{};
+    for (final entry in headers.entries) {
+      final key = entry.key;
+      final lowerKey = key.toLowerCase();
+      if (_sensitiveHeaders.contains(lowerKey) || _looksSensitiveKey(key)) {
+        result[key] = '***';
+      } else {
+        result[key] = entry.value?.toString() ?? '';
+      }
+    }
+    return result;
   }
 
   Object? _sanitize(Object? value) {

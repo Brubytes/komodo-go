@@ -66,33 +66,29 @@ class ServerRepository {
   Future<Either<Failure, SystemStats>> getSystemStats(
     String serverIdOrName,
   ) async {
-    return apiCall(
-      () async {
-        final response = await _client.read(
-          RpcRequest(type: 'GetSystemStats', params: {'server': serverIdOrName}),
-        );
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(type: 'GetSystemStats', params: {'server': serverIdOrName}),
+      );
 
-        return SystemStats.fromJson(response as Map<String, dynamic>);
-      },
-    );
+      return SystemStats.fromJson(response as Map<String, dynamic>);
+    });
   }
 
   /// Gets system information for a server.
   Future<Either<Failure, SystemInformation>> getSystemInformation(
     String serverIdOrName,
   ) async {
-    return apiCall(
-      () async {
-        final response = await _client.read(
-          RpcRequest(
-            type: 'GetSystemInformation',
-            params: {'server': serverIdOrName},
-          ),
-        );
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'GetSystemInformation',
+          params: {'server': serverIdOrName},
+        ),
+      );
 
-        return SystemInformation.fromJson(response as Map<String, dynamic>);
-      },
-    );
+      return SystemInformation.fromJson(response as Map<String, dynamic>);
+    });
   }
 
   /// Updates a server configuration and returns the updated server.
@@ -109,10 +105,7 @@ class ServerRepository {
         final response = await _client.write(
           RpcRequest(
             type: 'UpdateServer',
-            params: <String, dynamic>{
-              'id': serverId,
-              'config': partialConfig,
-            },
+            params: <String, dynamic>{'id': serverId, 'config': partialConfig},
           ),
         );
 
@@ -123,6 +116,38 @@ class ServerRepository {
         if (e.isNotFound) {
           return const Failure.server(message: 'Server not found');
         }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+    );
+  }
+
+  /// Lists Docker networks available on a server.
+  Future<Either<Failure, List<String>>> listDockerNetworks(
+    String serverIdOrName,
+  ) async {
+    return apiCall(
+      () async {
+        final response = await _client.read(
+          RpcRequest(
+            type: 'ListDockerNetworks',
+            params: {'server': serverIdOrName},
+          ),
+        );
+
+        final networksList = response as List<dynamic>? ?? [];
+        final names = <String>[];
+        for (final item in networksList) {
+          if (item is Map) {
+            final name = item['name'];
+            if (name is String && name.trim().isNotEmpty) {
+              names.add(name.trim());
+            }
+          }
+        }
+        return names;
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
         return Failure.server(message: e.message, statusCode: e.statusCode);
       },
     );

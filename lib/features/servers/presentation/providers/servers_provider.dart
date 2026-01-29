@@ -77,6 +77,35 @@ Future<SystemInformation?> serverSystemInformation(
   return unwrapOrThrow(result);
 }
 
+/// Provides Docker network names available on a specific server.
+///
+/// Returns an empty list if the server is not found or no networks are
+/// available. Built-in networks ('bridge', 'host') are always included.
+@riverpod
+Future<List<String>> dockerNetworks(Ref ref, String serverId) async {
+  const builtinNetworks = <String>['bridge', 'host'];
+
+  if (serverId.trim().isEmpty) {
+    return builtinNetworks;
+  }
+
+  final repository = ref.watch(serverRepositoryProvider);
+  if (repository == null) {
+    return builtinNetworks;
+  }
+
+  final result = await repository.listDockerNetworks(serverId);
+
+  return result.fold((_) => builtinNetworks, (networks) {
+    final custom = networks.toSet().toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return [
+      ...builtinNetworks,
+      ...custom.where((n) => !builtinNetworks.contains(n)),
+    ];
+  });
+}
+
 /// Action state for server operations.
 @riverpod
 class ServerActions extends _$ServerActions {
