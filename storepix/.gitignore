@@ -1,0 +1,12 @@
+# Storepix outputs
+output/
+
+# Screenshots (these come from Maestro)
+screenshots/iPhone/*.png
+
+# Keep directories but ignore contents
+!screenshots/iPhone/.gitkeep
+!output/.gitkeep
+
+# OS files
+.DS_Store

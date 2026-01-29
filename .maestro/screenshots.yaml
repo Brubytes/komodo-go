@@ -1,0 +1,49 @@
+appId: com.brubytes.komodoGo
+---
+# Launch the app and wait for it to load
+# Demo mode is enabled via --dart-define=KOMODO_DEMO_MODE=true during build
+- launchApp
+- waitForAnimationToEnd
+
+# Wait for demo data to load (auto-login in demo mode)
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 15000
+
+# Screenshot 1: Home Dashboard
+- tapOn: "Home"
+- waitForAnimationToEnd
+- takeScreenshot: 01_home_dashboard
+
+# Screenshot 2: Resources - Servers List
+- tapOn: "Resources"
+- waitForAnimationToEnd
+- tapOn: "(?s).*Servers.*"
+- waitForAnimationToEnd
+- takeScreenshot: 02_servers_list
+
+# Screenshot 3: Server Detail
+- tapOn: "(?s).*Primary Node.*"
+- waitForAnimationToEnd
+- takeScreenshot: 03_server_detail
+
+# Go back to servers list
+- pressKey: back
+
+# Screenshot 4: Containers View
+- tapOn: "Containers"
+- waitForAnimationToEnd
+- takeScreenshot: 04_containers
+
+# Screenshot 5: Deployments List
+- tapOn: "Resources"
+- waitForAnimationToEnd
+- tapOn: "(?s).*Deployments.*"
+- waitForAnimationToEnd
+- takeScreenshot: 05_deployments
+
+# Screenshot 6: Settings
+- tapOn: "Settings"
+- waitForAnimationToEnd
+- takeScreenshot: 06_settings

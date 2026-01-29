@@ -1,0 +1,6 @@
+# Maestro screenshot outputs
+screenshots/*.png
+*.png
+
+# Keep the screenshots directory but ignore contents
+!screenshots/.gitkeep

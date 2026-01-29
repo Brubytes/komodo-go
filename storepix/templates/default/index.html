@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App Store Screenshot</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="screenshot-frame" id="screenshot-frame">
+    <!-- Background decorative elements (optional - delete if not needed) -->
+    <div class="bg-blur bg-blur-1"></div>
+    <div class="bg-blur bg-blur-2"></div>
+    <div class="bg-blur bg-blur-3"></div>
+
+    <!-- Marketing headline -->
+    <div class="headline-container">
+      <h1 class="headline" id="headline">Your headline</h1>
+      <p class="subheadline" id="subheadline">here</p>
+    </div>
+
+    <!-- Device mockup -->
+    <div class="device-container">
+      <div class="device-frame">
+        <div class="device-notch" id="device-notch"></div>
+        <div class="device-home-button" id="device-home-button"></div>
+        <div class="device-screen">
+          <!-- Status bar injection point -->
+          <div id="status-bar-container"></div>
+          <img src="" alt="App Screenshot" id="screenshot-img">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../storepix-content.js"></script>
+  <script>
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const config = {
+      screenshot: urlParams.get('screenshot') || '',
+      headline: urlParams.get('headline') || 'Your headline',
+      subheadline: urlParams.get('subheadline') || 'here',
+      theme: urlParams.get('theme') || 'light',
+      layout: urlParams.get('layout') || 'top',
+      deviceWidth: parseInt(urlParams.get('deviceWidth')) || 1284,
+      deviceHeight: parseInt(urlParams.get('deviceHeight')) || 2778,
+      platform: urlParams.get('platform') || 'ios',
+      notchType: urlParams.get('notchType') || 'dynamic-island',
+      notchWidth: parseInt(urlParams.get('notchWidth')) || 210,
+      notchHeight: parseInt(urlParams.get('notchHeight')) || 62,
+      hasHomeButton: urlParams.get('hasHomeButton') === 'true',
+      // Status bar configuration
+      statusBar: urlParams.get('statusBar') === 'true',
+      statusBarTime: urlParams.get('statusBarTime') || '9:41',
+      statusBarBattery: parseInt(urlParams.get('statusBarBattery')) || 100,
+      statusBarShowPercent: urlParams.get('statusBarShowPercent') !== 'false',
+      statusBarStyle: urlParams.get('statusBarStyle') || 'auto',
+    };
+
+    // Parse theme JSON if provided
+    try {
+      const themeJson = urlParams.get('themeJson');
+      if (themeJson) {
+        const theme = JSON.parse(themeJson);
+        const root = document.documentElement;
+        if (theme.primary) root.style.setProperty('--primary', theme.primary);
+        if (theme.font) root.style.setProperty('--font-family', theme.font);
+        // Home indicator customization
+        if (theme.homeIndicatorLight) root.style.setProperty('--home-indicator-light', theme.homeIndicatorLight);
+        if (theme.homeIndicatorDark) root.style.setProperty('--home-indicator-dark', theme.homeIndicatorDark);
+        if (theme.homeIndicatorColor) root.style.setProperty('--home-indicator', theme.homeIndicatorColor);
+      }
+    } catch (e) {
+      console.warn('Failed to parse theme:', e);
+    }
+
+    // Apply configuration
+    document.getElementById('screenshot-img').src = config.screenshot;
+    document.getElementById('headline').textContent = config.headline;
+    document.getElementById('subheadline').textContent = config.subheadline;
+
+    // Apply theme
+    if (config.theme === 'dark') {
+      document.body.classList.add('dark-theme');
+    }
+
+    // Apply layout
+    if (config.layout === 'bottom') {
+      document.getElementById('screenshot-frame').classList.add('headline-below');
+    }
+
+    // Device notch/home button handling
+    const notchEl = document.getElementById('device-notch');
+    const homeButtonEl = document.getElementById('device-home-button');
+
+    if (config.notchType === 'none' || config.hasHomeButton) {
+      notchEl.style.display = 'none';
+    } else {
+      notchEl.style.width = `calc(${config.notchWidth}px * var(--scale))`;
+      notchEl.style.height = `calc(${config.notchHeight}px * var(--scale))`;
+    }
+
+    if (config.hasHomeButton) {
+      homeButtonEl.style.display = 'block';
+    }
+
+    // Set viewport size via CSS variables for dynamic scaling
+    document.documentElement.style.setProperty('--viewport-width', config.deviceWidth + 'px');
+    document.documentElement.style.setProperty('--viewport-height', config.deviceHeight + 'px');
+
+    // Scale factor based on base design (1284x2778)
+    const baseWidth = 1284;
+    const scale = config.deviceWidth / baseWidth;
+    document.documentElement.style.setProperty('--scale', scale);
+
+    // Detect tablet/iPad based on aspect ratio (iPads are ~0.75, iPhones are ~0.46)
+    const aspectRatio = config.deviceWidth / config.deviceHeight;
+    const isTablet = aspectRatio > 0.65;
+
+    if (isTablet) {
+      document.body.classList.add('tablet-device');
+
+      // Calculate device screen dimensions for tablet
+      // Leave 28% of viewport height for headline area
+      const headlineSpace = 0.28;
+      const devicePadding = 40; // frame padding for tablets
+      const availableHeight = config.deviceHeight * (1 - headlineSpace);
+
+      // Device screen height (subtracting frame padding)
+      const screenHeight = availableHeight - (devicePadding * 2) - 60; // extra margin
+      const screenWidth = screenHeight * aspectRatio;
+
+      document.documentElement.style.setProperty('--tablet-screen-width', screenWidth + 'px');
+      document.documentElement.style.setProperty('--tablet-screen-height', screenHeight + 'px');
+      document.documentElement.style.setProperty('--tablet-frame-radius', '60px');
+      document.documentElement.style.setProperty('--tablet-screen-radius', '40px');
+      document.documentElement.style.setProperty('--tablet-frame-padding', devicePadding + 'px');
+    }
+
+    // Apply custom content from data-storepix attributes
+    applyCustomContent(urlParams);
+
+    // Status bar initialization
+    if (config.statusBar) {
+      initStatusBar();
+    }
+
+    async function initStatusBar() {
+      const container = document.getElementById('status-bar-container');
+      if (!container) return;
+
+      // Load status bar HTML based on platform
+      const statusBarFile = config.platform === 'android' ? 'android.html' : 'ios.html';
+
+      try {
+        // Load status bar HTML
+        const response = await fetch(`/status-bar/${statusBarFile}`);
+        if (!response.ok) throw new Error('Status bar not found');
+        const html = await response.text();
+        container.innerHTML = html;
+
+        // Load status bar CSS
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = '/status-bar/styles.css';
+        document.head.appendChild(link);
+
+        // Configure status bar
+        const statusBar = document.getElementById('status-bar');
+        if (!statusBar) return;
+
+        // Show the status bar
+        statusBar.classList.add('visible');
+
+        // Set time
+        const timeEl = document.getElementById('status-time');
+        if (timeEl) timeEl.textContent = config.statusBarTime;
+
+        // Set battery level
+        const batteryFill = document.getElementById('battery-fill');
+        if (batteryFill) {
+          const batteryPercent = Math.max(0, Math.min(100, config.statusBarBattery));
+          // Calculate fill width based on battery percentage
+          if (config.platform === 'android') {
+            // Android battery fill height
+            const fillHeight = (batteryPercent / 100) * 16;
+            batteryFill.setAttribute('height', fillHeight);
+            batteryFill.setAttribute('y', 5 + (16 - fillHeight));
+          } else {
+            // iOS battery fill width
+            const fillWidth = (batteryPercent / 100) * 18;
+            batteryFill.setAttribute('width', fillWidth);
+          }
+        }
+
+        // Show/hide battery percentage
+        const percentEl = document.getElementById('battery-percent');
+        if (percentEl) {
+          if (config.statusBarShowPercent) {
+            percentEl.textContent = `${config.statusBarBattery}%`;
+          } else {
+            percentEl.style.display = 'none';
+          }
+        }
+
+        // Low battery indicator
+        if (config.statusBarBattery <= 20) {
+          statusBar.classList.add('battery-low');
+        }
+
+        // Apply notch type class for positioning
+        if (config.platform === 'ios') {
+          if (config.notchType === 'dynamic-island') {
+            statusBar.classList.add('has-dynamic-island');
+          } else if (config.notchType === 'notch') {
+            statusBar.classList.add('has-notch');
+          } else if (config.hasHomeButton || config.notchType === 'none') {
+            statusBar.classList.add('no-notch');
+          }
+        } else if (config.platform === 'android') {
+          if (config.notchType === 'punch-hole') {
+            statusBar.classList.add('has-punch-hole');
+          }
+        }
+
+        // Apply dark/light style
+        let useDarkStyle = false;
+        if (config.statusBarStyle === 'dark') {
+          useDarkStyle = true;
+        } else if (config.statusBarStyle === 'auto') {
+          // Auto: use dark for light theme, light for dark theme (contrast)
+          useDarkStyle = config.theme === 'dark';
+        }
+
+        if (useDarkStyle) {
+          statusBar.classList.add('dark');
+        }
+
+      } catch (err) {
+        console.warn('Failed to load status bar:', err.message);
+      }
+    }
+  </script>
+</body>
+</html>

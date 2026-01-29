@@ -1,0 +1,29 @@
+appId: com.brubytes.komodoGo
+---
+# Light mode screenshots
+# Demo mode is enabled via --dart-define=KOMODO_DEMO_MODE=true during build
+- launchApp
+- waitForAnimationToEnd
+
+# Wait for demo data to load (auto-login in demo mode)
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 15000
+
+# Screenshot 4: Containers View (light)
+- tapOn: "Containers"
+- waitForAnimationToEnd
+- takeScreenshot: 04_containers
+
+# Screenshot 5: Deployments List (light)
+- tapOn: "Resources"
+- waitForAnimationToEnd
+- tapOn: "(?s).*Deployments.*"
+- waitForAnimationToEnd
+- takeScreenshot: 05_deployments
+
+# Screenshot 6: Settings (light)
+- tapOn: "Settings"
+- waitForAnimationToEnd
+- takeScreenshot: 06_settings
