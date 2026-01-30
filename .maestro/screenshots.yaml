@@ -36,12 +36,10 @@ appId: com.brubytes.komodoGo
 - waitForAnimationToEnd
 - takeScreenshot: 04_containers
 
-# Screenshot 5: Deployments List
+# Screenshot 5: Resources Overview
 - tapOn: "Resources"
 - waitForAnimationToEnd
-- tapOn: "(?s).*Deployments.*"
-- waitForAnimationToEnd
-- takeScreenshot: 05_deployments
+- takeScreenshot: 05_resources
 
 # Screenshot 6: Settings
 - tapOn: "Settings"
