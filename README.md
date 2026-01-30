@@ -36,6 +36,15 @@ It is available as an option on the login screen.
   - `KOMODO_DEMO_API_SECRET` (default: `demo-secret`)
   - `KOMODO_DEMO_AVAILABLE` (default: `true`)
 
+### UI-defined demo stack
+
+Demo mode includes a stack named **Demo Stack (UI Defined)** whose Compose
+contents are loaded from:
+
+- `assets/demo_mode/ui_defined_stack/compose.yml`
+
+Edit that file and restart the app to see the Compose editor update.
+
 ## App Store screenshots (Maestro + Storepix)
 
 The project includes a Maestro flow for capturing iOS screenshots and a Storepix

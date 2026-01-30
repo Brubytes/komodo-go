@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart' show rootBundle;
+
 final List<Map<String, dynamic>> _servers = [
   _serverItem(
     id: 'server-1',
@@ -84,7 +86,30 @@ final List<Map<String, dynamic>> _deployments = [
   ),
 ];
 
+const String _demoUiStackComposeFallbackYml = '''# Demo compose.yml (fallback)
+# If you see this, the asset load failed.
+
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+''';
+
+String _demoUiStackComposeYml = _demoUiStackComposeFallbackYml;
+
 final List<Map<String, dynamic>> _stacks = [
+  _stackListItem(
+    id: 'stack-demo-ui',
+    name: 'Demo Stack',
+    serverId: 'server-1',
+    repo: '',
+    branch: '',
+    state: 'Running',
+    fileContents: true,
+    gitProvider: '',
+    linkedRepo: '',
+  ),
   _stackListItem(
     id: 'stack-1',
     name: 'Production Stack',
@@ -701,6 +726,20 @@ class DemoBackend {
 
   Future<void> start() async {
     if (_server != null) return;
+
+    // Load demo UI-defined stack compose.yml from assets.
+    // This makes it obvious that the demo stack is configurable.
+    try {
+      final loaded = await rootBundle.loadString(
+        'assets/demo_mode/ui_defined_stack/compose.yml',
+      );
+      if (loaded.trim().isNotEmpty) {
+        _demoUiStackComposeYml = loaded;
+      }
+    } catch (_) {
+      // Keep fallback.
+    }
+
     try {
       _server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
     } on SocketException {
@@ -1196,6 +1235,10 @@ Map<String, dynamic> _stackListItem({
   required String repo,
   required String branch,
   required String state,
+  bool fileContents = false,
+  bool filesOnHost = false,
+  String gitProvider = 'GitHub',
+  String? linkedRepo,
 }) {
   return <String, dynamic>{
     'id': id,
@@ -1204,15 +1247,15 @@ Map<String, dynamic> _stackListItem({
     'tags': <String>[],
     'info': <String, dynamic>{
       'server_id': serverId,
-      'files_on_host': false,
-      'file_contents': false,
-      'git_provider': 'GitHub',
+      'files_on_host': filesOnHost,
+      'file_contents': fileContents,
+      'git_provider': gitProvider,
       'state': state,
       'status': null,
       'repo': repo,
       'branch': branch,
-      'linked_repo': repo,
-      'repo_link': 'https://github.com/$repo',
+      'linked_repo': linkedRepo ?? repo,
+      'repo_link': repo.isEmpty ? '' : 'https://github.com/$repo',
       'services': [
         <String, dynamic>{
           'service': 'web',
@@ -1231,6 +1274,7 @@ Map<String, dynamic> _stackListItem({
 Map<String, dynamic> _stackDetail({required String? id}) {
   final match = id == null ? null : _stackById(id) ?? _stackByName(id);
   final stack = match ?? _stacks.first;
+  final isUiDefined = stack['info']?['file_contents'] == true;
   return <String, dynamic>{
     'id': stack['id'],
     'name': stack['name'],
@@ -1244,9 +1288,9 @@ Map<String, dynamic> _stackDetail({required String? id}) {
       'auto_pull': true,
       'run_build': true,
       'destroy_before_deploy': false,
-      'linked_repo': stack['info']?['linked_repo'] ?? '',
-      'repo': stack['info']?['repo'] ?? '',
-      'branch': stack['info']?['branch'] ?? '',
+      'linked_repo': isUiDefined ? '' : (stack['info']?['linked_repo'] ?? ''),
+      'repo': isUiDefined ? '' : (stack['info']?['repo'] ?? ''),
+      'branch': isUiDefined ? '' : (stack['info']?['branch'] ?? ''),
       'commit': '',
       'clone_path': '/srv/komodo',
       'reclone': false,
@@ -1260,6 +1304,7 @@ Map<String, dynamic> _stackDetail({required String? id}) {
       'files_on_host': false,
       'file_paths': <String>[],
       'env_file_path': '',
+      'file_contents': isUiDefined ? _demoUiStackComposeYml : '',
       'use_internal_registry': false,
       'include_services': <String>[],
       'exclude_services': <String>[],
