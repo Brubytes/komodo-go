@@ -1,19 +1,36 @@
 #!/bin/bash
 # Run Maestro screenshots for Komodo Go on iPhone simulator
 # Usage:
-#   ./run_screenshots.sh              # Mixed mode (first 3 dark, rest light)
-#   ./run_screenshots.sh mixed        # Mixed mode (first 3 dark, rest light)
+#   ./run_screenshots.sh              # Mixed mode (first 5 dark, rest light)
+#   ./run_screenshots.sh mixed        # Mixed mode (first 5 dark, rest light)
 #   ./run_screenshots.sh light        # Light mode only
 #   ./run_screenshots.sh dark         # Dark mode only
 #   ./run_screenshots.sh all          # Run both light and dark mode
+#
+# Options:
+#   --build                           # Force rebuild the app before running
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OUTPUT_DIR="$SCRIPT_DIR/screenshots"
 APP_ID="com.brubytes.komodoGo"
-MODE_FILTER="${1:-mixed}"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Parse arguments
+FORCE_BUILD=false
+MODE_FILTER="mixed"
+
+for arg in "$@"; do
+    case $arg in
+        --build)
+            FORCE_BUILD=true
+            ;;
+        mixed|light|dark|all)
+            MODE_FILTER="$arg"
+            ;;
+    esac
+done
 
 # iPhone 14 Plus for 6.5" App Store screenshots (1284x2778)
 DEVICE_NAME="iPhone 14 Plus"
@@ -126,7 +143,11 @@ sleep 3
 echo "Looking for app bundle..."
 APP_PATH="$PROJECT_ROOT/build/ios/iphonesimulator/Runner.app"
 
-if [ ! -d "$APP_PATH" ]; then
+if [ "$FORCE_BUILD" = true ]; then
+    echo "Force building app for simulator..."
+    cd "$PROJECT_ROOT"
+    fvm flutter build ios --simulator --dart-define=KOMODO_DEMO_MODE=true
+elif [ ! -d "$APP_PATH" ]; then
     echo "Runner.app not found at $APP_PATH. Building app for simulator..."
     cd "$PROJECT_ROOT"
     fvm flutter build ios --simulator --dart-define=KOMODO_DEMO_MODE=true
