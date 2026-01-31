@@ -1362,7 +1362,19 @@ Map<String, dynamic> _stackLog() {
   return <String, dynamic>{
     'stage': 'deploy',
     'command': 'docker compose up -d',
-    'stdout': 'Services started',
+    'stdout': [
+      'Pulling web (nginx:latest)...',
+      'Pulling api (ghcr.io/komodo/api:1.2.3)...',
+      'Pulling worker (ghcr.io/komodo/worker:2.0.1)...',
+      'Creating network "komodo_default" with the default driver',
+      'Creating komodo-web-1 ... done',
+      'Creating komodo-api-1 ... done',
+      'Creating komodo-worker-1 ... done',
+      'Waiting for healthchecks (api, worker)',
+      '✔ api healthy',
+      '✔ worker healthy',
+      'Services started',
+    ].join('\n'),
     'stderr': '',
     'success': true,
     'start_ts': DateTime.now().millisecondsSinceEpoch - 5000,
@@ -1871,6 +1883,10 @@ Map<String, dynamic> _procedureListItem({
 Map<String, dynamic> _procedureDetail({required String? id}) {
   final match = id == null ? null : _procedureById(id) ?? _procedureByName(id);
   final procedure = match ?? _procedures.first;
+  final stages = _procedureStagesFor(
+    id: procedure['id']?.toString(),
+    name: procedure['name']?.toString(),
+  );
   return <String, dynamic>{
     'id': procedure['id'],
     'name': procedure['name'],
@@ -1878,7 +1894,7 @@ Map<String, dynamic> _procedureDetail({required String? id}) {
     'template': false,
     'tags': <String>[],
     'config': <String, dynamic>{
-      'stages': <Object>[],
+      'stages': stages,
       'schedule_format': 'English',
       'schedule': 'Every day at 02:00',
       'schedule_enabled': true,
@@ -1887,6 +1903,172 @@ Map<String, dynamic> _procedureDetail({required String? id}) {
       'failure_alert': true,
       'webhook_enabled': false,
       'webhook_secret': '',
+    },
+  };
+}
+
+List<Map<String, dynamic>> _procedureStagesFor({
+  required String? id,
+  required String? name,
+}) {
+  switch (id ?? name ?? '') {
+    case 'procedure-1':
+    case 'Nightly Cleanup':
+      return [
+        _procedureStage(
+          name: 'Preflight checks',
+          executions: [
+            _execution(command: 'komodo health --format=json'),
+          ],
+        ),
+        _procedureStage(
+          name: 'Cleanup resources',
+          executions: [
+            _execution(command: 'docker system prune -af', timeout: '5m'),
+            _execution(command: 'rm -rf /tmp/komodo-cache', enabled: false),
+          ],
+        ),
+        _procedureStage(
+          name: 'Report',
+          executions: [
+            _execution(
+              command: 'notify --channel=ops --message="Cleanup complete"',
+            ),
+          ],
+        ),
+      ];
+    case 'procedure-2':
+    case 'Rotate Secrets':
+      return [
+        _procedureStage(
+          name: 'Freeze writes',
+          executions: [
+            _execution(command: 'komodo maintenance enable'),
+          ],
+        ),
+        _procedureStage(
+          name: 'Rotate database',
+          executions: [
+            _typedExecution(
+              'RotateSecret',
+              params: {
+                'target': 'postgres',
+                'path': 'secret/prod/db',
+              },
+            ),
+          ],
+        ),
+        _procedureStage(
+          name: 'Rotate API keys',
+          executions: [
+            _typedExecution(
+              'RotateSecret',
+              params: {
+                'target': 'api',
+                'path': 'secret/prod/api',
+              },
+            ),
+            _typedExecution(
+              'RotateSecret',
+              params: {
+                'target': 'worker',
+                'path': 'secret/prod/worker',
+              },
+              enabled: false,
+            ),
+          ],
+        ),
+        _procedureStage(
+          name: 'Restart services',
+          executions: [
+            _typedExecution(
+              'RestartService',
+              params: {'service': 'api'},
+            ),
+            _typedExecution(
+              'RestartService',
+              params: {'service': 'worker'},
+            ),
+          ],
+        ),
+        _procedureStage(
+          name: 'Notify',
+          executions: [
+            _execution(
+              command:
+                  'notify --channel=security --message="Secrets rotated"',
+            ),
+          ],
+        ),
+      ];
+    case 'procedure-3':
+    case 'Incident Drill':
+      return [
+        _procedureStage(
+          name: 'Simulate outage',
+          executions: [
+            _execution(command: 'komodo drill start --scenario=region-failure'),
+          ],
+        ),
+        _procedureStage(
+          name: 'Restore',
+          executions: [
+            _execution(command: 'komodo drill stop'),
+            _execution(
+              command: 'notify --channel=incident --message="Drill complete"',
+            ),
+          ],
+        ),
+      ];
+    default:
+      return [
+        _procedureStage(
+          name: 'Default stage',
+          executions: [
+            _typedExecution('RunBuild'),
+          ],
+        ),
+      ];
+  }
+}
+
+Map<String, dynamic> _procedureStage({
+  required String name,
+  required List<Map<String, dynamic>> executions,
+  bool enabled = true,
+}) {
+  return <String, dynamic>{
+    'name': name,
+    'enabled': enabled,
+    'executions': executions,
+  };
+}
+
+Map<String, dynamic> _execution({
+  required String command,
+  bool enabled = true,
+  String? timeout,
+}) {
+  return <String, dynamic>{
+    'enabled': enabled,
+    'execution': <String, dynamic>{
+      'type': 'RunCommand',
+      'command': command,
+      if (timeout != null) 'timeout': timeout,
+    },
+  };
+}
+
+Map<String, dynamic> _typedExecution(
+  String type, {
+  Map<String, dynamic>? params,
+  bool enabled = true,
+}) {
+  return <String, dynamic>{
+    'enabled': enabled,
+    'execution': <String, dynamic>{
+      'type': type,
+      if (params != null) 'params': params,
     },
   };
 }
