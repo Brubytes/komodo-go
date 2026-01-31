@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
@@ -111,9 +112,7 @@ class StackHeroPanel extends StatelessWidget {
               ? AppIcons.widgets
               : (upToDate ? AppIcons.ok : AppIcons.warning),
           label: 'Git',
-          value: !hasGitMeta
-              ? '—'
-              : (upToDate ? 'Up to date' : 'Out of date'),
+          value: !hasGitMeta ? '—' : (upToDate ? 'Up to date' : 'Out of date'),
           tone: !hasGitMeta
               ? DetailMetricTone.neutral
               : (upToDate
@@ -150,10 +149,7 @@ class StackHeroPanel extends StatelessWidget {
               ),
             ),
             const Gap(6),
-            Text(
-              description,
-              style: textTheme.bodyMedium,
-            ),
+            Text(description, style: textTheme.bodyMedium),
           ],
         ],
       ),
@@ -192,8 +188,10 @@ class StackHeroPanel extends StatelessWidget {
   String _formatDirectory(String path) {
     if (path.isEmpty) return path;
     final normalized = path.replaceAll('\\', '/');
-    final parts =
-        normalized.split('/').where((segment) => segment.isNotEmpty).toList();
+    final parts = normalized
+        .split('/')
+        .where((segment) => segment.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return path;
     if (parts.length <= 2) return normalized;
     final tail = parts.sublist(parts.length - 2).join('/');
@@ -386,7 +384,14 @@ class StackConfigContent extends StatelessWidget {
                     language: DetailCodeLanguage.yaml,
                   )
                 else
-                  const Text('No compose contents available'),
+                  Text(
+                    'No compose contents yet',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
                 const Gap(12),
                 Text(
                   'Environment variables',
@@ -399,7 +404,14 @@ class StackConfigContent extends StatelessWidget {
                 if (environment.isNotEmpty)
                   DetailCodeBlock(code: environment)
                 else
-                  const Text('No environment variables available'),
+                  Text(
+                    'No environment variables yet',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -2093,11 +2105,8 @@ class StackInfoTabContent extends StatefulWidget {
   });
 
   final StackInfo info;
-  final Future<bool> Function(
-    String path,
-    String contents, {
-    bool showSnackBar,
-  }) onSaveFile;
+  final Future<bool> Function(String path, String contents, {bool showSnackBar})
+  onSaveFile;
   final ValueChanged<bool>? onDirtyChanged;
 
   @override
@@ -2319,7 +2328,11 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_files.isEmpty)
-          const StackMessageSurface(message: 'No file contents available')
+          const EmptyStateView.inline(
+            icon: AppIcons.package,
+            title: 'No file contents',
+            message: 'Stack file contents will appear here once configured.',
+          )
         else
           Column(
             children: [
@@ -2350,8 +2363,9 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
                       DetailCodeEditor(
                         controller: _controllerForFile(file),
                         maxHeight: 360,
-                        fullscreenTitle:
-                            file.path.trim().isNotEmpty ? file.path.trim() : '',
+                        fullscreenTitle: file.path.trim().isNotEmpty
+                            ? file.path.trim()
+                            : '',
                       ),
                     ],
                   ),
@@ -2369,7 +2383,14 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
                   code: deployedConfig,
                   language: DetailCodeLanguage.yaml,
                 )
-              : const Text('No deployed config available'),
+              : Text(
+                  'No deployed config yet',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
         ),
       ],
     );
@@ -2443,7 +2464,11 @@ class StackLogContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final log = this.log;
     if (log == null) {
-      return const Text('No logs available');
+      return const EmptyStateView.inline(
+        icon: AppIcons.logs,
+        title: 'No logs available',
+        message: 'Logs will appear here after running stack operations.',
+      );
     }
 
     final output = [
