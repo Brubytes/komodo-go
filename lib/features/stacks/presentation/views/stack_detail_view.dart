@@ -50,6 +50,8 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
         TickerProviderStateMixin,
         DetailDirtySnackBarMixin<StackDetailView> {
   late TabController _tabController;
+  final _outerScrollController = ScrollController();
+  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
 
   Timer? _logRefreshTimer;
   var _autoRefreshLogs = true;
@@ -74,6 +76,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     _tabController
       ..removeListener(_onInnerTabChanged)
       ..dispose();
+    _outerScrollController.dispose();
     super.dispose();
   }
 
@@ -299,6 +302,8 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       body: Stack(
         children: [
           NestedScrollView(
+            key: _nestedScrollKey,
+            controller: _outerScrollController,
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
                 SliverToBoxAdapter(
@@ -344,41 +349,48 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                     ),
                   ),
                 ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _PinnedTabBarHeaderDelegate(
-                    backgroundColor: scheme.surface,
-                    tabBar: buildDetailTabBar(
-                      context: context,
-                      controller: _tabController,
-                      tabs: [
-                        const Tab(
-                          key: ValueKey('stack_tab_config'),
-                          icon: Icon(AppIcons.bolt),
-                          text: 'Config',
-                        ),
-                        if (hasInfoTab)
+                SliverOverlapAbsorber(
+                  handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                    context,
+                  ),
+                  sliver: SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _PinnedTabBarHeaderDelegate(
+                      backgroundColor: scheme.surface,
+                      tabBar: buildDetailTabBar(
+                        context: context,
+                        controller: _tabController,
+                        outerScrollController: _outerScrollController,
+                        nestedScrollKey: _nestedScrollKey,
+                        tabs: [
                           const Tab(
-                            key: ValueKey('stack_tab_info'),
-                            icon: Icon(AppIcons.info),
-                            text: 'Info',
+                            key: ValueKey('stack_tab_config'),
+                            icon: Icon(AppIcons.bolt),
+                            text: 'Config',
                           ),
-                        const Tab(
-                          key: ValueKey('stack_tab_services'),
-                          icon: Icon(AppIcons.toolbox),
-                          text: 'Services',
-                        ),
-                        const Tab(
-                          key: ValueKey('stack_tab_updates'),
-                          icon: Icon(AppIcons.history),
-                          text: 'Updates',
-                        ),
-                        const Tab(
-                          key: ValueKey('stack_tab_logs'),
-                          icon: Icon(AppIcons.logs),
-                          text: 'Logs',
-                        ),
-                      ],
+                          if (hasInfoTab)
+                            const Tab(
+                              key: ValueKey('stack_tab_info'),
+                              icon: Icon(AppIcons.info),
+                              text: 'Info',
+                            ),
+                          const Tab(
+                            key: ValueKey('stack_tab_services'),
+                            icon: Icon(AppIcons.toolbox),
+                            text: 'Services',
+                          ),
+                          const Tab(
+                            key: ValueKey('stack_tab_updates'),
+                            icon: Icon(AppIcons.history),
+                            text: 'Updates',
+                          ),
+                          const Tab(
+                            key: ValueKey('stack_tab_logs'),
+                            icon: Icon(AppIcons.logs),
+                            text: 'Logs',
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -392,41 +404,38 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                     onRefresh: () async {
                       ref.invalidate(stackDetailProvider(widget.stackId));
                     },
-                    child: ListView(
-                      key: PageStorageKey('stack_${widget.stackId}_config'),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      children: [
-                        stackAsync.when(
-                          data: (stack) => stack != null
-                              ? StackConfigEditorContent(
-                                  key: _configEditorKey,
-                                  stackIdOrName: widget.stackId,
-                                  initialConfig: stack.config,
-                                  webhookBaseUrl: coreInfoAsync.maybeWhen(
-                                    data: (info) => info.webhookBaseUrl,
-                                    orElse: () => '',
-                                  ),
-                                  servers: servers,
-                                  repos: repos,
-                                  registryAccounts: registryAccounts,
-                                  onDirtyChanged: (dirty) {
-                                    syncDirtySnackBar(
-                                      dirty: dirty,
-                                      onDiscard: () => _discardConfig(stack),
-                                      onSave: () => _saveConfig(stack: stack),
-                                      saveEnabled: !_configSaveInFlight,
-                                    );
-                                  },
-                                )
-                              : const StackMessageSurface(
-                                  message: 'Stack not found',
+                    child: DetailTabScrollView.box(
+                      scrollKey:
+                          PageStorageKey('stack_${widget.stackId}_config'),
+                      child: stackAsync.when(
+                        data: (stack) => stack != null
+                            ? StackConfigEditorContent(
+                                key: _configEditorKey,
+                                stackIdOrName: widget.stackId,
+                                initialConfig: stack.config,
+                                webhookBaseUrl: coreInfoAsync.maybeWhen(
+                                  data: (info) => info.webhookBaseUrl,
+                                  orElse: () => '',
                                 ),
-                          loading: () => const StackLoadingSurface(),
-                          error: (error, _) =>
-                              StackMessageSurface(message: 'Error: $error'),
-                        ),
-                      ],
+                                servers: servers,
+                                repos: repos,
+                                registryAccounts: registryAccounts,
+                                onDirtyChanged: (dirty) {
+                                  syncDirtySnackBar(
+                                    dirty: dirty,
+                                    onDiscard: () => _discardConfig(stack),
+                                    onSave: () => _saveConfig(stack: stack),
+                                    saveEnabled: !_configSaveInFlight,
+                                  );
+                                },
+                              )
+                            : const StackMessageSurface(
+                                message: 'Stack not found',
+                              ),
+                        loading: () => const StackLoadingSurface(),
+                        error: (error, _) =>
+                            StackMessageSurface(message: 'Error: $error'),
+                      ),
                     ),
                   ),
                 ),
@@ -436,46 +445,43 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                       onRefresh: () async {
                         ref.invalidate(stackDetailProvider(widget.stackId));
                       },
-                      child: ListView(
-                        key: PageStorageKey('stack_${widget.stackId}_info'),
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                        children: [
-                          stackAsync.when(
-                            data: (stack) => stack != null
-                                ? StackInfoTabContent(
-                                    key: _infoEditorKey,
-                                    info: stack.info,
-                                    onSaveFile:
-                                        (
-                                          path,
-                                          contents, {
-                                          bool showSnackBar = true,
-                                        }) =>
-                                        _saveStackFile(
-                                          stackId: stack.id,
-                                          filePath: path,
-                                          contents: contents,
-                                          showSnackBar: showSnackBar,
-                                        ),
-                                    onDirtyChanged: (dirty) {
-                                      syncDirtySnackBar(
-                                        dirty: dirty,
-                                        onDiscard: _discardInfoChanges,
-                                        onSave: _saveInfoChanges,
-                                        saveEnabled: !_infoSaveInFlight,
-                                      );
-                                    },
-                                  )
-                                : const StackMessageSurface(
-                                    message: 'Stack not found',
-                                  ),
-                            loading: () => const StackLoadingSurface(),
-                            error: (error, _) => StackMessageSurface(
-                              message: 'Error: $error',
-                            ),
+                      child: DetailTabScrollView.box(
+                        scrollKey:
+                            PageStorageKey('stack_${widget.stackId}_info'),
+                        child: stackAsync.when(
+                          data: (stack) => stack != null
+                              ? StackInfoTabContent(
+                                  key: _infoEditorKey,
+                                  info: stack.info,
+                                  onSaveFile:
+                                      (
+                                        path,
+                                        contents, {
+                                        bool showSnackBar = true,
+                                      }) =>
+                                      _saveStackFile(
+                                        stackId: stack.id,
+                                        filePath: path,
+                                        contents: contents,
+                                        showSnackBar: showSnackBar,
+                                      ),
+                                  onDirtyChanged: (dirty) {
+                                    syncDirtySnackBar(
+                                      dirty: dirty,
+                                      onDiscard: _discardInfoChanges,
+                                      onSave: _saveInfoChanges,
+                                      saveEnabled: !_infoSaveInFlight,
+                                    );
+                                  },
+                                )
+                              : const StackMessageSurface(
+                                  message: 'Stack not found',
+                                ),
+                          loading: () => const StackLoadingSurface(),
+                          error: (error, _) => StackMessageSurface(
+                            message: 'Error: $error',
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -484,28 +490,25 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                     onRefresh: () async {
                       ref.invalidate(stackServicesProvider(widget.stackId));
                     },
-                    child: ListView(
-                      key: PageStorageKey('stack_${widget.stackId}_services'),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      children: [
-                        servicesAsync.when(
-                          data: (services) => services.isEmpty
-                              ? const Text('No services found')
-                              : Column(
-                                  children: [
-                                    for (final service in services) ...[
-                                      StackServiceCard(service: service),
-                                      const Gap(12),
-                                    ],
+                    child: DetailTabScrollView.box(
+                      scrollKey:
+                          PageStorageKey('stack_${widget.stackId}_services'),
+                      child: servicesAsync.when(
+                        data: (services) => services.isEmpty
+                            ? const Text('No services found')
+                            : Column(
+                                children: [
+                                  for (final service in services) ...[
+                                    StackServiceCard(service: service),
+                                    const Gap(12),
                                   ],
-                                ),
-                          loading: () => const StackLoadingSurface(),
-                          error: (error, _) => StackMessageSurface(
-                            message: 'Services unavailable: $error',
-                          ),
+                                ],
+                              ),
+                        loading: () => const StackLoadingSurface(),
+                        error: (error, _) => StackMessageSurface(
+                          message: 'Services unavailable: $error',
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -519,12 +522,19 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                     child: stackUpdatesAsync.when(
                       data: (state) {
                         if (state.items.isEmpty) {
-                          return const NotificationsEmptyState(
-                            icon: AppIcons.updateAvailable,
-                            title: 'No updates',
-                            description: 'No recent activity for this stack.',
+                          return DetailTabScrollView.box(
+                            child: const NotificationsEmptyState(
+                              icon: AppIcons.updateAvailable,
+                              title: 'No updates',
+                              description: 'No recent activity for this stack.',
+                            ),
                           );
                         }
+
+                        final itemCount = state.items.length +
+                            (state.nextPage == null ? 0 : 1);
+                        final sliverChildCount =
+                            itemCount == 0 ? 0 : itemCount * 2 - 1;
 
                         return NotificationListener<ScrollNotification>(
                           onNotification: (notification) {
@@ -539,44 +549,56 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                             }
                             return false;
                           },
-                          child: ListView.separated(
-                            key: PageStorageKey(
+                          child: DetailTabScrollView(
+                            scrollKey: PageStorageKey(
                               'stack_${widget.stackId}_updates',
                             ),
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                            itemCount:
-                                state.items.length +
-                                (state.nextPage == null ? 0 : 1),
-                            separatorBuilder: (_, __) => const Gap(12),
-                            itemBuilder: (context, index) {
-                              final isFooter = index >= state.items.length;
-                              if (isFooter) {
-                                return PaginationFooter(
-                                  isLoading: state.isLoadingMore,
-                                  onLoadMore: () => ref
-                                      .read(
-                                        stackUpdatesProvider(widget.stackId)
-                                            .notifier,
-                                      )
-                                      .fetchNextPage(),
-                                );
-                              }
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  if (index.isOdd) {
+                                    return const Gap(12);
+                                  }
 
-                              final update = state.items[index];
-                              return UpdateTile(update: update);
-                            },
+                                  final itemIndex = index ~/ 2;
+                                  final isFooter =
+                                      itemIndex >= state.items.length;
+                                  if (isFooter) {
+                                    return PaginationFooter(
+                                      isLoading: state.isLoadingMore,
+                                      onLoadMore: () => ref
+                                          .read(
+                                            stackUpdatesProvider(
+                                              widget.stackId,
+                                            ).notifier,
+                                          )
+                                          .fetchNextPage(),
+                                    );
+                                  }
+
+                                  final update = state.items[itemIndex];
+                                  return UpdateTile(update: update);
+                                },
+                                childCount: sliverChildCount,
+                              ),
+                            ),
                           ),
                         );
                       },
-                      loading: () => const AppSkeletonList(
-                        padding: EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      loading: () => DetailTabScrollView.box(
+                        padding: EdgeInsets.zero,
+                        child: const AppSkeletonList(
+                          padding: EdgeInsets.fromLTRB(16, 12, 16, 16),
+                        ),
                       ),
-                      error: (error, _) => NotificationsErrorState(
-                        title: 'Failed to load updates',
-                        message: error.toString(),
-                        onRetry: () => ref.invalidate(
-                          stackUpdatesProvider(widget.stackId),
+                      error: (error, _) => DetailTabScrollView.box(
+                        padding: EdgeInsets.zero,
+                        child: NotificationsErrorState(
+                          title: 'Failed to load updates',
+                          message: error.toString(),
+                          onRetry: () => ref.invalidate(
+                            stackUpdatesProvider(widget.stackId),
+                          ),
                         ),
                       ),
                     ),
@@ -587,10 +609,9 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                     onRefresh: () async {
                       ref.invalidate(stackLogProvider(widget.stackId));
                     },
-                    child: ListView(
-                      key: PageStorageKey('stack_${widget.stackId}_logs'),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    child: DetailTabScrollView.list(
+                      scrollKey:
+                          PageStorageKey('stack_${widget.stackId}_logs'),
                       children: [
                         Text(
                           'Auto refresh logs',
@@ -955,7 +976,7 @@ class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.backgroundColor,
   });
 
-  final TabBar tabBar;
+  final PreferredSizeWidget tabBar;
   final Color backgroundColor;
 
   @override

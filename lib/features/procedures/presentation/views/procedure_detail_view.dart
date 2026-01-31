@@ -35,6 +35,8 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
         SingleTickerProviderStateMixin,
         DetailDirtySnackBarMixin<ProcedureDetailView> {
   late final TabController _tabController;
+  final _outerScrollController = ScrollController();
+  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
   final _configEditorKey = GlobalKey<ProcedureConfigEditorContentState>();
   var _configSaveInFlight = false;
 
@@ -47,6 +49,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
   @override
   void dispose() {
     _tabController.dispose();
+    _outerScrollController.dispose();
     super.dispose();
   }
 
@@ -87,6 +90,8 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
       body: Stack(
         children: [
           NestedScrollView(
+            key: _nestedScrollKey,
+            controller: _outerScrollController,
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
                 SliverToBoxAdapter(
@@ -111,23 +116,30 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                     ),
                   ),
                 ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _PinnedTabBarHeaderDelegate(
-                    backgroundColor: scheme.surface,
-                    tabBar: buildDetailTabBar(
-                      context: context,
-                      controller: _tabController,
-                      tabs: const [
-                        Tab(
-                          icon: Icon(AppIcons.bolt),
-                          text: 'Config',
-                        ),
-                        Tab(
-                          icon: Icon(AppIcons.procedures),
-                          text: 'Stages',
-                        ),
-                      ],
+                SliverOverlapAbsorber(
+                  handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                    context,
+                  ),
+                  sliver: SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _PinnedTabBarHeaderDelegate(
+                      backgroundColor: scheme.surface,
+                      tabBar: buildDetailTabBar(
+                        context: context,
+                        controller: _tabController,
+                        outerScrollController: _outerScrollController,
+                        nestedScrollKey: _nestedScrollKey,
+                        tabs: const [
+                          Tab(
+                            icon: Icon(AppIcons.bolt),
+                            text: 'Config',
+                          ),
+                          Tab(
+                            icon: Icon(AppIcons.procedures),
+                            text: 'Stages',
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -141,40 +153,36 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                     onRefresh: () async {
                       ref.invalidate(procedureDetailProvider(procedureId));
                     },
-                    child: ListView(
-                      key: PageStorageKey(
+                    child: DetailTabScrollView.box(
+                      scrollKey: PageStorageKey(
                         'procedure_${widget.procedureId}_config',
                       ),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        procedureAsync.when(
-                          data: (procedure) {
-                            if (procedure == null) {
-                              return const _MessageSurface(
-                                message: 'Procedure not found',
-                              );
-                            }
-
-                            return ProcedureConfigEditorContent(
-                              key: _configEditorKey,
-                              initialConfig: procedure.config,
-                              onDirtyChanged: (dirty) {
-                                syncDirtySnackBar(
-                                  dirty: dirty,
-                                  onDiscard: () => _discardConfig(procedure),
-                                  onSave: () =>
-                                      _saveConfig(procedure: procedure),
-                                  saveEnabled: !_configSaveInFlight,
-                                );
-                              },
+                      child: procedureAsync.when(
+                        data: (procedure) {
+                          if (procedure == null) {
+                            return const _MessageSurface(
+                              message: 'Procedure not found',
                             );
-                          },
-                          loading: () => const _LoadingSurface(),
-                          error: (error, _) =>
-                              _ErrorSurface(error: error.toString()),
-                        ),
-                      ],
+                          }
+
+                          return ProcedureConfigEditorContent(
+                            key: _configEditorKey,
+                            initialConfig: procedure.config,
+                            onDirtyChanged: (dirty) {
+                              syncDirtySnackBar(
+                                dirty: dirty,
+                                onDiscard: () => _discardConfig(procedure),
+                                onSave: () =>
+                                    _saveConfig(procedure: procedure),
+                                saveEnabled: !_configSaveInFlight,
+                              );
+                            },
+                          );
+                        },
+                        loading: () => const _LoadingSurface(),
+                        error: (error, _) =>
+                            _ErrorSurface(error: error.toString()),
+                      ),
                     ),
                   ),
                 ),
@@ -183,30 +191,26 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                     onRefresh: () async {
                       ref.invalidate(procedureDetailProvider(procedureId));
                     },
-                    child: ListView(
-                      key: PageStorageKey(
+                    child: DetailTabScrollView.box(
+                      scrollKey: PageStorageKey(
                         'procedure_${widget.procedureId}_stages',
                       ),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        procedureAsync.when(
-                          data: (procedure) {
-                            if (procedure == null) {
-                              return const _MessageSurface(
-                                message: 'Procedure not found',
-                              );
-                            }
-
-                            return _ProcedureStagesContent(
-                              config: procedure.config,
+                      child: procedureAsync.when(
+                        data: (procedure) {
+                          if (procedure == null) {
+                            return const _MessageSurface(
+                              message: 'Procedure not found',
                             );
-                          },
-                          loading: () => const _LoadingSurface(),
-                          error: (error, _) =>
-                              _ErrorSurface(error: error.toString()),
-                        ),
-                      ],
+                          }
+
+                          return _ProcedureStagesContent(
+                            config: procedure.config,
+                          );
+                        },
+                        loading: () => const _LoadingSurface(),
+                        error: (error, _) =>
+                            _ErrorSurface(error: error.toString()),
+                      ),
                     ),
                   ),
                 ),
@@ -319,7 +323,7 @@ class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.backgroundColor,
   });
 
-  final TabBar tabBar;
+  final PreferredSizeWidget tabBar;
   final Color backgroundColor;
 
   @override

@@ -36,6 +36,8 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
   static const int _tabStats = 1;
 
   late final TabController _tabController;
+  final _outerScrollController = ScrollController();
+  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
   Timer? _statsRefreshTimer;
   ProviderSubscription<AsyncValue<SystemStats?>>? _statsSubscription;
   final _configEditorKey = GlobalKey<ServerConfigEditorContentState>();
@@ -75,6 +77,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
     _tabController
       ..removeListener(_onInnerTabChanged)
       ..dispose();
+    _outerScrollController.dispose();
     super.dispose();
   }
 
@@ -206,6 +209,8 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
         centerTitle: true,
       ),
       body: NestedScrollView(
+        key: _nestedScrollKey,
+        controller: _outerScrollController,
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverToBoxAdapter(
@@ -221,27 +226,34 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                 ),
               ),
             ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _PinnedTabBarHeaderDelegate(
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                tabBar: buildDetailTabBar(
-                  context: context,
-                  controller: _tabController,
-                  tabs: const [
-                    Tab(
-                      icon: Icon(AppIcons.bolt),
-                      text: 'Config',
-                    ),
-                    Tab(
-                      icon: Icon(AppIcons.activity),
-                      text: 'Stats',
-                    ),
-                    Tab(
-                      icon: Icon(AppIcons.cpu),
-                      text: 'System',
-                    ),
-                  ],
+            SliverOverlapAbsorber(
+              handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                context,
+              ),
+              sliver: SliverPersistentHeader(
+                pinned: true,
+                delegate: _PinnedTabBarHeaderDelegate(
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  tabBar: buildDetailTabBar(
+                    context: context,
+                    controller: _tabController,
+                    outerScrollController: _outerScrollController,
+                    nestedScrollKey: _nestedScrollKey,
+                    tabs: const [
+                      Tab(
+                        icon: Icon(AppIcons.bolt),
+                        text: 'Config',
+                      ),
+                      Tab(
+                        icon: Icon(AppIcons.activity),
+                        text: 'Stats',
+                      ),
+                      Tab(
+                        icon: Icon(AppIcons.cpu),
+                        text: 'System',
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -260,34 +272,30 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                     )
                     ..invalidate(serverStatsProvider(widget.serverId));
                 },
-                child: ListView(
-                  key: PageStorageKey('server_${widget.serverId}_config'),
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    serverAsync.when(
-                      data: (server) => server?.config != null
-                          ? ServerConfigEditorContent(
-                              key: _configEditorKey,
-                              initialConfig: server!.config!,
-                              onDirtyChanged: (dirty) {
-                                syncDirtySnackBar(
-                                  dirty: dirty,
-                                  onDiscard: () => _discardConfig(server),
-                                  onSave: () =>
-                                      _saveConfig(server: server),
-                                  saveEnabled: !_configSaveInFlight,
-                                );
-                              },
-                            )
-                          : const ServerMessageCard(
-                              message: 'No config available',
-                            ),
-                      loading: () => const ServerLoadingCard(),
-                      error: (error, _) =>
-                          ServerMessageCard(message: 'Config: $error'),
-                    ),
-                  ],
+                child: DetailTabScrollView.box(
+                  scrollKey:
+                      PageStorageKey('server_${widget.serverId}_config'),
+                  child: serverAsync.when(
+                    data: (server) => server?.config != null
+                        ? ServerConfigEditorContent(
+                            key: _configEditorKey,
+                            initialConfig: server!.config!,
+                            onDirtyChanged: (dirty) {
+                              syncDirtySnackBar(
+                                dirty: dirty,
+                                onDiscard: () => _discardConfig(server),
+                                onSave: () => _saveConfig(server: server),
+                                saveEnabled: !_configSaveInFlight,
+                              );
+                            },
+                          )
+                        : const ServerMessageCard(
+                            message: 'No config available',
+                          ),
+                    loading: () => const ServerLoadingCard(),
+                    error: (error, _) =>
+                        ServerMessageCard(message: 'Config: $error'),
+                  ),
                 ),
               ),
             ),
@@ -301,24 +309,21 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                     )
                     ..invalidate(serverStatsProvider(widget.serverId));
                 },
-                child: ListView(
-                  key: PageStorageKey('server_${widget.serverId}_stats'),
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    statsAsync.when(
-                      data: (stats) => DetailSurface(
-                        child: StatsHistoryContent(
-                          history: _history,
-                          latestStats: stats,
-                        ),
-                      ),
-                      loading: () => const ServerLoadingCard(),
-                      error: (error, _) => ServerMessageCard(
-                        message: 'Stats unavailable: $error',
+                child: DetailTabScrollView.box(
+                  scrollKey:
+                      PageStorageKey('server_${widget.serverId}_stats'),
+                  child: statsAsync.when(
+                    data: (stats) => DetailSurface(
+                      child: StatsHistoryContent(
+                        history: _history,
+                        latestStats: stats,
                       ),
                     ),
-                  ],
+                    loading: () => const ServerLoadingCard(),
+                    error: (error, _) => ServerMessageCard(
+                      message: 'Stats unavailable: $error',
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -332,25 +337,22 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                     )
                     ..invalidate(serverStatsProvider(widget.serverId));
                 },
-                child: ListView(
-                  key: PageStorageKey('server_${widget.serverId}_system'),
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    systemInfoAsync.when(
-                      data: (info) => info != null
-                          ? DetailSurface(
-                              child: ServerSystemInfoContent(info: info),
-                            )
-                          : const ServerMessageCard(
-                              message: 'System info unavailable',
-                            ),
-                      loading: () => const ServerLoadingCard(),
-                      error: (error, _) => ServerMessageCard(
-                        message: 'System info unavailable: $error',
-                      ),
+                child: DetailTabScrollView.box(
+                  scrollKey:
+                      PageStorageKey('server_${widget.serverId}_system'),
+                  child: systemInfoAsync.when(
+                    data: (info) => info != null
+                        ? DetailSurface(
+                            child: ServerSystemInfoContent(info: info),
+                          )
+                        : const ServerMessageCard(
+                            message: 'System info unavailable',
+                          ),
+                    loading: () => const ServerLoadingCard(),
+                    error: (error, _) => ServerMessageCard(
+                      message: 'System info unavailable: $error',
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -435,7 +437,7 @@ class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.backgroundColor,
   });
 
-  final TabBar tabBar;
+  final PreferredSizeWidget tabBar;
   final Color backgroundColor;
 
   @override

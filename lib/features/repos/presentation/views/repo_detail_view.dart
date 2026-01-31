@@ -39,6 +39,8 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
         SingleTickerProviderStateMixin,
         DetailDirtySnackBarMixin<RepoDetailView> {
   late final TabController _tabController;
+  final _outerScrollController = ScrollController();
+  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
   final _configEditorKey = GlobalKey<RepoConfigEditorContentState>();
 
   var _configSaveInFlight = false;
@@ -52,6 +54,7 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
   @override
   void dispose() {
     _tabController.dispose();
+    _outerScrollController.dispose();
     super.dispose();
   }
 
@@ -118,6 +121,8 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
       body: Stack(
         children: [
           NestedScrollView(
+            key: _nestedScrollKey,
+            controller: _outerScrollController,
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
                 SliverToBoxAdapter(
@@ -136,23 +141,30 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                     ),
                   ),
                 ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _PinnedTabBarHeaderDelegate(
-                    backgroundColor: scheme.surface,
-                    tabBar: buildDetailTabBar(
-                      context: context,
-                      controller: _tabController,
-                      tabs: const [
-                        Tab(
-                          icon: Icon(AppIcons.bolt),
-                          text: 'Config',
-                        ),
-                        Tab(
-                          icon: Icon(AppIcons.builds),
-                          text: 'Build Status',
-                        ),
-                      ],
+                SliverOverlapAbsorber(
+                  handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                    context,
+                  ),
+                  sliver: SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _PinnedTabBarHeaderDelegate(
+                      backgroundColor: scheme.surface,
+                      tabBar: buildDetailTabBar(
+                        context: context,
+                        controller: _tabController,
+                        outerScrollController: _outerScrollController,
+                        nestedScrollKey: _nestedScrollKey,
+                        tabs: const [
+                          Tab(
+                            icon: Icon(AppIcons.bolt),
+                            text: 'Config',
+                          ),
+                          Tab(
+                            icon: Icon(AppIcons.builds),
+                            text: 'Build Status',
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -166,36 +178,33 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                     onRefresh: () async {
                       ref.invalidate(repoDetailProvider(widget.repoId));
                     },
-                    child: ListView(
-                      key: PageStorageKey('repo_${widget.repoId}_config'),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        repoAsync.when(
-                          data: (repo) => repo != null
-                              ? RepoConfigEditorContent(
-                                  key: _configEditorKey,
-                                  initialConfig: repo.config,
-                                  servers: servers,
-                                  builders: builders,
-                                  gitProviders: gitProviders,
-                                  onDirtyChanged: (dirty) {
-                                    syncDirtySnackBar(
-                                      dirty: dirty,
-                                      onDiscard: () => _discardConfig(repo),
-                                      onSave: () => _saveConfig(repo: repo),
-                                      saveEnabled: !_configSaveInFlight,
-                                    );
-                                  },
-                                )
-                              : const _MessageSurface(
-                                  message: 'Repo not found',
-                                ),
-                          loading: () => const _LoadingSurface(),
-                          error: (error, _) =>
-                              _MessageSurface(message: 'Error: $error'),
-                        ),
-                      ],
+                    child: DetailTabScrollView.box(
+                      scrollKey:
+                          PageStorageKey('repo_${widget.repoId}_config'),
+                      child: repoAsync.when(
+                        data: (repo) => repo != null
+                            ? RepoConfigEditorContent(
+                                key: _configEditorKey,
+                                initialConfig: repo.config,
+                                servers: servers,
+                                builders: builders,
+                                gitProviders: gitProviders,
+                                onDirtyChanged: (dirty) {
+                                  syncDirtySnackBar(
+                                    dirty: dirty,
+                                    onDiscard: () => _discardConfig(repo),
+                                    onSave: () => _saveConfig(repo: repo),
+                                    saveEnabled: !_configSaveInFlight,
+                                  );
+                                },
+                              )
+                            : const _MessageSurface(
+                                message: 'Repo not found',
+                              ),
+                        loading: () => const _LoadingSurface(),
+                        error: (error, _) =>
+                            _MessageSurface(message: 'Error: $error'),
+                      ),
                     ),
                   ),
                 ),
@@ -204,22 +213,20 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                     onRefresh: () async {
                       ref.invalidate(repoDetailProvider(widget.repoId));
                     },
-                    child: ListView(
-                      key: PageStorageKey('repo_${widget.repoId}_build_status'),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        repoAsync.when(
-                          data: (repo) => repo != null
-                              ? _RepoBuildContent(info: repo.info)
-                              : const _MessageSurface(
-                                  message: 'Repo not found',
-                                ),
-                          loading: () => const _LoadingSurface(),
-                          error: (error, _) =>
-                              _MessageSurface(message: 'Error: $error'),
-                        ),
-                      ],
+                    child: DetailTabScrollView.box(
+                      scrollKey: PageStorageKey(
+                        'repo_${widget.repoId}_build_status',
+                      ),
+                      child: repoAsync.when(
+                        data: (repo) => repo != null
+                            ? _RepoBuildContent(info: repo.info)
+                            : const _MessageSurface(
+                                message: 'Repo not found',
+                              ),
+                        loading: () => const _LoadingSurface(),
+                        error: (error, _) =>
+                            _MessageSurface(message: 'Error: $error'),
+                      ),
                     ),
                   ),
                 ),
@@ -524,7 +531,7 @@ class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.backgroundColor,
   });
 
-  final TabBar tabBar;
+  final PreferredSizeWidget tabBar;
   final Color backgroundColor;
 
   @override

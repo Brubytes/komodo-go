@@ -45,6 +45,8 @@ class _DeploymentDetailViewState
   static const int _tabLogs = 1;
 
   late final TabController _tabController;
+  final _outerScrollController = ScrollController();
+  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
   Timer? _logRefreshTimer;
   var _autoRefreshLogs = true;
 
@@ -65,6 +67,7 @@ class _DeploymentDetailViewState
     _tabController
       ..removeListener(_onInnerTabChanged)
       ..dispose();
+    _outerScrollController.dispose();
     super.dispose();
   }
 
@@ -159,6 +162,8 @@ class _DeploymentDetailViewState
       body: Stack(
         children: [
           NestedScrollView(
+            key: _nestedScrollKey,
+            controller: _outerScrollController,
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
                 SliverToBoxAdapter(
@@ -193,17 +198,24 @@ class _DeploymentDetailViewState
                     ),
                   ),
                 ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _PinnedTabBarHeaderDelegate(
-                    backgroundColor: scheme.surface,
-                    tabBar: buildDetailTabBar(
-                      context: context,
-                      controller: _tabController,
-                      tabs: const [
-                        Tab(icon: Icon(AppIcons.bolt), text: 'Config'),
-                        Tab(icon: Icon(AppIcons.logs), text: 'Logs'),
-                      ],
+                SliverOverlapAbsorber(
+                  handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                    context,
+                  ),
+                  sliver: SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _PinnedTabBarHeaderDelegate(
+                      backgroundColor: scheme.surface,
+                      tabBar: buildDetailTabBar(
+                        context: context,
+                        controller: _tabController,
+                        outerScrollController: _outerScrollController,
+                        nestedScrollKey: _nestedScrollKey,
+                        tabs: const [
+                          Tab(icon: Icon(AppIcons.bolt), text: 'Config'),
+                          Tab(icon: Icon(AppIcons.logs), text: 'Logs'),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -217,58 +229,54 @@ class _DeploymentDetailViewState
                     onRefresh: () async {
                       ref.invalidate(deploymentDetailProvider(deploymentId));
                     },
-                    child: ListView(
-                      key: PageStorageKey(
+                    child: DetailTabScrollView.box(
+                      scrollKey: PageStorageKey(
                         'deployment_${widget.deploymentId}_config',
                       ),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      children: [
-                        deploymentAsync.when(
-                          data: (deployment) {
-                            if (deployment == null) {
-                              return const DeploymentMessageSurface(
-                                message: 'Deployment not found',
-                              );
-                            }
+                      child: deploymentAsync.when(
+                        data: (deployment) {
+                          if (deployment == null) {
+                            return const DeploymentMessageSurface(
+                              message: 'Deployment not found',
+                            );
+                          }
 
-                            return deployment.config != null
-                                ? DeploymentConfigEditorContent(
-                                    key: _configEditorKey,
-                                    initialConfig: deployment.config!,
-                                    imageLabel: deployment.imageLabel,
-                                    servers:
-                                        serversListAsync.asData?.value ??
-                                        const [],
-                                    registryAccounts:
-                                        registryAccountsAsync.asData?.value ??
-                                        const [],
-                                    onDirtyChanged: (dirty) {
-                                      syncDirtySnackBar(
-                                        dirty: dirty,
-                                        onDiscard: () =>
-                                            _discardConfig(deployment),
-                                        onSave: () =>
-                                            _saveConfig(deployment: deployment),
-                                        saveEnabled: !_configSaveInFlight,
-                                      );
-                                    },
-                                  )
-                                : DeploymentConfigContent(
-                                    deployment: deployment,
-                                    serverName: serverNameForId(
-                                      deployment.config?.serverId ??
-                                          deployment.info?.serverId ??
-                                          '',
-                                    ),
-                                  );
-                          },
-                          loading: () => const DeploymentLoadingSurface(),
-                          error: (error, _) => DeploymentMessageSurface(
-                            message: 'Error: $error',
-                          ),
+                          return deployment.config != null
+                              ? DeploymentConfigEditorContent(
+                                  key: _configEditorKey,
+                                  initialConfig: deployment.config!,
+                                  imageLabel: deployment.imageLabel,
+                                  servers:
+                                      serversListAsync.asData?.value ??
+                                      const [],
+                                  registryAccounts:
+                                      registryAccountsAsync.asData?.value ??
+                                      const [],
+                                  onDirtyChanged: (dirty) {
+                                    syncDirtySnackBar(
+                                      dirty: dirty,
+                                      onDiscard: () =>
+                                          _discardConfig(deployment),
+                                      onSave: () =>
+                                          _saveConfig(deployment: deployment),
+                                      saveEnabled: !_configSaveInFlight,
+                                    );
+                                  },
+                                )
+                              : DeploymentConfigContent(
+                                  deployment: deployment,
+                                  serverName: serverNameForId(
+                                    deployment.config?.serverId ??
+                                        deployment.info?.serverId ??
+                                        '',
+                                  ),
+                                );
+                        },
+                        loading: () => const DeploymentLoadingSurface(),
+                        error: (error, _) => DeploymentMessageSurface(
+                          message: 'Error: $error',
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -282,12 +290,10 @@ class _DeploymentDetailViewState
                         ref.invalidate(buildDetailProvider(buildId));
                       }
                     },
-                    child: ListView(
-                      key: PageStorageKey(
+                    child: DetailTabScrollView.list(
+                      scrollKey: PageStorageKey(
                         'deployment_${widget.deploymentId}_logs',
                       ),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                       children: [
                         Text(
                           'Auto refresh logs',
@@ -663,7 +669,7 @@ class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.backgroundColor,
   });
 
-  final TabBar tabBar;
+  final PreferredSizeWidget tabBar;
   final Color backgroundColor;
 
   @override

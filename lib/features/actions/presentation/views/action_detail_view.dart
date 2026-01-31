@@ -33,6 +33,8 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
         SingleTickerProviderStateMixin,
         DetailDirtySnackBarMixin<ActionDetailView> {
   late final TabController _tabController;
+  final _outerScrollController = ScrollController();
+  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
   CodeEditorController? _fileContentsController;
   final _configEditorKey = GlobalKey<ActionConfigEditorContentState>();
   var _configSaveInFlight = false;
@@ -48,6 +50,7 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
     _fileContentsController?.dispose();
     _fileContentsController = null;
     _tabController.dispose();
+    _outerScrollController.dispose();
     super.dispose();
   }
 
@@ -107,6 +110,8 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
       body: Stack(
         children: [
           NestedScrollView(
+            key: _nestedScrollKey,
+            controller: _outerScrollController,
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
                 SliverToBoxAdapter(
@@ -131,23 +136,30 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                     ),
                   ),
                 ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _PinnedTabBarHeaderDelegate(
-                    backgroundColor: scheme.surface,
-                    tabBar: buildDetailTabBar(
-                      context: context,
-                      controller: _tabController,
-                      tabs: const [
-                        Tab(
-                          icon: Icon(AppIcons.bolt),
-                          text: 'Config',
-                        ),
-                        Tab(
-                          icon: Icon(AppIcons.notepadText),
-                          text: 'File content',
-                        ),
-                      ],
+                SliverOverlapAbsorber(
+                  handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                    context,
+                  ),
+                  sliver: SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _PinnedTabBarHeaderDelegate(
+                      backgroundColor: scheme.surface,
+                      tabBar: buildDetailTabBar(
+                        context: context,
+                        controller: _tabController,
+                        outerScrollController: _outerScrollController,
+                        nestedScrollKey: _nestedScrollKey,
+                        tabs: const [
+                          Tab(
+                            icon: Icon(AppIcons.bolt),
+                            text: 'Config',
+                          ),
+                          Tab(
+                            icon: Icon(AppIcons.notepadText),
+                            text: 'File content',
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -161,42 +173,39 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                     onRefresh: () async {
                       ref.invalidate(actionDetailProvider(actionId));
                     },
-                    child: ListView(
-                      key: PageStorageKey('action_${widget.actionId}_config'),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        actionAsync.when(
-                          data: (action) {
-                            if (action == null) {
-                              return const _MessageSurface(
-                                message: 'Action not found',
-                              );
-                            }
-
-                            final fileController =
-                                _ensureFileContentsController(
-                                  action.config.fileContents,
-                                );
-                            return ActionConfigEditorContent(
-                              key: _configEditorKey,
-                              initialConfig: action.config,
-                              fileContentsController: fileController,
-                              onDirtyChanged: (dirty) {
-                                syncDirtySnackBar(
-                                  dirty: dirty,
-                                  onDiscard: () => _discardConfig(action),
-                                  onSave: () => _saveConfig(action: action),
-                                  saveEnabled: !_configSaveInFlight,
-                                );
-                              },
+                    child: DetailTabScrollView.box(
+                      scrollKey:
+                          PageStorageKey('action_${widget.actionId}_config'),
+                      child: actionAsync.when(
+                        data: (action) {
+                          if (action == null) {
+                            return const _MessageSurface(
+                              message: 'Action not found',
                             );
-                          },
-                          loading: () => const _LoadingSurface(),
-                          error: (error, _) =>
-                              _ErrorSurface(error: error.toString()),
-                        ),
-                      ],
+                          }
+
+                          final fileController =
+                              _ensureFileContentsController(
+                                action.config.fileContents,
+                              );
+                          return ActionConfigEditorContent(
+                            key: _configEditorKey,
+                            initialConfig: action.config,
+                            fileContentsController: fileController,
+                            onDirtyChanged: (dirty) {
+                              syncDirtySnackBar(
+                                dirty: dirty,
+                                onDiscard: () => _discardConfig(action),
+                                onSave: () => _saveConfig(action: action),
+                                saveEnabled: !_configSaveInFlight,
+                              );
+                            },
+                          );
+                        },
+                        loading: () => const _LoadingSurface(),
+                        error: (error, _) =>
+                            _ErrorSurface(error: error.toString()),
+                      ),
                     ),
                   ),
                 ),
@@ -205,35 +214,31 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                     onRefresh: () async {
                       ref.invalidate(actionDetailProvider(actionId));
                     },
-                    child: ListView(
-                      key: PageStorageKey(
+                    child: DetailTabScrollView.box(
+                      scrollKey: PageStorageKey(
                         'action_${widget.actionId}_file_content',
                       ),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        actionAsync.when(
-                          data: (action) {
-                            if (action == null) {
-                              return const _MessageSurface(
-                                message: 'Action not found',
-                              );
-                            }
-
-                            final fileController =
-                                _ensureFileContentsController(
-                                  action.config.fileContents,
-                                );
-                            return DetailCodeEditor(
-                              controller: fileController,
-                              maxHeight: 420,
+                      child: actionAsync.when(
+                        data: (action) {
+                          if (action == null) {
+                            return const _MessageSurface(
+                              message: 'Action not found',
                             );
-                          },
-                          loading: () => const _LoadingSurface(),
-                          error: (error, _) =>
-                              _ErrorSurface(error: error.toString()),
-                        ),
-                      ],
+                          }
+
+                          final fileController =
+                              _ensureFileContentsController(
+                                action.config.fileContents,
+                              );
+                          return DetailCodeEditor(
+                            controller: fileController,
+                            maxHeight: 420,
+                          );
+                        },
+                        loading: () => const _LoadingSurface(),
+                        error: (error, _) =>
+                            _ErrorSurface(error: error.toString()),
+                      ),
                     ),
                   ),
                 ),
@@ -773,7 +778,7 @@ class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.backgroundColor,
   });
 
-  final TabBar tabBar;
+  final PreferredSizeWidget tabBar;
   final Color backgroundColor;
 
   @override

@@ -11,4 +11,5 @@ export 'detail_section.dart';
 export 'detail_sub_card.dart';
 export 'detail_surface.dart';
 export 'detail_tab_bar.dart';
+export 'detail_tab_scroll_view.dart';
 export 'sparkline.dart';

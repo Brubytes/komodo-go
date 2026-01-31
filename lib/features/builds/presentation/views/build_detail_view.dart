@@ -35,6 +35,8 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
         SingleTickerProviderStateMixin,
         DetailDirtySnackBarMixin<BuildDetailView> {
   late final TabController _tabController;
+  final _outerScrollController = ScrollController();
+  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
   final _configEditorKey = GlobalKey<BuildConfigEditorContentState>();
   var _configSaveInFlight = false;
 
@@ -47,6 +49,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
   @override
   void dispose() {
     _tabController.dispose();
+    _outerScrollController.dispose();
     super.dispose();
   }
 
@@ -94,6 +97,8 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
       body: Stack(
         children: [
           NestedScrollView(
+            key: _nestedScrollKey,
+            controller: _outerScrollController,
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
                 SliverToBoxAdapter(
@@ -145,23 +150,30 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                     ),
                   ),
                 ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _PinnedTabBarHeaderDelegate(
-                    backgroundColor: scheme.surface,
-                    tabBar: buildDetailTabBar(
-                      context: context,
-                      controller: _tabController,
-                      tabs: const [
-                        Tab(
-                          icon: Icon(AppIcons.bolt),
-                          text: 'Config',
-                        ),
-                        Tab(
-                          icon: Icon(AppIcons.logs),
-                          text: 'Logs',
-                        ),
-                      ],
+                SliverOverlapAbsorber(
+                  handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                    context,
+                  ),
+                  sliver: SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _PinnedTabBarHeaderDelegate(
+                      backgroundColor: scheme.surface,
+                      tabBar: buildDetailTabBar(
+                        context: context,
+                        controller: _tabController,
+                        outerScrollController: _outerScrollController,
+                        nestedScrollKey: _nestedScrollKey,
+                        tabs: const [
+                          Tab(
+                            icon: Icon(AppIcons.bolt),
+                            text: 'Config',
+                          ),
+                          Tab(
+                            icon: Icon(AppIcons.logs),
+                            text: 'Logs',
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -175,58 +187,55 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                     onRefresh: () async {
                       ref.invalidate(buildDetailProvider(buildId));
                     },
-                    child: ListView(
-                      key: PageStorageKey('build_${widget.buildId}_config'),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        buildAsync.when(
-                          data: (build) {
-                            if (build == null) {
-                              return const BuildMessageSurface(
-                                message: 'Build not found',
-                              );
-                            }
-
-                            final builders =
-                                buildersAsync.asData?.value ?? const [];
-                            final repos = reposAsync.asData?.value ?? const [];
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                BuildConfigEditorContent(
-                                  key: _configEditorKey,
-                                  initialConfig: build.config,
-                                  builders: builders,
-                                  repos: repos,
-                                  onDirtyChanged: (dirty) {
-                                    syncDirtySnackBar(
-                                      dirty: dirty,
-                                      onDiscard: () => _discardConfig(build),
-                                      onSave: () => _saveConfig(build: build),
-                                    );
-                                  },
-                                ),
-                                if (build.info.latestHash != null ||
-                                    build.info.builtHash != null) ...[
-                                  const Gap(16),
-                                  DetailSection(
-                                    title: 'Commit Hashes',
-                                    icon: AppIcons.tag,
-                                    child: BuildHashesContent(
-                                      buildResource: build,
-                                    ),
-                                  ),
-                                ],
-                              ],
+                    child: DetailTabScrollView.box(
+                      scrollKey:
+                          PageStorageKey('build_${widget.buildId}_config'),
+                      child: buildAsync.when(
+                        data: (build) {
+                          if (build == null) {
+                            return const BuildMessageSurface(
+                              message: 'Build not found',
                             );
-                          },
-                          loading: () => const BuildLoadingSurface(),
-                          error: (error, _) =>
-                              BuildErrorSurface(error: error.toString()),
-                        ),
-                      ],
+                          }
+
+                          final builders =
+                              buildersAsync.asData?.value ?? const [];
+                          final repos = reposAsync.asData?.value ?? const [];
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              BuildConfigEditorContent(
+                                key: _configEditorKey,
+                                initialConfig: build.config,
+                                builders: builders,
+                                repos: repos,
+                                onDirtyChanged: (dirty) {
+                                  syncDirtySnackBar(
+                                    dirty: dirty,
+                                    onDiscard: () => _discardConfig(build),
+                                    onSave: () => _saveConfig(build: build),
+                                  );
+                                },
+                              ),
+                              if (build.info.latestHash != null ||
+                                  build.info.builtHash != null) ...[
+                                const Gap(16),
+                                DetailSection(
+                                  title: 'Commit Hashes',
+                                  icon: AppIcons.tag,
+                                  child: BuildHashesContent(
+                                    buildResource: build,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                        loading: () => const BuildLoadingSurface(),
+                        error: (error, _) =>
+                            BuildErrorSurface(error: error.toString()),
+                      ),
                     ),
                   ),
                 ),
@@ -235,46 +244,41 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                     onRefresh: () async {
                       ref.invalidate(buildDetailProvider(buildId));
                     },
-                    child: ListView(
-                      key: PageStorageKey('build_${widget.buildId}_logs'),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        buildAsync.when(
-                          data: (build) {
-                            if (build == null) {
-                              return const BuildMessageSurface(
-                                message: 'Build not found',
-                              );
-                            }
+                    child: DetailTabScrollView.box(
+                      scrollKey:
+                          PageStorageKey('build_${widget.buildId}_logs'),
+                      child: buildAsync.when(
+                        data: (build) {
+                          if (build == null) {
+                            return const BuildMessageSurface(
+                              message: 'Build not found',
+                            );
+                          }
 
-                            final hasAnyLogs =
-                                (build.info.remoteError != null &&
-                                    build.info.remoteError!
-                                        .trim()
-                                        .isNotEmpty) ||
-                                (build.info.remoteContents != null &&
-                                    build.info.remoteContents!
-                                        .trim()
-                                        .isNotEmpty) ||
-                                (build.info.builtContents != null &&
-                                    build.info.builtContents!
-                                        .trim()
-                                        .isNotEmpty);
+                          final hasAnyLogs =
+                              (build.info.remoteError != null &&
+                                  build.info.remoteError!.trim().isNotEmpty) ||
+                              (build.info.remoteContents != null &&
+                                  build.info.remoteContents!
+                                      .trim()
+                                      .isNotEmpty) ||
+                              (build.info.builtContents != null &&
+                                  build.info.builtContents!
+                                      .trim()
+                                      .isNotEmpty);
 
-                            if (!hasAnyLogs) {
-                              return const BuildMessageSurface(
-                                message: 'No log output',
-                              );
-                            }
+                          if (!hasAnyLogs) {
+                            return const BuildMessageSurface(
+                              message: 'No log output',
+                            );
+                          }
 
-                            return BuildLogsContent(buildResource: build);
-                          },
-                          loading: () => const BuildLoadingSurface(),
-                          error: (error, _) =>
-                              BuildErrorSurface(error: error.toString()),
-                        ),
-                      ],
+                          return BuildLogsContent(buildResource: build);
+                        },
+                        loading: () => const BuildLoadingSurface(),
+                        error: (error, _) =>
+                            BuildErrorSurface(error: error.toString()),
+                      ),
                     ),
                   ),
                 ),
@@ -390,7 +394,7 @@ class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.backgroundColor,
   });
 
-  final TabBar tabBar;
+  final PreferredSizeWidget tabBar;
   final Color backgroundColor;
 
   @override
