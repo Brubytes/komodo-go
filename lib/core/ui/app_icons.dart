@@ -71,6 +71,12 @@ abstract class AppIcons {
   static const IconData themeDark = LucideIcons.moon;
   static const IconData check = LucideIcons.check;
   static const IconData formError = LucideIcons.triangleAlert;
+  static const IconData heart = LucideIcons.heart;
+  static const IconData externalLink = LucideIcons.externalLink;
+  static const IconData github = LucideIcons.github;
+  static const IconData globe = LucideIcons.globe;
+  static const IconData code = LucideIcons.code;
+  static const IconData sparkles = LucideIcons.sparkles;
 
   // Resources
   static const IconData deployments = LucideIcons.rocket;

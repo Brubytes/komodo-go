@@ -114,6 +114,17 @@ class SettingsView extends ConsumerWidget {
             onTap: () => context.push(AppRoutes.komodoAlerters),
           ),
           const Gap(20),
+          const _SettingsSectionHeader(title: 'About'),
+          const Gap(8),
+          _SettingsCardTile(
+            icon: AppIcons.heart,
+            accentColor: scheme.primary,
+            title: 'Credits',
+            subtitle: 'Acknowledgments and open source licenses',
+            trailing: const _CardTrailing(showChevron: true),
+            onTap: () => context.push(AppRoutes.credits),
+          ),
+          const Gap(20),
           const _SettingsSectionHeader(title: 'Account'),
           const Gap(8),
           _SettingsCardTile(

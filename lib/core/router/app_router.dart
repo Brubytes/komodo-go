@@ -33,6 +33,7 @@ import 'package:komodo_go/features/resources/presentation/views/resources_view.d
 import 'package:komodo_go/features/servers/presentation/views/server_detail_view.dart';
 import 'package:komodo_go/features/servers/presentation/views/servers_list_view.dart';
 import 'package:komodo_go/features/settings/presentation/views/connections_view.dart';
+import 'package:komodo_go/features/settings/presentation/views/credits_view.dart';
 import 'package:komodo_go/features/settings/presentation/views/settings_view.dart';
 import 'package:komodo_go/features/stacks/presentation/views/stack_detail_view.dart';
 import 'package:komodo_go/features/stacks/presentation/views/stacks_list_view.dart';
@@ -78,6 +79,7 @@ abstract class AppRoutes {
   static const komodoBuilders = '$settings/komodo/builders';
   static const komodoAlerters = '$settings/komodo/alerters';
   static const komodoAlerterDetail = '$komodoAlerters/:id';
+  static const credits = '$settings/credits';
 
   /// Legacy paths.
   static const legacyConnections = '/connections';
@@ -287,10 +289,8 @@ GoRouter appRouter(Ref ref) {
                   ),
                   GoRoute(
                     path: 'deployments',
-                    pageBuilder: (context, state) => _appStackPage(
-                      state,
-                      const DeploymentsListView(),
-                    ),
+                    pageBuilder: (context, state) =>
+                        _appStackPage(state, const DeploymentsListView()),
                     routes: [
                       GoRoute(
                         path: ':id',
@@ -515,6 +515,11 @@ GoRouter appRouter(Ref ref) {
                         },
                       ),
                     ],
+                  ),
+                  GoRoute(
+                    path: 'credits',
+                    pageBuilder: (context, state) =>
+                        _appStackPage(state, const CreditsView()),
                   ),
                 ],
               ),
