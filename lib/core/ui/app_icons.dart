@@ -77,6 +77,7 @@ abstract class AppIcons {
   static const IconData globe = LucideIcons.globe;
   static const IconData code = LucideIcons.code;
   static const IconData sparkles = LucideIcons.sparkles;
+  static const IconData mail = LucideIcons.mail;
 
   // Resources
   static const IconData deployments = LucideIcons.rocket;

@@ -11,6 +11,7 @@ import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/settings/presentation/providers/theme_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsView extends ConsumerWidget {
   const SettingsView({super.key});
@@ -123,6 +124,24 @@ class SettingsView extends ConsumerWidget {
             subtitle: 'Acknowledgments and open source licenses',
             trailing: const _CardTrailing(showChevron: true),
             onTap: () => context.push(AppRoutes.credits),
+          ),
+          const Gap(10),
+          _SettingsCardTile(
+            icon: AppIcons.mail,
+            accentColor: scheme.primary,
+            title: 'Contact & Feedback',
+            subtitle: 'Questions, suggestions, or bug reports',
+            trailing: const _CardTrailing(showChevron: false),
+            onTap: () async {
+              final uri = Uri(
+                scheme: 'mailto',
+                path: 'support@example.com',
+                queryParameters: {'subject': 'Komodo Go Feedback'},
+              );
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri);
+              }
+            },
           ),
           const Gap(20),
           const _SettingsSectionHeader(title: 'Account'),

@@ -287,7 +287,7 @@ class _CompactCreditRow extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return InkWell(
-      onTap: () => _launchUrl(url),
+      onTap: () => _launchUrl(context, url),
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -333,10 +333,10 @@ class _CompactCreditRow extends StatelessWidget {
     );
   }
 
-  Future<void> _launchUrl(String url) async {
+  Future<void> _launchUrl(BuildContext context, String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
     }
   }
 }
@@ -370,7 +370,7 @@ class _LinkChip extends StatelessWidget {
       color: scheme.primaryContainer.withValues(alpha: 0.4),
       borderRadius: BorderRadius.circular(AppTokens.radiusMd),
       child: InkWell(
-        onTap: () => _launchUrl(link.url),
+        onTap: () => _launchUrl(context, link.url),
         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -397,10 +397,10 @@ class _LinkChip extends StatelessWidget {
     );
   }
 
-  Future<void> _launchUrl(String url) async {
+  Future<void> _launchUrl(BuildContext context, String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
     }
   }
 }
