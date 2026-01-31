@@ -7,6 +7,7 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
@@ -130,14 +131,8 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                         outerScrollController: _outerScrollController,
                         nestedScrollKey: _nestedScrollKey,
                         tabs: const [
-                          Tab(
-                            icon: Icon(AppIcons.bolt),
-                            text: 'Config',
-                          ),
-                          Tab(
-                            icon: Icon(AppIcons.procedures),
-                            text: 'Stages',
-                          ),
+                          Tab(icon: Icon(AppIcons.bolt), text: 'Config'),
+                          Tab(icon: Icon(AppIcons.procedures), text: 'Stages'),
                         ],
                       ),
                     ),
@@ -172,8 +167,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                               syncDirtySnackBar(
                                 dirty: dirty,
                                 onDiscard: () => _discardConfig(procedure),
-                                onSave: () =>
-                                    _saveConfig(procedure: procedure),
+                                onSave: () => _saveConfig(procedure: procedure),
                                 saveEnabled: !_configSaveInFlight,
                               );
                             },
@@ -731,10 +725,7 @@ class _ProcedureHeroPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (procedure.tags.isNotEmpty)
-            DetailPillList(
-              items: procedure.tags,
-              showEmptyLabel: false,
-            ),
+            DetailPillList(items: procedure.tags, showEmptyLabel: false),
           if (description.isNotEmpty) ...[
             if (procedure.tags.isNotEmpty) const Gap(12),
             Text(
@@ -745,10 +736,7 @@ class _ProcedureHeroPanel extends StatelessWidget {
               ),
             ),
             const Gap(6),
-            Text(
-              description,
-              style: textTheme.bodyMedium,
-            ),
+            Text(description, style: textTheme.bodyMedium),
           ],
         ],
       ),
@@ -764,7 +752,11 @@ class _ProcedureStagesContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (config.stages.isEmpty) {
-      return const Text('No stages configured');
+      return const EmptyStateView.inline(
+        icon: AppIcons.procedures,
+        title: 'No stages configured',
+        message: 'Configure stages in the Komodo web interface.',
+      );
     }
 
     return Column(

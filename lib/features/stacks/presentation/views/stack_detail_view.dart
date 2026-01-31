@@ -3,32 +3,33 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/providers/core_info_provider.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
-import 'package:komodo_go/core/providers/core_info_provider.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/stack_updates_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/views/notifications/notifications_sections.dart'
-  show
-    NotificationsEmptyState,
-    NotificationsErrorState,
-    PaginationFooter,
-    UpdateTile;
-import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+    show
+        NotificationsEmptyState,
+        NotificationsErrorState,
+        PaginationFooter,
+        UpdateTile;
+import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
+import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
 import 'package:komodo_go/features/stacks/presentation/views/stack_detail/stack_detail_sections.dart';
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
-import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 
 /// View displaying detailed stack information.
 class StackDetailView extends ConsumerStatefulWidget {
@@ -46,9 +47,7 @@ class StackDetailView extends ConsumerStatefulWidget {
 }
 
 class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
-    with
-        TickerProviderStateMixin,
-        DetailDirtySnackBarMixin<StackDetailView> {
+    with TickerProviderStateMixin, DetailDirtySnackBarMixin<StackDetailView> {
   late TabController _tabController;
   final _outerScrollController = ScrollController();
   final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
@@ -405,8 +404,9 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                       ref.invalidate(stackDetailProvider(widget.stackId));
                     },
                     child: DetailTabScrollView.box(
-                      scrollKey:
-                          PageStorageKey('stack_${widget.stackId}_config'),
+                      scrollKey: PageStorageKey(
+                        'stack_${widget.stackId}_config',
+                      ),
                       child: stackAsync.when(
                         data: (stack) => stack != null
                             ? StackConfigEditorContent(
@@ -446,8 +446,9 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                         ref.invalidate(stackDetailProvider(widget.stackId));
                       },
                       child: DetailTabScrollView.box(
-                        scrollKey:
-                            PageStorageKey('stack_${widget.stackId}_info'),
+                        scrollKey: PageStorageKey(
+                          'stack_${widget.stackId}_info',
+                        ),
                         child: stackAsync.when(
                           data: (stack) => stack != null
                               ? StackInfoTabContent(
@@ -458,8 +459,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                         path,
                                         contents, {
                                         bool showSnackBar = true,
-                                      }) =>
-                                      _saveStackFile(
+                                      }) => _saveStackFile(
                                         stackId: stack.id,
                                         filePath: path,
                                         contents: contents,
@@ -478,9 +478,8 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                   message: 'Stack not found',
                                 ),
                           loading: () => const StackLoadingSurface(),
-                          error: (error, _) => StackMessageSurface(
-                            message: 'Error: $error',
-                          ),
+                          error: (error, _) =>
+                              StackMessageSurface(message: 'Error: $error'),
                         ),
                       ),
                     ),
@@ -491,11 +490,18 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                       ref.invalidate(stackServicesProvider(widget.stackId));
                     },
                     child: DetailTabScrollView.box(
-                      scrollKey:
-                          PageStorageKey('stack_${widget.stackId}_services'),
+                      scrollKey: PageStorageKey(
+                        'stack_${widget.stackId}_services',
+                      ),
                       child: servicesAsync.when(
                         data: (services) => services.isEmpty
-                            ? const Text('No services found')
+                            ? const EmptyStateView.inline(
+                                icon: AppIcons.containers,
+                                title: 'No services found',
+                                message:
+                                    'Services will appear here once '
+                                    'the stack is deployed.',
+                              )
                             : Column(
                                 children: [
                                   for (final service in services) ...[
@@ -531,10 +537,12 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                           );
                         }
 
-                        final itemCount = state.items.length +
+                        final itemCount =
+                            state.items.length +
                             (state.nextPage == null ? 0 : 1);
-                        final sliverChildCount =
-                            itemCount == 0 ? 0 : itemCount * 2 - 1;
+                        final sliverChildCount = itemCount == 0
+                            ? 0
+                            : itemCount * 2 - 1;
 
                         return NotificationListener<ScrollNotification>(
                           onNotification: (notification) {
@@ -542,8 +550,9 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                 notification.metrics.maxScrollExtent - 200) {
                               ref
                                   .read(
-                                    stackUpdatesProvider(widget.stackId)
-                                        .notifier,
+                                    stackUpdatesProvider(
+                                      widget.stackId,
+                                    ).notifier,
                                   )
                                   .fetchNextPage();
                             }
@@ -554,33 +563,33 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                               'stack_${widget.stackId}_updates',
                             ),
                             sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  if (index.isOdd) {
-                                    return const Gap(12);
-                                  }
+                              delegate: SliverChildBuilderDelegate((
+                                context,
+                                index,
+                              ) {
+                                if (index.isOdd) {
+                                  return const Gap(12);
+                                }
 
-                                  final itemIndex = index ~/ 2;
-                                  final isFooter =
-                                      itemIndex >= state.items.length;
-                                  if (isFooter) {
-                                    return PaginationFooter(
-                                      isLoading: state.isLoadingMore,
-                                      onLoadMore: () => ref
-                                          .read(
-                                            stackUpdatesProvider(
-                                              widget.stackId,
-                                            ).notifier,
-                                          )
-                                          .fetchNextPage(),
-                                    );
-                                  }
+                                final itemIndex = index ~/ 2;
+                                final isFooter =
+                                    itemIndex >= state.items.length;
+                                if (isFooter) {
+                                  return PaginationFooter(
+                                    isLoading: state.isLoadingMore,
+                                    onLoadMore: () => ref
+                                        .read(
+                                          stackUpdatesProvider(
+                                            widget.stackId,
+                                          ).notifier,
+                                        )
+                                        .fetchNextPage(),
+                                  );
+                                }
 
-                                  final update = state.items[itemIndex];
-                                  return UpdateTile(update: update);
-                                },
-                                childCount: sliverChildCount,
-                              ),
+                                final update = state.items[itemIndex];
+                                return UpdateTile(update: update);
+                              }, childCount: sliverChildCount),
                             ),
                           ),
                         );
@@ -610,8 +619,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                       ref.invalidate(stackLogProvider(widget.stackId));
                     },
                     child: DetailTabScrollView.list(
-                      scrollKey:
-                          PageStorageKey('stack_${widget.stackId}_logs'),
+                      scrollKey: PageStorageKey('stack_${widget.stackId}_logs'),
                       children: [
                         Text(
                           'Auto refresh logs',
@@ -754,9 +762,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     Map<String, String> tagNameById,
   ) {
     if (tags.isEmpty) return const [];
-    return [
-      for (final tag in tags) tagNameById[tag] ?? tag,
-    ];
+    return [for (final tag in tags) tagNameById[tag] ?? tag];
   }
 
   Future<void> _handleAction(
@@ -897,11 +903,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
 
     if (success) {
       hideDirtySnackBar();
-      AppSnackBar.show(
-        context,
-        'Files updated',
-        tone: AppSnackBarTone.success,
-      );
+      AppSnackBar.show(context, 'Files updated', tone: AppSnackBarTone.success);
       return;
     }
 
