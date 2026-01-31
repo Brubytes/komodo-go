@@ -57,33 +57,33 @@ class HomeStatCard<T> extends StatelessWidget {
               // In tests and very compact layouts the grid can become quite short.
               // Keep this threshold generous to avoid overflows.
               final isTight = constraints.maxHeight < 110;
-              final padding = isTight ? 6.0 : 11.0;
-              final iconSize = isTight ? 14.0 : 19.0;
-              final iconPadding = isTight ? 3.0 : 6.0;
-              final gap = isTight ? 2.0 : 6.0;
+              final padding = isTight ? 6.0 : 14.0;
+              final iconSize = isTight ? 14.0 : 22.0;
+              final iconPadding = isTight ? 3.0 : 8.0;
               final showSubtitle = !isTight;
 
               final valueStyle =
-                  (isTight ? textTheme.titleMedium : textTheme.headlineSmall)
+                  (isTight ? textTheme.titleMedium : textTheme.headlineMedium)
                       ?.copyWith(
                         fontWeight: FontWeight.w900,
-                        letterSpacing: -0.2,
+                        letterSpacing: -0.3,
                       );
               final titleStyle =
-                  (isTight ? textTheme.titleSmall : textTheme.titleSmall)
+                  (isTight ? textTheme.titleSmall : textTheme.titleMedium)
                       ?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         color: scheme.onSurfaceVariant,
                         letterSpacing: -0.1,
                       );
               final subtitleStyle =
-                  (isTight ? textTheme.labelMedium : textTheme.labelMedium)
+                  (isTight ? textTheme.labelMedium : textTheme.labelLarge)
                       ?.copyWith(color: color, fontWeight: FontWeight.w700);
 
               return Padding(
                 padding: EdgeInsets.all(padding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
@@ -91,7 +91,7 @@ class HomeStatCard<T> extends StatelessWidget {
                           padding: EdgeInsets.all(iconPadding),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(icon, color: color, size: iconSize),
                         ),
@@ -106,7 +106,6 @@ class HomeStatCard<T> extends StatelessWidget {
                           ),
                       ],
                     ),
-                    Gap(gap),
                     asyncValue.when(
                       data: (data) {
                         if (isTight) {
@@ -137,7 +136,7 @@ class HomeStatCard<T> extends StatelessWidget {
                                 const Gap(8),
                                 Expanded(
                                   child: Padding(
-                                    padding: const EdgeInsets.only(bottom: 2),
+                                    padding: const EdgeInsets.only(bottom: 3),
                                     child: Text(
                                       title,
                                       maxLines: 1,
@@ -161,11 +160,11 @@ class HomeStatCard<T> extends StatelessWidget {
                         );
                       },
                       loading: () => SizedBox(
-                        height: isTight ? 32 : 40,
-                        child: const Center(child: AppInlineSkeleton(size: 18)),
+                        height: isTight ? 32 : 48,
+                        child: const Center(child: AppInlineSkeleton(size: 20)),
                       ),
                       error: (_, __) => SizedBox(
-                        height: isTight ? 32 : 40,
+                        height: isTight ? 32 : 48,
                         child: const Center(child: Icon(AppIcons.formError)),
                       ),
                     ),
