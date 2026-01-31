@@ -27,3 +27,25 @@ appId: com.brubytes.komodoGo
 - tapOn: "(?s).*Primary Node.*"
 - waitForAnimationToEnd
 - takeScreenshot: 03_server_detail
+
+# Go back to Resources for Stack screenshots
+- tapOn: "Resources"
+- waitForAnimationToEnd
+
+# Navigate to Stacks
+- tapOn: "(?s).*Stacks.*"
+- waitForAnimationToEnd
+
+# Tap on Demo Stack card
+- tapOn: "(?s).*Demo Stack.*"
+- waitForAnimationToEnd
+
+# Screenshot 4: Stack Config (dark) - Tap Config to scroll to compose view
+- tapOn: "(?s).*Config.*"
+- waitForAnimationToEnd
+- takeScreenshot: 04_stack_config
+
+# Screenshot 5: Stack Logs (dark)
+- tapOn: "(?s).*Logs.*"
+- waitForAnimationToEnd
+- takeScreenshot: 05_stack_logs

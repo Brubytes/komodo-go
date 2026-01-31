@@ -40,7 +40,7 @@ collect_screenshots() {
                 local base="${BASH_REMATCH[1]}_${BASH_REMATCH[2]}"
                 local name_prefix="$PREFIX"
                 if [ "$PREFIX" = "mixed" ]; then
-                    if [ "$index" -le 03 ]; then
+                    if [ "$index" -le 05 ]; then
                         name_prefix="dark"
                     else
                         name_prefix="light"
