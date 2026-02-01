@@ -2323,12 +2323,14 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
   @override
   Widget build(BuildContext context) {
     final deployedConfig = widget.info.deployedConfig?.trim() ?? '';
+    final hasFiles = _files.isNotEmpty;
+    final hasDeployedConfig = deployedConfig.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_files.isEmpty)
-          const EmptyStateView.inline(
+        if (!hasFiles)
+          const EmptyStateView(
             icon: AppIcons.package,
             title: 'No file contents',
             message: 'Stack file contents will appear here once configured.',
@@ -2374,24 +2376,26 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
               ],
             ],
           ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Deployed config',
-          icon: AppIcons.stacks,
-          child: deployedConfig.isNotEmpty
-              ? DetailCodeBlock(
-                  code: deployedConfig,
-                  language: DetailCodeLanguage.yaml,
-                )
-              : Text(
-                  'No deployed config yet',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+        if (hasFiles || hasDeployedConfig) ...[
+          const Gap(12),
+          DetailSubCard(
+            title: 'Deployed config',
+            icon: AppIcons.stacks,
+            child: hasDeployedConfig
+                ? DetailCodeBlock(
+                    code: deployedConfig,
+                    language: DetailCodeLanguage.yaml,
+                  )
+                : Text(
+                    'No deployed config yet',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
                   ),
-                ),
-        ),
+          ),
+        ],
       ],
     );
   }
