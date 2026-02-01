@@ -3,8 +3,11 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/connections/connection_profile.dart';
+import 'package:komodo_go/core/demo/demo_config.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
+import 'package:komodo_go/core/providers/demo_mode_provider.dart';
+import 'package:komodo_go/core/providers/onboarding_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
@@ -37,6 +40,7 @@ class LoginView extends HookConsumerWidget {
       final nextState = next.value;
       if (nextState is AuthStateAuthenticated) {
         ref.read(connectionDraftProvider.notifier).reset();
+        ref.read(onboardingProvider.notifier).markCompleted();
       }
     });
 
@@ -129,11 +133,16 @@ class LoginView extends HookConsumerWidget {
         case _ConnectionAction.edit:
           await EditConnectionSheet.show(context, connection: connection);
         case _ConnectionAction.delete:
+          final isDemo = connection.name == demoConnectionName;
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('Delete connection'),
-              content: Text('Remove "${connection.name}"?'),
+              content: Text(
+                isDemo
+                    ? 'Remove "${connection.name}"? This disables demo mode and the demo instance will disappear. You can re-enable it by long-pressing the Connections header.'
+                    : 'Remove "${connection.name}"?',
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
@@ -148,6 +157,10 @@ class LoginView extends HookConsumerWidget {
           );
 
           if (confirmed ?? false) {
+            if (connection.name == demoConnectionName) {
+              await ref.read(demoModeProvider.notifier).setEnabled(false);
+              return;
+            }
             await ref
                 .read(connectionsProvider.notifier)
                 .deleteConnection(connection.id);

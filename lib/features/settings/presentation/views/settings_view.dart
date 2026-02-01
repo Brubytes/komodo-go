@@ -322,6 +322,7 @@ class _SettingsCardTile extends StatelessWidget {
   }
 }
 
+
 class _CardTrailing extends StatelessWidget {
   const _CardTrailing({required this.showChevron, this.label});
 
