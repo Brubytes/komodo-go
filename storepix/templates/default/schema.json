@@ -1,0 +1,39 @@
+{
+  "$schema": "https://storepix.dev/schema/template-schema.json",
+  "name": "default",
+  "description": "Gradient background with decorative blur effects",
+  "version": "1.0.0",
+
+  "fields": {
+    "headline": {
+      "type": "string",
+      "required": false,
+      "default": "Your headline",
+      "description": "Main marketing text displayed above or below the device"
+    },
+    "subheadline": {
+      "type": "string",
+      "required": false,
+      "default": "here",
+      "description": "Secondary text below the headline"
+    },
+    "theme": {
+      "type": "enum",
+      "values": ["light", "dark"],
+      "default": "light",
+      "description": "Color theme for background and text"
+    },
+    "layout": {
+      "type": "enum",
+      "values": ["top", "bottom"],
+      "default": "top",
+      "description": "Position of headline relative to device (top = headline above device)"
+    }
+  },
+
+  "supports": {
+    "statusBar": true,
+    "customContent": true,
+    "locales": true
+  }
+}

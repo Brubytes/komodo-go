@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'package:komodo_go/core/extensions/icon_data_x.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 abstract class AppIcons {
@@ -19,9 +18,15 @@ abstract class AppIcons {
   static const IconData moreVertical = LucideIcons.ellipsisVertical;
   static const IconData logout = LucideIcons.logOut;
   static const IconData edit = LucideIcons.pencil;
+  static const IconData copy = LucideIcons.copy;
   static const IconData delete = LucideIcons.trash2;
   static const IconData download = LucideIcons.download;
   static const IconData refresh = LucideIcons.refreshCw;
+  static const IconData info = LucideIcons.info;
+  static const IconData bolt = LucideIcons.bolt;
+  static const IconData toolbox = LucideIcons.toolbox;
+  static const IconData history = LucideIcons.history;
+  static const IconData logs = LucideIcons.logs;
   static const IconData network = LucideIcons.network;
   static const IconData wifi = LucideIcons.wifi;
   static const IconData cpu = LucideIcons.cpu;
@@ -38,7 +43,7 @@ abstract class AppIcons {
   static const IconData factory = LucideIcons.factory;
 
   // Directional
-  static IconData chevron = LucideIcons.chevronRight.dir();
+  static const IconData chevron = LucideIcons.chevronRight;
 
   // Status / states
   static const IconData loading = LucideIcons.loader;
@@ -66,11 +71,19 @@ abstract class AppIcons {
   static const IconData themeDark = LucideIcons.moon;
   static const IconData check = LucideIcons.check;
   static const IconData formError = LucideIcons.triangleAlert;
+  static const IconData heart = LucideIcons.heart;
+  static const IconData externalLink = LucideIcons.externalLink;
+  static const IconData github = LucideIcons.github;
+  static const IconData globe = LucideIcons.globe;
+  static const IconData code = LucideIcons.code;
+  static const IconData sparkles = LucideIcons.sparkles;
+  static const IconData mail = LucideIcons.mail;
 
   // Resources
   static const IconData deployments = LucideIcons.rocket;
   static const IconData stacks = LucideIcons.layers;
   static const IconData repos = LucideIcons.gitBranch;
+  static const IconData notepadText = LucideIcons.notepadText;
   static const IconData builds = LucideIcons.hammer;
   static const IconData procedures = LucideIcons.route;
   static const IconData actions = LucideIcons.zap;
@@ -79,4 +92,5 @@ abstract class AppIcons {
   static const IconData updateAvailable = LucideIcons.cloudDownload;
   static const IconData widgets = LucideIcons.blocks;
   static const IconData dot = LucideIcons.dot;
+  static const IconData expand = LucideIcons.maximize2;
 }

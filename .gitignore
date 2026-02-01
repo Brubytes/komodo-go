@@ -53,6 +53,9 @@ app.*.map.json
 # Coverage
 coverage/
 
+# Patrol (generated during `patrol test`)
+patrol_test/
+
 # Environment files
 .env
 .env.*
@@ -68,3 +71,5 @@ coverage/
 *.dSYM
 
 opencode.json
+.grepai/
+.beads/

@@ -76,6 +76,16 @@ class DeploymentActions extends _$DeploymentActions {
   Future<bool> unpause(String deploymentId) =>
       _executeAction((repo) => repo.unpauseDeployment(deploymentId));
 
+  Future<Deployment?> updateDeploymentConfig({
+    required String deploymentId,
+    required Map<String, dynamic> partialConfig,
+  }) => _executeRequest(
+    (repo) => repo.updateDeploymentConfig(
+      deploymentId: deploymentId,
+      partialConfig: partialConfig,
+    ),
+  );
+
   Future<bool> _executeAction(
     Future<Either<Failure, void>> Function(DeploymentRepository repo) action,
   ) async {
@@ -98,6 +108,32 @@ class DeploymentActions extends _$DeploymentActions {
         state = const AsyncValue.data(null);
         ref.invalidate(deploymentsProvider);
         return true;
+      },
+    );
+  }
+
+  Future<T?> _executeRequest<T>(
+    Future<Either<Failure, T>> Function(DeploymentRepository repo) request,
+  ) async {
+    final repository = ref.read(deploymentRepositoryProvider);
+    if (repository == null) {
+      state = AsyncValue.error('Not authenticated', StackTrace.current);
+      return null;
+    }
+
+    state = const AsyncValue.loading();
+
+    final result = await request(repository);
+
+    return result.fold(
+      (failure) {
+        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
+        return null;
+      },
+      (value) {
+        state = const AsyncValue.data(null);
+        ref.invalidate(deploymentsProvider);
+        return value;
       },
     );
   }

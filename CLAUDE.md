@@ -41,6 +41,9 @@ fvm flutter test
 # Run specific test file
 fvm flutter test test/unit/features/auth/data/repositories/auth_repository_test.dart
 
+# Run backend contract tests (loads .env if present)
+./scripts/run_test.sh test/integration/backend/stack_contract_test.dart
+
 # Lint and analyze
 fvm flutter analyze
 

@@ -1,20 +1,28 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/polling_route_aware_state.dart';
+import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
+import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
+import 'package:komodo_go/features/builds/presentation/views/build_detail/build_detail_sections.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
 import 'package:komodo_go/features/deployments/presentation/views/deployment_detail/deployment_detail_sections.dart';
 import 'package:komodo_go/features/deployments/presentation/widgets/deployment_card.dart';
+import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 
 /// View displaying detailed deployment information.
-class DeploymentDetailView extends ConsumerWidget {
+class DeploymentDetailView extends ConsumerStatefulWidget {
   const DeploymentDetailView({
     required this.deploymentId,
     required this.deploymentName,
@@ -25,11 +33,100 @@ class DeploymentDetailView extends ConsumerWidget {
   final String deploymentName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DeploymentDetailView> createState() =>
+      _DeploymentDetailViewState();
+}
+
+class _DeploymentDetailViewState
+    extends PollingRouteAwareState<DeploymentDetailView>
+    with
+        SingleTickerProviderStateMixin,
+        DetailDirtySnackBarMixin<DeploymentDetailView> {
+  static const int _tabLogs = 1;
+
+  late final TabController _tabController;
+  final _outerScrollController = ScrollController();
+  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
+  Timer? _logRefreshTimer;
+  var _autoRefreshLogs = true;
+
+  final _configEditorKey = GlobalKey<DeploymentConfigEditorContentState>();
+  var _configSaveInFlight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onInnerTabChanged);
+  }
+
+  @override
+  void dispose() {
+    _logRefreshTimer?.cancel();
+    _logRefreshTimer = null;
+    _tabController
+      ..removeListener(_onInnerTabChanged)
+      ..dispose();
+    _outerScrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void onVisibilityChanged() {
+    if (!mounted) return;
+    _syncLogPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
+    super.onVisibilityChanged();
+  }
+
+  void _onInnerTabChanged() {
+    if (!mounted) return;
+    _syncLogPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
+  }
+
+  void _startLogPolling() {
+    _logRefreshTimer?.cancel();
+    _logRefreshTimer = null;
+    if (!_autoRefreshLogs) return;
+
+    _logRefreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
+      final current = ref
+          .read(deploymentDetailProvider(widget.deploymentId))
+          .asData
+          ?.value;
+      final buildId = current?.info?.buildId?.trim() ?? '';
+      if (buildId.isEmpty) return;
+      ref.invalidate(buildDetailProvider(buildId));
+    });
+  }
+
+  void _stopLogPolling() {
+    _logRefreshTimer?.cancel();
+    _logRefreshTimer = null;
+  }
+
+  void _syncLogPolling({required bool isShellTabActive}) {
+    final isLogsTabActive = _tabController.index == _tabLogs;
+    final isActiveTab = isShellTabActive && isLogsTabActive;
+    if (shouldPoll(isActiveTab: isActiveTab, enabled: _autoRefreshLogs)) {
+      _startLogPolling();
+    } else {
+      _stopLogPolling();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Use ref.listen to sync polling when shell tab changes, instead of
+    // addPostFrameCallback on every build.
+    ref.listen<int>(mainShellIndexProvider, (previous, next) {
+      _syncLogPolling(isShellTabActive: next == 1);
+    });
+
+    final deploymentId = widget.deploymentId;
     final deploymentAsync = ref.watch(deploymentDetailProvider(deploymentId));
     final actionsState = ref.watch(deploymentActionsProvider);
     final serversListAsync = ref.watch(serversProvider);
-
+    final registryAccountsAsync = ref.watch(dockerRegistryAccountsProvider);
     final scheme = Theme.of(context).colorScheme;
 
     String? serverNameForId(String serverId) {
@@ -43,7 +140,7 @@ class DeploymentDetailView extends ConsumerWidget {
 
     return Scaffold(
       appBar: MainAppBar(
-        title: deploymentName,
+        title: widget.deploymentName,
         icon: AppIcons.deployments,
         markColor: AppTokens.resourceDeployments,
         markUseGradient: true,
@@ -52,7 +149,7 @@ class DeploymentDetailView extends ConsumerWidget {
           PopupMenuButton<DeploymentAction>(
             icon: const Icon(AppIcons.moreVertical),
             onSelected: (action) =>
-                _handleAction(context, ref, deploymentId, action),
+                _handleAction(context, deploymentId, action),
             itemBuilder: (context) {
               final deployment = deploymentAsync.asData?.value;
               final state = deployment?.info?.state ?? DeploymentState.unknown;
@@ -64,16 +161,23 @@ class DeploymentDetailView extends ConsumerWidget {
       ),
       body: Stack(
         children: [
-          RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(deploymentDetailProvider(deploymentId));
-            },
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              children: [
-                deploymentAsync.when(
-                  data: (deployment) => deployment != null
-                      ? Column(
+          NestedScrollView(
+            key: _nestedScrollKey,
+            controller: _outerScrollController,
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: deploymentAsync.when(
+                      data: (deployment) {
+                        if (deployment == null) {
+                          return const DeploymentMessageSurface(
+                            message: 'Deployment not found',
+                          );
+                        }
+
+                        return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             DeploymentHeroPanel(
@@ -84,25 +188,218 @@ class DeploymentDetailView extends ConsumerWidget {
                                     '',
                               ),
                             ),
-                            const Gap(16),
-                            DetailSection(
-                              title: 'Config',
-                              icon: AppIcons.settings,
-                              child: DeploymentConfigContent(
-                                deployment: deployment,
-                                serverName: serverNameForId(
-                                  deployment.config?.serverId ??
-                                      deployment.info?.serverId ??
-                                      '',
-                                ),
+                            const Gap(12),
+                          ],
+                        );
+                      },
+                      loading: () => const DeploymentLoadingSurface(),
+                      error: (error, _) =>
+                          DeploymentMessageSurface(message: 'Error: $error'),
+                    ),
+                  ),
+                ),
+                SliverOverlapAbsorber(
+                  handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                    context,
+                  ),
+                  sliver: SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _PinnedTabBarHeaderDelegate(
+                      backgroundColor: scheme.surface,
+                      tabBar: buildDetailTabBar(
+                        context: context,
+                        controller: _tabController,
+                        outerScrollController: _outerScrollController,
+                        nestedScrollKey: _nestedScrollKey,
+                        tabs: const [
+                          Tab(icon: Icon(AppIcons.bolt), text: 'Config'),
+                          Tab(icon: Icon(AppIcons.logs), text: 'Logs'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(deploymentDetailProvider(deploymentId));
+                    },
+                    child: DetailTabScrollView.box(
+                      scrollKey: PageStorageKey(
+                        'deployment_${widget.deploymentId}_config',
+                      ),
+                      child: deploymentAsync.when(
+                        data: (deployment) {
+                          if (deployment == null) {
+                            return const DeploymentMessageSurface(
+                              message: 'Deployment not found',
+                            );
+                          }
+
+                          return deployment.config != null
+                              ? DeploymentConfigEditorContent(
+                                  key: _configEditorKey,
+                                  initialConfig: deployment.config!,
+                                  imageLabel: deployment.imageLabel,
+                                  servers:
+                                      serversListAsync.asData?.value ??
+                                      const [],
+                                  registryAccounts:
+                                      registryAccountsAsync.asData?.value ??
+                                      const [],
+                                  onDirtyChanged: (dirty) {
+                                    syncDirtySnackBar(
+                                      dirty: dirty,
+                                      onDiscard: () =>
+                                          _discardConfig(deployment),
+                                      onSave: () =>
+                                          _saveConfig(deployment: deployment),
+                                      saveEnabled: !_configSaveInFlight,
+                                    );
+                                  },
+                                )
+                              : DeploymentConfigContent(
+                                  deployment: deployment,
+                                  serverName: serverNameForId(
+                                    deployment.config?.serverId ??
+                                        deployment.info?.serverId ??
+                                        '',
+                                  ),
+                                );
+                        },
+                        loading: () => const DeploymentLoadingSurface(),
+                        error: (error, _) => DeploymentMessageSurface(
+                          message: 'Error: $error',
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                _KeepAlive(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      final deployment = deploymentAsync.asData?.value;
+                      final buildId = deployment?.info?.buildId?.trim() ?? '';
+                      ref.invalidate(deploymentDetailProvider(deploymentId));
+                      if (buildId.isNotEmpty) {
+                        ref.invalidate(buildDetailProvider(buildId));
+                      }
+                    },
+                    child: DetailTabScrollView.list(
+                      scrollKey: PageStorageKey(
+                        'deployment_${widget.deploymentId}_logs',
+                      ),
+                      children: [
+                        Text(
+                          'Auto refresh logs',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const Gap(4),
+                        Text(
+                          'When enabled, logs refresh every 2.5 seconds while this tab is visible. Pull down to refresh once.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                        const Gap(10),
+                        Row(
+                          children: [
+                            Tooltip(
+                              message:
+                                  'When enabled, logs refresh every 2.5 seconds while this tab is visible.',
+                              child: Icon(
+                                AppIcons.refresh,
+                                size: 16,
+                                color: scheme.onSurfaceVariant,
                               ),
                             ),
+                            const Gap(8),
+                            Expanded(
+                              child: Text(
+                                _autoRefreshLogs ? 'Enabled' : 'Disabled',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: scheme.onSurfaceVariant),
+                              ),
+                            ),
+                            Switch.adaptive(
+                              value: _autoRefreshLogs,
+                              onChanged: (value) {
+                                setState(() => _autoRefreshLogs = value);
+                                _syncLogPolling(
+                                  isShellTabActive:
+                                      ref.read(mainShellIndexProvider) == 1,
+                                );
+                              },
+                            ),
                           ],
-                        )
-                      : const DeploymentMessageSurface(message: 'Deployment not found'),
-                  loading: () => const DeploymentLoadingSurface(),
-                  error: (error, _) =>
-                      DeploymentMessageSurface(message: 'Error: $error'),
+                        ),
+                        const Gap(12),
+                        deploymentAsync.when(
+                          data: (deployment) {
+                            final buildId =
+                                deployment?.info?.buildId?.trim() ?? '';
+                            if (buildId.isEmpty) {
+                              return const DeploymentMessageSurface(
+                                message:
+                                    'No build logs available for this deployment',
+                              );
+                            }
+
+                            final buildAsync = ref.watch(
+                              buildDetailProvider(buildId),
+                            );
+                            return buildAsync.when(
+                              data: (build) {
+                                if (build == null) {
+                                  return const DeploymentMessageSurface(
+                                    message: 'Build not found',
+                                  );
+                                }
+
+                                final hasAnyLogs =
+                                    (build.info.remoteError
+                                            ?.trim()
+                                            .isNotEmpty ??
+                                        false) ||
+                                    (build.info.remoteContents
+                                            ?.trim()
+                                            .isNotEmpty ??
+                                        false) ||
+                                    (build.info.builtContents
+                                            ?.trim()
+                                            .isNotEmpty ??
+                                        false);
+
+                                if (!hasAnyLogs) {
+                                  return const DeploymentMessageSurface(
+                                    message: 'No log output',
+                                  );
+                                }
+
+                                return DetailSection(
+                                  title: 'Logs',
+                                  icon: AppIcons.package,
+                                  child: BuildLogsContent(buildResource: build),
+                                );
+                              },
+                              loading: () => const DeploymentLoadingSurface(),
+                              error: (error, _) => DeploymentMessageSurface(
+                                message: 'Logs unavailable: $error',
+                              ),
+                            );
+                          },
+                          loading: () => const DeploymentLoadingSurface(),
+                          error: (error, _) => DeploymentMessageSurface(
+                            message: 'Logs unavailable: $error',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -110,17 +407,86 @@ class DeploymentDetailView extends ConsumerWidget {
           if (actionsState.isLoading)
             ColoredBox(
               color: scheme.scrim.withValues(alpha: 0.25),
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-              ),
+              child: const Center(child: AppSkeletonCard()),
             ),
         ],
       ),
+    );
+  }
+
+  void _discardConfig(Deployment deployment) {
+    final config = deployment.config;
+    if (config == null) return;
+    _configEditorKey.currentState?.resetTo(config);
+    hideDirtySnackBar();
+  }
+
+  Future<void> _saveConfig({required Deployment deployment}) async {
+    if (_configSaveInFlight) return;
+
+    final draft = _configEditorKey.currentState;
+    if (draft == null) {
+      AppSnackBar.show(
+        context,
+        'Editor not ready. Please try again.',
+        tone: AppSnackBarTone.error,
+      );
+      return;
+    }
+
+    final validationError = draft.validateDraft();
+    if (validationError != null) {
+      AppSnackBar.show(context, validationError, tone: AppSnackBarTone.error);
+      return;
+    }
+
+    final partialConfig = draft.buildPartialConfigParams();
+    if (partialConfig.isEmpty) {
+      hideDirtySnackBar();
+      return;
+    }
+
+    final actions = ref.read(deploymentActionsProvider.notifier);
+    setState(() => _configSaveInFlight = true);
+    final updated = await actions.updateDeploymentConfig(
+      deploymentId: deployment.id,
+      partialConfig: partialConfig,
+    );
+    if (!mounted) return;
+    setState(() => _configSaveInFlight = false);
+
+    if (updated != null) {
+      ref.invalidate(deploymentDetailProvider(deployment.id));
+      final updatedConfig = updated.config;
+      if (updatedConfig != null) {
+        _configEditorKey.currentState?.resetTo(updatedConfig);
+      }
+      hideDirtySnackBar();
+      AppSnackBar.show(
+        context,
+        'Deployment updated',
+        tone: AppSnackBarTone.success,
+      );
+      return;
+    }
+
+    final err = ref.read(deploymentActionsProvider).asError?.error;
+    AppSnackBar.show(
+      context,
+      err != null ? 'Failed: $err' : 'Failed to update deployment',
+      tone: AppSnackBarTone.error,
+    );
+
+    reShowDirtySnackBarIfStillDirty(
+      isStillDirty: () {
+        return _configEditorKey.currentState
+                ?.buildPartialConfigParams()
+                .isNotEmpty ??
+            false;
+      },
+      onDiscard: () => _discardConfig(deployment),
+      onSave: () => _saveConfig(deployment: deployment),
+      saveEnabled: !_configSaveInFlight,
     );
   }
 
@@ -239,7 +605,6 @@ class DeploymentDetailView extends ConsumerWidget {
 
   Future<void> _handleAction(
     BuildContext context,
-    WidgetRef ref,
     String deploymentId,
     DeploymentAction action,
   ) async {
@@ -249,16 +614,19 @@ class DeploymentDetailView extends ConsumerWidget {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
+          key: ValueKey('deployment_destroy_dialog_$deploymentId'),
           title: const Text('Destroy deployment?'),
           content: const Text(
             'This will stop and remove the container. Continue?',
           ),
           actions: [
             TextButton(
+              key: ValueKey('deployment_destroy_cancel_$deploymentId'),
               onPressed: () => Navigator.of(context).pop(false),
               child: const Text('Cancel'),
             ),
             FilledButton(
+              key: ValueKey('deployment_destroy_confirm_$deploymentId'),
               onPressed: () => Navigator.of(context).pop(true),
               child: const Text('Destroy'),
             ),
@@ -292,5 +660,61 @@ class DeploymentDetailView extends ConsumerWidget {
         tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
       );
     }
+  }
+}
+
+class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedTabBarHeaderDelegate({
+    required this.tabBar,
+    required this.backgroundColor,
+  });
+
+  final PreferredSizeWidget tabBar;
+  final Color backgroundColor;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Material(
+      color: backgroundColor,
+      elevation: overlapsContent ? 1 : 0,
+      child: tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedTabBarHeaderDelegate oldDelegate) {
+    return oldDelegate.tabBar != tabBar ||
+        oldDelegate.backgroundColor != backgroundColor;
+  }
+}
+
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin<_KeepAlive> {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

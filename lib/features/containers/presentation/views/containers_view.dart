@@ -8,12 +8,17 @@ import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_filters_provider.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 
@@ -152,9 +157,9 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                       .toggleDirection(),
                 ),
                 AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
+                  duration: AppMotion.base,
+                  switchInCurve: AppMotion.enterCurve,
+                  switchOutCurve: AppMotion.exitCurve,
                   child: _isSearchVisible
                       ? Padding(
                           padding: const EdgeInsets.only(top: 12),
@@ -184,6 +189,8 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                 ),
                 const Gap(12),
                 containersAsync.when(
+                  skipLoadingOnRefresh: true,
+                  skipLoadingOnReload: true,
                   data: (result) {
                     final filtered = _applyFilters(
                       result.items,
@@ -202,19 +209,28 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                           _PartialErrorBanner(errors: result.errors),
                           const Gap(12),
                         ],
-                        for (final item in filtered) ...[
-                          ContainerCard(
-                            item: item,
-                            onTap: () {
-                              final containerKey =
-                                  item.container.id ?? item.container.name;
-                              context.push(
-                                '${AppRoutes.containers}/${item.serverId}/${Uri.encodeComponent(containerKey)}',
-                                extra: item,
-                              );
-                            },
-                            onAction: (action) =>
-                                _handleAction(context, ref, item, action),
+                        for (var i = 0; i < filtered.length; i++) ...[
+                          AppFadeSlide(
+                            delay: AppMotion.stagger(i),
+                            play: i < 10,
+                            child: ContainerCard(
+                              item: filtered[i],
+                              onTap: () {
+                                final containerKey =
+                                    filtered[i].container.id ??
+                                    filtered[i].container.name;
+                                context.push(
+                                  '${AppRoutes.containers}/${filtered[i].serverId}/${Uri.encodeComponent(containerKey)}',
+                                  extra: filtered[i],
+                                );
+                              },
+                              onAction: (action) => _handleAction(
+                                context,
+                                ref,
+                                filtered[i],
+                                action,
+                              ),
+                            ),
                           ),
                           const Gap(12),
                         ],
@@ -223,8 +239,8 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                     );
                   },
                   loading: () => const Padding(
-                    padding: EdgeInsets.only(top: 48),
-                    child: Center(child: CircularProgressIndicator()),
+                    padding: EdgeInsets.only(top: 16),
+                    child: _ContainersSkeletonBlock(),
                   ),
                   error: (error, stack) => ErrorStateView(
                     title: 'Failed to load containers',
@@ -237,15 +253,10 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
           ),
           if (actionsState.isLoading)
             ColoredBox(
-              color: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-              ),
+              color: Theme.of(
+                context,
+              ).colorScheme.scrim.withValues(alpha: 0.25),
+              child: const Center(child: AppSkeletonCard()),
             ),
         ],
       ),
@@ -258,10 +269,9 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
     ContainerOverviewItem item,
     ContainerAction action,
   ) async {
-    final containerIdOrName =
-        (item.container.id?.trim().isNotEmpty ?? false)
-            ? item.container.id!.trim()
-            : item.container.name.trim();
+    final containerIdOrName = (item.container.id?.trim().isNotEmpty ?? false)
+        ? item.container.id!.trim()
+        : item.container.name.trim();
 
     if (containerIdOrName.isEmpty) {
       AppSnackBar.show(
@@ -310,25 +320,25 @@ class _FiltersRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final serverField = serversAsync.maybeWhen(
-      data: (servers) => DropdownButtonFormField<String?>(
+      data: (servers) => KomodoSelectMenuFormField<String?>(
         initialValue: selectedServerId,
         decoration: const InputDecoration(
           labelText: 'Server',
           prefixIcon: Icon(AppIcons.server),
         ),
         items: [
-          const DropdownMenuItem(child: Text('All servers')),
+          const KomodoSelectMenuItem(value: null, label: 'All servers'),
           for (final server in servers)
-            DropdownMenuItem(value: server.id, child: Text(server.name)),
+            KomodoSelectMenuItem(value: server.id, label: server.name),
         ],
         onChanged: onServerChanged,
       ),
-      orElse: () => DropdownButtonFormField<String?>(
+      orElse: () => KomodoSelectMenuFormField<String?>(
         decoration: const InputDecoration(
           labelText: 'Server',
           prefixIcon: Icon(AppIcons.server),
         ),
-        items: const [DropdownMenuItem(child: Text('All servers'))],
+        items: const [KomodoSelectMenuItem(value: null, label: 'All servers')],
         onChanged: null,
       ),
     );
@@ -386,7 +396,8 @@ class _SortRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final directionIcon = sortState.descending
         ? Icons.arrow_downward_rounded
         : Icons.arrow_upward_rounded;
@@ -395,36 +406,36 @@ class _SortRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: DropdownButtonFormField<ContainersSortField>(
+          child: KomodoSelectMenuFormField<ContainersSortField>(
             initialValue: sortState.field,
             decoration: const InputDecoration(
               labelText: 'Sort by',
               prefixIcon: Icon(Icons.sort),
             ),
             items: const [
-              DropdownMenuItem(
+              KomodoSelectMenuItem(
                 value: ContainersSortField.name,
-                child: Text('Name'),
+                label: 'Name',
               ),
-              DropdownMenuItem(
+              KomodoSelectMenuItem(
                 value: ContainersSortField.cpu,
-                child: Text('CPU'),
+                label: 'CPU',
               ),
-              DropdownMenuItem(
+              KomodoSelectMenuItem(
                 value: ContainersSortField.memory,
-                child: Text('Memory'),
+                label: 'Memory',
               ),
-              DropdownMenuItem(
+              KomodoSelectMenuItem(
                 value: ContainersSortField.network,
-                child: Text('Network I/O'),
+                label: 'Network I/O',
               ),
-              DropdownMenuItem(
+              KomodoSelectMenuItem(
                 value: ContainersSortField.blockIo,
-                child: Text('Drive I/O'),
+                label: 'Drive I/O',
               ),
-              DropdownMenuItem(
+              KomodoSelectMenuItem(
                 value: ContainersSortField.pids,
-                child: Text('PIDs'),
+                label: 'PIDs',
               ),
             ],
             onChanged: (value) {
@@ -435,7 +446,7 @@ class _SortRow extends StatelessWidget {
         ),
         const Gap(8),
         Material(
-          color: scheme.surfaceContainerHigh,
+          color: theme.cardTheme.color ?? scheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(12),
           child: IconButton(
             tooltip: directionLabel,
@@ -588,6 +599,62 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContainersSkeletonBlock extends StatelessWidget {
+  const _ContainersSkeletonBlock();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: Column(
+        children: List.generate(
+          3,
+          (index) => Padding(
+            padding: EdgeInsets.only(bottom: index == 2 ? 0 : 12),
+            child: AppCardSurface(
+              padding: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const CircleAvatar(radius: 16),
+                        const Gap(10),
+                        Expanded(
+                          child: Text(
+                            'Container name',
+                            style: textTheme.titleSmall,
+                          ),
+                        ),
+                        const Gap(8),
+                        const CircleAvatar(radius: 6),
+                      ],
+                    ),
+                    const Gap(10),
+                    Text('Image • Status • Server', style: textTheme.bodySmall),
+                    const Gap(10),
+                    Row(
+                      children: const [
+                        Chip(label: Text('Running')),
+                        Gap(8),
+                        Chip(label: Text('CPU 12%')),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

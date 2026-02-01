@@ -3,8 +3,11 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
@@ -67,6 +70,12 @@ class HomeView extends ConsumerWidget {
     final actionsAsync = ref.watch(actionsProvider);
     final alertsAsync = ref.watch(alertsProvider);
     final updatesAsync = ref.watch(updatesProvider);
+    var sectionIndex = 0;
+
+    Widget staggeredSection(Widget child) {
+      final delay = AppMotion.stagger(sectionIndex++);
+      return AppFadeSlide(delay: delay, child: child);
+    }
 
     return Scaffold(
       appBar: const MainAppBar(title: 'Dashboard', icon: AppIcons.home),
@@ -88,261 +97,322 @@ class HomeView extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
           children: [
-            const HomeSectionHeader(title: 'Server overview'),
-            const Gap(8),
-            serversAsync.when(
-              data: (servers) {
-                if (servers.isEmpty) {
-                  return const HomeEmptyListTile(
-                    icon: AppIcons.server,
-                    message: 'No servers yet',
-                  );
-                }
-
-                final statsValues = [
-                  for (final server in servers)
-                    ref.watch(serverStatsProvider(server.id)),
-                ];
-                final statsEntries = <_ServerStatsEntry>[
-                  for (var i = 0; i < servers.length; i++)
-                    if (statsValues[i].asData?.value != null)
-                      _ServerStatsEntry(
-                        server: servers[i],
-                        stats: statsValues[i].asData!.value!,
-                      ),
-                ];
-                final summary = _ServerStatsSummary.from(servers, statsEntries);
-                final hasStats = summary.statsCount > 0;
-                final isStatsLoading = statsValues.any(
-                  (value) => value.isLoading,
-                );
-
-                String avgWithTotals(double average, String totals) {
-                  final avgLabel = '${average.toStringAsFixed(0)}%';
-                  if (totals.isEmpty) return avgLabel;
-                  return '$avgLabel\n$totals';
-                }
-
-                final cpuValue = hasStats
-                    ? '${summary.avgCpu.toStringAsFixed(0)}%'
-                    : '—';
-                final memValue = hasStats
-                    ? avgWithTotals(summary.avgMem, summary.memTotalsLabel)
-                    : '—';
-                final diskValue = hasStats
-                    ? avgWithTotals(summary.avgDisk, summary.diskTotalsLabel)
-                    : '—';
-
-                String statsSubtitle({
-                  required double maxValue,
-                  required String? serverName,
-                }) {
-                  if (!hasStats) {
-                    return isStatsLoading ? 'Loading stats' : 'No stats yet';
-                  }
-                  final label = 'max ${maxValue.toStringAsFixed(0)}%';
-                  final name = (serverName?.trim().isNotEmpty ?? false)
-                      ? serverName!.trim()
-                      : null;
-                  final parts = <String>[label, if (name != null) name];
-                  return parts.join(' · ');
-                }
-
-                final serverSubtitleParts = <String>[];
-                if (summary.online > 0) {
-                  serverSubtitleParts.add('${summary.online} online');
-                }
-                if (summary.offline > 0) {
-                  serverSubtitleParts.add('${summary.offline} down');
-                }
-                if (summary.disabled > 0) {
-                  serverSubtitleParts.add('${summary.disabled} disabled');
-                }
-                if (summary.unknown > 0) {
-                  serverSubtitleParts.add('${summary.unknown} unknown');
-                }
-                final serverSubtitle = serverSubtitleParts.isEmpty
-                    ? 'No status data'
-                    : serverSubtitleParts.join(' · ');
-
-                return Column(
-                  children: [
-                    GridView.count(
-                      crossAxisCount: overviewColumns,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                      childAspectRatio: overviewAspectRatio,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        HomeMetricCard(
-                          title: 'CPU Avg',
-                          value: cpuValue,
-                          subtitle: statsSubtitle(
-                            maxValue: summary.maxCpu,
-                            serverName: summary.maxCpuServerName,
-                          ),
-                          icon: AppIcons.cpu,
-                        ),
-                        HomeMetricCard(
-                          title: 'Memory Avg',
-                          value: memValue,
-                          subtitle: statsSubtitle(
-                            maxValue: summary.maxMem,
-                            serverName: summary.maxMemServerName,
-                          ),
-                          icon: AppIcons.memory,
-                        ),
-                        HomeMetricCard(
-                          title: 'Disk Avg',
-                          value: diskValue,
-                          subtitle: statsSubtitle(
-                            maxValue: summary.maxDisk,
-                            serverName: summary.maxDiskServerName,
-                          ),
-                          icon: AppIcons.hardDrive,
-                        ),
-                        HomeMetricCard(
-                          title: 'Servers',
-                          value: summary.total.toString(),
-                          subtitle: serverSubtitle,
+            staggeredSection(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const HomeSectionHeader(title: 'Server overview'),
+                  const Gap(8),
+                  serversAsync.when(
+                    data: (servers) {
+                      if (servers.isEmpty) {
+                        return const HomeEmptyListTile(
                           icon: AppIcons.server,
-                          onTap: () =>
-                              _goToResources(context, ResourceType.servers),
-                        ),
-                      ],
-                    ),
-                    const Gap(16),
-                    HomeSectionHeader(
-                      title: 'Server stats',
-                      onSeeAll: () =>
-                          _goToResources(context, ResourceType.servers),
-                    ),
-                    const Gap(8),
-                    SizedBox(
-                      height: 130,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: servers.length,
-                        separatorBuilder: (_, __) => const Gap(8),
-                        itemBuilder: (context, index) {
-                          return HomeServerStatTile(
-                            server: servers[index],
-                            stats: statsValues[index],
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                );
-              },
-              loading: () => const HomeLoadingTile(),
-              error: (e, _) => HomeErrorTile(message: e.toString()),
-            ),
-            const Gap(20),
+                          message: 'No servers yet',
+                        );
+                      }
 
-            HomeSectionHeader(
-              title: 'Alerts',
-              onSeeAll: () => context.go(AppRoutes.notifications),
-            ),
-            const Gap(8),
-            alertsAsync.when(
-              data: (state) {
-                final unresolved = state.items
-                    .where((alert) => !alert.resolved)
-                    .toList();
-                if (unresolved.isEmpty) {
-                  return const HomeEmptyListTile(
-                    icon: AppIcons.warning,
-                    message: 'No unresolved alerts',
-                  );
-                }
+                      final statsValues = [
+                        for (final server in servers)
+                          ref.watch(serverStatsProvider(server.id)),
+                      ];
+                      final statsEntries = <_ServerStatsEntry>[
+                        for (var i = 0; i < servers.length; i++)
+                          if (statsValues[i].asData?.value != null)
+                            _ServerStatsEntry(
+                              server: servers[i],
+                              stats: statsValues[i].asData!.value!,
+                            ),
+                      ];
+                      final summary = _ServerStatsSummary.from(
+                        servers,
+                        statsEntries,
+                      );
+                      final hasStats = summary.statsCount > 0;
+                      final isStatsLoading = statsValues.any(
+                        (value) => value.isLoading,
+                      );
 
-                final criticalCount = unresolved
-                    .where((alert) => alert.level == SeverityLevel.critical)
-                    .length;
-                final warningCount = unresolved
-                    .where((alert) => alert.level == SeverityLevel.warning)
-                    .length;
-                final unknownCount = unresolved
-                    .where((alert) => alert.level == SeverityLevel.unknown)
-                    .length;
-                final summaryParts = <String>[];
-                if (criticalCount > 0) {
-                  summaryParts.add('$criticalCount critical');
-                }
-                if (warningCount > 0) {
-                  summaryParts.add('$warningCount warning');
-                }
-                if (unknownCount > 0) {
-                  summaryParts.add('$unknownCount unknown');
-                }
-                final summaryText = summaryParts.isEmpty
-                    ? 'No severity data'
-                    : summaryParts.join(' · ');
+                      String avgWithTotals(double average, String totals) {
+                        final avgLabel = '${average.toStringAsFixed(0)}%';
+                        if (totals.isEmpty) return avgLabel;
+                        return '$avgLabel\n$totals';
+                      }
 
-                return Column(
-                  children: [
-                    HomeMetricCard(
-                      title: 'Unresolved alerts',
-                      value: unresolved.length.toString(),
-                      subtitle: summaryText,
-                      icon: AppIcons.warning,
-                      onTap: () => context.go(AppRoutes.notifications),
-                    ),
-                    const Gap(8),
-                    ...unresolved
-                        .take(3)
-                        .map((alert) => HomeAlertPreviewTile(alert: alert)),
-                  ],
-                );
-              },
-              loading: () => const HomeLoadingTile(),
-              error: (e, _) => HomeErrorTile(message: e.toString()),
-            ),
-            const Gap(20),
+                      final cpuValue = hasStats
+                          ? '${summary.avgCpu.toStringAsFixed(0)}%'
+                          : '—';
+                      final memValue = hasStats
+                          ? avgWithTotals(
+                              summary.avgMem,
+                              summary.memTotalsLabel,
+                            )
+                          : '—';
+                      final diskValue = hasStats
+                          ? avgWithTotals(
+                              summary.avgDisk,
+                              summary.diskTotalsLabel,
+                            )
+                          : '—';
 
-            HomeSectionHeader(
-              title: 'Ops pulse',
-              onSeeAll: () => _goToResources(context, ResourceType.deployments),
-            ),
-            const Gap(8),
-            _buildOpsPulseCard(
-              context: context,
-              deploymentsAsync: deploymentsAsync,
-              stacksAsync: stacksAsync,
-              reposAsync: reposAsync,
-              syncsAsync: syncsAsync,
-              buildsAsync: buildsAsync,
-              proceduresAsync: proceduresAsync,
-              actionsAsync: actionsAsync,
-              onNavigate: (type) => _goToResources(context, type),
-            ),
-            const Gap(20),
+                      String statsSubtitle({
+                        required double maxValue,
+                        required String? serverName,
+                      }) {
+                        if (!hasStats) {
+                          return isStatsLoading
+                              ? 'Loading stats'
+                              : 'No stats yet';
+                        }
+                        final label = 'max ${maxValue.toStringAsFixed(0)}%';
+                        final name = (serverName?.trim().isNotEmpty ?? false)
+                            ? serverName!.trim()
+                            : null;
+                        final parts = <String>[label, if (name != null) name];
+                        return parts.join(' · ');
+                      }
 
-            HomeSectionHeader(
-              title: 'Recent updates',
-              onSeeAll: () => context.go(AppRoutes.notifications),
-            ),
-            const Gap(8),
-            updatesAsync.when(
-              data: (state) {
-                if (state.items.isEmpty) {
-                  return const HomeEmptyListTile(
-                    icon: AppIcons.updateAvailable,
-                    message: 'No recent updates',
-                  );
-                }
+                      final serverSubtitleParts = <String>[];
+                      if (summary.online > 0) {
+                        serverSubtitleParts.add('${summary.online} online');
+                      }
+                      if (summary.offline > 0) {
+                        serverSubtitleParts.add('${summary.offline} down');
+                      }
+                      if (summary.disabled > 0) {
+                        serverSubtitleParts.add('${summary.disabled} disabled');
+                      }
+                      if (summary.unknown > 0) {
+                        serverSubtitleParts.add('${summary.unknown} unknown');
+                      }
+                      final serverSubtitle = serverSubtitleParts.isEmpty
+                          ? 'No status data'
+                          : serverSubtitleParts.join(' · ');
 
-                return Column(
-                  children: state.items
-                      .take(3)
-                      .map((update) => HomeUpdatePreviewTile(update: update))
-                      .toList(),
-                );
-              },
-              loading: () => const HomeLoadingTile(),
-              error: (e, _) => HomeErrorTile(message: e.toString()),
+                      return Column(
+                        children: [
+                          GridView.count(
+                            crossAxisCount: overviewColumns,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                            childAspectRatio: overviewAspectRatio,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              HomeMetricCard(
+                                title: 'CPU Avg',
+                                value: cpuValue,
+                                subtitle: statsSubtitle(
+                                  maxValue: summary.maxCpu,
+                                  serverName: summary.maxCpuServerName,
+                                ),
+                                icon: AppIcons.cpu,
+                              ),
+                              HomeMetricCard(
+                                title: 'Memory Avg',
+                                value: memValue,
+                                subtitle: statsSubtitle(
+                                  maxValue: summary.maxMem,
+                                  serverName: summary.maxMemServerName,
+                                ),
+                                icon: AppIcons.memory,
+                              ),
+                              HomeMetricCard(
+                                title: 'Disk Avg',
+                                value: diskValue,
+                                subtitle: statsSubtitle(
+                                  maxValue: summary.maxDisk,
+                                  serverName: summary.maxDiskServerName,
+                                ),
+                                icon: AppIcons.hardDrive,
+                              ),
+                              HomeMetricCard(
+                                title: 'Servers',
+                                value: summary.total.toString(),
+                                subtitle: serverSubtitle,
+                                icon: AppIcons.server,
+                                onTap: () => _goToResources(
+                                  context,
+                                  ResourceType.servers,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Gap(16),
+                          HomeSectionHeader(
+                            title: 'Server stats',
+                            onSeeAll: () =>
+                                _goToResources(context, ResourceType.servers),
+                          ),
+                          const Gap(8),
+                          SizedBox(
+                            height: 130,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: servers.length,
+                              separatorBuilder: (_, __) => const Gap(8),
+                              itemBuilder: (context, index) {
+                                return HomeServerStatTile(
+                                  server: servers[index],
+                                  stats: statsValues[index],
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () => const HomeLoadingTile(),
+                    error: (e, _) => HomeErrorTile(message: e.toString()),
+                  ),
+                  const Gap(20),
+                ],
+              ),
+            ),
+            staggeredSection(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  HomeSectionHeader(
+                    title: 'Alerts',
+                    onSeeAll: () => context.go(AppRoutes.notifications),
+                  ),
+                  const Gap(8),
+                  alertsAsync.when(
+                    data: (state) {
+                      final unresolved = state.items
+                          .where((alert) => !alert.resolved)
+                          .toList();
+                      if (unresolved.isEmpty) {
+                        return const HomeEmptyListTile(
+                          icon: AppIcons.warning,
+                          message: 'No unresolved alerts',
+                        );
+                      }
+
+                      final criticalCount = unresolved
+                          .where(
+                            (alert) => alert.level == SeverityLevel.critical,
+                          )
+                          .length;
+                      final warningCount = unresolved
+                          .where(
+                            (alert) => alert.level == SeverityLevel.warning,
+                          )
+                          .length;
+                      final unknownCount = unresolved
+                          .where(
+                            (alert) => alert.level == SeverityLevel.unknown,
+                          )
+                          .length;
+                      final summaryParts = <String>[];
+                      if (criticalCount > 0) {
+                        summaryParts.add('$criticalCount critical');
+                      }
+                      if (warningCount > 0) {
+                        summaryParts.add('$warningCount warning');
+                      }
+                      if (unknownCount > 0) {
+                        summaryParts.add('$unknownCount unknown');
+                      }
+                      final summaryText = summaryParts.isEmpty
+                          ? 'No severity data'
+                          : summaryParts.join(' · ');
+                      final scheme = Theme.of(context).colorScheme;
+                      final summaryColor = criticalCount > 0
+                          ? scheme.error
+                          : warningCount > 0
+                              ? AppTokens.statusOrange
+                              : scheme.onSurfaceVariant;
+
+                      return Column(
+                        children: [
+                          HomeAlertSummaryCard(
+                            count: unresolved.length,
+                            summary: summaryText,
+                            color: summaryColor,
+                            onTap: () => context.go(AppRoutes.notifications),
+                          ),
+                          const Gap(8),
+                          ...unresolved
+                              .take(3)
+                              .map(
+                                (alert) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: HomeAlertPreviewTile(alert: alert),
+                                ),
+                              ),
+                        ],
+                      );
+                    },
+                    loading: () => const HomeLoadingTile(),
+                    error: (e, _) => HomeErrorTile(message: e.toString()),
+                  ),
+                  const Gap(20),
+                ],
+              ),
+            ),
+            staggeredSection(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  HomeSectionHeader(
+                    title: 'Ops pulse',
+                    onSeeAll: () =>
+                        _goToResources(context, ResourceType.deployments),
+                  ),
+                  const Gap(8),
+                  _buildOpsPulseCard(
+                    context: context,
+                    deploymentsAsync: deploymentsAsync,
+                    stacksAsync: stacksAsync,
+                    reposAsync: reposAsync,
+                    syncsAsync: syncsAsync,
+                    buildsAsync: buildsAsync,
+                    proceduresAsync: proceduresAsync,
+                    actionsAsync: actionsAsync,
+                    onNavigate: (type) => _goToResources(context, type),
+                  ),
+                  const Gap(20),
+                ],
+              ),
+            ),
+            staggeredSection(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  HomeSectionHeader(
+                    title: 'Recent updates',
+                    onSeeAll: () => context.go(AppRoutes.notifications),
+                  ),
+                  const Gap(8),
+                  updatesAsync.when(
+                    data: (state) {
+                      if (state.items.isEmpty) {
+                        return const HomeEmptyListTile(
+                          icon: AppIcons.updateAvailable,
+                          message: 'No recent updates',
+                        );
+                      }
+
+                      return Column(
+                        children: state.items
+                            .take(3)
+                            .map(
+                              (update) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child:
+                                    HomeUpdatePreviewTile(update: update),
+                              ),
+                            )
+                            .toList(),
+                      );
+                    },
+                    loading: () => const HomeLoadingTile(),
+                    error: (e, _) => HomeErrorTile(message: e.toString()),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -482,7 +552,8 @@ Widget _buildOpsPulseCard({
   final totalActive = rows.fold<int>(0, (sum, row) => sum + row.active);
   final totalFailed = rows.fold<int>(0, (sum, row) => sum + row.failed);
 
-  return Card(
+  return AppCardSurface(
+    padding: EdgeInsets.zero,
     child: Padding(
       padding: const EdgeInsets.all(12),
       child: Column(

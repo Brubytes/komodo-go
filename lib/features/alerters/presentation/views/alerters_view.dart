@@ -4,15 +4,20 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pill_list.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
-import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class AlertersView extends ConsumerWidget {
   const AlertersView({super.key});
@@ -40,11 +45,14 @@ class AlertersView extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
                   separatorBuilder: (_, __) => const Gap(12),
-                  itemBuilder: (context, index) =>
-                      _AlerterTile(item: items[index]),
+                  itemBuilder: (context, index) => AppFadeSlide(
+                    delay: AppMotion.stagger(index),
+                    play: index < 10,
+                    child: _AlerterTile(item: items[index]),
+                  ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const _AlertersSkeletonList(),
               error: (error, _) => ErrorStateView(
                 title: 'Failed to load alerters',
                 message: error.toString(),
@@ -57,7 +65,7 @@ class AlertersView extends ConsumerWidget {
               color: Theme.of(
                 context,
               ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: CircularProgressIndicator()),
+              child: const Center(child: AppSkeletonCard()),
             ),
         ],
       ),
@@ -74,167 +82,183 @@ class _AlerterTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final info = item.info;
+    final endpointType = info.endpointType.trim();
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => context.push('${AppRoutes.komodoAlerters}/${item.id}'),
-          child: DetailSurface(
-            padding: const EdgeInsets.all(14),
-            radius: 20,
-            enableGradientInDark: false,
-            enableShadow: false,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: scheme.secondary.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        AppIcons.notifications,
-                        color: scheme.secondary,
-                        size: 18,
-                      ),
-                    ),
-                    const Gap(12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.name,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                          const Gap(2),
-                          Text(
-                            info.endpointType,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: scheme.onSurfaceVariant),
+          borderRadius: cardRadius,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 88),
+            child: SizedBox(
+              width: double.infinity,
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: scheme.secondary.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                AppIcons.notifications,
+                                color: scheme.secondary,
+                                size: 16,
+                              ),
+                            ),
+                            const Gap(12),
+                            Expanded(
+                              child: Text(
+                                item.name,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (endpointType.isNotEmpty) ...[
+                          const Gap(8),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            children: [
+                              _IconLabel(
+                                icon: AppIcons.plug,
+                                label: endpointType,
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ),
-                    Switch(
-                      value: info.enabled,
-                      onChanged: (value) async {
-                        final ok = await ref
-                            .read(alerterActionsProvider.notifier)
-                            .setEnabled(id: item.id, enabled: value);
-
-                        if (!context.mounted) return;
-                        AppSnackBar.show(
-                          context,
-                          ok ? 'Alerter updated' : 'Failed to update alerter',
-                          tone: ok
-                              ? AppSnackBarTone.success
-                              : AppSnackBarTone.error,
-                        );
-                      },
-                    ),
-                    PopupMenuButton<_AlerterAction>(
-                      onSelected: (action) async {
-                        switch (action) {
-                          case _AlerterAction.edit:
-                            await context.push(
-                              '${AppRoutes.komodoAlerters}/${item.id}',
-                            );
-                            return;
-                          case _AlerterAction.test:
-                            await _test(context, ref);
-                            return;
-                          case _AlerterAction.rename:
-                            await _rename(context, ref);
-                            return;
-                          case _AlerterAction.delete:
-                            await _delete(context, ref);
-                            return;
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          value: _AlerterAction.edit,
-                          child: Row(
-                            children: [
-                              Icon(
-                                AppIcons.edit,
-                                color: scheme.primary,
-                                size: 18,
-                              ),
-                              const Gap(10),
-                              const Text('Edit'),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: _AlerterAction.test,
-                          child: Row(
-                            children: [
-                              Icon(
-                                AppIcons.activity,
-                                color: scheme.primary,
-                                size: 18,
-                              ),
-                              const Gap(10),
-                              const Text('Test'),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: _AlerterAction.rename,
-                          child: Row(
-                            children: [
-                              Icon(
-                                AppIcons.edit,
-                                color: scheme.primary,
-                                size: 18,
-                              ),
-                              const Gap(10),
-                              const Text('Rename'),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: _AlerterAction.delete,
-                          child: Row(
-                            children: [
-                              Icon(
-                                AppIcons.delete,
-                                color: scheme.error,
-                                size: 18,
-                              ),
-                              const Gap(10),
-                              const Text('Delete'),
-                            ],
-                          ),
+                        const Gap(10),
+                        DetailPillList(
+                          items: item.tags,
+                          maxItems: 4,
+                          showEmptyLabel: false,
+                          leading: [
+                            TextPill(
+                              label: info.enabled ? 'Enabled' : 'Disabled',
+                              tone:
+                                  info.enabled
+                                      ? PillTone.success
+                                      : PillTone.neutral,
+                            ),
+                            if (item.template)
+                              const TextPill(label: 'Template'),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-                const Gap(10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    if (item.template) const TextPill(label: 'Template'),
-                    if (info.endpointType.trim().isNotEmpty)
-                      TextPill(label: info.endpointType),
-                  ],
-                ),
-                if (item.tags.isNotEmpty) ...[
-                  const Gap(10),
-                  DetailPillList(items: item.tags, maxItems: 6),
+                  ),
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    bottom: 6,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Switch.adaptive(
+                          value: info.enabled,
+                          onChanged: (value) async {
+                            final ok = await ref
+                                .read(alerterActionsProvider.notifier)
+                                .setEnabled(id: item.id, enabled: value);
+
+                            if (!context.mounted) return;
+                            AppSnackBar.show(
+                              context,
+                              ok
+                                  ? 'Alerter updated'
+                                  : 'Failed to update alerter',
+                              tone: ok
+                                  ? AppSnackBarTone.success
+                                  : AppSnackBarTone.error,
+                            );
+                          },
+                        ),
+                        PopupMenuButton<_AlerterAction>(
+                          onSelected: (action) async {
+                            switch (action) {
+                              case _AlerterAction.edit:
+                                await context.push(
+                                  '${AppRoutes.komodoAlerters}/${item.id}',
+                                );
+                                return;
+                              case _AlerterAction.test:
+                                await _test(context, ref);
+                                return;
+                              case _AlerterAction.delete:
+                                await _delete(context, ref);
+                                return;
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: _AlerterAction.edit,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    AppIcons.edit,
+                                    color: scheme.primary,
+                                    size: 18,
+                                  ),
+                                  const Gap(10),
+                                  const Text('Edit'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: _AlerterAction.test,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    AppIcons.activity,
+                                    color: scheme.primary,
+                                    size: 18,
+                                  ),
+                                  const Gap(10),
+                                  const Text('Test'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: _AlerterAction.delete,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    AppIcons.delete,
+                                    color: scheme.error,
+                                    size: 18,
+                                  ),
+                                  const Gap(10),
+                                  const Text('Delete'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -251,43 +275,6 @@ class _AlerterTile extends ConsumerWidget {
     AppSnackBar.show(
       context,
       ok ? 'Test triggered' : 'Failed to trigger test',
-      tone: ok ? AppSnackBarTone.success : AppSnackBarTone.error,
-    );
-  }
-
-  Future<void> _rename(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController(text: item.name);
-    final nextName = await showDialog<String?>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename alerter'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-
-    if (nextName == null || nextName.isEmpty) return;
-    final ok = await ref
-        .read(alerterActionsProvider.notifier)
-        .rename(id: item.id, name: nextName);
-
-    if (!context.mounted) return;
-    AppSnackBar.show(
-      context,
-      ok ? 'Alerter renamed' : 'Failed to rename alerter',
       tone: ok ? AppSnackBarTone.success : AppSnackBarTone.error,
     );
   }
@@ -325,7 +312,85 @@ class _AlerterTile extends ConsumerWidget {
   }
 }
 
-enum _AlerterAction { edit, test, rename, delete }
+class _AlertersSkeletonList extends StatelessWidget {
+  const _AlertersSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        separatorBuilder: (_, __) => const Gap(12),
+        itemBuilder: (_, __) => AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(radius: 16),
+                    const Gap(12),
+                    Expanded(
+                      child: Text('Alerter name', style: textTheme.titleMedium),
+                    ),
+                  ],
+                ),
+                const Gap(8),
+                Text('Endpoint type', style: textTheme.bodySmall),
+                const Gap(10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: const [
+                    Chip(label: Text('Enabled')),
+                    Chip(label: Text('Template')),
+                    Chip(label: Text('Tag')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _AlerterAction { edit, test, delete }
+
+class _IconLabel extends StatelessWidget {
+  const _IconLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: scheme.onSurfaceVariant),
+        const Gap(6),
+        Text(
+          label,
+          style: textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState();

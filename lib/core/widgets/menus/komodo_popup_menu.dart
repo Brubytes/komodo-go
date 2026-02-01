@@ -26,12 +26,10 @@ class KomodoPopupMenuItemRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 36,
-          height: 36,
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: accent.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: accent.withValues(alpha: 0.22)),
+            color: accent.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 18, color: accent),
         ),
@@ -63,8 +61,10 @@ PopupMenuItem<T> komodoPopupMenuItem<T>({
   required String label,
   Color? iconColor,
   bool destructive = false,
+  Key? key,
 }) {
   return PopupMenuItem<T>(
+    key: key,
     value: value,
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     child: KomodoPopupMenuItemRow(

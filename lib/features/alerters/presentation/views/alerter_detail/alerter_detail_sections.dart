@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 
 class AlerterSummaryPanel extends StatelessWidget {
   const AlerterSummaryPanel({
@@ -47,6 +48,50 @@ class AlerterSummaryPanel extends StatelessWidget {
   }
 }
 
+class AlerterNameSection extends StatelessWidget {
+  const AlerterNameSection({
+    required this.controller,
+    required this.onChanged,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'Name',
+          subtitle: 'Displayed name for this alerter.',
+        ),
+        const Gap(8),
+        DetailSurface(
+          padding: const EdgeInsets.all(14),
+          radius: 16,
+          enableGradientInDark: false,
+          child: TextFormField(
+            controller: controller,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'Alerter name',
+              prefixIcon: Icon(AppIcons.notifications),
+            ),
+            validator: (value) {
+              final name = (value ?? '').trim();
+              if (name.isEmpty) return 'Name is required';
+              return null;
+            },
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class AlerterEnabledSection extends StatelessWidget {
   const AlerterEnabledSection({
     required this.enabled,
@@ -71,7 +116,7 @@ class AlerterEnabledSection extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           radius: 16,
           enableGradientInDark: false,
-          child: SwitchListTile(
+          child: SwitchListTile.adaptive(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 8,
               vertical: 2,
@@ -118,16 +163,16 @@ class AlerterEndpointSection extends StatelessWidget {
           enableGradientInDark: false,
           child: Column(
             children: [
-              DropdownButtonFormField<String>(
+              KomodoSelectMenuField<String>(
                 key: ValueKey(endpointType),
-                initialValue: endpointType,
+                value: endpointType,
                 decoration: const InputDecoration(
                   labelText: 'Endpoint',
                   prefixIcon: Icon(AppIcons.plug),
                 ),
                 items: [
                   for (final t in endpointTypes)
-                    DropdownMenuItem(value: t, child: Text(t)),
+                    KomodoSelectMenuItem(value: t, label: t),
                 ],
                 onChanged: (value) {
                   if (value == null) return;
@@ -206,9 +251,7 @@ class AlerterAlertTypesSection extends StatelessWidget {
               ),
               const Gap(8),
               SelectionPills(
-                items: [
-                  for (final label in selectedLabels) PillData(label),
-                ],
+                items: [for (final label in selectedLabels) PillData(label)],
                 emptyLabel: 'All alert types',
               ),
               const Gap(6),
@@ -333,11 +376,7 @@ class AlerterMaintenanceSection extends StatelessWidget {
 }
 
 class SectionHeader extends StatelessWidget {
-  const SectionHeader({
-    required this.title,
-    required this.subtitle,
-    super.key,
-  });
+  const SectionHeader({required this.title, required this.subtitle, super.key});
 
   final String title;
   final String subtitle;
@@ -426,15 +465,8 @@ class SelectionPills extends StatelessWidget {
       runSpacing: 8,
       children: [
         for (final item in visible)
-          TextPill(
-            label: item.label,
-            icon: item.icon,
-          ),
-        if (remaining > 0)
-          ValuePill(
-            label: 'More',
-            value: '+$remaining',
-          ),
+          TextPill(label: item.label, icon: item.icon),
+        if (remaining > 0) ValuePill(label: 'More', value: '+$remaining'),
       ],
     );
   }

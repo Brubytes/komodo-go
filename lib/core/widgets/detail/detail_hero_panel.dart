@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:komodo_go/core/widgets/detail/detail_metric_grid.dart';
-import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 /// Generic hero panel for detail pages: optional header/footer + metric grid.
 class DetailHeroPanel extends StatelessWidget {
@@ -20,7 +20,7 @@ class DetailHeroPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DetailSurface(
+    return AppCardSurface(
       tintColor: tintColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

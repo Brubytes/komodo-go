@@ -73,6 +73,39 @@ class DeploymentRepository {
     );
   }
 
+  /// Updates a deployment configuration and returns the updated deployment.
+  ///
+  /// Uses the `/write` module `UpdateDeployment` RPC.
+  ///
+  /// Note: Only fields included in [partialConfig] will be updated.
+  Future<Either<Failure, Deployment>> updateDeploymentConfig({
+    required String deploymentId,
+    required Map<String, dynamic> partialConfig,
+  }) async {
+    return apiCall(
+      () async {
+        final response = await _client.write(
+          RpcRequest(
+            type: 'UpdateDeployment',
+            params: <String, dynamic>{
+              'id': deploymentId,
+              'config': partialConfig,
+            },
+          ),
+        );
+
+        return Deployment.fromJson(response as Map<String, dynamic>);
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
+        if (e.isNotFound) {
+          return const Failure.server(message: 'Deployment not found');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+    );
+  }
+
   /// Starts a deployment.
   Future<Either<Failure, void>> startDeployment(
     String deploymentIdOrName,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 enum DetailMetricTone { primary, secondary, tertiary, success, neutral, alert }
 
@@ -10,6 +11,8 @@ class DetailMetricTileData {
     required this.value,
     required this.tone,
     this.progress,
+    this.showFullValueOnTap = true,
+    this.fullValue,
   });
 
   final IconData icon;
@@ -17,6 +20,8 @@ class DetailMetricTileData {
   final String value;
   final double? progress;
   final DetailMetricTone tone;
+  final bool showFullValueOnTap;
+  final String? fullValue;
 }
 
 class DetailMetricGrid extends StatelessWidget {
@@ -56,9 +61,9 @@ class _DetailMetricTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fullValue = (item.fullValue ?? item.value).trim();
 
-    final (Color accent, Color accentContainer) = switch (item.tone) {
+    final (Color accent, Color _) = switch (item.tone) {
       DetailMetricTone.primary => (scheme.primary, scheme.primaryContainer),
       DetailMetricTone.secondary => (
         scheme.secondary,
@@ -72,18 +77,11 @@ class _DetailMetricTile extends StatelessWidget {
       ),
       DetailMetricTone.alert => (scheme.error, scheme.errorContainer),
     };
+    final iconColor = scheme.primary;
 
-    final tileBorder = scheme.outlineVariant.withValues(
-      alpha: isDark ? 0.22 : 0.40,
-    );
-
-    return Container(
+    final content = AppCardSurface(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: accentContainer.withValues(alpha: isDark ? 0.26 : 0.34),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: tileBorder),
-      ),
+      radius: 18,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -93,10 +91,10 @@ class _DetailMetricTile extends StatelessWidget {
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: scheme.surface.withValues(alpha: isDark ? 0.55 : 0.85),
+                  color: iconColor.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(item.icon, size: 18, color: accent),
+                child: Icon(item.icon, size: 18, color: iconColor),
               ),
               const Gap(10),
               Expanded(
@@ -136,6 +134,41 @@ class _DetailMetricTile extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+
+    if (!item.showFullValueOnTap || fullValue.isEmpty) return content;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => _showFullValueDialog(
+          context,
+          title: item.label,
+          value: fullValue,
+        ),
+        child: content,
+      ),
+    );
+  }
+
+  void _showFullValueDialog(
+    BuildContext context, {
+    required String title,
+    required String value,
+  }) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: SelectableText(value),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );

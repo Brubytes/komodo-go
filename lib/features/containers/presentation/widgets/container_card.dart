@@ -3,14 +3,19 @@ import 'package:gap/gap.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 
 class ContainerCard extends StatelessWidget {
-  const ContainerCard({required this.item, this.onTap, this.onAction, super.key});
+  const ContainerCard({
+    required this.item,
+    this.onTap,
+    this.onAction,
+    super.key,
+  });
 
   final ContainerOverviewItem item;
   final VoidCallback? onTap;
@@ -29,16 +34,19 @@ class ContainerCard extends StatelessWidget {
     final stateColor = _stateColor(item.container.state, scheme);
     final portsLabel = _formatPorts(item.container.ports);
 
-    final serverPillBg = scheme.secondaryContainer.withValues(
-      alpha: isDark ? 0.22 : 0.45,
-    );
-    final neutralPillBg = scheme.surfaceContainerHigh.withValues(
-      alpha: isDark ? 0.70 : 0.90,
-    );
+    final pillBg = scheme.surfaceContainerHigh;
+    final pillFg = scheme.onSurface;
 
     final hasActions = _hasActions(item.container.state);
+    final keyId =
+        (item.container.id?.trim().isNotEmpty ?? false)
+            ? item.container.id!.trim()
+            : (item.container.name.trim().isNotEmpty
+                  ? item.container.name.trim()
+                  : 'unknown');
 
-    return DetailSurface(
+    return AppCardSurface(
+      key: ValueKey('container_card_$keyId'),
       padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,
@@ -59,19 +67,19 @@ class ContainerCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
                     const Gap(12),
-                    _StateChip(
+                      _StateChip(
                       state: item.container.state,
                       color: stateColor,
                       showMenu: onAction != null && hasActions,
                       onAction: onAction,
                       itemsBuilder: (context) =>
-                          _buildMenuItems(context, item.container.state),
+                          _buildMenuItems(context, item.container.state, keyId),
+                      menuKey: ValueKey('container_card_menu_$keyId'),
                     ),
                   ],
                 ),
@@ -83,30 +91,30 @@ class ContainerCard extends StatelessWidget {
                     _InfoPill(
                       icon: AppIcons.server,
                       label: item.serverName,
-                      backgroundColor: serverPillBg,
-                      foregroundColor: scheme.onSecondaryContainer,
+                      backgroundColor: pillBg,
+                      foregroundColor: pillFg,
                     ),
                     if (image.isNotEmpty)
                       _InfoPill(
                         icon: AppIcons.package,
                         label: image,
-                        backgroundColor: neutralPillBg,
-                        foregroundColor: scheme.onSurface,
+                        backgroundColor: pillBg,
+                        foregroundColor: pillFg,
                       ),
                     if (networks.isNotEmpty)
                       _InfoPill(
                         icon: AppIcons.network,
                         label:
                             '${networks.take(2).join(', ')}${networks.length > 2 ? '…' : ''}',
-                        backgroundColor: neutralPillBg,
-                        foregroundColor: scheme.onSurface,
+                        backgroundColor: pillBg,
+                        foregroundColor: pillFg,
                       ),
                     if (portsLabel.isNotEmpty)
                       _InfoPill(
                         icon: AppIcons.plug,
-                        label: portsLabel,
-                        backgroundColor: neutralPillBg,
-                        foregroundColor: scheme.onSurface,
+                        label: 'Ports: $portsLabel',
+                        backgroundColor: pillBg,
+                        foregroundColor: pillFg,
                       ),
                   ],
                 ),
@@ -115,9 +123,8 @@ class ContainerCard extends StatelessWidget {
                   _UsageRow(
                     icon: AppIcons.cpu,
                     label: 'CPU',
-                    value: stats.cpuPerc.trim().isNotEmpty
-                        ? stats.cpuPerc
-                        : '-',
+                    value:
+                        stats.cpuPerc.trim().isNotEmpty ? stats.cpuPerc : '-',
                     progress: stats.cpuPercentValue != null
                         ? stats.cpuPercentValue! / 100.0
                         : null,
@@ -130,15 +137,15 @@ class ContainerCard extends StatelessWidget {
                     value: stats.memUsage.trim().isNotEmpty
                         ? stats.memUsage
                         : (stats.memPerc.trim().isNotEmpty
-                            ? stats.memPerc
-                            : '-'),
+                              ? stats.memPerc
+                              : '-'),
                     progress: stats.memPercentValue != null
                         ? stats.memPercentValue! / 100.0
                         : null,
                     accent: scheme.secondary,
                   ),
                   const Gap(10),
-                  _StatsChips(stats: stats),
+                  _IoRow(stats: stats),
                 ],
               ],
             ),
@@ -165,6 +172,7 @@ class ContainerCard extends StatelessWidget {
   List<PopupMenuEntry<ContainerAction>> _buildMenuItems(
     BuildContext context,
     ContainerState state,
+    String keyId,
   ) {
     final scheme = Theme.of(context).colorScheme;
     final items = <PopupMenuEntry<ContainerAction>>[];
@@ -183,6 +191,7 @@ class ContainerCard extends StatelessWidget {
     if (canRestart) {
       items.add(
         komodoPopupMenuItem(
+          key: ValueKey('container_card_restart_$keyId'),
           value: ContainerAction.restart,
           icon: AppIcons.refresh,
           label: 'Restart',
@@ -193,6 +202,7 @@ class ContainerCard extends StatelessWidget {
     if (canStop) {
       items.add(
         komodoPopupMenuItem(
+          key: ValueKey('container_card_stop_$keyId'),
           value: ContainerAction.stop,
           icon: AppIcons.stop,
           label: 'Stop',
@@ -234,6 +244,7 @@ class _StateChip extends StatelessWidget {
     required this.showMenu,
     this.onAction,
     this.itemsBuilder,
+    this.menuKey,
   });
 
   final ContainerState state;
@@ -242,6 +253,7 @@ class _StateChip extends StatelessWidget {
   final void Function(ContainerAction action)? onAction;
   final List<PopupMenuEntry<ContainerAction>> Function(BuildContext context)?
   itemsBuilder;
+  final Key? menuKey;
 
   @override
   Widget build(BuildContext context) {
@@ -288,6 +300,7 @@ class _StateChip extends StatelessWidget {
     }
 
     return PopupMenuButton<ContainerAction>(
+      key: menuKey,
       onSelected: onAction,
       itemBuilder: itemsBuilder!,
       child: chip,
@@ -310,6 +323,8 @@ class _InfoPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
       color: foregroundColor,
       fontWeight: FontWeight.w600,
@@ -321,6 +336,14 @@ class _InfoPill extends StatelessWidget {
         decoration: ShapeDecoration(
           color: backgroundColor,
           shape: const StadiumBorder(),
+          shadows: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.08),
+              blurRadius: isDark ? 16 : 12,
+              offset: const Offset(0, 6),
+              spreadRadius: isDark ? -6 : -7,
+            ),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -409,56 +432,85 @@ class _UsageRow extends StatelessWidget {
   }
 }
 
-class _StatsChips extends StatelessWidget {
-  const _StatsChips({required this.stats});
+class _IoRow extends StatelessWidget {
+  const _IoRow({required this.stats});
 
-  final ContainerStats stats;
+  final ContainerStats? stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final netLabel = stats?.netIo.trim() ?? '';
+    final blockLabel = stats?.blockIo.trim() ?? '';
+
+    if (netLabel.isEmpty && blockLabel.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return AppCardSurface(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      radius: AppTokens.radiusMd,
+      enableGradientInDark: false,
+      child: Row(
+        children: [
+          Expanded(
+            child: _IoMetric(
+              icon: AppIcons.network,
+              label: 'Net I/O',
+              value: netLabel.isNotEmpty ? netLabel : '-',
+            ),
+          ),
+          const Gap(12),
+          Expanded(
+            child: _IoMetric(
+              icon: AppIcons.hardDrive,
+              label: 'Drive I/O',
+              value: blockLabel.isNotEmpty ? blockLabel : '-',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IoMetric extends StatelessWidget {
+  const _IoMetric({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final pillBg = scheme.surfaceContainerHigh.withValues(
-      alpha: isDark ? 0.7 : 0.9,
-    );
-    final pillFg = scheme.onSurface;
+    final textTheme = Theme.of(context).textTheme;
 
-    final netLabel = stats.netIo.trim();
-    final blockLabel = stats.blockIo.trim();
-    final pidsLabel = stats.pids.trim();
-
-    final chips = <Widget>[
-      if (netLabel.isNotEmpty)
-        _InfoPill(
-          icon: AppIcons.network,
-          label: 'Net I/O: $netLabel',
-          backgroundColor: pillBg,
-          foregroundColor: pillFg,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: scheme.onSurfaceVariant),
+            const Gap(6),
+            Text(
+              label,
+              style: textTheme.labelMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-      if (blockLabel.isNotEmpty)
-        _InfoPill(
-          icon: AppIcons.hardDrive,
-          label: 'Drive I/O: $blockLabel',
-          backgroundColor: pillBg,
-          foregroundColor: pillFg,
+        const Gap(4),
+        Text(
+          value,
+          style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
-      if (pidsLabel.isNotEmpty)
-        _InfoPill(
-          icon: AppIcons.activity,
-          label: 'PIDs: $pidsLabel',
-          backgroundColor: pillBg,
-          foregroundColor: pillFg,
-        ),
-    ];
-
-    if (chips.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: chips,
+      ],
     );
   }
 }

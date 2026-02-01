@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -48,13 +49,21 @@ class AppTheme {
     final controlShape = RoundedRectangleBorder(borderRadius: radius);
     final isDark = colorScheme.brightness == Brightness.dark;
 
+    final scaffoldSurface = colorScheme.surface;
+    final cardSurface =
+        isDark ? colorScheme.surfaceContainer : colorScheme.surface;
+
     return ThemeData(
       useMaterial3: true,
       brightness: colorScheme.brightness,
       colorScheme: colorScheme,
+      cupertinoOverrideTheme: CupertinoThemeData(
+        primaryColor: isDark ? colorScheme.secondary : colorScheme.primary,
+        applyThemeToAll: true,
+      ),
       typography: Typography.material2021(platform: defaultTargetPlatform),
       fontFamily: kIsWeb ? AppTokens.systemFontStack : null,
-      scaffoldBackgroundColor: colorScheme.surface,
+      scaffoldBackgroundColor: scaffoldSurface,
       iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
       dividerTheme: DividerThemeData(
         color: colorScheme.outlineVariant,
@@ -65,11 +74,12 @@ class AppTheme {
         centerTitle: true,
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: colorScheme.surface,
+        backgroundColor: scaffoldSurface,
         foregroundColor: colorScheme.onSurface,
         surfaceTintColor: _surfaceTint,
       ),
       cardTheme: CardThemeData(
+        color: cardSurface,
         elevation: 0,
         surfaceTintColor: _surfaceTint,
         shape: cardShape,
@@ -90,16 +100,13 @@ class AppTheme {
         color: isDark
             ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.985)
             : colorScheme.surface,
-        elevation: 0,
-        shadowColor: Colors.black.withValues(alpha: 0.3),
+        elevation: 12,
+        shadowColor: Colors.black.withValues(
+          alpha: isDark ? 0.38 : 0.20,
+        ),
         surfaceTintColor: _surfaceTint,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusMd + 4),
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(
-              alpha: isDark ? 0.6 : 1,
-            ),
-          ),
         ),
         textStyle: TextStyle(
           color: colorScheme.onSurface,

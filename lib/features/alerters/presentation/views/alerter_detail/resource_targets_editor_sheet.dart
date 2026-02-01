@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
@@ -321,14 +322,7 @@ class _ResourceTargetsEditorSheetState
                 const Gap(8),
                 Row(
                   children: [
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: scheme.primary,
-                      ),
-                    ),
+                    const AppInlineSkeleton(size: 16),
                     const Gap(8),
                     Text(
                       'Loading resources...',
@@ -458,7 +452,7 @@ class _ResourceTargetsEditorSheetState
                                 width: 84,
                                 child: Align(
                                   alignment: Alignment.centerRight,
-                                  child: Switch(
+                                    child: Switch.adaptive(
                                     value: selectedKeys.contains(option.key),
                                     onChanged: (next) =>
                                         _toggleOption(option, next),

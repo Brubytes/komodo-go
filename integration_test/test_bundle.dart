@@ -1,0 +1,123 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND AND DO NOT COMMIT TO VERSION CONTROL
+// ignore_for_file: type=lint, invalid_use_of_internal_member
+
+import 'dart:async';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:patrol/patrol.dart';
+import 'package:patrol/src/platform/contracts/contracts.dart';
+import 'package:test_api/src/backend/invoker.dart';
+
+// START: GENERATED TEST IMPORTS
+import 'app_test.dart' as app_test;
+import 'resource_flows/actions_run_test.dart' as resource_flows__actions_run_test;
+import 'resource_flows/builds_run_cancel_test.dart' as resource_flows__builds_run_cancel_test;
+import 'resource_flows/containers_logs_actions_test.dart' as resource_flows__containers_logs_actions_test;
+import 'resource_flows/deployments_deploy_test.dart' as resource_flows__deployments_deploy_test;
+import 'resource_flows/deployments_destroy_test.dart' as resource_flows__deployments_destroy_test;
+import 'resource_flows/procedures_run_test.dart' as resource_flows__procedures_run_test;
+import 'resource_flows/repos_pull_test.dart' as resource_flows__repos_pull_test;
+import 'resource_flows/servers_detail_test.dart' as resource_flows__servers_detail_test;
+import 'resource_flows/stacks_deploy_test.dart' as resource_flows__stacks_deploy_test;
+import 'resource_flows/stacks_destroy_test.dart' as resource_flows__stacks_destroy_test;
+import 'resource_flows/stacks_list_loads_test.dart' as resource_flows__stacks_list_loads_test;
+import 'resource_flows/stacks_services_logs_test.dart' as resource_flows__stacks_services_logs_test;
+import 'resource_flows/syncs_run_test.dart' as resource_flows__syncs_run_test;
+import 'resource_flows/tags_crud_test.dart' as resource_flows__tags_crud_test;
+import 'unhappy/login_unauthorized_test.dart' as unhappy__login_unauthorized_test;
+import 'unhappy/login_unreachable_server_test.dart' as unhappy__login_unreachable_server_test;
+import 'unhappy/stack_not_found_test.dart' as unhappy__stack_not_found_test;
+// END: GENERATED TEST IMPORTS
+
+Future<void> main() async {
+  // This is the entrypoint of the bundled Dart test.
+  //
+  // Its responsibilities are:
+  //  * Running a special Dart test that runs before all the other tests and
+  //    explores the hierarchy of groups and tests.
+  //  * Hosting a PatrolAppService, which the native side of Patrol uses to get
+  //    the Dart tests, and to request execution of a specific Dart test.
+  //
+  // When running on Android, the Android Test Orchestrator, before running the
+  // tests, makes an initial run to gather the tests that it will later run. The
+  // native side of Patrol (specifically: PatrolJUnitRunner class) is hooked
+  // into the Android Test Orchestrator lifecycle and knows when that initial
+  // run happens. When it does, PatrolJUnitRunner makes an RPC call to
+  // PatrolAppService and asks it for Dart tests.
+  //
+  // When running on iOS, the native side of Patrol (specifically: the
+  // PATROL_INTEGRATION_TEST_IOS_RUNNER macro) makes an initial run to gather
+  // the tests that it will later run (same as the Android). During that initial
+  // run, it makes an RPC call to PatrolAppService and asks it for Dart tests.
+  //
+  // Once the native runner has the list of Dart tests, it dynamically creates
+  // native test cases from them. On Android, this is done using the
+  // Parametrized JUnit runner. On iOS, new test case methods are swizzled into
+  // the RunnerUITests class, taking advantage of the very dynamic nature of
+  // Objective-C runtime.
+  //
+  // Execution of these dynamically created native test cases is then fully
+  // managed by the underlying native test framework (JUnit on Android, XCTest
+  // on iOS). The native test cases do only one thing - request execution of the
+  // Dart test (out of which they had been created) and wait for it to complete.
+  // The result of running the Dart test is the result of the native test case.
+
+  final platformAutomator = PlatformAutomator(
+    config: PlatformAutomatorConfig.defaultConfig(),
+  );
+  await platformAutomator.initialize();
+  final binding = PatrolBinding.ensureInitialized(platformAutomator);
+  final testExplorationCompleter = Completer<DartGroupEntry>();
+
+  // A special test to explore the hierarchy of groups and tests. This is a hack
+  // around https://github.com/dart-lang/test/issues/1998.
+  //
+  // This test must be the first to run. If not, the native side likely won't
+  // receive any tests, and everything will fall apart.
+  test('patrol_test_explorer', () {
+    // Maybe somewhat counterintuitively, this callback runs *after* the calls
+    // to group() below.
+    final topLevelGroup = Invoker.current!.liveTest.groups.first;
+    final dartTestGroup = createDartTestGroup(
+      topLevelGroup,
+      tags: null,
+      excludeTags: null,
+    );
+    testExplorationCompleter.complete(dartTestGroup);
+    print('patrol_test_explorer: obtained Dart-side test hierarchy:');
+    reportGroupStructure(dartTestGroup);
+  });
+
+  // START: GENERATED TEST GROUPS
+  group('app_test', app_test.main);
+  group('resource_flows.actions_run_test', resource_flows__actions_run_test.main);
+  group('resource_flows.builds_run_cancel_test', resource_flows__builds_run_cancel_test.main);
+  group('resource_flows.containers_logs_actions_test', resource_flows__containers_logs_actions_test.main);
+  group('resource_flows.deployments_deploy_test', resource_flows__deployments_deploy_test.main);
+  group('resource_flows.deployments_destroy_test', resource_flows__deployments_destroy_test.main);
+  group('resource_flows.procedures_run_test', resource_flows__procedures_run_test.main);
+  group('resource_flows.repos_pull_test', resource_flows__repos_pull_test.main);
+  group('resource_flows.servers_detail_test', resource_flows__servers_detail_test.main);
+  group('resource_flows.stacks_deploy_test', resource_flows__stacks_deploy_test.main);
+  group('resource_flows.stacks_destroy_test', resource_flows__stacks_destroy_test.main);
+  group('resource_flows.stacks_list_loads_test', resource_flows__stacks_list_loads_test.main);
+  group('resource_flows.stacks_services_logs_test', resource_flows__stacks_services_logs_test.main);
+  group('resource_flows.syncs_run_test', resource_flows__syncs_run_test.main);
+  group('resource_flows.tags_crud_test', resource_flows__tags_crud_test.main);
+  group('unhappy.login_unauthorized_test', unhappy__login_unauthorized_test.main);
+  group('unhappy.login_unreachable_server_test', unhappy__login_unreachable_server_test.main);
+  group('unhappy.stack_not_found_test', unhappy__stack_not_found_test.main);
+  // END: GENERATED TEST GROUPS
+
+  final dartTestGroup = await testExplorationCompleter.future;
+  final appService = PatrolAppService(topLevelDartTestGroup: dartTestGroup);
+  binding.patrolAppService = appService;
+  await runAppService(appService);
+
+  // Until now, the native test runner was waiting for us, the Dart side, to
+  // come alive. Now that we did, let's tell it that we're ready to be asked
+  // about Dart tests.
+  await platformAutomator.markPatrolAppServiceReady();
+
+  await appService.testExecutionCompleted;
+}

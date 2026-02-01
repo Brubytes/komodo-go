@@ -105,6 +105,36 @@ class BuildRepository {
     );
   }
 
+  /// Updates a build configuration and returns the updated build.
+  ///
+  /// Uses the `/write` module `UpdateBuild` RPC.
+  ///
+  /// Note: Only fields included in [partialConfig] will be updated.
+  Future<Either<Failure, KomodoBuild>> updateBuildConfig({
+    required String buildId,
+    required Map<String, dynamic> partialConfig,
+  }) async {
+    return apiCall(
+      () async {
+        final response = await _client.write(
+          RpcRequest(
+            type: 'UpdateBuild',
+            params: <String, dynamic>{'id': buildId, 'config': partialConfig},
+          ),
+        );
+
+        return KomodoBuild.fromJson(response as Map<String, dynamic>);
+      },
+      onApiException: (e) {
+        if (e.isUnauthorized) return const Failure.auth();
+        if (e.isNotFound) {
+          return const Failure.server(message: 'Build not found');
+        }
+        return Failure.server(message: e.message, statusCode: e.statusCode);
+      },
+    );
+  }
+
   Future<Either<Failure, void>> _executeAction(
     String actionType,
     Map<String, dynamic> params,

@@ -2,17 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
 import 'package:komodo_go/features/providers/data/models/git_provider_account.dart';
 import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 import 'package:komodo_go/features/providers/presentation/providers/git_providers_provider.dart';
 import 'package:komodo_go/features/providers/presentation/widgets/docker_registry_editor_sheet.dart';
 import 'package:komodo_go/features/providers/presentation/widgets/git_provider_editor_sheet.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class ProvidersView extends ConsumerWidget {
   const ProvidersView({super.key});
@@ -31,7 +37,7 @@ class ProvidersView extends ConsumerWidget {
         icon: AppIcons.repos,
         centerTitle: true,
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: AppSecondaryFab.extended(
         onPressed: isBusy ? null : () => _createProvider(context, ref),
         icon: const Icon(AppIcons.add),
         label: const Text('Add'),
@@ -93,14 +99,14 @@ class ProvidersView extends ConsumerWidget {
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const _ProvidersSkeletonList(),
                 error: (error, _) => ErrorStateView(
                   title: 'Failed to load registries',
                   message: error.toString(),
                   onRetry: () => ref.invalidate(dockerRegistryAccountsProvider),
                 ),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const _ProvidersSkeletonList(),
               error: (error, _) => ErrorStateView(
                 title: 'Failed to load providers',
                 message: error.toString(),
@@ -113,7 +119,7 @@ class ProvidersView extends ConsumerWidget {
               color: Theme.of(
                 context,
               ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: CircularProgressIndicator()),
+              child: const Center(child: AppSkeletonCard()),
             ),
         ],
       ),
@@ -122,8 +128,16 @@ class ProvidersView extends ConsumerWidget {
 
   List<Widget> _buildCards(Iterable<Widget> tiles) {
     final items = <Widget>[];
+    var index = 0;
     for (final tile in tiles) {
-      items.add(tile);
+      items.add(
+        AppFadeSlide(
+          delay: AppMotion.stagger(index),
+          play: index < 10,
+          child: tile,
+        ),
+      );
+      index += 1;
       items.add(const Gap(12));
     }
     if (items.isNotEmpty) {
@@ -307,6 +321,89 @@ class ProvidersView extends ConsumerWidget {
   }
 }
 
+class _ProvidersSkeletonList extends StatelessWidget {
+  const _ProvidersSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text('Git Providers', style: textTheme.titleSmall),
+          const Gap(8),
+          ...List.generate(
+            3,
+            (_) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AppCardSurface(
+                padding: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      const CircleAvatar(radius: 16),
+                      const Gap(10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Provider name', style: textTheme.titleSmall),
+                            const Gap(6),
+                            Text('Username • Host', style: textTheme.bodySmall),
+                          ],
+                        ),
+                      ),
+                      const Gap(8),
+                      const Chip(label: Text('Active')),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const Gap(8),
+          Text('Registry Accounts', style: textTheme.titleSmall),
+          const Gap(8),
+          ...List.generate(
+            3,
+            (_) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AppCardSurface(
+                padding: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      const CircleAvatar(radius: 16),
+                      const Gap(10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Registry name', style: textTheme.titleSmall),
+                            const Gap(6),
+                            Text('Username • Host', style: textTheme.bodySmall),
+                          ],
+                        ),
+                      ),
+                      const Gap(8),
+                      const Chip(label: Text('Active')),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 enum _ProviderAction { edit, delete }
 
 enum _ProviderType { git, registry }
@@ -318,6 +415,7 @@ class _ProviderTypeSheet extends StatelessWidget {
     return showModalBottomSheet<_ProviderType>(
       context: context,
       useSafeArea: true,
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (context) => const _ProviderTypeSheet(),
     );
@@ -428,65 +526,76 @@ class _ProviderTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final subtitle = '${provider.username}@${provider.domain}';
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: ListTile(
-        leading: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: scheme.primary.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(AppIcons.repos, color: scheme.primary, size: 18),
-        ),
-        title: Text(
-          provider.domain,
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextPill(label: provider.https ? 'HTTPS' : 'HTTP'),
-            const Gap(6),
-            PopupMenuButton<_ProviderAction>(
-              onSelected: (action) {
-                switch (action) {
-                  case _ProviderAction.edit:
-                    onEdit();
-                  case _ProviderAction.delete:
-                    onDelete();
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: _ProviderAction.edit,
-                  child: Row(
-                    children: [
-                      Icon(AppIcons.edit, color: scheme.primary, size: 18),
-                      const Gap(10),
-                      const Text('Edit'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: _ProviderAction.delete,
-                  child: Row(
-                    children: [
-                      Icon(AppIcons.delete, color: scheme.error, size: 18),
-                      const Gap(10),
-                      const Text('Delete'),
-                    ],
-                  ),
-                ),
-              ],
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          leading: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
+            child: Icon(AppIcons.repos, color: scheme.primary, size: 18),
+          ),
+          title: Text(
+            provider.domain,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          subtitle: Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextPill(label: provider.https ? 'HTTPS' : 'HTTP'),
+              const Gap(6),
+              PopupMenuButton<_ProviderAction>(
+                onSelected: (action) {
+                  switch (action) {
+                    case _ProviderAction.edit:
+                      onEdit();
+                    case _ProviderAction.delete:
+                      onDelete();
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: _ProviderAction.edit,
+                    child: Row(
+                      children: [
+                        Icon(AppIcons.edit, color: scheme.primary, size: 18),
+                        const Gap(10),
+                        const Text('Edit'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: _ProviderAction.delete,
+                    child: Row(
+                      children: [
+                        Icon(AppIcons.delete, color: scheme.error, size: 18),
+                        const Gap(10),
+                        const Text('Delete'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          onTap: onEdit,
         ),
-        onTap: onEdit,
       ),
     );
   }
@@ -508,58 +617,69 @@ class _RegistryTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final subtitle = '${registry.username}@${registry.domain}';
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: ListTile(
-        leading: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: scheme.tertiary.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          leading: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: scheme.tertiary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(AppIcons.package, color: scheme.tertiary, size: 18),
           ),
-          child: Icon(AppIcons.package, color: scheme.tertiary, size: 18),
-        ),
-        title: Text(
-          registry.domain,
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-        trailing: PopupMenuButton<_ProviderAction>(
-          onSelected: (action) {
-            switch (action) {
-              case _ProviderAction.edit:
-                onEdit();
-              case _ProviderAction.delete:
-                onDelete();
-            }
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: _ProviderAction.edit,
-              child: Row(
-                children: [
-                  Icon(AppIcons.edit, color: scheme.primary, size: 18),
-                  const Gap(10),
-                  const Text('Edit'),
-                ],
+          title: Text(
+            registry.domain,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          subtitle: Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: PopupMenuButton<_ProviderAction>(
+            onSelected: (action) {
+              switch (action) {
+                case _ProviderAction.edit:
+                  onEdit();
+                case _ProviderAction.delete:
+                  onDelete();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: _ProviderAction.edit,
+                child: Row(
+                  children: [
+                    Icon(AppIcons.edit, color: scheme.primary, size: 18),
+                    const Gap(10),
+                    const Text('Edit'),
+                  ],
+                ),
               ),
-            ),
-            PopupMenuItem(
-              value: _ProviderAction.delete,
-              child: Row(
-                children: [
-                  Icon(AppIcons.delete, color: scheme.error, size: 18),
-                  const Gap(10),
-                  const Text('Delete'),
-                ],
+              PopupMenuItem(
+                value: _ProviderAction.delete,
+                child: Row(
+                  children: [
+                    Icon(AppIcons.delete, color: scheme.error, size: 18),
+                    const Gap(10),
+                    const Text('Delete'),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+          onTap: onEdit,
         ),
-        onTap: onEdit,
       ),
     );
   }

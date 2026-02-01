@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
@@ -23,91 +27,151 @@ class HomeServerStatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final statusColor = _serverStatusColor(server.state);
+    final statusIcon = _serverStatusIcon(server.state);
     final statsValue = stats.asData?.value;
     final isLoading = stats.isLoading && statsValue == null;
 
-    return Card(
-      child: Container(
-        width: 220,
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    shape: BoxShape.circle,
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return SizedBox(
+      width: 220,
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: cardRadius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () {
+              final id = server.id;
+              if (id.isEmpty) return;
+              context.go(
+                '${AppRoutes.servers}/$id?name=${Uri.encodeComponent(server.name)}',
+              );
+            },
+            borderRadius: cardRadius,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // This tile is rendered inside a fixed-height horizontal list (currently 130).
+                // Use a compact layout to prevent vertical overflow.
+                final isCompact = constraints.maxHeight <= 132;
+                final padding = isCompact ? 10.0 : 14.0;
+                final headerGap = isCompact ? 3.0 : 10.0;
+
+                return Padding(
+                  padding: EdgeInsets.all(padding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const Gap(8),
+                          Expanded(
+                            child: Text(
+                              server.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          Icon(statusIcon, size: 14, color: statusColor),
+                        ],
+                      ),
+                      Gap(headerGap),
+                      if (isLoading)
+                        Row(
+                          children: [
+                            const AppInlineSkeleton(size: 16),
+                            const Gap(8),
+                            Text(
+                              'Loading stats',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ],
+                        )
+                      else if (isCompact)
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _CompactStatLine(
+                                icon: AppIcons.cpu,
+                                label: 'CPU',
+                                primary: _percentLabel(statsValue?.cpuPercent),
+                                color: AppTokens.statusGreen,
+                              ),
+                              _CompactStatLine(
+                                icon: AppIcons.memory,
+                                label: 'Memory',
+                                primary: _percentLabel(statsValue?.memPercent),
+                                secondary: _absoluteLabel(
+                                  statsValue?.memUsedGb,
+                                  statsValue?.memTotalGb,
+                                ),
+                                color: AppTokens.statusOrange,
+                              ),
+                              _CompactStatLine(
+                                icon: AppIcons.hardDrive,
+                                label: 'Disk',
+                                primary: _percentLabel(statsValue?.diskPercent),
+                                secondary: _absoluteLabel(
+                                  statsValue?.diskUsedGb,
+                                  statsValue?.diskTotalGb,
+                                ),
+                                color: AppTokens.statusRed,
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Column(
+                          children: [
+                            _StatRow(
+                              icon: AppIcons.cpu,
+                              label: 'CPU',
+                              percent: statsValue?.cpuPercent,
+                              color: AppTokens.statusGreen,
+                            ),
+                            const Gap(10),
+                            _StatRow(
+                              icon: AppIcons.memory,
+                              label: 'Memory',
+                              percent: statsValue?.memPercent,
+                              secondary: _absoluteLabel(
+                                statsValue?.memUsedGb,
+                                statsValue?.memTotalGb,
+                              ),
+                              color: AppTokens.statusOrange,
+                            ),
+                            const Gap(10),
+                            _StatRow(
+                              icon: AppIcons.hardDrive,
+                              label: 'Disk',
+                              percent: statsValue?.diskPercent,
+                              secondary: _absoluteLabel(
+                                statsValue?.diskUsedGb,
+                                statsValue?.diskTotalGb,
+                              ),
+                              color: AppTokens.statusRed,
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
-                ),
-                const Gap(8),
-                Expanded(
-                  child: Text(
-                    server.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
+                );
+              },
             ),
-            const Gap(10),
-            if (isLoading)
-              Row(
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: scheme.primary,
-                    ),
-                  ),
-                  const Gap(8),
-                  Text(
-                    'Loading stats',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              )
-            else
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  _StatPill(
-                    label: 'CPU',
-                    value: _percentLabel(statsValue?.cpuPercent),
-                    color: AppTokens.statusGreen,
-                  ),
-                  _StatPill(
-                    label: 'Mem',
-                    value: _percentWithAbsolute(
-                      statsValue?.memPercent,
-                      statsValue?.memUsedGb,
-                      statsValue?.memTotalGb,
-                    ),
-                    color: AppTokens.statusOrange,
-                  ),
-                  _StatPill(
-                    label: 'Disk',
-                    value: _percentWithAbsolute(
-                      statsValue?.diskPercent,
-                      statsValue?.diskUsedGb,
-                      statsValue?.diskTotalGb,
-                    ),
-                    color: AppTokens.statusRed,
-                  ),
-                ],
-              ),
-          ],
+          ),
         ),
       ),
     );
@@ -116,13 +180,6 @@ class HomeServerStatTile extends StatelessWidget {
   String _percentLabel(double? value) {
     if (value == null || value.isNaN) return '—';
     return '${value.toStringAsFixed(0)}%';
-  }
-
-  String _percentWithAbsolute(double? percent, double? used, double? total) {
-    final percentLabel = _percentLabel(percent);
-    final absoluteLabel = _absoluteLabel(used, total);
-    if (absoluteLabel == '—') return percentLabel;
-    return '$percentLabel\n$absoluteLabel';
   }
 
   String _absoluteLabel(double? used, double? total) {
@@ -153,6 +210,15 @@ class HomeServerStatTile extends StatelessWidget {
       ServerState.unknown => AppTokens.statusOrange,
     };
   }
+
+  IconData _serverStatusIcon(ServerState state) {
+    return switch (state) {
+      ServerState.ok => AppIcons.ok,
+      ServerState.notOk => AppIcons.error,
+      ServerState.disabled => AppIcons.paused,
+      ServerState.unknown => AppIcons.unknown,
+    };
+  }
 }
 
 class HomeAlertPreviewTile extends StatelessWidget {
@@ -167,22 +233,38 @@ class HomeAlertPreviewTile extends StatelessWidget {
     final title = alert.payload.displayTitle;
     final primary = alert.payload.primaryName;
 
-    return Card(
-      child: ListTile(
-        leading: Icon(_alertIcon(alert.level), color: color),
-        title: Text(title),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (primary != null && primary.isNotEmpty) Text(primary),
-            const Gap(4),
-            Text(
-              _formatTimestamp(alert.timestamp.toLocal()),
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 6,
+          ),
+          dense: true,
+          visualDensity: const VisualDensity(vertical: -1),
+          minLeadingWidth: 0,
+          horizontalTitleGap: 12,
+          leading: Icon(_alertIcon(alert.level), color: color),
+          title: Text(title),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (primary != null && primary.isNotEmpty) Text(primary),
+              const Gap(2),
+              Text(
+                _formatTimestamp(alert.timestamp.toLocal()),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -207,6 +289,105 @@ class HomeAlertPreviewTile extends StatelessWidget {
   }
 }
 
+class HomeAlertSummaryCard extends StatelessWidget {
+  const HomeAlertSummaryCard({
+    required this.count,
+    required this.summary,
+    this.color,
+    this.onTap,
+    super.key,
+  });
+
+  final int count;
+  final String summary;
+  final Color? color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final accent = color ?? scheme.primary;
+
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(AppIcons.warning, color: accent, size: 18),
+                ),
+                const Gap(10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Unresolved alerts',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Gap(4),
+                      Text(
+                        summary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.labelMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Gap(10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      count.toString(),
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        height: 1.0,
+                      ),
+                    ),
+                    const Gap(2),
+                    Text(
+                      'open',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class HomeUpdatePreviewTile extends StatelessWidget {
   const HomeUpdatePreviewTile({required this.update, super.key});
 
@@ -221,34 +402,42 @@ class HomeUpdatePreviewTile extends StatelessWidget {
         : 'Update';
     final targetName = update.target?.displayName ?? 'Unknown target';
 
-    return Card(
-      child: ListTile(
-        leading: Icon(
-          _iconForTargetType(update.target?.type),
-          color: statusColor,
-        ),
-        title: Text(label),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              targetName,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const Gap(4),
-            Text(
-              _formatTimestamp(update.timestamp.toLocal()),
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-        trailing: _StatusChip(
-          label: _statusLabel(update.status, update.success),
-          color: statusColor,
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          leading: Icon(
+            _iconForTargetType(update.target?.type),
+            color: statusColor,
+          ),
+          title: Text(label),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                targetName,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              const Gap(4),
+              Text(
+                _formatTimestamp(update.timestamp.toLocal()),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+          trailing: _StatusChip(
+            label: _statusLabel(update.status, update.success),
+            color: statusColor,
+          ),
         ),
       ),
     );
@@ -301,66 +490,191 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
-class _StatPill extends StatelessWidget {
-  const _StatPill({
+class _StatRow extends StatelessWidget {
+  const _StatRow({
+    required this.icon,
     required this.label,
-    required this.value,
+    required this.percent,
     required this.color,
+    this.secondary,
   });
 
+  final IconData icon;
   final String label;
-  final String value;
+  final double? percent;
+  final String? secondary;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Builder(
-        builder: (context) {
-          final parts = value.split('\n');
-          final primaryStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w700,
-            fontSize: 11,
-            height: 1.1,
-          );
-          final secondaryStyle = Theme.of(context).textTheme.labelSmall
-              ?.copyWith(
-                color: color.withValues(alpha: 0.8),
-                fontWeight: FontWeight.w600,
-                fontSize: 10,
-                height: 1.1,
-              );
+    final scheme = Theme.of(context).colorScheme;
+    final percentValue = _percentValue(percent);
+    final percentLabel = _percentLabel(percent);
+    final showSecondary = secondary != null && secondary != '—';
 
-          if (parts.length == 1) {
-            return Text(
-              '$label ${parts.first}',
+    return Column(
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 16, color: color),
+            ),
+            const Gap(10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                    ),
+                  ),
+                  if (showSecondary) ...[
+                    const Gap(2),
+                    Text(
+                      secondary!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const Gap(8),
+            Text(
+              percentLabel,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        const Gap(6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: percentValue ?? 0,
+            minHeight: 6,
+            color: color,
+            backgroundColor: scheme.onSurface.withValues(alpha: 0.08),
+          ),
+        ),
+      ],
+    );
+  }
+
+  double? _percentValue(double? value) {
+    if (value == null || value.isNaN) return null;
+    return (value / 100).clamp(0.0, 1.0);
+  }
+
+  String _percentLabel(double? value) {
+    if (value == null || value.isNaN) return '—';
+    return '${value.toStringAsFixed(0)}%';
+  }
+}
+
+class _CompactStatLine extends StatelessWidget {
+  const _CompactStatLine({
+    required this.icon,
+    required this.label,
+    required this.primary,
+    required this.color,
+    this.secondary,
+  });
+
+  final IconData icon;
+  final String label;
+  final String primary;
+  final String? secondary;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    final labelStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+      color: scheme.onSurface,
+      fontWeight: FontWeight.w700,
+      height: 1.0,
+    );
+    final primaryStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+      color: scheme.onSurface,
+      fontWeight: FontWeight.w800,
+      height: 1.0,
+    );
+
+    final secondaryValue = secondary;
+    final showSecondary = secondaryValue != null && secondaryValue != '—';
+    final secondaryStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: color.withValues(alpha: 0.9),
+      fontWeight: FontWeight.w700,
+      fontSize: 10,
+      height: 1.0,
+    );
+
+    return SizedBox(
+      height: 26,
+      child: Row(
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 13, color: color),
+          ),
+          const Gap(7),
+          Expanded(
+            child: Text(
+              label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: primaryStyle,
-            );
-          }
-
-          return Text.rich(
-            TextSpan(
-              text: '$label ${parts.first}',
-              style: primaryStyle,
-              children: [
-                TextSpan(
-                  text: '\n${parts.skip(1).join(' ')}',
+              style: labelStyle,
+            ),
+          ),
+          const Gap(7),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                primary,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: primaryStyle,
+              ),
+              if (showSecondary) ...[
+                const Gap(1),
+                Text(
+                  secondaryValue,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: secondaryStyle,
                 ),
               ],
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          );
-        },
+            ],
+          ),
+        ],
       ),
     );
   }

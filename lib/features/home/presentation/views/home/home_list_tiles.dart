@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
@@ -26,8 +28,8 @@ class HomeServerListTile extends StatelessWidget {
       ServerState.unknown => Colors.orange,
     };
 
-    return Card(
-      child: ListTile(
+    return _wrapCardTile(
+      ListTile(
         leading: Container(
           width: 8,
           height: 8,
@@ -67,8 +69,8 @@ class HomeDeploymentListTile extends StatelessWidget {
 
     final imageLabel = deployment.imageLabel;
 
-    return Card(
-      child: ListTile(
+    return _wrapCardTile(
+      ListTile(
         leading: Container(
           width: 8,
           height: 8,
@@ -113,8 +115,8 @@ class HomeStackListTile extends StatelessWidget {
         ? (branch.isNotEmpty ? '$repo · $branch' : repo)
         : 'No repo';
 
-    return Card(
-      child: ListTile(
+    return _wrapCardTile(
+      ListTile(
         leading: Container(
           width: 8,
           height: 8,
@@ -157,8 +159,8 @@ class HomeRepoListTile extends StatelessWidget {
         ? (branch.isNotEmpty ? '$repoPath · $branch' : repoPath)
         : 'No repo';
 
-    return Card(
-      child: ListTile(
+    return _wrapCardTile(
+      ListTile(
         leading: Container(
           width: 8,
           height: 8,
@@ -200,8 +202,8 @@ class HomeSyncListTile extends StatelessWidget {
         ? (branch.isNotEmpty ? '$repo · $branch' : repo)
         : 'No repo';
 
-    return Card(
-      child: ListTile(
+    return _wrapCardTile(
+      ListTile(
         leading: Container(
           width: 8,
           height: 8,
@@ -244,8 +246,8 @@ class HomeBuildListTile extends StatelessWidget {
       if (versionLabel != '0.0.0') 'v$versionLabel',
     ];
 
-    return Card(
-      child: ListTile(
+    return _wrapCardTile(
+      ListTile(
         leading: Container(
           width: 8,
           height: 8,
@@ -284,8 +286,8 @@ class HomeProcedureListTile extends StatelessWidget {
 
     final stages = procedure.info.stages;
 
-    return Card(
-      child: ListTile(
+    return _wrapCardTile(
+      ListTile(
         leading: Container(
           width: 8,
           height: 8,
@@ -322,8 +324,8 @@ class HomeActionListTile extends StatelessWidget {
 
     final hasSchedule = action.info.nextScheduledRun != null;
 
-    return Card(
-      child: ListTile(
+    return _wrapCardTile(
+      ListTile(
         leading: Container(
           width: 8,
           height: 8,
@@ -341,4 +343,17 @@ class HomeActionListTile extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget _wrapCardTile(Widget child) {
+  final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+  return AppCardSurface(
+    padding: EdgeInsets.zero,
+    child: Material(
+      color: Colors.transparent,
+      borderRadius: cardRadius,
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    ),
+  );
 }

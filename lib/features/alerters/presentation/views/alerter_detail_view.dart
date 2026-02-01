@@ -3,7 +3,9 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
@@ -31,11 +33,14 @@ class AlerterDetailView extends ConsumerStatefulWidget {
   ConsumerState<AlerterDetailView> createState() => _AlerterDetailViewState();
 }
 
-class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
+class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
+  with DetailDirtySnackBarMixin<AlerterDetailView> {
   final _formKey = GlobalKey<FormState>();
 
   String? _loadedMarker;
   String _name = '';
+  String _initialName = '';
+  late final TextEditingController _nameController;
 
   bool _enabled = false;
   String _endpointType = _endpointTypes.first;
@@ -56,16 +61,19 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
       <AlerterResourceTarget>[];
   List<AlerterMaintenanceWindow> _initialMaintenanceWindows =
       <AlerterMaintenanceWindow>[];
+    var _suppressDirtySnackBar = false;
 
   @override
   void initState() {
     super.initState();
+    _nameController = TextEditingController();
     _endpointUrlController = TextEditingController();
     _endpointEmailController = TextEditingController();
   }
 
   @override
   void dispose() {
+    _nameController.dispose();
     _endpointUrlController.dispose();
     _endpointEmailController.dispose();
     super.dispose();
@@ -99,130 +107,140 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
       orElse: () => _name.isEmpty ? 'Alerter' : _name,
     );
 
-    return Scaffold(
-      appBar: MainAppBar(title: title, icon: AppIcons.notifications),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: FilledButton(
-          onPressed: actionsState.isLoading ? null : () => _save(context),
-          child: actionsState.isLoading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (didPop) {
+        if (didPop) hideDirtySnackBar();
+      },
+      child: Scaffold(
+        appBar: MainAppBar(title: title, icon: AppIcons.notifications),
+        body: alerterAsync.when(
+          loading: () => const AppSkeletonCentered(),
+          error: (error, _) => ErrorStateView(
+            title: 'Failed to load alerter',
+            message: error.toString(),
+            onRetry: () =>
+                ref.invalidate(alerterDetailProvider(widget.alerterIdOrName)),
+          ),
+          data: (detail) {
+            if (detail != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                _maybeLoadFromDetail(detail);
+              });
+            }
+
+            final isDirty = _isDirty();
+            if (_suppressDirtySnackBar || actionsState.isLoading) {
+              hideDirtySnackBar();
+            } else {
+              syncDirtySnackBar(
+                dirty: isDirty,
+                onDiscard: _discardChanges,
+                onSave: () => _save(context),
+                saveEnabled: true,
+              );
+            }
+
+            final alertTypeLabels = (_alertTypes.toList()..sort())
+                .map(_humanizeEnum)
+                .toList();
+            final resourcePills = _resources
+                .map(
+                  (entry) => PillData(
+                    resourceLabel(entry, resourceNameLookupMap),
+                    resourceIcon(entry.variant),
+                  ),
                 )
-              : const Text('Save'),
-        ),
-      ),
-      body: alerterAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => ErrorStateView(
-          title: 'Failed to load alerter',
-          message: error.toString(),
-          onRetry: () =>
-              ref.invalidate(alerterDetailProvider(widget.alerterIdOrName)),
-        ),
-        data: (detail) {
-          if (detail != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              _maybeLoadFromDetail(detail);
-            });
-          }
+                .toList();
+            final exceptPills = _exceptResources
+                .map(
+                  (entry) => PillData(
+                    resourceLabel(entry, resourceNameLookupMap),
+                    resourceIcon(entry.variant),
+                  ),
+                )
+                .toList();
+            final maintenancePills = _maintenanceWindows
+                .map(
+                  (window) => PillData(
+                    window.name.isEmpty ? 'Maintenance' : window.name,
+                    AppIcons.maintenance,
+                  ),
+                )
+                .toList();
 
-          final alertTypeLabels = (_alertTypes.toList()..sort())
-              .map(_humanizeEnum)
-              .toList();
-          final resourcePills = _resources
-              .map(
-                (entry) => PillData(
-                  resourceLabel(entry, resourceNameLookupMap),
-                  resourceIcon(entry.variant),
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+              children: [
+                AlerterSummaryPanel(
+                  enabled: _enabled,
+                  endpointType: _endpointType,
+                  alertTypeCount: _alertTypes.length,
+                  resourceCount: _resources.length,
+                  exceptCount: _exceptResources.length,
+                  maintenanceCount: _maintenanceWindows.length,
                 ),
-              )
-              .toList();
-          final exceptPills = _exceptResources
-              .map(
-                (entry) => PillData(
-                  resourceLabel(entry, resourceNameLookupMap),
-                  resourceIcon(entry.variant),
+                const Gap(12),
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AlerterNameSection(
+                        controller: _nameController,
+                        onChanged: (value) => setState(() => _name = value),
+                      ),
+                      const Gap(16),
+                      AlerterEnabledSection(
+                        enabled: _enabled,
+                        onChanged: (v) => setState(() => _enabled = v),
+                      ),
+                      const Gap(16),
+                      AlerterEndpointSection(
+                        endpointType: _endpointType,
+                        endpointTypes: _endpointTypes,
+                        urlController: _endpointUrlController,
+                        emailController: _endpointEmailController,
+                        onTypeChanged: (value) =>
+                            setState(() => _endpointType = value),
+                      ),
+                      const Gap(16),
+                      AlerterAlertTypesSection(
+                        selectedLabels: alertTypeLabels,
+                        onEdit: _pickAlertTypes,
+                      ),
+                      const Gap(16),
+                      AlerterResourceSection(
+                        title: 'Resource whitelist',
+                        subtitle: 'Only send alerts for these resources.',
+                        countLabel: _resources.length.toString(),
+                        pills: resourcePills,
+                        emptyLabel: 'No resource filter',
+                        onEdit: _editWhitelist,
+                      ),
+                      const Gap(16),
+                      AlerterResourceSection(
+                        title: 'Resource blacklist',
+                        subtitle: 'Suppress alerts for these resources.',
+                        countLabel: _exceptResources.length.toString(),
+                        pills: exceptPills,
+                        emptyLabel: 'No exclusions',
+                        onEdit: _editBlacklist,
+                      ),
+                      const Gap(16),
+                      AlerterMaintenanceSection(
+                        count: _maintenanceWindows.length,
+                        pills: maintenancePills,
+                        onEdit: _editMaintenance,
+                      ),
+                    ],
+                  ),
                 ),
-              )
-              .toList();
-          final maintenancePills = _maintenanceWindows
-              .map(
-                (window) => PillData(
-                  window.name.isEmpty ? 'Maintenance' : window.name,
-                  AppIcons.maintenance,
-                ),
-              )
-              .toList();
-
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-            children: [
-              AlerterSummaryPanel(
-                enabled: _enabled,
-                endpointType: _endpointType,
-                alertTypeCount: _alertTypes.length,
-                resourceCount: _resources.length,
-                exceptCount: _exceptResources.length,
-                maintenanceCount: _maintenanceWindows.length,
-              ),
-              const Gap(12),
-              Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AlerterEnabledSection(
-                      enabled: _enabled,
-                      onChanged: (v) => setState(() => _enabled = v),
-                    ),
-                    const Gap(16),
-                    AlerterEndpointSection(
-                      endpointType: _endpointType,
-                      endpointTypes: _endpointTypes,
-                      urlController: _endpointUrlController,
-                      emailController: _endpointEmailController,
-                      onTypeChanged: (value) =>
-                          setState(() => _endpointType = value),
-                    ),
-                    const Gap(16),
-                    AlerterAlertTypesSection(
-                      selectedLabels: alertTypeLabels,
-                      onEdit: _pickAlertTypes,
-                    ),
-                    const Gap(16),
-                    AlerterResourceSection(
-                      title: 'Resource whitelist',
-                      subtitle: 'Only send alerts for these resources.',
-                      countLabel: _resources.length.toString(),
-                      pills: resourcePills,
-                      emptyLabel: 'No resource filter',
-                      onEdit: _editWhitelist,
-                    ),
-                    const Gap(16),
-                    AlerterResourceSection(
-                      title: 'Resource blacklist',
-                      subtitle: 'Suppress alerts for these resources.',
-                      countLabel: _exceptResources.length.toString(),
-                      pills: exceptPills,
-                      emptyLabel: 'No exclusions',
-                      onEdit: _editBlacklist,
-                    ),
-                    const Gap(16),
-                    AlerterMaintenanceSection(
-                      count: _maintenanceWindows.length,
-                      pills: maintenancePills,
-                      onEdit: _editMaintenance,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -233,6 +251,8 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     _loadedMarker = marker;
 
     _name = detail.name;
+    _initialName = detail.name;
+    _nameController.text = detail.name;
 
     final config = detail.config;
 
@@ -272,6 +292,63 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     );
 
     if (mounted) setState(() {});
+  }
+
+  bool _isDirty() {
+    final nextName = _nameController.text.trim();
+    if (nextName != _initialName) return true;
+    if (_enabled != _initialEnabled) return true;
+
+    final currentEndpoint = AlerterEndpoint(
+      type: _endpointType,
+      url: _endpointUrlController.text.trim(),
+      email: _endpointEmailController.text.trim(),
+    );
+
+    if (_endpointChanged(current: currentEndpoint, initial: _initialEndpoint)) {
+      return true;
+    }
+
+    if (!_setEquals(_alertTypes, _initialAlertTypes)) return true;
+    if (!_resourceSetsEqual(_resources, _initialResources)) return true;
+    if (!_resourceSetsEqual(_exceptResources, _initialExceptResources)) {
+      return true;
+    }
+    if (!_maintenanceEquals(_maintenanceWindows, _initialMaintenanceWindows)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  void _discardChanges() {
+    setState(() {
+      _name = _initialName;
+      _nameController.text = _initialName;
+      _enabled = _initialEnabled;
+
+      final endpoint = _initialEndpoint;
+      final nextType = endpoint?.type ?? _endpointTypes.first;
+      _endpointType = _endpointTypes.contains(nextType)
+          ? nextType
+          : _endpointTypes.first;
+      _endpointUrlController.text = endpoint?.url ?? '';
+      _endpointEmailController.text = endpoint?.email ?? '';
+
+      _alertTypes
+        ..clear()
+        ..addAll(_initialAlertTypes);
+
+      _resources = List<AlerterResourceTarget>.from(_initialResources);
+      _exceptResources = List<AlerterResourceTarget>.from(
+        _initialExceptResources,
+      );
+      _maintenanceWindows = List<AlerterMaintenanceWindow>.from(
+        _initialMaintenanceWindows,
+      );
+    });
+
+    hideDirtySnackBar();
   }
 
   Future<void> _pickAlertTypes() async {
@@ -325,6 +402,31 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    setState(() => _suppressDirtySnackBar = true);
+
+    final nextName = _nameController.text.trim();
+    final renameOk = nextName != _initialName
+        ? await ref
+              .read(alerterActionsProvider.notifier)
+              .rename(id: widget.alerterIdOrName, name: nextName)
+        : true;
+
+    if (!context.mounted) return;
+    if (!renameOk) {
+      setState(() => _suppressDirtySnackBar = false);
+      AppSnackBar.show(
+        context,
+        'Failed to rename alerter',
+        tone: AppSnackBarTone.error,
+      );
+      reShowDirtySnackBarIfStillDirty(
+        isStillDirty: _isDirty,
+        onDiscard: _discardChanges,
+        onSave: () => _save(context),
+      );
+      return;
+    }
+
     final endpointUrl = _endpointUrlController.text.trim();
     final endpointEmail = _endpointEmailController.text.trim();
     final currentEndpoint = AlerterEndpoint(
@@ -350,7 +452,18 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     };
 
     if (config.isEmpty) {
-      AppSnackBar.show(context, 'No changes to save');
+      AppSnackBar.show(
+        context,
+        nextName != _initialName ? 'Alerter renamed' : 'No changes to save',
+      );
+      if (nextName != _initialName) {
+        _initialName = nextName;
+        ref
+          ..invalidate(alerterDetailProvider(widget.alerterIdOrName))
+          ..invalidate(alertersProvider);
+        hideDirtySnackBar();
+      }
+      if (mounted) setState(() => _suppressDirtySnackBar = false);
       return;
     }
 
@@ -366,10 +479,31 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView> {
     );
 
     if (ok) {
+      _initialName = nextName;
+      _initialEnabled = _enabled;
+      _initialEndpoint = currentEndpoint;
+      _initialAlertTypes = Set<String>.from(_alertTypes);
+      _initialResources = List<AlerterResourceTarget>.from(_resources);
+      _initialExceptResources = List<AlerterResourceTarget>.from(
+        _exceptResources,
+      );
+      _initialMaintenanceWindows = List<AlerterMaintenanceWindow>.from(
+        _maintenanceWindows,
+      );
       ref
         ..invalidate(alerterDetailProvider(widget.alerterIdOrName))
         ..invalidate(alertersProvider);
+      hideDirtySnackBar();
+      if (mounted) setState(() => _suppressDirtySnackBar = false);
+      return;
     }
+
+    if (mounted) setState(() => _suppressDirtySnackBar = false);
+    reShowDirtySnackBarIfStillDirty(
+      isStillDirty: _isDirty,
+      onDiscard: _discardChanges,
+      onSave: () => _save(context),
+    );
   }
 }
 

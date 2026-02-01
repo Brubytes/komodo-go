@@ -3,11 +3,18 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
+import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
+import 'package:komodo_go/features/auth/presentation/widgets/edit_connection_sheet.dart';
 import 'package:komodo_go/features/settings/presentation/widgets/add_connection_sheet.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class ConnectionsView extends ConsumerWidget {
   const ConnectionsView({super.key});
@@ -56,7 +63,7 @@ class ConnectionsView extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: AppSecondaryFab.extended(
         onPressed: authAsync.isLoading
             ? null
             : () => AddConnectionSheet.show(context),
@@ -86,50 +93,68 @@ class ConnectionsView extends ConsumerWidget {
               final connection = connections[index];
               final isActive = connection.id == activeId;
 
-              return Card(
-                clipBehavior: Clip.antiAlias,
-                child: ListTile(
-                  leading: Icon(
-                    isActive ? AppIcons.ok : AppIcons.server,
-                    color: isActive
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  title: Text(connection.name),
-                  subtitle: Text(connection.baseUrl),
-                  onTap: authAsync.isLoading
-                      ? null
-                      : () async {
-                          await ref
-                              .read(authProvider.notifier)
-                              .selectConnection(connection.id);
+              final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+              return AppFadeSlide(
+                delay: AppMotion.stagger(index),
+                play: index < 10,
+                child: AppCardSurface(
+                  padding: EdgeInsets.zero,
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: cardRadius,
+                    clipBehavior: Clip.antiAlias,
+                    child: ListTile(
+                      leading: Icon(
+                        isActive ? AppIcons.ok : AppIcons.server,
+                        color: isActive
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      title: Text(connection.name),
+                      subtitle: Text(connection.baseUrl),
+                      onTap: authAsync.isLoading
+                          ? null
+                          : () async {
+                              await ref
+                                  .read(authProvider.notifier)
+                                  .selectConnection(connection.id);
+                            },
+                      trailing: PopupMenuButton<_ConnectionAction>(
+                        onSelected: (action) async {
+                          switch (action) {
+                            case _ConnectionAction.edit:
+                              await EditConnectionSheet.show(
+                                context,
+                                connection: connection,
+                              );
+                            case _ConnectionAction.delete:
+                              await _deleteConnection(
+                                context,
+                                ref,
+                                connection,
+                              );
+                          }
                         },
-                  trailing: PopupMenuButton<_ConnectionAction>(
-                    onSelected: (action) async {
-                      switch (action) {
-                        case _ConnectionAction.rename:
-                          await _renameConnection(context, ref, connection);
-                        case _ConnectionAction.delete:
-                          await _deleteConnection(context, ref, connection);
-                      }
-                    },
-                    itemBuilder: (context) {
-                      final scheme = Theme.of(context).colorScheme;
-                      return [
-                        komodoPopupMenuItem(
-                          value: _ConnectionAction.rename,
-                          icon: AppIcons.edit,
-                          label: 'Rename',
-                          iconColor: scheme.primary,
-                        ),
-                        komodoPopupMenuItem(
-                          value: _ConnectionAction.delete,
-                          icon: AppIcons.delete,
-                          label: 'Delete',
-                          destructive: true,
-                        ),
-                      ];
-                    },
+                        itemBuilder: (context) {
+                          final scheme = Theme.of(context).colorScheme;
+                          return [
+                            komodoPopupMenuItem(
+                              value: _ConnectionAction.edit,
+                              icon: AppIcons.edit,
+                              label: 'Edit',
+                              iconColor: scheme.primary,
+                            ),
+                            komodoPopupMenuItem(
+                              value: _ConnectionAction.delete,
+                              icon: AppIcons.delete,
+                              label: 'Delete',
+                              destructive: true,
+                            ),
+                          ];
+                        },
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -138,7 +163,7 @@ class ConnectionsView extends ConsumerWidget {
             itemCount: connections.length,
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _ConnectionsSkeletonList(),
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -147,44 +172,6 @@ class ConnectionsView extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  Future<void> _renameConnection(
-    BuildContext context,
-    WidgetRef ref,
-    ConnectionProfile connection,
-  ) async {
-    final controller = TextEditingController(text: connection.name);
-
-    final nextName = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename connection'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'Name'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-
-    if (nextName == null || nextName.isEmpty) {
-      return;
-    }
-
-    await ref
-        .read(connectionsProvider.notifier)
-        .renameConnection(connectionId: connection.id, name: nextName);
   }
 
   Future<void> _deleteConnection(
@@ -218,4 +205,46 @@ class ConnectionsView extends ConsumerWidget {
   }
 }
 
-enum _ConnectionAction { rename, delete }
+enum _ConnectionAction { edit, delete }
+
+class _ConnectionsSkeletonList extends StatelessWidget {
+  const _ConnectionsSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Skeletonizer(
+      enabled: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: 4,
+        separatorBuilder: (_, __) => const Gap(8),
+        itemBuilder: (_, __) => AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                const CircleAvatar(radius: 16),
+                const Gap(10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Connection name', style: textTheme.titleSmall),
+                      const Gap(6),
+                      Text('Base URL • User', style: textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                const Gap(8),
+                const Chip(label: Text('Active')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

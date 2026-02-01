@@ -3,12 +3,15 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/settings/presentation/providers/theme_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsView extends ConsumerWidget {
   const SettingsView({super.key});
@@ -44,7 +47,7 @@ class SettingsView extends ConsumerWidget {
           const Gap(8),
           _SettingsCardTile(
             icon: AppIcons.theme,
-            accentColor: scheme.secondary,
+            accentColor: scheme.primary,
             title: 'Theme',
             subtitle: 'Customize the app appearance',
             trailing: _CardTrailing(
@@ -78,7 +81,7 @@ class SettingsView extends ConsumerWidget {
           const Gap(10),
           _SettingsCardTile(
             icon: AppIcons.tag,
-            accentColor: scheme.tertiary,
+            accentColor: scheme.primary,
             title: 'Tags',
             subtitle: 'View and edit tags',
             trailing: const _CardTrailing(showChevron: true),
@@ -87,7 +90,7 @@ class SettingsView extends ConsumerWidget {
           const Gap(10),
           _SettingsCardTile(
             icon: AppIcons.repos,
-            accentColor: scheme.secondary,
+            accentColor: scheme.primary,
             title: 'Providers',
             subtitle: 'Manage git and registry accounts',
             trailing: const _CardTrailing(showChevron: true),
@@ -96,7 +99,7 @@ class SettingsView extends ConsumerWidget {
           const Gap(10),
           _SettingsCardTile(
             icon: AppIcons.factory,
-            accentColor: scheme.secondary,
+            accentColor: scheme.primary,
             title: 'Builders',
             subtitle: 'View and manage builders',
             trailing: const _CardTrailing(showChevron: true),
@@ -110,6 +113,35 @@ class SettingsView extends ConsumerWidget {
             subtitle: 'View and manage alerters',
             trailing: const _CardTrailing(showChevron: true),
             onTap: () => context.push(AppRoutes.komodoAlerters),
+          ),
+          const Gap(20),
+          const _SettingsSectionHeader(title: 'About'),
+          const Gap(8),
+          _SettingsCardTile(
+            icon: AppIcons.heart,
+            accentColor: scheme.primary,
+            title: 'Credits',
+            subtitle: 'Acknowledgments and open source licenses',
+            trailing: const _CardTrailing(showChevron: true),
+            onTap: () => context.push(AppRoutes.credits),
+          ),
+          const Gap(10),
+          _SettingsCardTile(
+            icon: AppIcons.mail,
+            accentColor: scheme.primary,
+            title: 'Contact & Feedback',
+            subtitle: 'Questions, suggestions, or bug reports',
+            trailing: const _CardTrailing(showChevron: false),
+            onTap: () async {
+              final uri = Uri(
+                scheme: 'mailto',
+                path: 'support@example.com',
+                queryParameters: {'subject': 'Komodo Go Feedback'},
+              );
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri);
+              }
+            },
           ),
           const Gap(20),
           const _SettingsSectionHeader(title: 'Account'),
@@ -223,62 +255,66 @@ class _SettingsCardTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: accentColor.withValues(alpha: 0.22),
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, size: 20, color: accentColor),
+                ),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const Gap(2),
+                      Text(
+                        subtitle,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          height: 1.25,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
-                child: Icon(icon, size: 20, color: accentColor),
-              ),
-              const Gap(12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.2,
+                const Gap(12),
+                DefaultTextStyle.merge(
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                  child:
+                      trailing ??
+                      Icon(
+                        AppIcons.chevron,
+                        color: scheme.onSurfaceVariant.withValues(alpha: 0.65),
                       ),
-                    ),
-                    const Gap(2),
-                    Text(
-                      subtitle,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        height: 1.25,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
                 ),
-              ),
-              const Gap(12),
-              DefaultTextStyle.merge(
-                style: TextStyle(color: scheme.onSurfaceVariant),
-                child:
-                    trailing ??
-                    Icon(
-                      AppIcons.chevron,
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.65),
-                    ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -326,7 +362,6 @@ class _ThemePickerSheet extends StatelessWidget {
       context: context,
       useSafeArea: true,
       showDragHandle: true,
-      isScrollControlled: true,
       builder: (context) => _ThemePickerSheet(currentMode: currentMode),
     );
   }
@@ -339,6 +374,8 @@ class _ThemePickerSheet extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
       child: Center(
+        widthFactor: 1,
+        heightFactor: 1,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: Column(
@@ -414,67 +451,72 @@ class _ThemeChoiceTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final accent = scheme.secondary;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: accent.withValues(alpha: 0.22)),
+    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: cardRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, size: 20, color: accent),
                 ),
-                child: Icon(icon, size: 20, color: accent),
-              ),
-              const Gap(12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.2,
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
                       ),
-                    ),
-                    const Gap(2),
-                    Text(
-                      subtitle,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
+                      const Gap(2),
+                      Text(
+                        subtitle,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const Gap(12),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? scheme.secondaryContainer.withValues(alpha: 0.55)
-                      : scheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: scheme.outlineVariant),
+                const Gap(12),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? scheme.secondaryContainer.withValues(alpha: 0.55)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isSelected ? AppIcons.check : AppIcons.chevron,
+                    size: 18,
+                    color: isSelected
+                        ? scheme.onSecondaryContainer
+                        : scheme.onSurfaceVariant.withValues(alpha: 0.65),
+                  ),
                 ),
-                child: Icon(
-                  isSelected ? AppIcons.check : AppIcons.chevron,
-                  size: 18,
-                  color: isSelected
-                      ? scheme.onSecondaryContainer
-                      : scheme.onSurfaceVariant.withValues(alpha: 0.65),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

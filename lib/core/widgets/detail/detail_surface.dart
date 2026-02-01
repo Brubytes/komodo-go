@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 /// Shared surface styling for detail pages.
 ///
-/// - Light mode: no gradients (tinted solid background).
-/// - Dark mode: subtle gradient allowed for depth.
+/// Uses the app's `CardTheme.color` by default so detail surfaces match
+/// dashboard/list cards.
 class DetailSurface extends StatelessWidget {
   const DetailSurface({
     required this.child,
@@ -14,7 +15,7 @@ class DetailSurface extends StatelessWidget {
     this.radius = AppTokens.radiusLg,
     this.tintColor,
     this.baseColor,
-    this.enableGradientInDark = true,
+    this.enableGradientInDark = false,
     this.showBorder = false,
     this.enableShadow = true,
   });
@@ -30,16 +31,16 @@ class DetailSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
-    final base =
-        baseColor ??
-        (isDark ? scheme.surfaceContainerHigh : scheme.surfaceContainer);
+    final defaultBase =
+        theme.cardTheme.color ??
+        (isDark ? scheme.surfaceContainerHigh : scheme.surface);
+    final base = baseColor ?? defaultBase;
     final tint = tintColor ?? scheme.primary;
-    final surfaceColor = isDark
-        ? base
-        : Color.alphaBlend(tint.withValues(alpha: 0.035), base);
+    final surfaceColor = base;
 
     final borderColor = scheme.outlineVariant.withValues(
       alpha: isDark ? 0.35 : 0.55,
@@ -64,11 +65,7 @@ class DetailSurface extends StatelessWidget {
         border: showBorder ? Border.all(color: borderColor) : null,
         boxShadow: shadows,
         gradient: isDark && enableGradientInDark
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [tint.withValues(alpha: 0.06), base],
-              )
+            ? appCardGradient(tint: tint, base: base)
             : null,
       ),
       child: child,

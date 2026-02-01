@@ -1,0 +1,282 @@
+/* storepix - Default Template Styles */
+/* Feel free to customize everything! */
+
+:root {
+  /* Primary brand color - customize via config */
+  --primary: #007AFF;
+  --primary-dark: #0056b3;
+
+  /* Accent colors - customize as needed */
+  --accent-1: #5AC8FA;
+  --accent-2: #AF52DE;
+  --accent-3: #FF9500;
+
+  /* Light theme (default) */
+  --background: #F6F6F6;
+  --foreground: #222222;
+  --foreground-secondary: #666666;
+  --card: #FFFFFF;
+
+  /* Device frame */
+  --device-frame: #1a1a1a;
+
+  /* Home indicator (for older iPhones with home button) */
+  --home-indicator-light: #333333;
+  --home-indicator-dark: #CCCCCC;
+  --home-indicator: var(--home-indicator-light);
+
+  /* Spacing - adjust for different layouts */
+  --edge-padding: 220px;
+
+  /* Typography */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Dynamic viewport (set by JavaScript) */
+  --viewport-width: 1284px;
+  --viewport-height: 2778px;
+  --scale: 1;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--background);
+  overflow: hidden;
+}
+
+/* ============================================
+   Main Screenshot Frame
+   ============================================ */
+.screenshot-frame {
+  width: var(--viewport-width);
+  height: var(--viewport-height);
+  position: relative;
+  background: linear-gradient(
+    165deg,
+    #f8f9fc 0%,
+    #eef2f9 25%,
+    #e5ecf7 50%,
+    #f0f4fa 75%,
+    #f8fafc 100%
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(var(--edge-padding) * var(--scale)) calc(40px * var(--scale));
+  overflow: hidden;
+}
+
+/* ============================================
+   Dark Theme
+   ============================================ */
+.dark-theme .screenshot-frame {
+  background: linear-gradient(
+    165deg,
+    #0a0d14 0%,
+    #0e1219 25%,
+    #080b10 50%,
+    #0c1016 75%,
+    #0a0c12 100%
+  );
+}
+
+.dark-theme {
+  --foreground: #E0E0E0;
+  --foreground-secondary: #B0B0B0;
+  --home-indicator: var(--home-indicator-dark);
+}
+
+/* ============================================
+   Decorative Background Blurs (optional)
+   Delete this section if you want a cleaner look
+   ============================================ */
+.bg-blur {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(calc(120px * var(--scale)));
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.bg-blur-1 {
+  width: calc(600px * var(--scale));
+  height: calc(600px * var(--scale));
+  background: var(--accent-1);
+  top: calc(-100px * var(--scale));
+  right: calc(-150px * var(--scale));
+  opacity: 0.25;
+}
+
+.bg-blur-2 {
+  width: calc(500px * var(--scale));
+  height: calc(500px * var(--scale));
+  background: var(--primary);
+  bottom: calc(200px * var(--scale));
+  left: calc(-200px * var(--scale));
+  opacity: 0.2;
+}
+
+.bg-blur-3 {
+  width: calc(400px * var(--scale));
+  height: calc(400px * var(--scale));
+  background: var(--accent-1);
+  bottom: calc(-100px * var(--scale));
+  right: calc(-100px * var(--scale));
+  opacity: 0.2;
+}
+
+/* ============================================
+   Headlines
+   ============================================ */
+.headline-container {
+  text-align: center;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex: 1;
+  padding-bottom: calc(120px * var(--scale));
+}
+
+.headline {
+  font-size: calc(88px * var(--scale));
+  font-weight: 700;
+  color: var(--foreground);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.subheadline {
+  font-size: calc(88px * var(--scale));
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+/* ============================================
+   Device Mockup
+   ============================================ */
+.device-container {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.device-frame {
+  position: relative;
+  background: var(--device-frame);
+  border-radius: calc(144px * var(--scale));
+  padding: calc(26px * var(--scale));
+  box-shadow:
+    0 calc(80px * var(--scale)) calc(160px * var(--scale)) rgba(0, 0, 0, 0.25),
+    0 calc(40px * var(--scale)) calc(80px * var(--scale)) rgba(0, 0, 0, 0.15),
+    0 calc(20px * var(--scale)) calc(40px * var(--scale)) rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Dynamic Island */
+.device-notch {
+  position: absolute;
+  top: calc(54px * var(--scale));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(210px * var(--scale));
+  height: calc(62px * var(--scale));
+  background: #000000;
+  border-radius: calc(31px * var(--scale));
+  z-index: 20;
+}
+
+/* Home Button (for iPhone 8 Plus and older) */
+.device-home-button {
+  display: none;
+  position: absolute;
+  bottom: calc(40px * var(--scale));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(160px * var(--scale));
+  height: calc(160px * var(--scale));
+  border-radius: 50%;
+  border: calc(6px * var(--scale)) solid var(--home-indicator);
+  background: transparent;
+  z-index: 20;
+}
+
+.device-screen {
+  width: calc(920px * var(--scale));
+  height: calc(1993px * var(--scale));
+  border-radius: calc(118px * var(--scale));
+  overflow: hidden;
+  background: var(--card);
+  position: relative;
+}
+
+.device-screen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ============================================
+   Layout Variant: Headline Below Device
+   ============================================ */
+.screenshot-frame.headline-below .headline-container {
+  order: 2;
+  padding-bottom: 0;
+  padding-top: calc(120px * var(--scale));
+}
+
+.screenshot-frame.headline-below .device-container {
+  order: 1;
+}
+
+/* ============================================
+   Tablet/iPad Specific Styles
+   ============================================ */
+.tablet-device .screenshot-frame {
+  padding: calc(100px * var(--scale)) calc(80px * var(--scale));
+}
+
+.tablet-device .headline-container {
+  flex: 0 0 auto;
+  padding-bottom: calc(60px * var(--scale));
+}
+
+.tablet-device .device-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tablet-device .device-frame {
+  border-radius: var(--tablet-frame-radius, calc(60px * var(--scale)));
+  padding: var(--tablet-frame-padding, calc(40px * var(--scale)));
+}
+
+.tablet-device .device-screen {
+  width: var(--tablet-screen-width, calc(1400px * var(--scale)));
+  height: var(--tablet-screen-height, calc(1866px * var(--scale)));
+  border-radius: var(--tablet-screen-radius, calc(40px * var(--scale)));
+}
+
+.tablet-device .device-notch {
+  display: none; /* iPads don't have notches */
+}
+
+/* Tablet headline below layout */
+.tablet-device .screenshot-frame.headline-below .headline-container {
+  padding-bottom: 0;
+  padding-top: calc(60px * var(--scale));
+}

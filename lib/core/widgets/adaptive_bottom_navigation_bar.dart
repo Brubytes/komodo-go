@@ -22,6 +22,8 @@ class AdaptiveBottomNavigationBar extends StatelessWidget {
         (platform == TargetPlatform.iOS || platform == TargetPlatform.macOS);
     final width = MediaQuery.sizeOf(context).width;
     final isCompact = width < 360;
+    final navigationBarHeight =
+        kBottomNavigationBarHeight + (isCompact ? 6.0 : 8.0);
 
     if (isCupertino) {
       final colorScheme = Theme.of(context).colorScheme;
@@ -40,6 +42,7 @@ class AdaptiveBottomNavigationBar extends StatelessWidget {
           ).textTheme.copyWith(tabLabelTextStyle: tabLabelTextStyle),
         ),
         child: CupertinoTabBar(
+          height: navigationBarHeight,
           currentIndex: selectedIndex,
           onTap: onTap,
           activeColor: colorScheme.primary,
@@ -48,8 +51,15 @@ class AdaptiveBottomNavigationBar extends StatelessWidget {
           items: [
             for (final item in items)
               BottomNavigationBarItem(
-                icon: item.icon,
-                activeIcon: item.activeIcon ?? item.icon,
+                icon: item.key == null
+                    ? item.icon
+                    : KeyedSubtree(key: item.key, child: item.icon),
+                activeIcon: item.key == null
+                    ? (item.activeIcon ?? item.icon)
+                    : KeyedSubtree(
+                        key: item.key,
+                        child: item.activeIcon ?? item.icon,
+                      ),
                 label: item.label,
               ),
           ],
@@ -73,13 +83,14 @@ class AdaptiveBottomNavigationBar extends StatelessWidget {
     return NavigationBarTheme(
       data: NavigationBarTheme.of(
         context,
-      ).copyWith(labelTextStyle: labelTextStyle),
+      ).copyWith(height: navigationBarHeight, labelTextStyle: labelTextStyle),
       child: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: onTap,
         destinations: [
           for (final item in items)
             NavigationDestination(
+              key: item.key,
               icon: item.icon,
               selectedIcon: item.activeIcon,
               label: item.label,
@@ -95,9 +106,11 @@ class AdaptiveNavigationItem {
     required this.icon,
     required this.label,
     this.activeIcon,
+    this.key,
   });
 
   final Widget icon;
   final String label;
   final Widget? activeIcon;
+  final Key? key;
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 
 class AuthLoadingView extends StatelessWidget {
   const AuthLoadingView({super.key});
@@ -14,7 +15,7 @@ class AuthLoadingView extends StatelessWidget {
           child: SizedBox(
             height: 28,
             width: 28,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
+            child: AppInlineSkeleton(size: 28),
           ),
         ),
       ),

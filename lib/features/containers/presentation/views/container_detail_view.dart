@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/features/containers/presentation/providers/container_log_provider.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
@@ -58,12 +60,7 @@ class ContainerDetailView extends ConsumerWidget {
             itemAsync.when(
               data: (item) =>
                   item == null ? const _NotFound() : ContainerCard(item: item),
-              loading: () => const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              ),
+              loading: () => const AppSkeletonCard(),
               error: (error, stack) => _ErrorState(
                 title: 'Failed to load container',
                 message: error.toString(),
@@ -161,11 +158,9 @@ class _NotFound extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Text('Container not found.'),
-      ),
+    return const AppCardSurface(
+      padding: EdgeInsets.all(16),
+      child: Text('Container not found.'),
     );
   }
 }
@@ -187,31 +182,26 @@ class _LogBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final textTheme = Theme.of(context).textTheme;
+
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+      child: AppCardSurface(
+        padding: const EdgeInsets.all(12),
+        radius: 12,
+        child: isLoading
+            ? Row(
+                children: [
+                  const AppInlineSkeleton(size: 16),
+                  const Gap(10),
+                  Text(content, style: textTheme.bodySmall),
+                ],
+              )
+            : SelectableText(
+                content,
+                style: textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+              ),
       ),
-      child: isLoading
-          ? Row(
-              children: [
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const Gap(10),
-                Text(content, style: Theme.of(context).textTheme.bodySmall),
-              ],
-            )
-          : SelectableText(
-              content,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
-            ),
     );
   }
 }
@@ -229,35 +219,25 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const Gap(8),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const Gap(12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.tonal(
-                onPressed: onRetry,
-                child: const Text('Retry'),
-              ),
-            ),
-          ],
-        ),
+    return AppCardSurface(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const Gap(8),
+          Text(message),
+          const Gap(12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ),
+        ],
       ),
     );
   }

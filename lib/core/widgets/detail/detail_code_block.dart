@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
-import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
 
 enum DetailCodeLanguage { plainText, yaml, typescript }
@@ -23,15 +23,11 @@ class DetailCodeBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     final span = _highlight(context, code);
 
-    return DetailSurface(
-      baseColor: scheme.surfaceContainerHighest,
-      enableGradientInDark: false,
-      enableShadow: false,
+    return AppCardSurface(
       radius: 16,
       padding: const EdgeInsets.all(12),
       child: ConstrainedBox(
@@ -61,9 +57,6 @@ class DetailCodeBlock extends StatelessWidget {
         ? AppSyntaxHighlight.darkTheme
         : AppSyntaxHighlight.lightTheme;
 
-    return Highlighter(
-      language: languageName,
-      theme: theme,
-    ).highlight(input);
+    return Highlighter(language: languageName, theme: theme).highlight(input);
   }
 }

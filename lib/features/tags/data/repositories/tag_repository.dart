@@ -1,7 +1,6 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
-import 'package:komodo_go/core/api/query_templates.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
@@ -19,7 +18,9 @@ class TagRepository {
       final response = await _client.read(
         RpcRequest(
           type: 'ListTags',
-          params: <String, dynamic>{'query': emptyQuery()},
+          // Backend expects an optional *Mongo* query for tags.
+          // Omitting it returns all tags.
+          params: <String, dynamic>{},
         ),
       );
 
