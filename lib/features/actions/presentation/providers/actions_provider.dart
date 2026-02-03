@@ -27,7 +27,9 @@ class Actions extends _$Actions {
     ref.invalidateSelf();
     try {
       await future;
-    } catch (_) {}
+    } on Exception {
+      // Ignore refresh errors.
+    }
   }
 }
 

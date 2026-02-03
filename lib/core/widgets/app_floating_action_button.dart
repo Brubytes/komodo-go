@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 class AppSecondaryFab extends StatelessWidget {
   const AppSecondaryFab.extended({
-    super.key,
     required this.onPressed,
     required this.label,
     this.icon,
     this.tooltip,
     this.heroTag,
+    super.key,
   });
 
   final VoidCallback? onPressed;

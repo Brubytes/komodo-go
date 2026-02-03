@@ -83,7 +83,7 @@ class DetailSection extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (trailingWithHeaderColor != null) trailingWithHeaderColor,
+                trailingWithHeaderColor ?? const SizedBox.shrink(),
               ],
             ),
           ),

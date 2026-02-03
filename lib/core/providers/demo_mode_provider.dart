@@ -17,7 +17,7 @@ class DemoModeNotifier extends AsyncNotifier<bool> {
     return prefs.getBool(demoEnabledKey) ?? true;
   }
 
-  Future<void> setEnabled(bool enabled) async {
+  Future<void> setEnabled({required bool enabled}) async {
     final prefs = await ref.read(sharedPreferencesProvider.future);
     await prefs.setBool(demoEnabledKey, enabled);
     state = AsyncValue.data(enabled);

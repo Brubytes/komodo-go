@@ -13,7 +13,7 @@ abstract final class AppMotion {
   static const Curve enterCurve = Curves.easeOutCubic;
   static const Curve exitCurve = Curves.easeInCubic;
 
-  static const double slideOffsetY = 12.0;
+  static const double slideOffsetY = 12;
 
   static Duration stagger(int index, {int stepMs = 20, int maxMs = 160}) {
     final ms = (index * stepMs).clamp(0, maxMs);
@@ -71,11 +71,11 @@ class _AppFadeSlideState extends State<AppFadeSlide>
       return;
     }
     if (widget.delay == Duration.zero) {
-      _controller.forward();
+      unawaited(_controller.forward());
       return;
     }
     _delayTimer = Timer(widget.delay, () {
-      if (mounted) _controller.forward();
+      if (mounted) unawaited(_controller.forward());
     });
   }
 

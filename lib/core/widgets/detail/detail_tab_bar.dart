@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -53,27 +55,31 @@ PreferredSizeWidget buildDetailTabBar({
                 );
               }
               log('animate inner to $innerMin');
-              inner.animateTo(
-                innerMin,
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-              ).then((_) {
-                if (!debugScrollLogging || !kDebugMode) return;
-                if (nestedState.outerController.hasClients) {
-                  final outerPos = nestedState.outerController.position;
-                  log(
-                    'after outerPixels=${outerPos.pixels.toStringAsFixed(1)} '
-                    'outerMax=${outerPos.maxScrollExtent.toStringAsFixed(1)}',
-                  );
-                }
-                if (inner.hasClients) {
-                  final innerPos = inner.position;
-                  log(
-                    'after innerPixels=${innerPos.pixels.toStringAsFixed(1)} '
-                    'innerMax=${innerPos.maxScrollExtent.toStringAsFixed(1)}',
-                  );
-                }
-              });
+              unawaited(
+                inner
+                    .animateTo(
+                      innerMin,
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                    )
+                    .then((_) {
+                  if (!debugScrollLogging || !kDebugMode) return;
+                  if (nestedState.outerController.hasClients) {
+                    final outerPos = nestedState.outerController.position;
+                    log(
+                      'after outerPixels=${outerPos.pixels.toStringAsFixed(1)} '
+                      'outerMax=${outerPos.maxScrollExtent.toStringAsFixed(1)}',
+                    );
+                  }
+                  if (inner.hasClients) {
+                    final innerPos = inner.position;
+                    log(
+                      'after innerPixels=${innerPos.pixels.toStringAsFixed(1)} '
+                      'innerMax=${innerPos.maxScrollExtent.toStringAsFixed(1)}',
+                    );
+                  }
+                }),
+              );
               return;
             }
           }
@@ -84,9 +90,10 @@ PreferredSizeWidget buildDetailTabBar({
 
         final position = scrollController.position;
         final rawTarget = position.maxScrollExtent - outerScrollTopInset;
-        final target = rawTarget
-            .clamp(position.minScrollExtent, position.maxScrollExtent)
-            .toDouble();
+        final target = rawTarget.clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        );
         if ((position.pixels - target).abs() < 0.5) return;
 
         log(
@@ -95,10 +102,12 @@ PreferredSizeWidget buildDetailTabBar({
           'min=${position.minScrollExtent.toStringAsFixed(1)} '
           'max=${position.maxScrollExtent.toStringAsFixed(1)})',
         );
-        scrollController.animateTo(
-          target,
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
+        unawaited(
+          scrollController.animateTo(
+            target,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+          ),
         );
       }
 

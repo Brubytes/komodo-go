@@ -1,8 +1,7 @@
 import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/data/models/core_info.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../models/core_info.dart';
 
 part 'core_repository.g.dart';
 

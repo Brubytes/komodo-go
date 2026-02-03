@@ -23,8 +23,8 @@ dependencies:
   lucide_icons_flutter: ^3.1.9
   riverpod_annotation: ^4.0.1
   shared_preferences: ^2.5.4
-  syntax_highlight: ^0.5.0
   skeletonizer: ^2.1.2
+  syntax_highlight: ^0.5.0
   url_launcher: ^6.3.2
 
 dev_dependencies:

@@ -8,7 +8,7 @@ enum DetailCodeLanguage { plainText, yaml, typescript }
 
 /// A scrollable, selectable code block with lightweight syntax highlighting.
 ///
-/// Note: Light mode uses no gradients (handled by [DetailSurface]).
+/// Note: Light mode uses no gradients (handled by DetailSurface).
 class DetailCodeBlock extends StatelessWidget {
   const DetailCodeBlock({
     required this.code,

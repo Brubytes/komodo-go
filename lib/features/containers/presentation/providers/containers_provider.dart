@@ -104,10 +104,7 @@ class Containers extends _$Containers {
     final workers = <Future<void>>[for (var i = 0; i < limit; i++) runNext()];
 
     await Future.wait(workers);
-    return [
-      for (final result in results)
-        if (result != null) result,
-    ];
+    return results.whereType<ContainersResult>().toList();
   }
 
   Future<ContainersResult> _fetchForServer(
@@ -147,7 +144,9 @@ class Containers extends _$Containers {
     ref.invalidateSelf();
     try {
       await future;
-    } catch (_) {}
+    } on Exception {
+      // Ignore refresh errors.
+    }
   }
 }
 

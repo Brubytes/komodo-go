@@ -23,7 +23,9 @@ class Builders extends _$Builders {
     ref.invalidateSelf();
     try {
       await future;
-    } catch (_) {}
+    } on Exception {
+      // Ignore refresh errors.
+    }
   }
 }
 

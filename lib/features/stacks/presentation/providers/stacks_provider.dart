@@ -27,7 +27,9 @@ class Stacks extends _$Stacks {
     ref.invalidateSelf();
     try {
       await future;
-    } catch (_) {}
+    } on Exception {
+      // Ignore refresh errors.
+    }
   }
 }
 

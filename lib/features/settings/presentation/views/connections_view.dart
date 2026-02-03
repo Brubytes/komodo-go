@@ -206,7 +206,9 @@ class ConnectionsView extends ConsumerWidget {
 
     if (confirmed ?? false) {
       if (connection.name == demoConnectionName) {
-        await ref.read(demoModeProvider.notifier).setEnabled(false);
+        await ref
+            .read(demoModeProvider.notifier)
+            .setEnabled(enabled: false);
         return;
       }
       await ref
@@ -283,7 +285,9 @@ class ConnectionsView extends ConsumerWidget {
     );
 
     if (shouldEnable ?? false) {
-      await ref.read(demoModeProvider.notifier).setEnabled(true);
+      await ref
+          .read(demoModeProvider.notifier)
+          .setEnabled(enabled: true);
     }
   }
 }

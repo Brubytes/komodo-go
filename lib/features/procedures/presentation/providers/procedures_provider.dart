@@ -27,7 +27,9 @@ class Procedures extends _$Procedures {
     ref.invalidateSelf();
     try {
       await future;
-    } catch (_) {}
+    } on Exception {
+      // Ignore refresh errors.
+    }
   }
 }
 

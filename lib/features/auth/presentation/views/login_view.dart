@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
@@ -40,7 +42,7 @@ class LoginView extends HookConsumerWidget {
       final nextState = next.value;
       if (nextState is AuthStateAuthenticated) {
         ref.read(connectionDraftProvider.notifier).reset();
-        ref.read(onboardingProvider.notifier).markCompleted();
+        unawaited(ref.read(onboardingProvider.notifier).markCompleted());
       }
     });
 
@@ -158,7 +160,9 @@ class LoginView extends HookConsumerWidget {
 
           if (confirmed ?? false) {
             if (connection.name == demoConnectionName) {
-              await ref.read(demoModeProvider.notifier).setEnabled(false);
+              await ref
+                  .read(demoModeProvider.notifier)
+                  .setEnabled(enabled: false);
               return;
             }
             await ref
@@ -296,7 +300,7 @@ class LoginView extends HookConsumerWidget {
                         );
                       },
                       loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (error, stackTrace) => const SizedBox.shrink(),
                     ),
 
                     // Error message

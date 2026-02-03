@@ -28,7 +28,9 @@ class DockerRegistryAccounts extends _$DockerRegistryAccounts {
     ref.invalidateSelf();
     try {
       await future;
-    } catch (_) {}
+    } on Exception {
+      // Ignore refresh errors.
+    }
   }
 }
 
