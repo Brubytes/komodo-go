@@ -1,0 +1,96 @@
+workflows:
+  ci:
+    name: CI (analyze, test, build)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      flutter: fvm
+      xcode: latest
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/.gradle/caches
+        - ~/Library/Caches/CocoaPods
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: "*"
+          include: true
+          source: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Flutter pub get
+        script: fvm flutter pub get
+      - name: Flutter analyze
+        script: fvm flutter analyze
+      - name: Flutter test
+        script: fvm flutter test
+      - name: Build Android App Bundle
+        script: fvm flutter build appbundle
+      - name: Build iOS (no codesign)
+        script: fvm flutter build ios --no-codesign
+    artifacts:
+      - build/**/outputs/**/*.aab
+      - build/**/outputs/**/*.apk
+      - build/ios/iphoneos/*.app
+      - build/ios/iphonesimulator/*.app
+      - /tmp/xcodebuild_logs/*.log
+
+  release-android:
+    name: Release Android (signed)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      android_signing:
+        - keystore_reference
+      flutter: fvm
+      groups:
+        - keystore_credentials
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/.gradle/caches
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "v*"
+          include: true
+    scripts:
+      - name: Flutter pub get
+        script: fvm flutter pub get
+      - name: Build Android App Bundle
+        script: fvm flutter build appbundle
+    artifacts:
+      - build/**/outputs/**/*.aab
+      - build/**/outputs/**/*.apk
+
+  release-ios:
+    name: Release iOS (signed)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      flutter: fvm
+      xcode: latest
+      groups:
+        - app_store_credentials
+        - ios_signing
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/Library/Caches/CocoaPods
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "v*"
+          include: true
+    scripts:
+      - name: Flutter pub get
+        script: fvm flutter pub get
+      - name: Build iOS (release)
+        script: fvm flutter build ipa
+    artifacts:
+      - build/ios/ipa/*.ipa
