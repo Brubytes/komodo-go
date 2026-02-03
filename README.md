@@ -56,13 +56,21 @@ It is available as an option on the login screen.
   - `KOMODO_DEMO_API_SECRET` (default: `demo-secret`)
   - `KOMODO_DEMO_AVAILABLE` (default: `true`)
 
-### UI-defined demo stack
+## Design system / theming
 
-Demo mode includes a stack named **Demo Stack (UI Defined)** whose Compose contents are loaded from:
+The app uses a single unified Material 3 theme on both iOS and Android (no platform-specific split, expect for the main navigation bar).
 
-- [assets/demo_mode/ui_defined_stack/compose.yml](assets/demo_mode/ui_defined_stack/compose.yml)
+- Brand colors:
+  - Primary: `#014226`
+  - Secondary: `#4EB333`
+- Theme entry points:
+  - Tokens: [`lib/core/theme/app_tokens.dart`](lib/core/theme/app_tokens.dart)
+  - Theme: [`lib/core/theme/app_theme.dart`](lib/core/theme/app_theme.dart)
 
-Edit that file and restart the app to see the Compose editor update.
+Guidelines:
+
+- Prefer `Theme.of(context).colorScheme` for UI colors.
+- Don’t hard-code hex colors in widgets unless there is a strong reason.
 
 ## App Store screenshots (Maestro + storepix)
 
@@ -109,22 +117,6 @@ Outputs are saved to:
 - [`storepix/output/iphone-6.5/`](storepix/output/iphone-6.5/)
 
 or elsewhere depending on your storepix configuration.
-
-## Design system / theming
-
-The app uses a single unified Material 3 theme on both iOS and Android (no platform-specific split, expect for the main navigation bar).
-
-- Brand colors:
-  - Primary: `#014226`
-  - Secondary: `#4EB333`
-- Theme entry points:
-  - Tokens: [`lib/core/theme/app_tokens.dart`](lib/core/theme/app_tokens.dart)
-  - Theme: [`lib/core/theme/app_theme.dart`](lib/core/theme/app_theme.dart)
-
-Guidelines:
-
-- Prefer `Theme.of(context).colorScheme` for UI colors.
-- Don’t hard-code hex colors in widgets unless there is a strong reason.
 
 ## License
 
