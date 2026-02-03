@@ -23,11 +23,12 @@ Optional:
 
 ## Development
 
-- `fvm flutter pub get`
-- `fvm flutter run`
-- `fvm flutter analyze`
-- `fvm flutter test`
-
+- `fvm flutter pub get` to install dependencies
+- `fvm dart run build_runner build --delete-conflicting-outputs` to generate code
+- `fvm flutter run` to run the app
+- `fvm flutter analyze` to analyze the code
+- `fvm flutter test` to run tests
+  
 ## Testing
 
 See [TESTING.md](TESTING.md) for the full testing strategy, available test suites, and
