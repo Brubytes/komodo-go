@@ -102,8 +102,6 @@ workflows:
       flutter: fvm
       xcode: 26.2
       cocoapods: default
-      groups:
-        - app_store_credentials
       vars:
         APP_ID: 6758161017
     cache:
