@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/komodo-go-logo_circle.png" alt="Komodo Go logo" width="140">
+</p>
+
 # Komodo Go
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
@@ -10,7 +14,10 @@ Komodo Go is a third party client for [Komodo 🦎](https://komo.do). Komodo Go 
 
 ## Requirements
 
-- Flutter is pinned via [FVM](https://fvm.app/) in `.fvmrc`
+- Flutter, pinned via [FVM](https://fvm.app/) in `.fvmrc`
+Optional:
+- [Patrol](https://patrol.leancode.co/) for running integration tests
+- [Maestro](https://docs.maestro.dev/) and [storepix](https://www.npmjs.com/package/storepix) for App Store screenshot generation
 
 ## Development
 
@@ -19,7 +26,12 @@ Komodo Go is a third party client for [Komodo 🦎](https://komo.do). Komodo Go 
 - `fvm flutter analyze`
 - `fvm flutter test`
 
-## Integration tests (Patrol)
+## Testing
+
+See [TESTING.md](TESTING.md) for the full testing strategy, available test suites, and
+step-by-step commands.
+
+### Integration tests (Patrol)
 
 More advanced tests are implemented with [Patrol](https://patrol.leancode.co/) and located in `integration_test/`.
 
@@ -48,7 +60,7 @@ It is available as an option on the login screen.
 
 Demo mode includes a stack named **Demo Stack (UI Defined)** whose Compose contents are loaded from:
 
-- `assets/demo_mode/ui_defined_stack/compose.yml`
+- [assets/demo_mode/ui_defined_stack/compose.yml](assets/demo_mode/ui_defined_stack/compose.yml)
 
 Edit that file and restart the app to see the Compose editor update.
 
@@ -74,7 +86,7 @@ Run the mixed flow (dark for 1-3, light for 4-6):
 
 Outputs are saved to:
 
-- `.maestro/screenshots/`
+- [`.maestro/screenshots/`](.maestro/screenshots/)
 
 ### Prepare Storepix inputs
 
@@ -94,7 +106,7 @@ storepix generate
 
 Outputs are saved to:
 
-- `storepix/output/iphone-6.5/`
+- [`storepix/output/iphone-6.5/`](storepix/output/iphone-6.5/)
 
 or elsewhere depending on your storepix configuration.
 
@@ -106,8 +118,8 @@ The app uses a single unified Material 3 theme on both iOS and Android (no platf
   - Primary: `#014226`
   - Secondary: `#4EB333`
 - Theme entry points:
-  - Tokens: `lib/core/theme/app_tokens.dart`
-  - Theme: `lib/core/theme/app_theme.dart`
+  - Tokens: [`lib/core/theme/app_tokens.dart`](lib/core/theme/app_tokens.dart)
+  - Theme: [`lib/core/theme/app_theme.dart`](lib/core/theme/app_theme.dart)
 
 Guidelines:
 
