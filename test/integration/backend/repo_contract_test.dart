@@ -22,8 +22,8 @@ void registerRepoContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = RepoRepository(client);
     });
 
@@ -65,11 +65,12 @@ void registerRepoContractTests() {
           },
           name: name,
         );
+        final createdIdValue = createdId;
 
         final updated = await retryAsync(() async {
           return expectRight(
             await repository.updateRepoConfig(
-              repoId: createdId!,
+              repoId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'skip_secret_interp': !seedDetail.config.skipSecretInterp,
               },
@@ -81,32 +82,32 @@ void registerRepoContractTests() {
         final updatedHttps = await retryAsync(() async {
           return expectRight(
             await repository.updateRepoConfig(
-              repoId: createdId!,
+              repoId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'git_https': !seedDetail.config.gitHttps,
               },
             ),
           );
         });
-        expect(updatedHttps.id, createdId);
+        expect(updatedHttps.id, createdIdValue);
 
-        final refreshed = expectRight(await repository.getRepo(createdId!));
+        final refreshed = expectRight(await repository.getRepo(createdIdValue));
         expect(refreshed.config.gitHttps, updatedHttps.config.gitHttps);
 
         await retryAsync(() async {
           await client.write(
             RpcRequest(
               type: 'DeleteRepo',
-              params: <String, dynamic>{'id': createdId},
+              params: <String, dynamic>{'id': createdIdValue},
             ),
           );
         });
         deleted = true;
         await expectEventuallyServerFailure(
-          () => repository.getRepo(createdId!),
+          () => repository.getRepo(createdIdValue),
         );
         final afterDelete = expectRight(await repository.listRepos());
-        expect(afterDelete.any((r) => r.id == createdId), isFalse);
+        expect(afterDelete.any((r) => r.id == createdIdValue), isFalse);
       } finally {
         final idToDelete = createdId ?? created?.id;
         if (!deleted && idToDelete != null) {
@@ -131,8 +132,8 @@ void registerRepoContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = RepoRepository(client);
     });
 

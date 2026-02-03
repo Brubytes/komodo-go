@@ -21,9 +21,9 @@ void registerTagContractTests() {
     late RpcRecorder recorder;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
+      await resetBackendIfConfigured(requireConfig(config));
       recorder = RpcRecorder();
-      repository = TagRepository(buildTestClient(config!, recorder));
+      repository = TagRepository(buildTestClient(requireConfig(config), recorder));
     });
 
     test('create/rename/update/delete tag + goldens', () async {
@@ -35,15 +35,17 @@ void registerTagContractTests() {
           color: TagColor.slate,
         );
         created = expectRight(createResult);
+        final createdValue =
+            created ?? (throw StateError('Expected created tag.'));
 
         final requestData = recorder.lastRequest?.data;
         final responseData = recorder.lastResponse?.data;
 
-        expect(requestData, isA<Map>());
-        expect(responseData, isA<Map>());
+        expect(requestData, isA<Map<String, dynamic>>());
+        expect(responseData, isA<Map<String, dynamic>>());
 
         final normalizedRequest = normalizeJson(
-          (requestData as Map).cast<String, dynamic>(),
+          requestData as Map<String, dynamic>,
         );
         expect(
           normalizedRequest,
@@ -51,7 +53,7 @@ void registerTagContractTests() {
         );
 
         final normalizedResponse = normalizeTagResponse(
-          (responseData as Map).cast<String, dynamic>(),
+          responseData as Map<String, dynamic>,
         );
         expect(
           normalizedResponse,
@@ -59,41 +61,41 @@ void registerTagContractTests() {
         );
 
         final listed = expectRight(await repository.listTags());
-        expect(listed.any((t) => t.id == created!.id), isTrue);
+        expect(listed.any((t) => t.id == createdValue.id), isTrue);
 
         final renamed = expectRight(
           await repository.renameTag(
-            id: created!.id,
+            id: createdValue.id,
             name: 'Contract Tag Renamed',
           ),
         );
-        expect(renamed.id, created!.id);
+        expect(renamed.id, createdValue.id);
         expect(renamed.name, 'Contract Tag Renamed');
 
         final afterRename = expectRight(await repository.listTags());
         final renamedFromList = afterRename.firstWhere(
-          (t) => t.id == created!.id,
+          (t) => t.id == createdValue.id,
         );
         expect(renamedFromList.name, 'Contract Tag Renamed');
 
         final recolored = expectRight(
           await repository.updateTagColor(
-            tagIdOrName: created!.id,
+            tagIdOrName: createdValue.id,
             color: TagColor.red,
           ),
         );
-        expect(recolored.id, created!.id);
+        expect(recolored.id, createdValue.id);
         expect(recolored.color, TagColor.red);
 
         final afterColor = expectRight(await repository.listTags());
         final recoloredFromList = afterColor.firstWhere(
-          (t) => t.id == created!.id,
+          (t) => t.id == createdValue.id,
         );
         expect(recoloredFromList.color, TagColor.red);
 
-        expectRight(await repository.deleteTag(id: created!.id));
+        expectRight(await repository.deleteTag(id: createdValue.id));
         final afterDelete = expectRight(await repository.listTags());
-        expect(afterDelete.any((t) => t.id == created!.id), isFalse);
+        expect(afterDelete.any((t) => t.id == createdValue.id), isFalse);
       } finally {
         if (created != null) {
           await repository.deleteTag(id: created.id);
@@ -118,9 +120,9 @@ void registerTagContractTests() {
     late TagRepository repository;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
+      await resetBackendIfConfigured(requireConfig(config));
       repository = TagRepository(
-        buildTestClient(config!, RpcRecorder()),
+        buildTestClient(requireConfig(config), RpcRecorder()),
       );
     });
 

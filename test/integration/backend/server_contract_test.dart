@@ -22,8 +22,8 @@ void registerServerContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = ServerRepository(client);
     });
 
@@ -60,11 +60,12 @@ void registerServerContractTests() {
           },
           name: name,
         );
+        final createdIdValue = createdId;
 
         final updated = await retryAsync(() async {
           return expectRight(
             await repository.updateServerConfig(
-              serverId: createdId!,
+              serverId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'enabled': !seedConfig.enabled,
               },
@@ -77,16 +78,16 @@ void registerServerContractTests() {
           await client.write(
             RpcRequest(
               type: 'DeleteServer',
-              params: <String, dynamic>{'id': createdId},
+              params: <String, dynamic>{'id': createdIdValue},
             ),
           );
         });
         deleted = true;
         await expectEventuallyServerFailure(
-          () => repository.getServer(createdId!),
+          () => repository.getServer(createdIdValue),
         );
         final afterDelete = expectRight(await repository.listServers());
-        expect(afterDelete.any((s) => s.id == createdId), isFalse);
+        expect(afterDelete.any((s) => s.id == createdIdValue), isFalse);
       } finally {
         final idToDelete = createdId ?? created?.id;
         if (!deleted && idToDelete != null) {
@@ -141,8 +142,8 @@ void registerServerContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = ServerRepository(client);
     });
 

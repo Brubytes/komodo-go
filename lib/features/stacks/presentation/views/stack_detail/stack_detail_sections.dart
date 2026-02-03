@@ -2237,12 +2237,6 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
     });
   }
 
-  bool _isDirty(String path) {
-    final controller = _controllers[path];
-    if (controller == null) return false;
-    return controller.text != (_initialContents[path] ?? '');
-  }
-
   String _requiresLabel(StackFileRequires value) {
     return switch (value) {
       StackFileRequires.none => 'None',
@@ -2251,36 +2245,6 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
     };
   }
 
-  Future<void> _saveFile(StackRemoteFileContents file) async {
-    final path = file.path;
-    final controller = _controllers[path];
-    if (controller == null || _savingPaths.contains(path)) return;
-
-    setState(() => _savingPaths.add(path));
-    final success = await widget.onSaveFile(
-      path,
-      controller.text,
-      showSnackBar: true,
-    );
-    if (!mounted) return;
-    setState(() {
-      _savingPaths.remove(path);
-      if (success) {
-        _initialContents[path] = controller.text;
-        _dirtyPaths.remove(path);
-      }
-    });
-    _notifyDirtyChanged();
-  }
-
-  void _resetFile(String path) {
-    final controller = _controllers[path];
-    if (controller == null) return;
-    controller.text = _initialContents[path] ?? '';
-    _updateDirtyForPath(path);
-    if (!mounted) return;
-    setState(() {});
-  }
 
   Future<bool> saveAll() async {
     final dirtyPaths = _dirtyPaths.toList();

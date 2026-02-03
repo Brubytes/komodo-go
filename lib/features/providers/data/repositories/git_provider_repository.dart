@@ -30,7 +30,7 @@ class GitProviderRepository {
 
       final itemsJson = response as List<dynamic>? ?? [];
       return itemsJson
-          .whereType<Map>()
+          .whereType<Map<dynamic, dynamic>>()
           .map(
             (json) => GitProviderAccount.fromJson(json.cast<String, dynamic>()),
           )

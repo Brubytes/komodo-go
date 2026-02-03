@@ -68,7 +68,7 @@ class DetailCodeEditor extends StatelessWidget {
                       context,
                       rootNavigator: true,
                     ).push(
-                      MaterialPageRoute(
+                      MaterialPageRoute<void>(
                         fullscreenDialog: true,
                         builder: (context) => _DetailCodeEditorFullscreen(
                           controller: controller,
