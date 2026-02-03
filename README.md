@@ -4,6 +4,10 @@
 
 Flutter app to control the Komodo infrastructure management platform.
 
+## Komodo project
+
+Komodo Go is a third party client for [Komodo 🦎](https://komo.do). Komodo Go is a native iOS / Android application that allows to control Komodo on the go. While it covers many options it is not feature complete compared to the Komodo Web UI.
+
 ## Requirements
 
 - Flutter is pinned via [FVM](https://fvm.app/) in `.fvmrc`
