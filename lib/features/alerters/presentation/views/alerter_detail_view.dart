@@ -108,8 +108,7 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
     );
 
     return PopScope(
-      canPop: true,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (didPop) hideDirtySnackBar();
       },
       child: Scaffold(
@@ -138,7 +137,6 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
                 dirty: isDirty,
                 onDiscard: _discardChanges,
                 onSave: () => _save(context),
-                saveEnabled: true,
               );
             }
 
@@ -405,11 +403,9 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
     setState(() => _suppressDirtySnackBar = true);
 
     final nextName = _nameController.text.trim();
-    final renameOk = nextName != _initialName
-        ? await ref
+    final renameOk = !(nextName != _initialName) || await ref
               .read(alerterActionsProvider.notifier)
-              .rename(id: widget.alerterIdOrName, name: nextName)
-        : true;
+              .rename(id: widget.alerterIdOrName, name: nextName);
 
     if (!context.mounted) return;
     if (!renameOk) {

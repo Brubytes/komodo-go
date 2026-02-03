@@ -16,12 +16,12 @@ class DockerRegistryAccounts extends _$DockerRegistryAccounts {
 
     final result = await repository.listAccounts();
     final accounts = unwrapOrThrow(result);
-    accounts.sort(
-      (a, b) => a.domain.compareTo(b.domain) != 0
-          ? a.domain.compareTo(b.domain)
-          : a.username.compareTo(b.username),
-    );
-    return accounts;
+    return accounts
+      ..sort(
+        (a, b) => a.domain.compareTo(b.domain) != 0
+            ? a.domain.compareTo(b.domain)
+            : a.username.compareTo(b.username),
+      );
   }
 
   Future<void> refresh() async {

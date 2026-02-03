@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -39,21 +41,22 @@ class AlertsTab extends ConsumerWidget {
             onNotification: (notification) {
               if (notification.metrics.pixels >=
                   notification.metrics.maxScrollExtent - 200) {
-                ref.read(alertsProvider.notifier).fetchNextPage();
+                unawaited(ref.read(alertsProvider.notifier).fetchNextPage());
               }
               return false;
             },
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: state.items.length + (state.nextPage == null ? 0 : 1),
-              separatorBuilder: (_, __) => const Gap(12),
+              separatorBuilder: (_, _) => const Gap(12),
               itemBuilder: (context, index) {
                 final isFooter = index >= state.items.length;
                 if (isFooter) {
                   return PaginationFooter(
                     isLoading: state.isLoadingMore,
-                    onLoadMore: () =>
-                        ref.read(alertsProvider.notifier).fetchNextPage(),
+                    onLoadMore: () => unawaited(
+                      ref.read(alertsProvider.notifier).fetchNextPage(),
+                    ),
                   );
                 }
 
@@ -101,21 +104,22 @@ class UpdatesTab extends ConsumerWidget {
             onNotification: (notification) {
               if (notification.metrics.pixels >=
                   notification.metrics.maxScrollExtent - 200) {
-                ref.read(updatesProvider.notifier).fetchNextPage();
+                unawaited(ref.read(updatesProvider.notifier).fetchNextPage());
               }
               return false;
             },
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: state.items.length + (state.nextPage == null ? 0 : 1),
-              separatorBuilder: (_, __) => const Gap(12),
+              separatorBuilder: (_, _) => const Gap(12),
               itemBuilder: (context, index) {
                 final isFooter = index >= state.items.length;
                 if (isFooter) {
                   return PaginationFooter(
                     isLoading: state.isLoadingMore,
-                    onLoadMore: () =>
-                        ref.read(updatesProvider.notifier).fetchNextPage(),
+                    onLoadMore: () => unawaited(
+                      ref.read(updatesProvider.notifier).fetchNextPage(),
+                    ),
                   );
                 }
 
@@ -412,12 +416,11 @@ class _AlertsSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: 6,
-        separatorBuilder: (_, __) => const Gap(12),
-        itemBuilder: (_, __) => AppCardSurface(
+        separatorBuilder: (_, _) => const Gap(12),
+        itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -457,12 +460,11 @@ class _UpdatesSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: 6,
-        separatorBuilder: (_, __) => const Gap(12),
-        itemBuilder: (_, __) => AppCardSurface(
+        separatorBuilder: (_, _) => const Gap(12),
+        itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
             padding: const EdgeInsets.all(14),

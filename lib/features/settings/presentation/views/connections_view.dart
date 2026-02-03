@@ -161,7 +161,7 @@ class ConnectionsView extends ConsumerWidget {
                 ),
               );
             },
-            separatorBuilder: (_, __) => const Gap(8),
+            separatorBuilder: (_, _) => const Gap(8),
             itemCount: connections.length,
           );
         },
@@ -226,12 +226,12 @@ class ConnectionsView extends ConsumerWidget {
         context: context,
         useSafeArea: true,
         showDragHandle: true,
-        builder: (context) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        builder: (context) => const Padding(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
+            children: [
               Text(
                 'Demo mode unavailable',
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
@@ -302,12 +302,11 @@ class _ConnectionsSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: 4,
-        separatorBuilder: (_, __) => const Gap(8),
-        itemBuilder: (_, __) => AppCardSurface(
+        separatorBuilder: (_, _) => const Gap(8),
+        itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
             padding: const EdgeInsets.all(14),

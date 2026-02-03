@@ -403,7 +403,7 @@ class ProcedureConfigEditorContentState
   var _webhookEnabled = false;
   var _scheduleAlert = false;
   var _failureAlert = false;
-  var _scheduleFormat = ScheduleFormat.english;
+  ScheduleFormat _scheduleFormat = ScheduleFormat.english;
 
   @override
   void initState() {

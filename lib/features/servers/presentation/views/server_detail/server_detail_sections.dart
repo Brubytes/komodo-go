@@ -685,8 +685,9 @@ class ServerConfigEditorContentState extends State<ServerConfigEditorContent> {
 
   void _disposeRowControllers(List<TextEditingController> controllers) {
     for (final c in controllers) {
-      c.removeListener(_notifyDirtyIfChanged);
-      c.dispose();
+      c
+        ..removeListener(_notifyDirtyIfChanged)
+        ..dispose();
     }
     controllers.clear();
   }
@@ -706,8 +707,7 @@ class ServerConfigEditorContentState extends State<ServerConfigEditorContent> {
 
   void _addRow(List<TextEditingController> target) {
     setState(() {
-      final c = TextEditingController();
-      c.addListener(_notifyDirtyIfChanged);
+      final c = TextEditingController()..addListener(_notifyDirtyIfChanged);
       target.add(c);
     });
     _notifyDirtyIfChanged();
@@ -716,9 +716,9 @@ class ServerConfigEditorContentState extends State<ServerConfigEditorContent> {
   void _removeRow(List<TextEditingController> target, int index) {
     if (index < 0 || index >= target.length) return;
     setState(() {
-      final c = target.removeAt(index);
-      c.removeListener(_notifyDirtyIfChanged);
-      c.dispose();
+      target.removeAt(index)
+        ..removeListener(_notifyDirtyIfChanged)
+        ..dispose();
     });
     _notifyDirtyIfChanged();
   }
@@ -1346,7 +1346,6 @@ class ServerMessageCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCardSurface(
-      padding: const EdgeInsets.all(16),
       child: Text(message),
     );
   }

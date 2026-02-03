@@ -16,7 +16,7 @@ class TagRepository {
   Future<Either<Failure, List<KomodoTag>>> listTags() async {
     return apiCall(() async {
       final response = await _client.read(
-        RpcRequest(
+        const RpcRequest(
           type: 'ListTags',
           // Backend expects an optional *Mongo* query for tags.
           // Omitting it returns all tags.

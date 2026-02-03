@@ -37,7 +37,7 @@ class HomeServerListTile extends StatelessWidget {
         ),
         title: Text(server.name),
         subtitle: Text(server.address),
-        trailing: Icon(AppIcons.chevron),
+        trailing: const Icon(AppIcons.chevron),
         onTap: () => context.go(
           '${AppRoutes.servers}/${server.id}?name=${Uri.encodeComponent(server.name)}',
         ),

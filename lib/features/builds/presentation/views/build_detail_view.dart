@@ -134,7 +134,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                               ? name.trim()
                               : (builderId.isNotEmpty ? builderId : null),
                           loading: () => 'Loading…',
-                          error: (_, __) =>
+                          error: (_, _) =>
                               builderId.isNotEmpty ? builderId : null,
                         );
 

@@ -51,7 +51,6 @@ class BuilderTile extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Container(
                               width: 32,
@@ -193,11 +192,9 @@ class BuilderTile extends ConsumerWidget {
     if (result == null) return;
 
     final nextName = result.name.trim();
-    final renameOk = nextName.isNotEmpty && nextName != item.name
-        ? await ref
+    final renameOk = !(nextName.isNotEmpty && nextName != item.name) || await ref
               .read(builderActionsProvider.notifier)
-              .rename(id: item.id, name: nextName)
-        : true;
+              .rename(id: item.id, name: nextName);
 
     if (!context.mounted) return;
 

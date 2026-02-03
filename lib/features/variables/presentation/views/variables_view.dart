@@ -70,7 +70,7 @@ class VariablesView extends ConsumerWidget {
                 return ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: variables.length,
-                  separatorBuilder: (_, __) => const Gap(12),
+                  separatorBuilder: (_, _) => const Gap(12),
                   itemBuilder: (context, index) => AppFadeSlide(
                     delay: AppMotion.stagger(index),
                     play: index < 10,
@@ -259,12 +259,11 @@ class _VariablesSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: 6,
-        separatorBuilder: (_, __) => const Gap(12),
-        itemBuilder: (_, __) => AppCardSurface(
+        separatorBuilder: (_, _) => const Gap(12),
+        itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
             padding: const EdgeInsets.all(14),

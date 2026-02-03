@@ -76,7 +76,7 @@ class GitProviderRepository {
         if (username != null && username.trim().isNotEmpty)
           'username': username.trim(),
         if (token != null && token.trim().isNotEmpty) 'token': token.trim(),
-        if (https != null) 'https': https,
+        'https': ?https,
       };
 
       final response = await _client.write(

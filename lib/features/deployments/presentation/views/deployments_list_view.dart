@@ -291,7 +291,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
                       sliver: SliverList.separated(
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const Gap(12),
+                        separatorBuilder: (_, _) => const Gap(12),
                         itemBuilder: (context, i) {
                           final deployment = filtered[i];
                           return AppFadeSlide(
@@ -671,11 +671,10 @@ class _DeploymentsSkeletonSliver extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer.sliver(
-      enabled: true,
       child: SliverList.separated(
         itemCount: 6,
-        separatorBuilder: (_, __) => const Gap(12),
-        itemBuilder: (_, __) => AppCardSurface(
+        separatorBuilder: (_, _) => const Gap(12),
+        itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -699,8 +698,8 @@ class _DeploymentsSkeletonSliver extends StatelessWidget {
                 const Gap(10),
                 Text('Image • Server', style: textTheme.bodySmall),
                 const Gap(10),
-                Row(
-                  children: const [
+                const Row(
+                  children: [
                     Chip(label: Text('Running')),
                     Gap(8),
                     Chip(label: Text('Healthy')),

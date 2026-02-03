@@ -322,7 +322,7 @@ class _ResourceTargetsEditorSheetState
                 const Gap(8),
                 Row(
                   children: [
-                    const AppInlineSkeleton(size: 16),
+                    const AppInlineSkeleton(),
                     const Gap(8),
                     Text(
                       'Loading resources...',
@@ -344,7 +344,6 @@ class _ResourceTargetsEditorSheetState
               DetailSurface(
                 padding: EdgeInsets.zero,
                 radius: 16,
-                enableGradientInDark: false,
                 child: Column(
                   children: [
                     Padding(
@@ -473,7 +472,6 @@ class _ResourceTargetsEditorSheetState
                 DetailSurface(
                   padding: const EdgeInsets.all(12),
                   radius: 16,
-                  enableGradientInDark: false,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

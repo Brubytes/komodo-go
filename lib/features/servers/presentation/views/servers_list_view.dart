@@ -567,12 +567,11 @@ class _ServersSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: 6,
-        separatorBuilder: (_, __) => const Gap(12),
-        itemBuilder: (_, __) => AppCardSurface(
+        separatorBuilder: (_, _) => const Gap(12),
+        itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -594,10 +593,10 @@ class _ServersSkeletonList extends StatelessWidget {
                 Text('Status - Region - Provider',
                     style: textTheme.bodySmall),
                 const Gap(10),
-                Wrap(
+                const Wrap(
                   spacing: 8,
                   runSpacing: 6,
-                  children: const [
+                  children: [
                     Chip(label: Text('Online')),
                     Chip(label: Text('CPU 45%')),
                     Chip(label: Text('Mem 62%')),

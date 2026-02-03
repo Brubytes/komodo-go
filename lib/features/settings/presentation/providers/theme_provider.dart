@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,7 +12,7 @@ const _themeModeKey = 'komodo_theme_mode';
 class ThemeModeNotifier extends _$ThemeModeNotifier {
   @override
   ThemeMode build() {
-    _loadThemeMode();
+    unawaited(_loadThemeMode());
     return ThemeMode.system;
   }
 
