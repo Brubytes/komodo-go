@@ -46,7 +46,7 @@ workflows:
     max_build_duration: 120
     environment:
       android_signing:
-        - keystore_reference
+        - Brubytes
       flutter: fvm
       groups:
         - keystore_credentials
