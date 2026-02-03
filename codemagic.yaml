@@ -48,6 +48,7 @@ workflows:
       flutter: fvm
       groups:
         - keystore_credentials
+        - google_play
       vars:
         PACKAGE_NAME: "com.brubytes.komodoGo"
         GOOGLE_PLAY_TRACK: "internal"
