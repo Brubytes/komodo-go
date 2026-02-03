@@ -361,7 +361,7 @@ final List<Map<String, dynamic>> _gitProviderAccounts = [
   ),
   _gitProviderAccount(
     id: 'git-3',
-    domain: 'git.company.local',
+    domain: 'git.example.com',
     username: 'build',
     https: false,
     token: '••••••••',
@@ -383,7 +383,7 @@ final List<Map<String, dynamic>> _dockerRegistryAccounts = [
   ),
   _dockerRegistryAccount(
     id: 'registry-3',
-    domain: 'registry.company.local',
+    domain: 'registry.example.com',
     username: 'deploy',
     token: '••••••••',
   ),
@@ -398,7 +398,7 @@ final List<Map<String, dynamic>> _builders = [
     tags: ['Production'],
     config: <String, dynamic>{
       'Url': <String, dynamic>{
-        'address': 'https://builders.komodo.dev',
+        'address': 'https://builders.example.com',
         'passkey': 'demo-passkey',
       },
     },
@@ -466,7 +466,7 @@ final List<Map<String, dynamic>> _alerters = [
       'enabled': false,
       'endpoint': <String, dynamic>{
         'type': 'Email',
-        'params': <String, dynamic>{'email': 'ops@komodo.dev'},
+        'params': <String, dynamic>{'email': 'ops@example.com'},
       },
       'alert_types': <String>['DeploymentAutoUpdated'],
       'resources': <Map<String, dynamic>>[
@@ -487,8 +487,8 @@ final List<Map<String, dynamic>> _alerters = [
       'endpoint': <String, dynamic>{
         'type': 'Ntfy',
         'params': <String, dynamic>{
-          'url': 'https://ntfy.sh/komodo-demo',
-          'email': 'demo@komodo.dev',
+          'url': 'https://ntfy.sh/example',
+          'email': 'demo@example.com',
         },
       },
       'alert_types': <String>['ServerUnreachable', 'BuildFailed'],
@@ -1618,7 +1618,7 @@ Map<String, dynamic> _builderDetail({required String? id}) {
             },
           _ => <String, dynamic>{
               'Url': <String, dynamic>{
-                'address': 'https://builders.komodo.dev',
+                'address': 'https://builders.example.com',
                 'passkey': 'demo-passkey',
               },
             },
@@ -1733,13 +1733,13 @@ Map<String, dynamic> _alerterDetail({required String? id}) {
   final endpoint = switch (endpointType) {
     'Email' => <String, dynamic>{
         'type': 'Email',
-        'params': <String, dynamic>{'email': 'ops@komodo.dev'},
+        'params': <String, dynamic>{'email': 'ops@example.com'},
       },
     'Ntfy' => <String, dynamic>{
         'type': 'Ntfy',
         'params': <String, dynamic>{
-          'url': 'https://ntfy.sh/komodo-demo',
-          'email': 'demo@komodo.dev',
+          'url': 'https://ntfy.sh/example',
+          'email': 'demo@example.com',
         },
       },
     _ => <String, dynamic>{
