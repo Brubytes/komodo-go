@@ -1,5 +1,7 @@
 # Komodo Go
 
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
 Flutter app to control the Komodo infrastructure management platform.
 
 ## Requirements
@@ -112,3 +114,7 @@ Guidelines:
 
 - Prefer `Theme.of(context).colorScheme` for UI colors.
 - Don’t hard-code hex colors in widgets unless there is a strong reason.
+
+## License
+
+This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE).
