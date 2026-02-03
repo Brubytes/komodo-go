@@ -42,7 +42,7 @@ void main() {
       addTearDown(container.dispose);
       final subscription = container.listen(
         tagsProvider.future,
-        (_, __) {},
+        (previous, next) {},
         fireImmediately: true,
       );
       addTearDown(subscription.close);

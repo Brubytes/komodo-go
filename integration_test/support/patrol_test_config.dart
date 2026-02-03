@@ -23,83 +23,30 @@ class PatrolTestConfig {
     required this.syncName,
   });
 
-  final PatrolBackendMode mode;
-  final String baseUrl;
-  final String apiKey;
-  final String apiSecret;
-  final bool allowDestructive;
-  final String stackName;
-  final String serverName;
-  final String buildName;
-  final String procedureName;
-  final String actionName;
-  final String containerName;
-  final String containerId;
-  final String deploymentName;
-  final String repoName;
-  final String syncName;
-
-  static PatrolTestConfig fromEnvironment() {
+  factory PatrolTestConfig.fromEnvironment() {
     const modeRaw = String.fromEnvironment(
       'KOMODO_TEST_BACKEND_MODE',
       defaultValue: 'fake',
     );
-    const baseUrlRaw = String.fromEnvironment(
-      'KOMODO_TEST_BASE_URL',
-      defaultValue: '',
-    );
-    const apiKeyRaw = String.fromEnvironment(
-      'KOMODO_TEST_API_KEY',
-      defaultValue: '',
-    );
-    const apiSecretRaw = String.fromEnvironment(
-      'KOMODO_TEST_API_SECRET',
-      defaultValue: '',
-    );
+    const baseUrlRaw = String.fromEnvironment('KOMODO_TEST_BASE_URL');
+    const apiKeyRaw = String.fromEnvironment('KOMODO_TEST_API_KEY');
+    const apiSecretRaw = String.fromEnvironment('KOMODO_TEST_API_SECRET');
     const allowDestructiveRaw = String.fromEnvironment(
       'KOMODO_TEST_ALLOW_DESTRUCTIVE',
       defaultValue: 'false',
     );
-    const stackNameRaw = String.fromEnvironment(
-      'KOMODO_TEST_STACK_NAME',
-      defaultValue: '',
-    );
-    const serverNameRaw = String.fromEnvironment(
-      'KOMODO_TEST_SERVER_NAME',
-      defaultValue: '',
-    );
-    const buildNameRaw = String.fromEnvironment(
-      'KOMODO_TEST_BUILD_NAME',
-      defaultValue: '',
-    );
-    const procedureNameRaw = String.fromEnvironment(
-      'KOMODO_TEST_PROCEDURE_NAME',
-      defaultValue: '',
-    );
-    const actionNameRaw = String.fromEnvironment(
-      'KOMODO_TEST_ACTION_NAME',
-      defaultValue: '',
-    );
-    const containerNameRaw = String.fromEnvironment(
-      'KOMODO_TEST_CONTAINER_NAME',
-      defaultValue: '',
-    );
-    const containerIdRaw = String.fromEnvironment(
-      'KOMODO_TEST_CONTAINER_ID',
-      defaultValue: '',
-    );
+    const stackNameRaw = String.fromEnvironment('KOMODO_TEST_STACK_NAME');
+    const serverNameRaw = String.fromEnvironment('KOMODO_TEST_SERVER_NAME');
+    const buildNameRaw = String.fromEnvironment('KOMODO_TEST_BUILD_NAME');
+    const procedureNameRaw = String.fromEnvironment('KOMODO_TEST_PROCEDURE_NAME');
+    const actionNameRaw = String.fromEnvironment('KOMODO_TEST_ACTION_NAME');
+    const containerNameRaw = String.fromEnvironment('KOMODO_TEST_CONTAINER_NAME');
+    const containerIdRaw = String.fromEnvironment('KOMODO_TEST_CONTAINER_ID');
     const deploymentNameRaw = String.fromEnvironment(
       'KOMODO_TEST_DEPLOYMENT_NAME',
-      defaultValue: '',
     );
-    const repoNameRaw = String.fromEnvironment(
-      'KOMODO_TEST_REPO_NAME',
-      defaultValue: '',
-    );
-    const syncNameRaw = String.fromEnvironment(
-      'KOMODO_TEST_SYNC_NAME',
-      defaultValue: '',
-    );
+    const repoNameRaw = String.fromEnvironment('KOMODO_TEST_REPO_NAME');
+    const syncNameRaw = String.fromEnvironment('KOMODO_TEST_SYNC_NAME');
 
     final normalizedMode = modeRaw.trim().toLowerCase();
     final mode = normalizedMode == 'real'
@@ -124,6 +71,22 @@ class PatrolTestConfig {
       syncName: syncNameRaw.trim(),
     );
   }
+
+  final PatrolBackendMode mode;
+  final String baseUrl;
+  final String apiKey;
+  final String apiSecret;
+  final bool allowDestructive;
+  final String stackName;
+  final String serverName;
+  final String buildName;
+  final String procedureName;
+  final String actionName;
+  final String containerName;
+  final String containerId;
+  final String deploymentName;
+  final String repoName;
+  final String syncName;
 
   bool get isFake => mode == PatrolBackendMode.fake;
   bool get isReal => mode == PatrolBackendMode.real;

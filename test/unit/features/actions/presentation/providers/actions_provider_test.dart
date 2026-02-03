@@ -113,7 +113,7 @@ void main() {
 
     test('run returns true on success', () async {
       final repository = _MockActionRepository();
-      when(() => repository.runAction('a1', args: null))
+      when(() => repository.runAction('a1'))
           .thenAnswer((_) async => const Right(null));
 
       final container = createProviderContainer(

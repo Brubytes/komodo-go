@@ -27,17 +27,31 @@ void main() {
       find.byType(_TestPollingWidget),
     );
 
-    state
-      ..isRouteVisible = true
-      ..lifecycleState = AppLifecycleState.resumed;
+    void setStateValues({
+      required bool isRouteVisible,
+      required AppLifecycleState lifecycleState,
+    }) {
+      state
+        ..isRouteVisible = isRouteVisible
+        ..lifecycleState = lifecycleState;
+    }
+
+    setStateValues(
+      isRouteVisible: true,
+      lifecycleState: AppLifecycleState.resumed,
+    );
     expect(state.shouldPoll(isActiveTab: true), isTrue);
 
-    state.isRouteVisible = false;
+    setStateValues(
+      isRouteVisible: false,
+      lifecycleState: AppLifecycleState.resumed,
+    );
     expect(state.shouldPoll(isActiveTab: true), isFalse);
 
-    state
-      ..isRouteVisible = true
-      ..lifecycleState = AppLifecycleState.paused;
+    setStateValues(
+      isRouteVisible: true,
+      lifecycleState: AppLifecycleState.paused,
+    );
     expect(state.shouldPoll(isActiveTab: true), isFalse);
 
     state.lifecycleState = AppLifecycleState.resumed;
