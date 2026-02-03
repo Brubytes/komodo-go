@@ -27,38 +27,60 @@ class CreditsView extends StatelessWidget {
           const _CreditsSectionHeader(title: 'Made with love'),
           const Gap(8),
           AppCardSurface(
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    'assets/komodo-go-logo_rounded.png',
-                    width: 44,
-                    height: 44,
-                  ),
+                Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/komodo-go-logo_rounded.png',
+                        width: 44,
+                        height: 44,
+                      ),
+                    ),
+                    const Gap(14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Komodo Go',
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const Gap(2),
+                          Text(
+                            'Built by an indie developer as a companion app for Komodo.',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const Gap(14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Komodo Go',
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      const Gap(2),
-                      Text(
-                        'Built by an indie developer as a companion app for Komodo.',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
-                  ),
+                const Gap(12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: const [
+                    _CreditLink(
+                      label: 'Website',
+                      url: 'https://komodogo.eu',
+                      icon: AppIcons.globe,
+                    ),
+                    _CreditLink(
+                      label: 'GitHub',
+                      url: 'https://github.com/Brubytes/komodo-go',
+                      icon: AppIcons.github,
+                    ),
+                  ].map((link) => _LinkChip(link: link)).toList(),
                 ),
               ],
             ),
