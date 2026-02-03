@@ -24,7 +24,6 @@ class ContainerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final name = item.container.name.isEmpty ? 'Unnamed' : item.container.name;
     final image = item.container.image ?? '';

@@ -92,7 +92,7 @@ class BuilderTile extends ConsumerWidget {
                               if (showInstanceType)
                                 _IconLabel(
                                   icon: AppIcons.cpu,
-                                  label: instanceType!,
+                                  label: instanceType,
                                 ),
                             ],
                           ),

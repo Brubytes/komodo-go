@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_catches_without_on_clauses, avoid_dynamic_calls, discarded_futures, leading_newlines_in_multiline_strings, use_null_aware_elements // Demo backend uses loose JSON fixtures; refactors would harm readability.
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
