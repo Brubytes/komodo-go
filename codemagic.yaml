@@ -164,10 +164,10 @@ workflows:
         # submission (if applicable) when submitting a new build to App Store review.
         # This allows automatically submitting a new build for review if a previous submission exists.
         # Note: This action is performed during post-processing.
-        cancel_previous_submissions: true
+        # cancel_previous_submissions: true
         
         # Optional, defaults to MANUAL. Supported values: MANUAL, AFTER_APPROVAL or SCHEDULED
-        release_type: AFTER_APPROVAL
+        # release_type: AFTER_APPROVAL
       
         # Optional boolean. Whether or not to release an App Store version update in phases.
         # With this option turned on, your version update will be released over a 7-day period
@@ -175,4 +175,4 @@ workflows:
         # updates turned on. Learn more from 
         # https://developer.apple.com/help/app-store-connect/update-your-app/release-a-version-update-in-phases.
         # If not specified, then App Store version default phased release configuration is reused.
-        phased_release: false
+        # phased_release: false
