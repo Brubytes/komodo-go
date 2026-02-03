@@ -177,8 +177,9 @@ void registerNegativeContractTests() {
         },
       );
 
-      expect(response.statusCode, isNotNull);
-      expect(response.statusCode!, inInclusiveRange(400, 499));
+      final statusCode = response.statusCode;
+      expect(statusCode, isNotNull);
+      expect(statusCode, inInclusiveRange(400, 499));
     });
 
     test(
@@ -194,8 +195,9 @@ void registerNegativeContractTests() {
           },
         );
 
-        expect(response.statusCode, isNotNull);
-        expect(response.statusCode!, greaterThanOrEqualTo(500));
+        final statusCode = response.statusCode;
+        expect(statusCode, isNotNull);
+        expect(statusCode, greaterThanOrEqualTo(500));
       },
       skip: allow500 == 'true'
           ? null
