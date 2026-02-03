@@ -23,6 +23,8 @@ workflows:
     scripts:
       - name: Flutter pub get
         script: flutter pub get
+      - name: Codegen
+        script: flutter pub run build_runner build --delete-conflicting-outputs
       - name: Flutter analyze
         script: flutter analyze
       - name: Flutter test
@@ -65,6 +67,8 @@ workflows:
     scripts:
       - name: Flutter pub get
         script: flutter pub get
+      - name: Codegen
+        script: flutter pub run build_runner build --delete-conflicting-outputs
       - name: Build Android App Bundle (auto-versioned)
         script: | 
           BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))      
@@ -118,6 +122,8 @@ workflows:
         script: xcode-project use-profiles
       - name: Flutter pub get
         script: flutter pub get
+      - name: Codegen
+        script: flutter pub run build_runner build --delete-conflicting-outputs
       - name: Install pods
         script: find . -name "Podfile" -execdir pod install \;
       # Optional: auto-increment build number from TestFlight (requires APP_ID + integration)
