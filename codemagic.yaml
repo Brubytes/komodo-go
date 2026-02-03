@@ -5,7 +5,7 @@ workflows:
     max_build_duration: 120
     environment:
       flutter: fvm
-      xcode: latest
+      xcode: 26.2
     cache:
       cache_paths:
         - ~/.pub-cache
@@ -16,21 +16,21 @@ workflows:
         - push
         - pull_request
       branch_patterns:
-        - pattern: "*"
+        - pattern: "main"
           include: true
           source: true
       cancel_previous_builds: true
     scripts:
       - name: Flutter pub get
-        script: fvm flutter pub get
+        script: flutter pub get
       - name: Flutter analyze
-        script: fvm flutter analyze
+        script: flutter analyze
       - name: Flutter test
-        script: fvm flutter test
+        script: flutter test
       - name: Build Android App Bundle
-        script: fvm flutter build appbundle
+        script: flutter build appbundle
       - name: Build iOS (no codesign)
-        script: fvm flutter build ios --no-codesign
+        script: flutter build ios --no-codesign
     artifacts:
       - build/**/outputs/**/*.aab
       - build/**/outputs/**/*.apk
@@ -48,6 +48,9 @@ workflows:
       flutter: fvm
       groups:
         - keystore_credentials
+      vars:
+        PACKAGE_NAME: "com.brubytes.komodoGo"
+        GOOGLE_PLAY_TRACK: "internal"
     cache:
       cache_paths:
         - ~/.pub-cache
@@ -60,9 +63,16 @@ workflows:
           include: true
     scripts:
       - name: Flutter pub get
-        script: fvm flutter pub get
+        script: flutter pub get
+      # Optional: auto-increment build number from Google Play (requires google_play group + vars above)
+      # - name: Build Android App Bundle (auto-versioned)
+      #   script: |
+      #     BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))
+      #     flutter build appbundle --release \
+      #       --build-name=1.0.$BUILD_NUMBER \
+      #       --build-number=$BUILD_NUMBER
       - name: Build Android App Bundle
-        script: fvm flutter build appbundle
+        script: flutter build appbundle --release
     artifacts:
       - build/**/outputs/**/*.aab
       - build/**/outputs/**/*.apk
@@ -71,12 +81,19 @@ workflows:
     name: Release iOS (signed)
     instance_type: mac_mini_m2
     max_build_duration: 120
+    integrations:
+      app_store_connect: Brubytes
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.brubytes.komodoGo
       flutter: fvm
-      xcode: latest
+      xcode: 26.2
+      cocoapods: default
       groups:
         - app_store_credentials
-        - ios_signing
+      vars:
+        APP_ID: 6758161017
     cache:
       cache_paths:
         - ~/.pub-cache
@@ -88,9 +105,20 @@ workflows:
         - pattern: "v*"
           include: true
     scripts:
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
       - name: Flutter pub get
-        script: fvm flutter pub get
+        script: flutter pub get
+      - name: Install pods
+        script: find . -name "Podfile" -execdir pod install \;
+      # Optional: auto-increment build number from TestFlight (requires APP_ID + integration)
+      # - name: Build iOS (auto-versioned)
+      #   script: |
+      #     BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number --platform=IOS "$APP_ID") + 1))
+      #     flutter build ipa --release \
+      #       --build-name=1.0.$BUILD_NUMBER \
+      #       --build-number=$BUILD_NUMBER
       - name: Build iOS (release)
-        script: fvm flutter build ipa
+        script: flutter build ipa --release
     artifacts:
       - build/ios/ipa/*.ipa
