@@ -51,7 +51,7 @@ workflows:
         - google_play
       vars:
         PACKAGE_NAME: "com.brubytes.komodoGo"
-        GOOGLE_PLAY_TRACK: "internal"
+        GOOGLE_PLAY_TRACK: "Internal"
     cache:
       cache_paths:
         - ~/.pub-cache
@@ -65,15 +65,12 @@ workflows:
     scripts:
       - name: Flutter pub get
         script: flutter pub get
-      # Optional: auto-increment build number from Google Play (requires google_play group + vars above)
-      # - name: Build Android App Bundle (auto-versioned)
-      #   script: |
-      #     BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))
-      #     flutter build appbundle --release \
-      #       --build-name=1.0.$BUILD_NUMBER \
-      #       --build-number=$BUILD_NUMBER
-      - name: Build Android App Bundle
-        script: flutter build appbundle --release
+      - name: Build Android App Bundle (auto-versioned)
+        script: | 
+          BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))      
+          flutter build appbundle --release \
+            --build-name=1.0.$BUILD_NUMBER \
+            --build-number=$BUILD_NUMBER
     artifacts:
       - build/**/outputs/**/*.aab
       - build/**/outputs/**/*.apk
