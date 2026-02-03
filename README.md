@@ -6,7 +6,7 @@ Flutter app to control the Komodo infrastructure management platform.
 
 ## Requirements
 
-- Flutter is pinned via FVM (`.fvmrc`) to `3.38.5`.
+- Flutter is pinned via [FVM](https://fvm.app/) in `.fvmrc`
 
 ## Development
 
@@ -17,14 +17,16 @@ Flutter app to control the Komodo infrastructure management platform.
 
 ## Integration tests (Patrol)
 
-Run the Patrol iOS integration test suite on the iPhone 17 Pro simulator:
+More advanced tests are implemented with [Patrol](https://patrol.leancode.co/) and located in `integration_test/`.
 
-- VS Code task: `Patrol: iOS (iPhone 17 Pro)`
-- CLI:
-  - `patrol test -t integration_test/app_test.dart -d BE3A6A62-DF90-4DC9-9249-37BFD2A75742 -v`
-  - `patrol test -t integration_test/resource_flows/stacks_services_logs_test.dart -d BE3A6A62-DF90-4DC9-9249-37BFD2A75742 -v`
+Run the Patrol iOS integration test suite on a simulator via the patrol cli:
 
-Note: Xcode UI tests often run on a temporary cloned simulator instance, which may shut down when the run finishes. The VS Code task re-opens Simulator and boots the target device afterwards.
+- `patrol test -t integration_test/app_test.dart -d <SIMULATOR_UDID> -v`
+- `patrol test -t integration_test/resource_flows/stacks_services_logs_test.dart -d <SIMULATOR_UDID> -v`
+
+Tip: you can list simulator device IDs with `xcrun simctl list` or `fvm flutter devices`.
+
+Note: Xcode UI tests often run on a temporary cloned simulator instance, which may shut down when the run finishes.
 
 ## Demo mode
 
@@ -40,23 +42,22 @@ It is available as an option on the login screen.
 
 ### UI-defined demo stack
 
-Demo mode includes a stack named **Demo Stack (UI Defined)** whose Compose
-contents are loaded from:
+Demo mode includes a stack named **Demo Stack (UI Defined)** whose Compose contents are loaded from:
 
 - `assets/demo_mode/ui_defined_stack/compose.yml`
 
 Edit that file and restart the app to see the Compose editor update.
 
-## App Store screenshots (Maestro + Storepix)
+## App Store screenshots (Maestro + storepix)
 
-The project includes a Maestro flow for capturing iOS screenshots and a Storepix
-configuration for producing App Store-ready assets.
+The project includes a Maestro flow for capturing iOS screenshots and a storepix configuration for producing App Store-ready assets.
 
 ### Prerequisites
 
-- Maestro installed globally
-- Storepix installed globally
-- Xcode + iOS Simulator
+- [Maestro](https://docs.maestro.dev/getting-started/installing-maestro) installed globally
+- [storepix](https://www.npmjs.com/package/storepix) installed globally
+- Xcode + iOS Simulator for iOS screenshots
+- Android Studio + Android Emulator for Android screenshots
 - FVM Flutter (`fvm`)
 
 ### Generate raw screenshots (Maestro)
@@ -79,29 +80,23 @@ Copy the Maestro outputs into Storepix inputs:
 cp .maestro/screenshots/*.png storepix/screenshots/iPhone/
 ```
 
-### Generate App Store assets (Storepix)
+### Generate App Store assets (storepix)
+
+Run from the project root:
 
 ```bash
-cd storepix
-storepix
+storepix generate
 ```
 
 Outputs are saved to:
 
 - `storepix/output/iphone-6.5/`
 
-### Screenshot set
-
-1. Home dashboard (dark)
-2. Servers list (dark)
-3. Server detail (dark)
-4. Containers (light)
-5. Deployments (light)
-6. Settings (light)
+or elsewhere depending on your storepix configuration.
 
 ## Design system / theming
 
-The app uses a single unified Material 3 theme on both iOS and Android (no platform-specific split).
+The app uses a single unified Material 3 theme on both iOS and Android (no platform-specific split, expect for the main navigation bar).
 
 - Brand colors:
   - Primary: `#014226`
@@ -118,3 +113,7 @@ Guidelines:
 ## License
 
 This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, and test guidance.
