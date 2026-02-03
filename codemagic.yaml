@@ -76,7 +76,18 @@ workflows:
     artifacts:
       - build/**/outputs/**/*.aab
       - build/**/outputs/**/*.apk
-
+    # publishing:
+      # email:
+      #   recipients:
+      #     - user_1@example.com
+      #     - user_2@example.com
+      #   notify:
+      #     success: true
+      #     failure: false
+      # google_play:
+      #   credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+      #   track: internal
+      #   submit_as_draft: true
   release-ios:
     name: Release iOS (signed)
     instance_type: mac_mini_m2
@@ -122,3 +133,48 @@ workflows:
         script: flutter build ipa --release
     artifacts:
       - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        # Use referenced App Store Connect API key to authenticate binary upload
+        auth: integration 
+
+        # Configuration related to TestFlight (optional)
+
+        # Optional boolean, defaults to false. Whether or not to submit the uploaded
+        # build to TestFlight beta review. Required for distributing to beta groups.
+        # Note: This action is performed during post-processing.
+        submit_to_testflight: true 
+
+        # Optional boolean, defaults to false. Set to true to automatically expire 
+        # previous build in review or waiting for review in Testflight before
+        # submitting a new build to beta review. Expired builds will no longer be available for testers.
+        # Note: This action is performed during post-processing.
+        expire_build_submitted_for_review: true
+
+        # Specify the names of beta tester groups that will get access to the build 
+        # once it has passed beta review.
+        beta_groups: 
+          - Internal
+        
+        # Configuration related to App Store (optional)
+
+        # Optional boolean, defaults to false. Whether or not to submit the uploaded
+        # build to App Store review. Note: This action is performed during post-processing.
+        submit_to_app_store: false
+
+        # Optional boolean, defaults to false. Set to true to cancel the previous 
+        # submission (if applicable) when submitting a new build to App Store review.
+        # This allows automatically submitting a new build for review if a previous submission exists.
+        # Note: This action is performed during post-processing.
+        cancel_previous_submissions: true
+        
+        # Optional, defaults to MANUAL. Supported values: MANUAL, AFTER_APPROVAL or SCHEDULED
+        release_type: AFTER_APPROVAL
+      
+        # Optional boolean. Whether or not to release an App Store version update in phases.
+        # With this option turned on, your version update will be released over a 7-day period
+        # to a percentage of your users (selected at random by their Apple ID) with automatic
+        # updates turned on. Learn more from 
+        # https://developer.apple.com/help/app-store-connect/update-your-app/release-a-version-update-in-phases.
+        # If not specified, then App Store version default phased release configuration is reused.
+        phased_release: false
