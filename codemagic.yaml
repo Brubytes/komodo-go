@@ -156,7 +156,7 @@ workflows:
         # Specify the names of beta tester groups that will get access to the build 
         # once it has passed beta review.
         beta_groups: 
-          - Internal
+          - External
         
         # Configuration related to App Store (optional)
 
