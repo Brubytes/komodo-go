@@ -5,6 +5,13 @@
 # Komodo Go
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![CI Tests](https://api.codemagic.io/apps/697fac44dbc045a607ea177d/ci/status_badge.svg)](https://codemagic.io/app/697fac44dbc045a607ea177d/ci/latest_build)
+
+| Platform | Status |
+| --- | --- |
+| Android | [![Android CI](https://api.codemagic.io/apps/697fac44dbc045a607ea177d/release-android/status_badge.svg)](https://codemagic.io/app/697fac44dbc045a607ea177d/release-android/latest_build) |
+| iOS | [![iOS CI](https://api.codemagic.io/apps/697fac44dbc045a607ea177d/release-ios/status_badge.svg)](https://codemagic.io/app/697fac44dbc045a607ea177d/release-ios/latest_build) |
+
 
 Flutter app to control the Komodo infrastructure management platform.
 
