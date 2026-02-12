@@ -20,7 +20,7 @@ Komodo Go is a Flutter app for controlling the Komodo infrastructure management 
 
 ## Development Commands
 
-Flutter is pinned via FVM (`.fvmrc`) to `3.38.5`. All Flutter commands must be prefixed with `fvm`:
+Flutter is pinned via FVM (`.fvmrc`) to `3.38.9`. All Flutter commands must be prefixed with `fvm`:
 
 ```bash
 # Install dependencies
