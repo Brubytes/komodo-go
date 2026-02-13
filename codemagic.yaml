@@ -24,8 +24,14 @@ workflows:
         script: flutter pub run build_runner build --delete-conflicting-outputs
       - name: Build Android App Bundle (signed, verify only)
         script: |
+          VERSION_NAME="$(printf '%s' "$CM_TAG" | sed -E 's/^rc-([0-9]+\.[0-9]+\.[0-9]+)-[0-9]+$/\1/')"
+          if [[ -z "$VERSION_NAME" || "$VERSION_NAME" == "$CM_TAG" ]]; then
+            echo "Invalid RC tag format '$CM_TAG'. Expected rc-x.y.z-N"
+            exit 1
+          fi
           BUILD_NUMBER=$(date +%s)
           flutter build appbundle --release \
+            --build-name="$VERSION_NAME" \
             --build-number=$BUILD_NUMBER
     artifacts:
       - build/**/outputs/**/*.aab
@@ -65,8 +71,14 @@ workflows:
         script: find . -name "Podfile" -execdir pod install \;
       - name: Build iOS IPA (signed, verify only)
         script: |
+          VERSION_NAME="$(printf '%s' "$CM_TAG" | sed -E 's/^rc-([0-9]+\.[0-9]+\.[0-9]+)-[0-9]+$/\1/')"
+          if [[ -z "$VERSION_NAME" || "$VERSION_NAME" == "$CM_TAG" ]]; then
+            echo "Invalid RC tag format '$CM_TAG'. Expected rc-x.y.z-N"
+            exit 1
+          fi
           BUILD_NUMBER=$(date +%s)
           flutter build ipa --release \
+            --build-name="$VERSION_NAME" \
             --build-number=$BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
@@ -102,9 +114,14 @@ workflows:
         script: flutter pub run build_runner build --delete-conflicting-outputs
       - name: Build Android App Bundle (auto-versioned)
         script: | 
+          VERSION_NAME="${CM_TAG#v}"
+          if ! printf '%s' "$VERSION_NAME" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Invalid release tag format '$CM_TAG'. Expected vX.Y.Z"
+            exit 1
+          fi
           BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))      
           flutter build appbundle --release \
-            --build-name=1.0.$BUILD_NUMBER \
+            --build-name="$VERSION_NAME" \
             --build-number=$BUILD_NUMBER
     artifacts:
       - build/**/outputs/**/*.aab
@@ -158,9 +175,14 @@ workflows:
       # Optional: auto-increment build number from TestFlight (requires APP_ID + integration)
       - name: Build iOS (auto-versioned)
         script: |
+          VERSION_NAME="${CM_TAG#v}"
+          if ! printf '%s' "$VERSION_NAME" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Invalid release tag format '$CM_TAG'. Expected vX.Y.Z"
+            exit 1
+          fi
           BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number --platform=IOS "$APP_ID") + 1))
           flutter build ipa --release \
-            --build-name=1.0.$BUILD_NUMBER \
+            --build-name="$VERSION_NAME" \
             --build-number=$BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
       # - name: Build iOS (release)

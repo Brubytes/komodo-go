@@ -2,10 +2,53 @@
 set -euo pipefail
 
 PUBSPEC_PATH="pubspec.yaml"
+SCRIPT_NAME="$(basename "$0")"
 
 abort() {
   echo "Error: $*" >&2
   exit 1
+}
+
+print_help() {
+  cat <<EOF
+Usage:
+  ./$SCRIPT_NAME
+  ./$SCRIPT_NAME --help
+
+What this script does:
+- Optionally bump version in $PUBSPEC_PATH
+- Optionally create rc/v tags from that version
+- Optionally push commit/tags
+- Optionally create GitHub Release for v-tags (using gh)
+
+Recommended flow (with protected main):
+1) On dev/release branch:
+   - choose patch/minor/major/custom
+   - choose "no tags (version commit only)"
+   - open PR and merge to main
+2) On main after merge:
+   - choose "keep current version"
+   - choose "release candidate only" (creates rc-x.y.z-N)
+3) After RC verify passes:
+   - choose "keep current version"
+   - choose "release only" (creates vX.Y.Z)
+   - optionally create GitHub Release
+
+Version/build behavior:
+- Tag controls release version name (v1.2.3 => 1.2.3)
+- Store build numbers are auto-incremented in Codemagic
+EOF
+}
+
+print_runtime_guide() {
+  cat <<'EOF'
+Release helper quick guide:
+- Use "no tags (version commit only)" to prepare version bumps via PR.
+- Use "release candidate only" on main to trigger Codemagic verify workflows (rc-*).
+- Use "release only" on main after RC success to trigger real releases (v*).
+- Codemagic uses tag version as build-name; build-number comes from stores.
+EOF
+  echo
 }
 
 github_repo_slug_from_origin() {
@@ -131,11 +174,25 @@ next_rc_tag_for_semver() {
   echo "rc-${semver}-$((max_suffix + 1))"
 }
 
+case "${1:-}" in
+  -h|--help)
+    print_help
+    exit 0
+    ;;
+  "")
+    ;;
+  *)
+    abort "Unknown argument '$1'. Use --help."
+    ;;
+esac
+
 [[ -f "$PUBSPEC_PATH" ]] || abort "$PUBSPEC_PATH not found. Run this script from the repository root."
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || abort "Not inside a git repository."
 
 require_clean_worktree
 read_pubspec_version
+
+print_runtime_guide
 
 current_branch="$(git rev-parse --abbrev-ref HEAD)"
 echo "Current branch: $current_branch"
@@ -151,11 +208,11 @@ fi
 
 echo
 echo "Version change:"
-echo "1) patch"
-echo "2) minor"
-echo "3) major"
-echo "4) custom"
-echo "5) keep current version"
+echo "1) patch (x.y.Z+build)"
+echo "2) minor (x.Y.0+build)"
+echo "3) major (X.0.0+build)"
+echo "4) custom (enter x.y.z)"
+echo "5) keep current version (no pubspec change)"
 read -r -p "Choose option [1-5]: " version_choice
 
 NEW_SEMVER="$CUR_SEMVER"
@@ -165,24 +222,24 @@ SHOULD_BUMP="n"
 case "$version_choice" in
   1)
     NEW_SEMVER="${CUR_MAJOR}.${CUR_MINOR}.$((CUR_PATCH + 1))"
-    NEW_BUILD="$((CUR_BUILD + 1))"
+    NEW_BUILD="$CUR_BUILD"
     SHOULD_BUMP="y"
     ;;
   2)
     NEW_SEMVER="${CUR_MAJOR}.$((CUR_MINOR + 1)).0"
-    NEW_BUILD="$((CUR_BUILD + 1))"
+    NEW_BUILD="$CUR_BUILD"
     SHOULD_BUMP="y"
     ;;
   3)
     NEW_SEMVER="$((CUR_MAJOR + 1)).0.0"
-    NEW_BUILD="$((CUR_BUILD + 1))"
+    NEW_BUILD="$CUR_BUILD"
     SHOULD_BUMP="y"
     ;;
   4)
     read -r -p "Enter custom version (x.y.z): " custom_semver
     [[ "$custom_semver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || abort "Invalid custom version '$custom_semver'."
     NEW_SEMVER="$custom_semver"
-    NEW_BUILD="$((CUR_BUILD + 1))"
+    NEW_BUILD="$CUR_BUILD"
     SHOULD_BUMP="y"
     ;;
   5)
@@ -193,7 +250,7 @@ case "$version_choice" in
 esac
 
 if [[ "$SHOULD_BUMP" == "y" ]]; then
-  read -r -p "Build number [$NEW_BUILD]: " build_input
+  read -r -p "Pubspec build number [$NEW_BUILD] (optional): " build_input
   if [[ -n "$build_input" ]]; then
     [[ "$build_input" =~ ^[0-9]+$ ]] || abort "Build number must be numeric."
     NEW_BUILD="$build_input"
@@ -205,10 +262,11 @@ fi
 
 echo
 echo "Tag mode:"
-echo "1) release candidate only (rc-<version>-N)"
-echo "2) release only (v<version>)"
-echo "3) both rc and release tags"
-read -r -p "Choose option [1-3]: " tag_choice
+echo "1) release candidate only (rc-<version>-N, verify build)"
+echo "2) release only (v<version>, real release)"
+echo "3) both rc and release tags (not recommended for normal flow)"
+echo "4) no tags (version commit only, good for PRs)"
+read -r -p "Choose option [1-4]: " tag_choice
 
 declare -a TAGS=()
 if [[ "$tag_choice" == "1" || "$tag_choice" == "3" ]]; then
@@ -217,7 +275,13 @@ fi
 if [[ "$tag_choice" == "2" || "$tag_choice" == "3" ]]; then
   TAGS+=("v${NEW_SEMVER}")
 fi
-[[ "${#TAGS[@]}" -gt 0 ]] || abort "Invalid tag selection '$tag_choice'."
+if [[ "$tag_choice" != "1" && "$tag_choice" != "2" && "$tag_choice" != "3" && "$tag_choice" != "4" ]]; then
+  abort "Invalid tag selection '$tag_choice'."
+fi
+
+if [[ "$current_branch" != "main" && "$tag_choice" != "4" ]]; then
+  confirm "You are on '$current_branch'. Create release tags from this non-main branch?" "n" || exit 1
+fi
 
 for tag in "${TAGS[@]}"; do
   if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
@@ -236,6 +300,12 @@ fi
 for tag in "${TAGS[@]}"; do
   echo "- Create tag: $tag"
 done
+if [[ "${#TAGS[@]}" -eq 0 ]]; then
+  echo "- No tags will be created"
+fi
+if [[ "$tag_choice" == "4" ]]; then
+  echo "- Next step: open PR and merge this version bump before tagging"
+fi
 
 confirm "Proceed?" "y" || exit 0
 
@@ -274,6 +344,10 @@ if confirm "Push commit/tag changes to origin now?" "n"; then
   echo "Pushed successfully."
 else
   echo "Nothing pushed. Push manually when ready."
+fi
+
+if [[ "$tag_choice" == "4" ]]; then
+  echo "Tip: after merge to main, run again with 'keep current version' + rc/v tag mode."
 fi
 
 declare -a RELEASE_TAGS=()
