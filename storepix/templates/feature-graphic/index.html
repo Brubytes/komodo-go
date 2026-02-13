@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feature Graphic</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="feature-graphic" id="feature-graphic">
+    <!-- Background decorative elements -->
+    <div class="bg-blur bg-blur-1"></div>
+    <div class="bg-blur bg-blur-2"></div>
+    <div class="bg-blur bg-blur-3"></div>
+
+    <!-- Logo (optional) -->
+    <div class="logo-container" id="logo-container">
+      <img src="" alt="App Logo" id="logo-img">
+    </div>
+
+    <!-- Text content -->
+    <div class="content-container">
+      <h1 class="headline" id="headline">Your App Name</h1>
+      <p class="subheadline" id="subheadline">Tagline goes here</p>
+    </div>
+  </div>
+
+  <script src="../storepix-content.js"></script>
+  <script>
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const config = {
+      headline: urlParams.get('headline') || 'Your App Name',
+      subheadline: urlParams.get('subheadline') || '',
+      logo: urlParams.get('logo') || '',
+      theme: urlParams.get('theme') || 'light',
+      deviceWidth: parseInt(urlParams.get('deviceWidth')) || 1024,
+      deviceHeight: parseInt(urlParams.get('deviceHeight')) || 500,
+    };
+
+    // Parse theme JSON if provided and apply gradient
+    try {
+      const themeJson = urlParams.get('themeJson');
+      if (themeJson) {
+        const theme = JSON.parse(themeJson);
+        const root = document.documentElement;
+        if (theme.primary) {
+          root.style.setProperty('--primary', theme.primary);
+          // Generate gradient based on primary color
+          const featureGraphic = document.getElementById('feature-graphic');
+          featureGraphic.style.background = `linear-gradient(135deg, ${theme.primary} 0%, ${adjustColor(theme.primary, -30)} 50%, ${adjustColor(theme.primary, 30)} 100%)`;
+        }
+        if (theme.font) root.style.setProperty('--font-family', theme.font);
+      }
+    } catch (e) {
+      console.warn('Failed to parse theme:', e);
+    }
+
+    // Helper to lighten/darken a hex color
+    function adjustColor(hex, amount) {
+      hex = hex.replace('#', '');
+      const num = parseInt(hex, 16);
+      let r = Math.min(255, Math.max(0, (num >> 16) + amount));
+      let g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount));
+      let b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount));
+      return '#' + (0x1000000 + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    }
+
+    // Apply configuration
+    document.getElementById('headline').textContent = config.headline;
+
+    const subheadlineEl = document.getElementById('subheadline');
+    if (config.subheadline) {
+      subheadlineEl.textContent = config.subheadline;
+    } else {
+      subheadlineEl.style.display = 'none';
+    }
+
+    // Handle logo
+    const logoContainer = document.getElementById('logo-container');
+    const logoImg = document.getElementById('logo-img');
+    if (config.logo) {
+      // Normalize path - strip leading ./ for proper URL resolution
+      let logoPath = config.logo;
+      if (logoPath.startsWith('./')) {
+        logoPath = logoPath.substring(2);
+      }
+      logoImg.src = '/' + logoPath;
+      logoContainer.style.display = 'flex';
+    } else {
+      logoContainer.style.display = 'none';
+    }
+
+    // Apply theme
+    if (config.theme === 'dark') {
+      document.body.classList.add('dark-theme');
+    }
+
+    // Set viewport size via CSS variables
+    document.documentElement.style.setProperty('--viewport-width', config.deviceWidth + 'px');
+    document.documentElement.style.setProperty('--viewport-height', config.deviceHeight + 'px');
+
+    // Apply custom content from data-storepix attributes
+    applyCustomContent(urlParams);
+  </script>
+</body>
+</html>
