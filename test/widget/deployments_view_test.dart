@@ -54,9 +54,7 @@ void main() {
     await AppSyntaxHighlight.ensureInitialized();
   });
 
-  testWidgets('Deployments list view shows deployment cards', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('Deployments list view shows deployment cards', (tester) async {
     final deployments = [
       Deployment.fromJson(<String, dynamic>{
         'id': 'd1',
@@ -91,9 +89,7 @@ void main() {
     expect(find.text('Deployment One'), findsOneWidget);
   });
 
-  testWidgets('Deployment detail view shows config section', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('Deployment detail view shows config section', (tester) async {
     final deployment = Deployment.fromJson(<String, dynamic>{
       'id': 'd1',
       'name': 'Deployment One',

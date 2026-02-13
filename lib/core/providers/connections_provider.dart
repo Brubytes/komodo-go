@@ -5,7 +5,6 @@ import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/providers/shared_preferences_provider.dart';
 import 'package:komodo_go/core/providers/storage_provider.dart';
 import 'package:komodo_go/core/storage/secure_storage_service.dart';
-import 'package:komodo_go/core/onboarding/onboarding_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'connections_provider.g.dart';

@@ -32,66 +32,67 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  testWidgets('Keeps tab navigation stacks while switching tabs', (
-    WidgetTester tester,
-  ) async {
-    final authenticated = AuthState.authenticated(
-      connection: ConnectionProfile(
-        id: 'test',
-        name: 'Test',
-        baseUrl: 'http://localhost',
-        createdAt: DateTime(2025),
-        lastUsedAt: DateTime(2025),
-      ),
-      credentials: const ApiCredentials(
-        baseUrl: 'http://localhost',
-        apiKey: 'test',
-        apiSecret: 'test',
-      ),
-    );
+  testWidgets(
+    'Keeps tab navigation stacks while switching tabs',
+    (tester) async {
+      final authenticated = AuthState.authenticated(
+        connection: ConnectionProfile(
+          id: 'test',
+          name: 'Test',
+          baseUrl: 'http://localhost',
+          createdAt: DateTime(2025),
+          lastUsedAt: DateTime(2025),
+        ),
+        credentials: const ApiCredentials(
+          baseUrl: 'http://localhost',
+          apiKey: 'test',
+          apiSecret: 'test',
+        ),
+      );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authProvider.overrideWith(
-            () => _TestAuth(Future.value(authenticated)),
-          ),
-          serverRepositoryProvider.overrideWithValue(null),
-          deploymentRepositoryProvider.overrideWithValue(null),
-          stackRepositoryProvider.overrideWithValue(null),
-          repoRepositoryProvider.overrideWithValue(null),
-          syncRepositoryProvider.overrideWithValue(null),
-          buildRepositoryProvider.overrideWithValue(null),
-          procedureRepositoryProvider.overrideWithValue(null),
-          actionRepositoryProvider.overrideWithValue(null),
-        ],
-        child: const KomodoApp(),
-      ),
-    );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authProvider.overrideWith(
+              () => _TestAuth(Future.value(authenticated)),
+            ),
+            serverRepositoryProvider.overrideWithValue(null),
+            deploymentRepositoryProvider.overrideWithValue(null),
+            stackRepositoryProvider.overrideWithValue(null),
+            repoRepositoryProvider.overrideWithValue(null),
+            syncRepositoryProvider.overrideWithValue(null),
+            buildRepositoryProvider.overrideWithValue(null),
+            procedureRepositoryProvider.overrideWithValue(null),
+            actionRepositoryProvider.overrideWithValue(null),
+          ],
+          child: const KomodoApp(),
+        ),
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Resources'));
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(AppBar, 'Resources'), findsOneWidget);
+      await tester.tap(find.text('Resources'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(AppBar, 'Resources'), findsOneWidget);
 
-    await tester.tap(find.text('Stacks'));
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(AppBar, 'Stacks'), findsOneWidget);
+      await tester.tap(find.text('Stacks'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(AppBar, 'Stacks'), findsOneWidget);
 
-    await tester.tap(find.text('Home'));
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(AppBar, 'Dashboard'), findsOneWidget);
+      await tester.tap(find.text('Home'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(AppBar, 'Dashboard'), findsOneWidget);
 
-    await tester.tap(find.text('Resources'));
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(AppBar, 'Stacks'), findsOneWidget);
-    expect(find.widgetWithText(AppBar, 'Resources'), findsNothing);
+      await tester.tap(find.text('Resources'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(AppBar, 'Stacks'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Resources'), findsNothing);
 
-    // Re-tapping the active tab should pop its stack back to the branch root.
-    await tester.tap(find.text('Resources'));
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(AppBar, 'Resources'), findsOneWidget);
-    expect(find.widgetWithText(AppBar, 'Stacks'), findsNothing);
-  });
+      // Re-tapping the active tab should pop its stack back to the branch root.
+      await tester.tap(find.text('Resources'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(AppBar, 'Resources'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Stacks'), findsNothing);
+    },
+  );
 }

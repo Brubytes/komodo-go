@@ -89,9 +89,7 @@ void main() {
     await AppSyntaxHighlight.ensureInitialized();
   });
 
-  testWidgets('Stacks list view shows stack cards', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('Stacks list view shows stack cards', (tester) async {
     final stacks = [
       StackListItem.fromJson(<String, dynamic>{
         'id': 's1',
@@ -127,9 +125,7 @@ void main() {
     expect(find.text('Stack One'), findsOneWidget);
   });
 
-  testWidgets('Stack detail view shows config section', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('Stack detail view shows config section', (tester) async {
     final stack = KomodoStack.fromJson(<String, dynamic>{
       'id': 's1',
       'name': 'Stack One',
@@ -163,7 +159,9 @@ void main() {
           ),
           stacksProvider.overrideWith(() => _TestStacks(stacks)),
           stackDetailProvider.overrideWith((ref, id) async => stack),
-          stackServicesProvider.overrideWith((ref, id) async => <StackService>[]),
+          stackServicesProvider.overrideWith(
+            (ref, id) async => <StackService>[],
+          ),
           stackLogProvider.overrideWith((ref, id) async => null),
           stackUpdatesProvider.overrideWith2(
             (stackId) => _TestStackUpdates(

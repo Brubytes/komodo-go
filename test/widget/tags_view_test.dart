@@ -15,9 +15,7 @@ class _TestTags extends Tags {
 }
 
 void main() {
-  testWidgets('Tags view shows list and opens editor sheet', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('Tags view shows list and opens editor sheet', (tester) async {
     final tags = [
       KomodoTag.fromJson(<String, dynamic>{
         'id': 't1',
@@ -45,7 +43,7 @@ void main() {
     expect(find.byKey(const ValueKey('tag_editor_name')), findsOneWidget);
   });
 
-  testWidgets('Tags view shows empty state', (WidgetTester tester) async {
+  testWidgets('Tags view shows empty state', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [tagsProvider.overrideWith(() => _TestTags(const []))],

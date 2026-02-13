@@ -892,9 +892,7 @@ class DeploymentConfigEditorContentState
     // Watch Docker networks provider and update local state when it changes.
     final serverId = _serverId.text.trim();
     if (serverId.isNotEmpty) {
-      ref.watch(dockerNetworksProvider(serverId)).whenData((
-        List<String> networks,
-      ) {
+      ref.watch(dockerNetworksProvider(serverId)).whenData((networks) {
         final options = <String>['', ...networks];
         if (_loadingNetworkOptions || !_listsEqual(options, _networkOptions)) {
           // Use a post-frame callback to avoid calling setState during build.
