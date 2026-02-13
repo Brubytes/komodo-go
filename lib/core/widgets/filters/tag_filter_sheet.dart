@@ -166,11 +166,10 @@ class _TagFilterSheetState extends State<TagFilterSheet> {
                 ],
               ),
               const Gap(12),
-              DetailSurface(
-                padding: EdgeInsets.zero,
-                radius: 16,
-                enableGradientInDark: false,
-                child: Column(
+                DetailSurface(
+                  padding: EdgeInsets.zero,
+                  radius: 16,
+                  child: Column(
                   children: [
                     if (filtered.isEmpty)
                       Padding(

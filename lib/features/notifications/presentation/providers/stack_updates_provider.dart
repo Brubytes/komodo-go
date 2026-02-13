@@ -27,7 +27,9 @@ class StackUpdates extends _$StackUpdates {
     ref.invalidateSelf();
     try {
       await future;
-    } catch (_) {}
+    } on Exception {
+      // Ignore refresh errors.
+    }
   }
 
   Future<void> fetchNextPage() async {

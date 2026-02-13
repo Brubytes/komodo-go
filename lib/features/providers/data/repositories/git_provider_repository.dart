@@ -30,7 +30,7 @@ class GitProviderRepository {
 
       final itemsJson = response as List<dynamic>? ?? [];
       return itemsJson
-          .whereType<Map>()
+          .whereType<Map<dynamic, dynamic>>()
           .map(
             (json) => GitProviderAccount.fromJson(json.cast<String, dynamic>()),
           )
@@ -76,7 +76,7 @@ class GitProviderRepository {
         if (username != null && username.trim().isNotEmpty)
           'username': username.trim(),
         if (token != null && token.trim().isNotEmpty) 'token': token.trim(),
-        if (https != null) 'https': https,
+        'https': ?https,
       };
 
       final response = await _client.write(

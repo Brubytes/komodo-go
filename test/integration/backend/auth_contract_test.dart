@@ -13,12 +13,13 @@ void registerAuthContractTests() {
 
   group('Auth failures (real backend)', () {
     test('invalid api secret returns auth failure', () async {
+      final requiredConfig = requireConfig(config);
       final badConfig = BackendTestConfig(
-        baseUrl: config!.baseUrl,
-        apiKey: config.apiKey,
+        baseUrl: requiredConfig.baseUrl,
+        apiKey: requiredConfig.apiKey,
         apiSecret: 'invalid-secret',
-        allowDestructive: config.allowDestructive,
-        resetCommand: config.resetCommand,
+        allowDestructive: requiredConfig.allowDestructive,
+        resetCommand: requiredConfig.resetCommand,
       );
 
       final repository = TagRepository(

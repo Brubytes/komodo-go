@@ -1,0 +1,182 @@
+workflows:
+  ci:
+    name: CI (analyze, test, build)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      flutter: fvm
+      xcode: 26.2
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/.gradle/caches
+        - ~/Library/Caches/CocoaPods
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: "main"
+          include: true
+          source: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Flutter pub get
+        script: flutter pub get
+      - name: Codegen
+        script: flutter pub run build_runner build --delete-conflicting-outputs
+      - name: Flutter analyze
+        script: flutter analyze
+      - name: Flutter test
+        script: flutter test
+      - name: Build Android App Bundle
+        script: flutter build appbundle
+      - name: Build iOS (no codesign)
+        script: flutter build ios --no-codesign
+    artifacts:
+      - build/**/outputs/**/*.aab
+      - build/**/outputs/**/*.apk
+      - build/ios/iphoneos/*.app
+      - build/ios/iphonesimulator/*.app
+      - /tmp/xcodebuild_logs/*.log
+
+  release-android:
+    name: Release Android (signed)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      android_signing:
+        - Brubytes
+      flutter: fvm
+      groups:
+        - google_play
+      vars:
+        PACKAGE_NAME: "com.brubytes.komodoGo"
+        GOOGLE_PLAY_TRACK: "Internal"
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/.gradle/caches
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "v*"
+          include: true
+    scripts:
+      - name: Flutter pub get
+        script: flutter pub get
+      - name: Codegen
+        script: flutter pub run build_runner build --delete-conflicting-outputs
+      - name: Build Android App Bundle (auto-versioned)
+        script: | 
+          BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))      
+          flutter build appbundle --release \
+            --build-name=1.0.$BUILD_NUMBER \
+            --build-number=$BUILD_NUMBER
+    artifacts:
+      - build/**/outputs/**/*.aab
+      - build/**/outputs/**/*.apk
+    # publishing:
+      # email:
+      #   recipients:
+      #     - user_1@example.com
+      #     - user_2@example.com
+      #   notify:
+      #     success: true
+      #     failure: false
+      # google_play:
+      #   credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+      #   track: internal
+      #   submit_as_draft: true
+  release-ios:
+    name: Release iOS (signed)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    integrations:
+      app_store_connect: Brubytes
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.brubytes.komodoGo
+      flutter: fvm
+      xcode: 26.2
+      cocoapods: default
+      vars:
+        APP_ID: 6758161017
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/Library/Caches/CocoaPods
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "v*"
+          include: true
+    scripts:
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
+      - name: Flutter pub get
+        script: flutter pub get
+      - name: Codegen
+        script: flutter pub run build_runner build --delete-conflicting-outputs
+      - name: Install pods
+        script: find . -name "Podfile" -execdir pod install \;
+      # Optional: auto-increment build number from TestFlight (requires APP_ID + integration)
+      - name: Build iOS (auto-versioned)
+        script: |
+          BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number --platform=IOS "$APP_ID") + 1))
+          flutter build ipa --release \
+            --build-name=1.0.$BUILD_NUMBER \
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+      # - name: Build iOS (release)
+      #   script: flutter build ipa --release
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        # Use referenced App Store Connect API key to authenticate binary upload
+        auth: integration 
+
+        # Configuration related to TestFlight (optional)
+
+        # Optional boolean, defaults to false. Whether or not to submit the uploaded
+        # build to TestFlight beta review. Required for distributing to beta groups.
+        # Note: This action is performed during post-processing.
+        submit_to_testflight: true 
+
+        # Optional boolean, defaults to false. Set to true to automatically expire 
+        # previous build in review or waiting for review in Testflight before
+        # submitting a new build to beta review. Expired builds will no longer be available for testers.
+        # Note: This action is performed during post-processing.
+        expire_build_submitted_for_review: true
+
+        # Specify the names of beta tester groups that will get access to the build 
+        # once it has passed beta review.
+        beta_groups: 
+          - External
+        
+        # Configuration related to App Store (optional)
+
+        # Optional boolean, defaults to false. Whether or not to submit the uploaded
+        # build to App Store review. Note: This action is performed during post-processing.
+        submit_to_app_store: false
+
+        # Optional boolean, defaults to false. Set to true to cancel the previous 
+        # submission (if applicable) when submitting a new build to App Store review.
+        # This allows automatically submitting a new build for review if a previous submission exists.
+        # Note: This action is performed during post-processing.
+        # cancel_previous_submissions: true
+        
+        # Optional, defaults to MANUAL. Supported values: MANUAL, AFTER_APPROVAL or SCHEDULED
+        # release_type: AFTER_APPROVAL
+      
+        # Optional boolean. Whether or not to release an App Store version update in phases.
+        # With this option turned on, your version update will be released over a 7-day period
+        # to a percentage of your users (selected at random by their Apple ID) with automatic
+        # updates turned on. Learn more from 
+        # https://developer.apple.com/help/app-store-connect/update-your-app/release-a-version-update-in-phases.
+        # If not specified, then App Store version default phased release configuration is reused.
+        # phased_release: false

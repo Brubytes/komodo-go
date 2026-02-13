@@ -8,7 +8,7 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 class AppTheme {
   AppTheme._();
 
-  static const _surfaceTint = Colors.transparent;
+  static const Color _surfaceTint = Colors.transparent;
 
   static Color _onColor(Color background) {
     final brightness = ThemeData.estimateBrightnessForColor(background);

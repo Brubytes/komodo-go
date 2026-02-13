@@ -11,7 +11,6 @@ import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
-import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
@@ -623,14 +622,13 @@ class _StacksSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         itemCount: 6,
-        separatorBuilder: (_, __) => const Gap(12),
-        itemBuilder: (_, __) => AppCardSurface(
+        separatorBuilder: (_, _) => const Gap(12),
+        itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -651,8 +649,8 @@ class _StacksSkeletonList extends StatelessWidget {
                 const Gap(10),
                 Text('Source • Server', style: textTheme.bodySmall),
                 const Gap(10),
-                Row(
-                  children: const [
+                const Row(
+                  children: [
                     Chip(label: Text('Update available')),
                     Gap(8),
                     Chip(label: Text('Tag')),
@@ -765,10 +763,8 @@ List<StackListItem> _applyFilters(
     switch (templateFilter) {
       case StacksTemplateFilter.exclude:
         if (stack.template) return false;
-        break;
       case StacksTemplateFilter.only:
         if (!stack.template) return false;
-        break;
       case StacksTemplateFilter.include:
         break;
     }

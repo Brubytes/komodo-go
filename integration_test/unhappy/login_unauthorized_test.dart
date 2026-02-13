@@ -18,18 +18,19 @@ void registerLoginUnauthorizedTests() {
         port: 57868,
       );
       await backend.start();
-      backend.queueError(
-        path: '/read',
-        type: 'GetVersion',
-        statusCode: 401,
-        message: 'Unauthorized',
-      );
-      backend.queueError(
-        path: '/read',
-        type: 'GetVersion',
-        statusCode: 401,
-        message: 'Unauthorized',
-      );
+      backend
+        ..queueError(
+          path: '/read',
+          type: 'GetVersion',
+          statusCode: 401,
+          message: 'Unauthorized',
+        )
+        ..queueError(
+          path: '/read',
+          type: 'GetVersion',
+          statusCode: 401,
+          message: 'Unauthorized',
+        );
 
       try {
         await app.main();

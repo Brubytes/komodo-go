@@ -13,7 +13,7 @@ class TargetNameCache extends _$TargetNameCache {
 
   @override
   Map<String, String> build() {
-    ref.listen<ActiveConnectionData?>(activeConnectionProvider, (_, __) {
+    ref.listen<ActiveConnectionData?>(activeConnectionProvider, (_, _) {
       _inflight.clear();
     });
 

@@ -1,7 +1,6 @@
+import 'package:komodo_go/core/data/models/core_info.dart';
+import 'package:komodo_go/core/data/repositories/core_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../data/models/core_info.dart';
-import '../data/repositories/core_repository.dart';
 
 part 'core_info_provider.g.dart';
 
@@ -13,7 +12,7 @@ Future<CoreInfo> coreInfo(Ref ref) async {
   }
   try {
     return await repo.getCoreInfo();
-  } catch (_) {
+  } on Exception {
     return const CoreInfo(webhookBaseUrl: '');
   }
 }

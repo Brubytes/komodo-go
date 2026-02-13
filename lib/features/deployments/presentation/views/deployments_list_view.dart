@@ -291,7 +291,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
                       sliver: SliverList.separated(
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const Gap(12),
+                        separatorBuilder: (_, _) => const Gap(12),
                         itemBuilder: (context, i) {
                           final deployment = filtered[i];
                           return AppFadeSlide(
@@ -662,61 +662,6 @@ class _SearchField extends StatelessWidget {
   }
 }
 
-class _DeploymentsSkeletonList extends StatelessWidget {
-  const _DeploymentsSkeletonList();
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Skeletonizer(
-      enabled: true,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 6,
-        separatorBuilder: (_, __) => const Gap(12),
-        itemBuilder: (_, __) => AppCardSurface(
-          padding: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const CircleAvatar(radius: 16),
-                    const Gap(10),
-                    Expanded(
-                      child: Text(
-                        'Deployment name',
-                        style: textTheme.titleSmall,
-                      ),
-                    ),
-                    const Gap(8),
-                    const CircleAvatar(radius: 6),
-                  ],
-                ),
-                const Gap(10),
-                Text('Image • Server', style: textTheme.bodySmall),
-                const Gap(10),
-                Row(
-                  children: const [
-                    Chip(label: Text('Running')),
-                    Gap(8),
-                    Chip(label: Text('Healthy')),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Sliver version of skeleton list for use in CustomScrollView.
 class _DeploymentsSkeletonSliver extends StatelessWidget {
   const _DeploymentsSkeletonSliver();
@@ -726,11 +671,10 @@ class _DeploymentsSkeletonSliver extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer.sliver(
-      enabled: true,
       child: SliverList.separated(
         itemCount: 6,
-        separatorBuilder: (_, __) => const Gap(12),
-        itemBuilder: (_, __) => AppCardSurface(
+        separatorBuilder: (_, _) => const Gap(12),
+        itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -754,8 +698,8 @@ class _DeploymentsSkeletonSliver extends StatelessWidget {
                 const Gap(10),
                 Text('Image • Server', style: textTheme.bodySmall),
                 const Gap(10),
-                Row(
-                  children: const [
+                const Row(
+                  children: [
                     Chip(label: Text('Running')),
                     Gap(8),
                     Chip(label: Text('Healthy')),

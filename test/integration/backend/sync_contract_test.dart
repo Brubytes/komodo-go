@@ -22,8 +22,8 @@ void registerSyncContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = SyncRepository(client);
     });
 
@@ -59,11 +59,12 @@ void registerSyncContractTests() {
           },
           name: name,
         );
+        final createdIdValue = createdId;
 
         final updated = await retryAsync(() async {
           return expectRight(
             await repository.updateSyncConfig(
-              syncId: createdId!,
+              syncId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'include_resources': !seedDetail.config.includeResources,
               },
@@ -75,7 +76,7 @@ void registerSyncContractTests() {
         final updatedFlags = await retryAsync(() async {
           return expectRight(
             await repository.updateSyncConfig(
-              syncId: createdId!,
+              syncId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'include_variables': !seedDetail.config.includeVariables,
                 'pending_alert': !seedDetail.config.pendingAlert,
@@ -83,9 +84,9 @@ void registerSyncContractTests() {
             ),
           );
         });
-        expect(updatedFlags.id, createdId);
+        expect(updatedFlags.id, createdIdValue);
 
-        final refreshed = expectRight(await repository.getSync(createdId!));
+        final refreshed = expectRight(await repository.getSync(createdIdValue));
         expect(
           refreshed.config.includeVariables,
           updatedFlags.config.includeVariables,
@@ -96,16 +97,16 @@ void registerSyncContractTests() {
           await client.write(
             RpcRequest(
               type: 'DeleteResourceSync',
-              params: <String, dynamic>{'id': createdId},
+              params: <String, dynamic>{'id': createdIdValue},
             ),
           );
         });
         deleted = true;
         await expectEventuallyServerFailure(
-          () => repository.getSync(createdId!),
+          () => repository.getSync(createdIdValue),
         );
         final afterDelete = expectRight(await repository.listSyncs());
-        expect(afterDelete.any((s) => s.id == createdId), isFalse);
+        expect(afterDelete.any((s) => s.id == createdIdValue), isFalse);
       } finally {
         final idToDelete = createdId ?? created?.id;
         if (!deleted && idToDelete != null) {

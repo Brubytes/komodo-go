@@ -22,8 +22,8 @@ void registerActionContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = ActionRepository(client);
     });
 
@@ -62,11 +62,12 @@ void registerActionContractTests() {
           },
           name: name,
         );
+        final createdIdValue = createdId;
 
         final updated = await retryAsync(() async {
           return expectRight(
             await repository.updateActionConfig(
-              actionId: createdId!,
+              actionId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'run_at_startup': !seedDetail.config.runAtStartup,
               },
@@ -78,7 +79,7 @@ void registerActionContractTests() {
         final updatedArgs = await retryAsync(() async {
           return expectRight(
             await repository.updateActionConfig(
-              actionId: createdId!,
+              actionId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'arguments_format': 'key_value',
                 'arguments': 'FOO=bar\nBAZ=qux',
@@ -88,23 +89,23 @@ void registerActionContractTests() {
         });
         expect(updatedArgs.config.arguments, contains('FOO=bar'));
 
-        final refreshed = expectRight(await repository.getAction(createdId!));
+        final refreshed = expectRight(await repository.getAction(createdIdValue));
         expect(refreshed.config.arguments, contains('FOO=bar'));
 
         await retryAsync(() async {
           await client.write(
             RpcRequest(
               type: 'DeleteAction',
-              params: <String, dynamic>{'id': createdId},
+              params: <String, dynamic>{'id': createdIdValue},
             ),
           );
         });
         deleted = true;
         await expectEventuallyServerFailure(
-          () => repository.getAction(createdId!),
+          () => repository.getAction(createdIdValue),
         );
         final afterDelete = expectRight(await repository.listActions());
-        expect(afterDelete.any((a) => a.id == createdId), isFalse);
+        expect(afterDelete.any((a) => a.id == createdIdValue), isFalse);
       } finally {
         final idToDelete = createdId ?? created?.id;
         if (!deleted && idToDelete != null) {

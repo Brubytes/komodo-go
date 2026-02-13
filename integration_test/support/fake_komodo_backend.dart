@@ -261,8 +261,7 @@ class FakeKomodoBackend {
 
   void _queueOverride(FakeRpcOverride override) {
     final key = _overrideKey(override.path, override.type);
-    final queue = _overrides.putIfAbsent(key, () => <FakeRpcOverride>[]);
-    queue.add(override);
+    _overrides.putIfAbsent(key, () => <FakeRpcOverride>[]).add(override);
   }
 
   Future<void> _serve() async {
@@ -272,28 +271,28 @@ class FakeKomodoBackend {
     await for (final request in server) {
       try {
         if (request.method != 'POST') {
-          _jsonError(request, 405, 'Only POST is supported');
+          await _jsonError(request, 405, 'Only POST is supported');
           continue;
         }
 
         final apiKey = request.headers.value('X-Api-Key');
         final apiSecret = request.headers.value('X-Api-Secret');
         if (apiKey != expectedApiKey || apiSecret != expectedApiSecret) {
-          _jsonError(request, 401, 'Invalid API credentials');
+          await _jsonError(request, 401, 'Invalid API credentials');
           continue;
         }
 
         final rawBody = await utf8.decoder.bind(request).join();
         final decoded = jsonDecode(rawBody);
         if (decoded is! Map<String, dynamic>) {
-          _jsonError(request, 400, 'Invalid JSON body');
+          await _jsonError(request, 400, 'Invalid JSON body');
           continue;
         }
 
         final type = decoded['type'];
         final params = decoded['params'];
         if (type is! String || (params != null && params is! Map)) {
-          _jsonError(request, 400, 'Invalid RPC shape');
+          await _jsonError(request, 400, 'Invalid RPC shape');
           continue;
         }
 
@@ -317,7 +316,7 @@ class FakeKomodoBackend {
             await Future<void>.delayed(override.delay!);
           }
           if (override.isError) {
-            _jsonError(
+            await _jsonError(
               request,
               override.statusCode,
               override.message ?? 'Fake backend error',
@@ -331,9 +330,9 @@ class FakeKomodoBackend {
         final response = _handleRpc(request.uri.path, type, paramsMap);
         await _jsonOk(request, response);
       } on FakeRpcResponseException catch (e) {
-        _jsonError(request, e.statusCode, e.message);
+        await _jsonError(request, e.statusCode, e.message);
       } on Object catch (e) {
-        _jsonError(request, 500, 'Unhandled fake backend error: $e');
+        await _jsonError(request, 500, 'Unhandled fake backend error: $e');
       }
     }
   }
@@ -1104,11 +1103,15 @@ Future<void> _jsonOk(HttpRequest request, Object body) async {
   await request.response.close();
 }
 
-void _jsonError(HttpRequest request, int statusCode, String message) {
+Future<void> _jsonError(
+  HttpRequest request,
+  int statusCode,
+  String message,
+) async {
   request.response.statusCode = statusCode;
   request.response.headers.contentType = ContentType.json;
   request.response.write(
     jsonEncode(<String, dynamic>{'error': message, 'trace': null}),
   );
-  request.response.close();
+  await request.response.close();
 }

@@ -380,8 +380,8 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
   var _reloadDenoDeps = false;
   var _scheduleAlert = false;
   var _failureAlert = false;
-  var _scheduleFormat = ScheduleFormat.english;
-  var _argumentsFormat = FileFormat.keyValue;
+  ScheduleFormat _scheduleFormat = ScheduleFormat.english;
+  FileFormat _argumentsFormat = FileFormat.keyValue;
 
   @override
   void initState() {

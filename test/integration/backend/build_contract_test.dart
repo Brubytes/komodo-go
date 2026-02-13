@@ -22,8 +22,8 @@ void registerBuildContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = BuildRepository(client);
     });
 
@@ -58,11 +58,12 @@ void registerBuildContractTests() {
           },
           name: name,
         );
+        final createdIdValue = createdId;
 
         final updated = await retryAsync(() async {
           return expectRight(
             await repository.updateBuildConfig(
-              buildId: createdId!,
+              buildId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'auto_increment_version':
                     !seedDetail.config.autoIncrementVersion,
@@ -75,7 +76,7 @@ void registerBuildContractTests() {
         final updatedFields = await retryAsync(() async {
           return expectRight(
             await repository.updateBuildConfig(
-              buildId: createdId!,
+              buildId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'use_buildx': !seedDetail.config.useBuildx,
                 'image_tag': 'test-${_randomToken(Random(13022))}',
@@ -83,9 +84,10 @@ void registerBuildContractTests() {
             ),
           );
         });
-        expect(updatedFields.id, createdId);
+        expect(updatedFields.id, createdIdValue);
 
-        final refreshed = expectRight(await repository.getBuild(createdId!));
+        final refreshed =
+            expectRight(await repository.getBuild(createdIdValue));
         expect(refreshed.config.useBuildx, updatedFields.config.useBuildx);
         expect(refreshed.config.imageTag, updatedFields.config.imageTag);
 
@@ -93,16 +95,16 @@ void registerBuildContractTests() {
           await client.write(
             RpcRequest(
               type: 'DeleteBuild',
-              params: <String, dynamic>{'id': createdId},
+              params: <String, dynamic>{'id': createdIdValue},
             ),
           );
         });
         deleted = true;
         await expectEventuallyServerFailure(
-          () => repository.getBuild(createdId!),
+          () => repository.getBuild(createdIdValue),
         );
         final afterDelete = expectRight(await repository.listBuilds());
-        expect(afterDelete.any((b) => b.id == createdId), isFalse);
+        expect(afterDelete.any((b) => b.id == createdIdValue), isFalse);
       } finally {
         final idToDelete = createdId ?? created?.id;
         if (!deleted && idToDelete != null) {
@@ -127,8 +129,8 @@ void registerBuildContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = BuildRepository(client);
     });
 

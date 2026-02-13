@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
@@ -192,19 +192,17 @@ class DeploymentConfigContent extends StatelessWidget {
                       : '—',
                 ),
                 if (!isHostNetwork && ports.isNotEmpty) ...[
-                  DetailKeyValueRow(
+                  const DetailKeyValueRow(
                     label: 'Ports',
                     value: '',
-                    bottomPadding: 8,
                   ),
                   DetailCodeBlock(code: ports),
                   if (config.links.isNotEmpty) const Gap(10),
                 ],
                 if (config.links.isNotEmpty)
-                  DetailKeyValueRow(
+                  const DetailKeyValueRow(
                     label: 'Links',
                     value: '',
-                    bottomPadding: 8,
                   ),
                 if (config.links.isNotEmpty)
                   Align(
@@ -535,9 +533,9 @@ class DeploymentConfigEditorContentState
       c.removeListener(_notifyDirtyIfChanged);
     }
 
-    _serverId.removeListener(_maybeRefreshNetworkOptions);
-
-    _serverId.dispose();
+    _serverId
+      ..removeListener(_maybeRefreshNetworkOptions)
+      ..dispose();
     _imageRegistryAccount.dispose();
     _network.dispose();
     _command.dispose();
@@ -596,8 +594,9 @@ class DeploymentConfigEditorContentState
 
   void _disposeRowControllers(List<TextEditingController> controllers) {
     for (final c in controllers) {
-      c.removeListener(_notifyDirtyIfChanged);
-      c.dispose();
+      c
+        ..removeListener(_notifyDirtyIfChanged)
+        ..dispose();
     }
     controllers.clear();
   }
@@ -617,8 +616,7 @@ class DeploymentConfigEditorContentState
 
   void _addRow(List<TextEditingController> target) {
     setState(() {
-      final c = TextEditingController();
-      c.addListener(_notifyDirtyIfChanged);
+      final c = TextEditingController()..addListener(_notifyDirtyIfChanged);
       target.add(c);
     });
     _notifyDirtyIfChanged();
@@ -627,9 +625,9 @@ class DeploymentConfigEditorContentState
   void _removeRow(List<TextEditingController> target, int index) {
     if (index < 0 || index >= target.length) return;
     setState(() {
-      final c = target.removeAt(index);
-      c.removeListener(_notifyDirtyIfChanged);
-      c.dispose();
+      target.removeAt(index)
+        ..removeListener(_notifyDirtyIfChanged)
+        ..dispose();
     });
     _notifyDirtyIfChanged();
   }
@@ -872,14 +870,14 @@ class DeploymentConfigEditorContentState
 
     if (_restart != null && _restart!.trim().isNotEmpty) {
       final initialRestart = _normalizeRestart(_initial.restart) ?? '';
-      setIfChanged('restart', _restart!, initialRestart);
+      setIfChanged('restart', _restart, initialRestart);
     }
 
     if (_terminationSignal != null && _terminationSignal!.trim().isNotEmpty) {
       final initialSignal = _stringOrNull(_initial.terminationSignal);
       setIfChanged(
         'termination_signal',
-        _terminationSignal!,
+        _terminationSignal,
         initialSignal ?? '',
       );
     }
@@ -894,8 +892,9 @@ class DeploymentConfigEditorContentState
     // Watch Docker networks provider and update local state when it changes.
     final serverId = _serverId.text.trim();
     if (serverId.isNotEmpty) {
-      final networksAsync = ref.watch(dockerNetworksProvider(serverId));
-      networksAsync.whenData((List<String> networks) {
+      ref.watch(dockerNetworksProvider(serverId)).whenData((
+        List<String> networks,
+      ) {
         final options = <String>['', ...networks];
         if (_loadingNetworkOptions || !_listsEqual(options, _networkOptions)) {
           // Use a post-frame callback to avoid calling setState during build.
@@ -1146,7 +1145,6 @@ class DeploymentConfigEditorContentState
                   children: [
                     for (var i = 0; i < _linkControllers.length; i++) ...[
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: TextFormField(
@@ -1161,7 +1159,6 @@ class DeploymentConfigEditorContentState
                           ),
                           const Gap(8),
                           Align(
-                            alignment: Alignment.center,
                             child: IconButton(
                               tooltip: 'Remove',
                               icon: const Icon(AppIcons.delete),
@@ -1334,7 +1331,6 @@ class DeploymentConfigEditorContentState
                   children: [
                     for (var i = 0; i < _extraArgControllers.length; i++) ...[
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: TextFormField(
@@ -1349,7 +1345,6 @@ class DeploymentConfigEditorContentState
                           ),
                           const Gap(8),
                           Align(
-                            alignment: Alignment.center,
                             child: IconButton(
                               tooltip: 'Remove',
                               icon: const Icon(AppIcons.delete),

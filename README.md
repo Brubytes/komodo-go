@@ -5,27 +5,37 @@
 # Komodo Go
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![CI Tests](https://api.codemagic.io/apps/697fac44dbc045a607ea177d/ci/status_badge.svg)](https://codemagic.io/app/697fac44dbc045a607ea177d/ci/latest_build)
+
+| Platform | Status |
+| --- | --- |
+| Android | [![Android CI](https://api.codemagic.io/apps/697fac44dbc045a607ea177d/release-android/status_badge.svg)](https://codemagic.io/app/697fac44dbc045a607ea177d/release-android/latest_build) |
+| iOS | [![iOS CI](https://api.codemagic.io/apps/697fac44dbc045a607ea177d/release-ios/status_badge.svg)](https://codemagic.io/app/697fac44dbc045a607ea177d/release-ios/latest_build) |
+
 
 Flutter app to control the Komodo infrastructure management platform.
 
+Website: https://komodogo.eu
+
 ## Komodo project
 
-Komodo Go is a third party client for [Komodo 🦎](https://komo.do). Komodo Go is a native iOS / Android application that allows to control Komodo on the go. While it covers many options it is not feature complete compared to the Komodo Web UI.
+Komodo Go is a third-party client for [Komodo 🦎](https://komo.do). Komodo Go is a native iOS/Android application that allows you to control Komodo on the go. While it covers many options, it is not feature-complete compared to the Komodo Web UI.
 
 ## Requirements
 
 - Flutter, pinned via [FVM](https://fvm.app/) in `.fvmrc`
-Optional:
+Optional tools:
 - [Patrol](https://patrol.leancode.co/) for running integration tests
 - [Maestro](https://docs.maestro.dev/) and [storepix](https://www.npmjs.com/package/storepix) for App Store screenshot generation
 
 ## Development
 
-- `fvm flutter pub get`
-- `fvm flutter run`
-- `fvm flutter analyze`
-- `fvm flutter test`
-
+- `fvm flutter pub get` to install dependencies
+- `fvm dart run build_runner build --delete-conflicting-outputs` to generate code
+- `fvm flutter run` to run the app
+- `fvm flutter analyze` to analyze the code
+- `fvm flutter test` to run tests
+  
 ## Testing
 
 See [TESTING.md](TESTING.md) for the full testing strategy, available test suites, and
@@ -35,7 +45,7 @@ step-by-step commands.
 
 More advanced tests are implemented with [Patrol](https://patrol.leancode.co/) and located in `integration_test/`.
 
-Run the Patrol iOS integration test suite on a simulator via the patrol cli:
+Run the Patrol iOS integration test suite on a simulator via the Patrol CLI:
 
 - `patrol test -t integration_test/app_test.dart -d <SIMULATOR_UDID> -v`
 - `patrol test -t integration_test/resource_flows/stacks_services_logs_test.dart -d <SIMULATOR_UDID> -v`
@@ -58,7 +68,7 @@ It is available as an option on the login screen.
 
 ## Design system / theming
 
-The app uses a single unified Material 3 theme on both iOS and Android (no platform-specific split, expect for the main navigation bar).
+The app uses a single unified Material 3 theme on both iOS and Android (no platform-specific split, except for the main navigation bar).
 
 - Brand colors:
   - Primary: `#014226`
@@ -125,3 +135,8 @@ This project is licensed under the GNU General Public License v3.0. See [LICENSE
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, and test guidance.
+
+## Community
+
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security Policy](SECURITY.md)

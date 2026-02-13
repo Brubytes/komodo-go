@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
@@ -93,14 +95,14 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
     _dirtySnackBar = controller;
     _dirtySnackBarMessage = message;
     _dirtySnackBarSaveEnabled = saveEnabled;
-    controller.closed.then((_) {
+    unawaited(controller.closed.then((_) {
       if (!mounted) return;
       if (_dirtySnackBar == controller) {
         _dirtySnackBar = null;
         _dirtySnackBarMessage = null;
         _dirtySnackBarSaveEnabled = null;
       }
-    });
+    }));
   }
 
   void hideDirtySnackBar() {

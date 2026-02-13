@@ -146,7 +146,6 @@ class _AlertTypesPickerSheetState extends State<AlertTypesPickerSheet> {
               DetailSurface(
                 padding: EdgeInsets.zero,
                 radius: 16,
-                enableGradientInDark: false,
                 child: Column(
                   children: [
                     if (filtered.isEmpty)

@@ -29,7 +29,9 @@ class Deployments extends _$Deployments {
     ref.invalidateSelf();
     try {
       await future;
-    } catch (_) {}
+    } on Exception {
+      // Ignore refresh errors.
+    }
   }
 }
 

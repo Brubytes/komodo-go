@@ -24,7 +24,9 @@ class Alerters extends _$Alerters {
     ref.invalidateSelf();
     try {
       await future;
-    } catch (_) {}
+    } on Exception {
+      // Ignore refresh errors.
+    }
   }
 }
 

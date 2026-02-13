@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -32,7 +34,7 @@ class ResourcesView extends ConsumerWidget {
     ref.listen<ResourceType?>(resourcesTargetProvider, (previous, next) {
       if (next == null) return;
       ref.read(resourcesTargetProvider.notifier).clear();
-      context.push(_routeFor(next));
+      unawaited(context.push(_routeFor(next)));
     });
 
     final width = MediaQuery.sizeOf(context).width;

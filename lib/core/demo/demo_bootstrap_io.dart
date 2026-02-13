@@ -1,6 +1,4 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/connections/connections_store.dart';
 import 'package:komodo_go/core/demo/demo_backend.dart';
@@ -8,6 +6,7 @@ import 'package:komodo_go/core/demo/demo_config.dart';
 import 'package:komodo_go/core/demo/demo_preferences.dart';
 import 'package:komodo_go/core/onboarding/onboarding_storage.dart';
 import 'package:komodo_go/core/storage/secure_storage_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DemoBootstrapImpl {
   static DemoBackend? _backend;

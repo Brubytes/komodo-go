@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
@@ -90,7 +90,7 @@ class HomeServerStatTile extends StatelessWidget {
                       if (isLoading)
                         Row(
                           children: [
-                            const AppInlineSkeleton(size: 16),
+                            const AppInlineSkeleton(),
                             const Gap(8),
                             Text(
                               'Loading stats',
@@ -366,7 +366,7 @@ class HomeAlertSummaryCard extends StatelessWidget {
                       count.toString(),
                       style: textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
-                        height: 1.0,
+                        height: 1,
                       ),
                     ),
                     const Gap(2),
@@ -613,12 +613,12 @@ class _CompactStatLine extends StatelessWidget {
     final labelStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
       color: scheme.onSurface,
       fontWeight: FontWeight.w700,
-      height: 1.0,
+      height: 1,
     );
     final primaryStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
       color: scheme.onSurface,
       fontWeight: FontWeight.w800,
-      height: 1.0,
+      height: 1,
     );
 
     final secondaryValue = secondary;
@@ -627,7 +627,7 @@ class _CompactStatLine extends StatelessWidget {
       color: color.withValues(alpha: 0.9),
       fontWeight: FontWeight.w700,
       fontSize: 10,
-      height: 1.0,
+      height: 1,
     );
 
     return SizedBox(

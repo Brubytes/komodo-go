@@ -27,6 +27,11 @@ Thanks for taking the time to contribute to Komodo Go!
 
 - Never commit API keys, secrets, or real credentials.
 - Use `.env.example` to document required environment variables.
+- Follow [SECURITY.md](SECURITY.md) for vulnerability reporting.
+
+## Community standards
+
+- Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Reporting issues
 

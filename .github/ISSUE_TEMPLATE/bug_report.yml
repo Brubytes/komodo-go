@@ -1,0 +1,75 @@
+name: Bug report
+description: Report a reproducible problem in Komodo Go.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+        Please provide enough detail so we can reproduce the issue.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A short and clear description of the bug.
+      placeholder: The app crashes when I open the Servers tab after login.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List exact steps.
+      placeholder: |
+        1. Open app
+        2. Log in with valid credentials
+        3. Tap "Servers"
+        4. Observe crash
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: The Servers list should load.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: The app crashes and returns to the OS home screen.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste relevant logs, stack traces, or screenshots.
+      render: shell
+  - type: input
+    id: app_version
+    attributes:
+      label: App version
+      description: App release version or commit SHA.
+      placeholder: v0.1.3+4 or 1a2b3c4
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - iOS
+        - Android
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include Flutter/FVM version and device/simulator details.
+      placeholder: |
+        Flutter: 3.38.9 (via FVM)
+        Device: iPhone 15 Pro simulator (iOS 18.x)
+

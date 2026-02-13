@@ -183,7 +183,7 @@ class _TagColorPickerPage extends StatelessWidget {
         child: ListView.separated(
           padding: const EdgeInsets.only(bottom: 24),
           itemCount: TagColor.values.length,
-          separatorBuilder: (_, __) => Divider(
+          separatorBuilder: (_, _) => Divider(
             height: 1,
             color: scheme.outlineVariant.withValues(alpha: 0.4),
           ),

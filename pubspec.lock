@@ -840,7 +840,7 @@ packages:
     source: hosted
     version: "0.2.1"
   riverpod:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: riverpod
       sha256: "9026676260f31bb5279cc5e59ca292145d8bab4aabede9aa2555c2a626ec66f1"
@@ -1101,7 +1101,7 @@ packages:
     source: hosted
     version: "1.29.0"
   test_api:
-    dependency: "direct overridden"
+    dependency: "direct dev"
     description:
       name: test_api
       sha256: "93167629bfc610f71560ab9312acdda4959de4df6fac7492c89ff0d3886f6636"

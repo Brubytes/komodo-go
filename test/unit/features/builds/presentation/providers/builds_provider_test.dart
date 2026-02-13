@@ -36,7 +36,7 @@ void main() {
       addTearDown(container.dispose);
       final subscription = container.listen(
         buildsProvider.future,
-        (_, __) {},
+        (previous, next) {},
         fireImmediately: true,
       );
       addTearDown(subscription.close);

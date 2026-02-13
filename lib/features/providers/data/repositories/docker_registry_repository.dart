@@ -30,7 +30,7 @@ class DockerRegistryRepository {
 
       final itemsJson = response as List<dynamic>? ?? [];
       return itemsJson
-          .whereType<Map>()
+          .whereType<Map<dynamic, dynamic>>()
           .map(
             (json) =>
                 DockerRegistryAccount.fromJson(json.cast<String, dynamic>()),

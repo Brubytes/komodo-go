@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability report
+    url: https://github.com/Brubytes/komodo-go/security/advisories/new
+    about: Please report security issues privately as described in SECURITY.md.
