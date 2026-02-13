@@ -16,9 +16,7 @@ class _TestPollingState extends PollingRouteAwareState<_TestPollingWidget> {
 }
 
 void main() {
-  testWidgets('shouldPoll respects visibility and lifecycle', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('shouldPoll respects visibility and lifecycle', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: _TestPollingWidget())),
     );

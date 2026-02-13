@@ -394,12 +394,14 @@ class KomodoSelectMenuFormField<T> extends FormField<T> {
     super.key,
   }) : super(
          builder: (state) {
+           void handleChanged(T? v) {
+             state.didChange(v);
+             onChanged?.call(v);
+           }
+
            final effectiveOnChanged =
                (state.widget.enabled && onChanged != null)
-               ? (T? v) {
-                   state.didChange(v);
-                   onChanged.call(v);
-                 }
+               ? handleChanged
                : null;
 
            return KomodoSelectMenuField<T>(

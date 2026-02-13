@@ -32,9 +32,7 @@ class _TestConnections extends Connections {
 }
 
 void main() {
-  testWidgets('Selects a saved connection from login view', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('Selects a saved connection from login view', (tester) async {
     final connection = ConnectionProfile(
       id: 'conn-1',
       name: 'Production',

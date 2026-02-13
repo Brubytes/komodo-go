@@ -24,9 +24,7 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  testWidgets('Shows loading screen while restoring auth', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('Shows loading screen while restoring auth', (tester) async {
     final never = Completer<AuthState>();
 
     await tester.pumpWidget(

@@ -458,7 +458,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                       (
                                         path,
                                         contents, {
-                                        bool showSnackBar = true,
+                                        showSnackBar = true,
                                       }) => _saveStackFile(
                                         stackId: stack.id,
                                         filePath: path,
