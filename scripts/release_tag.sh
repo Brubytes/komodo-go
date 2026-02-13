@@ -8,6 +8,38 @@ abort() {
   exit 1
 }
 
+github_repo_slug_from_origin() {
+  local remote_url
+  local repo_path
+  local owner
+  local name
+
+  remote_url="$(git remote get-url origin 2>/dev/null || true)"
+  [[ -n "$remote_url" ]] || return 1
+
+  case "$remote_url" in
+    git@github.com:*)
+      repo_path="${remote_url#git@github.com:}"
+      ;;
+    https://github.com/*)
+      repo_path="${remote_url#https://github.com/}"
+      ;;
+    http://github.com/*)
+      repo_path="${remote_url#http://github.com/}"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+
+  repo_path="${repo_path%.git}"
+  repo_path="${repo_path%/}"
+  owner="$(printf '%s' "$repo_path" | cut -d/ -f1)"
+  name="$(printf '%s' "$repo_path" | cut -d/ -f2)"
+  [[ -n "$owner" && -n "$name" ]] || return 1
+  echo "${owner}/${name}"
+}
+
 confirm() {
   local prompt="$1"
   local default="${2:-n}"
@@ -230,6 +262,7 @@ for tag in "${TAGS[@]}"; do
   echo "- Tag: $tag"
 done
 
+PUSHED="n"
 if confirm "Push commit/tag changes to origin now?" "n"; then
   if [[ "$SHOULD_BUMP" == "y" ]]; then
     git push origin "$current_branch"
@@ -237,7 +270,50 @@ if confirm "Push commit/tag changes to origin now?" "n"; then
   for tag in "${TAGS[@]}"; do
     git push origin "$tag"
   done
+  PUSHED="y"
   echo "Pushed successfully."
 else
   echo "Nothing pushed. Push manually when ready."
+fi
+
+declare -a RELEASE_TAGS=()
+for tag in "${TAGS[@]}"; do
+  if [[ "$tag" == v* ]]; then
+    RELEASE_TAGS+=("$tag")
+  fi
+done
+
+if [[ "${#RELEASE_TAGS[@]}" -gt 0 ]] && confirm "Create GitHub Release for v-tag(s)?" "n"; then
+  command -v gh >/dev/null 2>&1 || abort "GitHub CLI ('gh') not found. Install it first."
+  gh auth status >/dev/null 2>&1 || abort "GitHub CLI is not authenticated. Run 'gh auth login' first."
+
+  REPO_SLUG="$(github_repo_slug_from_origin || true)"
+  [[ -n "${REPO_SLUG:-}" ]] || abort "Could not determine GitHub repo from 'origin' remote."
+
+  if [[ "$PUSHED" != "y" ]]; then
+    if confirm "Release tags are not pushed yet. Push now?" "y"; then
+      if [[ "$SHOULD_BUMP" == "y" ]]; then
+        git push origin "$current_branch"
+      fi
+      for tag in "${TAGS[@]}"; do
+        git push origin "$tag"
+      done
+      PUSHED="y"
+      echo "Pushed successfully."
+    else
+      abort "Cannot create GitHub Release without pushing the tag."
+    fi
+  fi
+
+  for tag in "${RELEASE_TAGS[@]}"; do
+    if gh release view "$tag" --repo "$REPO_SLUG" >/dev/null 2>&1; then
+      abort "GitHub Release for tag '$tag' already exists."
+    fi
+    gh release create "$tag" \
+      --repo "$REPO_SLUG" \
+      --verify-tag \
+      --generate-notes \
+      --title "$tag"
+    echo "Created GitHub Release: $tag"
+  done
 fi

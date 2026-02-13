@@ -65,6 +65,8 @@ Use the interactive helper from the repository root:
 ./scripts/release_tag.sh
 ```
 
+The helper can also optionally create a GitHub Release for `v*` tags when `gh` is installed and authenticated.
+
 ## Demo mode
 
 The app always exposes a demo connection backed by an in-process fake backend.
