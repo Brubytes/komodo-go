@@ -341,11 +341,13 @@ if [[ "$current_branch" != "main" && "$tag_choice" != "4" ]]; then
   confirm "Continue creating tags from '$current_branch'?" "n" || exit 1
 fi
 
-for tag in "${TAGS[@]}"; do
-  if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
-    abort "Tag '$tag' already exists."
-  fi
-done
+if [[ "${#TAGS[@]}" -gt 0 ]]; then
+  for tag in "${TAGS[@]}"; do
+    if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+      abort "Tag '$tag' already exists."
+    fi
+  done
+fi
 
 echo
 echo "Planned actions:"
@@ -355,9 +357,11 @@ if [[ "$SHOULD_BUMP" == "y" ]]; then
 else
   echo "- Keep $PUBSPEC_PATH version at $CUR_VERSION"
 fi
-for tag in "${TAGS[@]}"; do
-  echo "- Create tag: $tag"
-done
+if [[ "${#TAGS[@]}" -gt 0 ]]; then
+  for tag in "${TAGS[@]}"; do
+    echo "- Create tag: $tag"
+  done
+fi
 if [[ "${#TAGS[@]}" -eq 0 ]]; then
   echo "- No tags will be created"
 fi
@@ -373,31 +377,37 @@ if [[ "$SHOULD_BUMP" == "y" ]]; then
   git commit -m "chore(release): bump version to $NEW_VERSION"
 fi
 
-for tag in "${TAGS[@]}"; do
-  if [[ "$tag" == rc-* ]]; then
-    git tag -a "$tag" -m "Release candidate $tag"
-  else
-    git tag -a "$tag" -m "Release $tag"
-  fi
-done
+if [[ "${#TAGS[@]}" -gt 0 ]]; then
+  for tag in "${TAGS[@]}"; do
+    if [[ "$tag" == rc-* ]]; then
+      git tag -a "$tag" -m "Release candidate $tag"
+    else
+      git tag -a "$tag" -m "Release $tag"
+    fi
+  done
+fi
 
 echo
 echo "Created:"
 if [[ "$SHOULD_BUMP" == "y" ]]; then
   echo "- Commit: $(git rev-parse --short HEAD)"
 fi
-for tag in "${TAGS[@]}"; do
-  echo "- Tag: $tag"
-done
+if [[ "${#TAGS[@]}" -gt 0 ]]; then
+  for tag in "${TAGS[@]}"; do
+    echo "- Tag: $tag"
+  done
+fi
 
 PUSHED="n"
 if confirm "Push commit/tag changes to origin now?" "n"; then
   if [[ "$SHOULD_BUMP" == "y" ]]; then
     git push origin "$current_branch"
   fi
-  for tag in "${TAGS[@]}"; do
-    git push origin "$tag"
-  done
+  if [[ "${#TAGS[@]}" -gt 0 ]]; then
+    for tag in "${TAGS[@]}"; do
+      git push origin "$tag"
+    done
+  fi
   PUSHED="y"
   echo "Pushed successfully."
 else
@@ -461,11 +471,13 @@ if [[ "$current_branch" != "main" && "$tag_choice" == "4" && "$SHOULD_BUMP" == "
 fi
 
 declare -a RELEASE_TAGS=()
-for tag in "${TAGS[@]}"; do
-  if [[ "$tag" == v* ]]; then
-    RELEASE_TAGS+=("$tag")
-  fi
-done
+if [[ "${#TAGS[@]}" -gt 0 ]]; then
+  for tag in "${TAGS[@]}"; do
+    if [[ "$tag" == v* ]]; then
+      RELEASE_TAGS+=("$tag")
+    fi
+  done
+fi
 
 if [[ "${#RELEASE_TAGS[@]}" -gt 0 ]] && confirm "Create GitHub Release for v-tag(s)?" "n"; then
   ensure_gh_available_and_authenticated
@@ -478,9 +490,11 @@ if [[ "${#RELEASE_TAGS[@]}" -gt 0 ]] && confirm "Create GitHub Release for v-tag
       if [[ "$SHOULD_BUMP" == "y" ]]; then
         git push origin "$current_branch"
       fi
-      for tag in "${TAGS[@]}"; do
-        git push origin "$tag"
-      done
+      if [[ "${#TAGS[@]}" -gt 0 ]]; then
+        for tag in "${TAGS[@]}"; do
+          git push origin "$tag"
+        done
+      fi
       PUSHED="y"
       echo "Pushed successfully."
     else
@@ -488,15 +502,17 @@ if [[ "${#RELEASE_TAGS[@]}" -gt 0 ]] && confirm "Create GitHub Release for v-tag
     fi
   fi
 
-  for tag in "${RELEASE_TAGS[@]}"; do
-    if gh release view "$tag" --repo "$REPO_SLUG" >/dev/null 2>&1; then
-      abort "GitHub Release for tag '$tag' already exists."
-    fi
-    gh release create "$tag" \
-      --repo "$REPO_SLUG" \
-      --verify-tag \
-      --generate-notes \
-      --title "$tag"
-    echo "Created GitHub Release: $tag"
-  done
+  if [[ "${#RELEASE_TAGS[@]}" -gt 0 ]]; then
+    for tag in "${RELEASE_TAGS[@]}"; do
+      if gh release view "$tag" --repo "$REPO_SLUG" >/dev/null 2>&1; then
+        abort "GitHub Release for tag '$tag' already exists."
+      fi
+      gh release create "$tag" \
+        --repo "$REPO_SLUG" \
+        --verify-tag \
+        --generate-notes \
+        --title "$tag"
+      echo "Created GitHub Release: $tag"
+    done
+  fi
 fi
