@@ -19,6 +19,7 @@ What this script does:
 - Optionally bump version in $PUBSPEC_PATH
 - Optionally create rc/v tags from that version
 - Optionally push commit/tags
+- Optionally create GitHub PR to main for version-bump branches (using gh)
 - Optionally create GitHub Release for v-tags (using gh)
 
 Recommended flow (with protected main):
@@ -81,6 +82,11 @@ github_repo_slug_from_origin() {
   name="$(printf '%s' "$repo_path" | cut -d/ -f2)"
   [[ -n "$owner" && -n "$name" ]] || return 1
   echo "${owner}/${name}"
+}
+
+ensure_gh_available_and_authenticated() {
+  command -v gh >/dev/null 2>&1 || abort "GitHub CLI ('gh') not found. Install it first."
+  gh auth status >/dev/null 2>&1 || abort "GitHub CLI is not authenticated. Run 'gh auth login' first."
 }
 
 confirm() {
@@ -402,6 +408,58 @@ if [[ "$tag_choice" == "4" ]]; then
   echo "Tip: after merge to main, run again with 'keep current version' + rc/v tag mode."
 fi
 
+if [[ "$current_branch" != "main" && "$tag_choice" == "4" && "$SHOULD_BUMP" == "y" ]]; then
+  if confirm "Create GitHub PR from '$current_branch' to 'main' now?" "y"; then
+    ensure_gh_available_and_authenticated
+    REPO_SLUG="$(github_repo_slug_from_origin || true)"
+    [[ -n "${REPO_SLUG:-}" ]] || abort "Could not determine GitHub repo from 'origin' remote."
+
+    if [[ "$PUSHED" != "y" ]]; then
+      if confirm "Branch is not pushed yet. Push '$current_branch' now?" "y"; then
+        git push -u origin "$current_branch"
+        PUSHED="y"
+      else
+        abort "Cannot create PR without pushing branch '$current_branch'."
+      fi
+    fi
+
+    PR_BASE="main"
+    read -r -p "PR base branch [$PR_BASE]: " pr_base_input
+    if [[ -n "$pr_base_input" ]]; then
+      PR_BASE="$pr_base_input"
+    fi
+
+    existing_pr_url="$(gh pr list \
+      --repo "$REPO_SLUG" \
+      --state open \
+      --base "$PR_BASE" \
+      --head "$current_branch" \
+      --json url \
+      --jq '.[0].url' 2>/dev/null || true)"
+
+    if [[ -n "$existing_pr_url" ]]; then
+      echo "Open PR already exists: $existing_pr_url"
+    else
+      PR_TITLE="chore(release): bump version to $NEW_VERSION"
+      read -r -p "PR title [$PR_TITLE]: " pr_title_input
+      if [[ -n "$pr_title_input" ]]; then
+        PR_TITLE="$pr_title_input"
+      fi
+
+      printf -v PR_BODY \
+        'Release prep:\n- bump pubspec version to %s\n\nNext:\n1. merge this PR\n2. run ./scripts/release_tag.sh on main\n3. create rc tag first, then v tag after verify passes\n' \
+        "$NEW_VERSION"
+
+      gh pr create \
+        --repo "$REPO_SLUG" \
+        --base "$PR_BASE" \
+        --head "$current_branch" \
+        --title "$PR_TITLE" \
+        --body "$PR_BODY"
+    fi
+  fi
+fi
+
 declare -a RELEASE_TAGS=()
 for tag in "${TAGS[@]}"; do
   if [[ "$tag" == v* ]]; then
@@ -410,8 +468,7 @@ for tag in "${TAGS[@]}"; do
 done
 
 if [[ "${#RELEASE_TAGS[@]}" -gt 0 ]] && confirm "Create GitHub Release for v-tag(s)?" "n"; then
-  command -v gh >/dev/null 2>&1 || abort "GitHub CLI ('gh') not found. Install it first."
-  gh auth status >/dev/null 2>&1 || abort "GitHub CLI is not authenticated. Run 'gh auth login' first."
+  ensure_gh_available_and_authenticated
 
   REPO_SLUG="$(github_repo_slug_from_origin || true)"
   [[ -n "${REPO_SLUG:-}" ]] || abort "Could not determine GitHub repo from 'origin' remote."

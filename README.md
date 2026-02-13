@@ -67,6 +67,7 @@ Use the interactive helper from the repository root:
 ```
 
 The helper can also optionally create a GitHub Release for `v*` tags when `gh` is installed and authenticated.
+On non-`main` branches, it can also open a PR to `main` for version-bump commits.
 
 ## Demo mode
 
