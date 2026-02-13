@@ -21,7 +21,7 @@ confirm() {
   fi
 
   read -r -p "$prompt $suffix " reply
-  reply="${reply,,}"
+  reply="$(printf '%s' "$reply" | tr '[:upper:]' '[:lower:]')"
   if [[ -z "$reply" ]]; then
     reply="$default"
   fi
