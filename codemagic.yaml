@@ -1,44 +1,76 @@
 workflows:
-  ci:
-    name: CI (analyze, test, build)
+  release-verify-android:
+    name: Release Verify Android (signed, no publish)
     instance_type: mac_mini_m2
     max_build_duration: 120
     environment:
+      android_signing:
+        - Brubytes
       flutter: fvm
-      xcode: 26.2
     cache:
       cache_paths:
         - ~/.pub-cache
         - ~/.gradle/caches
-        - ~/Library/Caches/CocoaPods
     triggering:
       events:
-        - push
-        - pull_request
-      branch_patterns:
-        - pattern: "main"
+        - tag
+      tag_patterns:
+        - pattern: "rc-*"
           include: true
-          source: true
-      cancel_previous_builds: true
     scripts:
       - name: Flutter pub get
         script: flutter pub get
       - name: Codegen
         script: flutter pub run build_runner build --delete-conflicting-outputs
-      - name: Flutter analyze
-        script: flutter analyze
-      - name: Flutter test
-        script: flutter test
-      - name: Build Android App Bundle
-        script: flutter build appbundle
-      - name: Build iOS (no codesign)
-        script: flutter build ios --no-codesign
+      - name: Build Android App Bundle (signed, verify only)
+        script: |
+          BUILD_NUMBER=$(date +%s)
+          flutter build appbundle --release \
+            --build-number=$BUILD_NUMBER
     artifacts:
       - build/**/outputs/**/*.aab
       - build/**/outputs/**/*.apk
-      - build/ios/iphoneos/*.app
-      - build/ios/iphonesimulator/*.app
-      - /tmp/xcodebuild_logs/*.log
+
+  release-verify-ios:
+    name: Release Verify iOS (signed, no publish)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    integrations:
+      app_store_connect: Brubytes
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.brubytes.komodoGo
+      flutter: fvm
+      xcode: 26.2
+      cocoapods: default
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/Library/Caches/CocoaPods
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "rc-*"
+          include: true
+    scripts:
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
+      - name: Flutter pub get
+        script: flutter pub get
+      - name: Codegen
+        script: flutter pub run build_runner build --delete-conflicting-outputs
+      - name: Install pods
+        script: find . -name "Podfile" -execdir pod install \;
+      - name: Build iOS IPA (signed, verify only)
+        script: |
+          BUILD_NUMBER=$(date +%s)
+          flutter build ipa --release \
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
 
   release-android:
     name: Release Android (signed)

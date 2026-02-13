@@ -5,7 +5,7 @@
 # Komodo Go
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![CI Tests](https://api.codemagic.io/apps/697fac44dbc045a607ea177d/ci/status_badge.svg)](https://codemagic.io/app/697fac44dbc045a607ea177d/ci/latest_build)
+[![PR Checks](https://github.com/Brubytes/komodo-go/actions/workflows/flutter-analyze.yml/badge.svg)](https://github.com/Brubytes/komodo-go/actions/workflows/flutter-analyze.yml)
 
 | Platform | Status |
 | --- | --- |
@@ -53,6 +53,17 @@ Run the Patrol iOS integration test suite on a simulator via the Patrol CLI:
 Tip: you can list simulator device IDs with `xcrun simctl list` or `fvm flutter devices`.
 
 Note: Xcode UI tests often run on a temporary cloned simulator instance, which may shut down when the run finishes.
+
+## Releases
+
+- `rc-*` tags trigger Codemagic signed build verification (`release-verify-android`, `release-verify-ios`) without publishing.
+- `v*` tags trigger actual release workflows (`release-android`, `release-ios`).
+
+Use the interactive helper from the repository root:
+
+```bash
+./scripts/release_tag.sh
+```
 
 ## Demo mode
 
