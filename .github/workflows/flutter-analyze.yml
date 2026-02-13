@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Read Flutter version from .fvmrc
         id: flutter-version
@@ -35,6 +37,18 @@ jobs:
 
       - name: Generate code
         run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Debug CI refs (temporary)
+        run: |
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "PR_HEAD_SHA=${{ github.event.pull_request.head.sha }}"
+          echo "PR_BASE_SHA=${{ github.event.pull_request.base.sha }}"
+          echo "Checked out HEAD:"
+          git rev-parse HEAD
+          git log --oneline -n 3
+          echo "connections_provider.dart (first 20 lines):"
+          nl -ba lib/core/providers/connections_provider.dart | sed -n '1,20p'
 
       - name: Analyze
         run: flutter analyze
