@@ -22,8 +22,8 @@ void registerBuilderContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = BuilderRepository(client);
     });
 
@@ -40,7 +40,7 @@ void registerBuilderContractTests() {
         );
         final seedConfigRaw = seedJson['config'];
         final seedConfig = seedConfigRaw is Map
-            ? Map<String, dynamic>.from(seedConfigRaw as Map)
+            ? Map<String, dynamic>.from(seedConfigRaw)
             : <String, dynamic>{};
 
         final name = 'contract-builder-${_randomToken(Random(5021))}';

@@ -1,28 +1,58 @@
+<p align="center">
+  <img src="assets/komodo-go-logo_circle.png" alt="Komodo Go logo" width="140">
+</p>
+
 # Komodo Go
+
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![CI Tests](https://api.codemagic.io/apps/697fac44dbc045a607ea177d/ci/status_badge.svg)](https://codemagic.io/app/697fac44dbc045a607ea177d/ci/latest_build)
+
+| Platform | Status |
+| --- | --- |
+| Android | [![Android CI](https://api.codemagic.io/apps/697fac44dbc045a607ea177d/release-android/status_badge.svg)](https://codemagic.io/app/697fac44dbc045a607ea177d/release-android/latest_build) |
+| iOS | [![iOS CI](https://api.codemagic.io/apps/697fac44dbc045a607ea177d/release-ios/status_badge.svg)](https://codemagic.io/app/697fac44dbc045a607ea177d/release-ios/latest_build) |
+
 
 Flutter app to control the Komodo infrastructure management platform.
 
+Website: https://komodogo.eu
+
+## Komodo project
+
+Komodo Go is a third-party client for [Komodo 🦎](https://komo.do). Komodo Go is a native iOS/Android application that allows you to control Komodo on the go. While it covers many options, it is not feature-complete compared to the Komodo Web UI.
+
 ## Requirements
 
-- Flutter is pinned via FVM (`.fvmrc`) to `3.38.5`.
+- Flutter, pinned via [FVM](https://fvm.app/) in `.fvmrc`
+Optional tools:
+- [Patrol](https://patrol.leancode.co/) for running integration tests
+- [Maestro](https://docs.maestro.dev/) and [storepix](https://www.npmjs.com/package/storepix) for App Store screenshot generation
 
 ## Development
 
-- `fvm flutter pub get`
-- `fvm flutter run`
-- `fvm flutter analyze`
-- `fvm flutter test`
+- `fvm flutter pub get` to install dependencies
+- `fvm dart run build_runner build --delete-conflicting-outputs` to generate code
+- `fvm flutter run` to run the app
+- `fvm flutter analyze` to analyze the code
+- `fvm flutter test` to run tests
+  
+## Testing
 
-## Integration tests (Patrol)
+See [TESTING.md](TESTING.md) for the full testing strategy, available test suites, and
+step-by-step commands.
 
-Run the Patrol iOS integration test suite on the iPhone 17 Pro simulator:
+### Integration tests (Patrol)
 
-- VS Code task: `Patrol: iOS (iPhone 17 Pro)`
-- CLI:
-  - `patrol test -t integration_test/app_test.dart -d BE3A6A62-DF90-4DC9-9249-37BFD2A75742 -v`
-  - `patrol test -t integration_test/resource_flows/stacks_services_logs_test.dart -d BE3A6A62-DF90-4DC9-9249-37BFD2A75742 -v`
+More advanced tests are implemented with [Patrol](https://patrol.leancode.co/) and located in `integration_test/`.
 
-Note: Xcode UI tests often run on a temporary cloned simulator instance, which may shut down when the run finishes. The VS Code task re-opens Simulator and boots the target device afterwards.
+Run the Patrol iOS integration test suite on a simulator via the Patrol CLI:
+
+- `patrol test -t integration_test/app_test.dart -d <SIMULATOR_UDID> -v`
+- `patrol test -t integration_test/resource_flows/stacks_services_logs_test.dart -d <SIMULATOR_UDID> -v`
+
+Tip: you can list simulator device IDs with `xcrun simctl list` or `fvm flutter devices`.
+
+Note: Xcode UI tests often run on a temporary cloned simulator instance, which may shut down when the run finishes.
 
 ## Demo mode
 
@@ -36,25 +66,32 @@ It is available as an option on the login screen.
   - `KOMODO_DEMO_API_SECRET` (default: `demo-secret`)
   - `KOMODO_DEMO_AVAILABLE` (default: `true`)
 
-### UI-defined demo stack
+## Design system / theming
 
-Demo mode includes a stack named **Demo Stack (UI Defined)** whose Compose
-contents are loaded from:
+The app uses a single unified Material 3 theme on both iOS and Android (no platform-specific split, except for the main navigation bar).
 
-- `assets/demo_mode/ui_defined_stack/compose.yml`
+- Brand colors:
+  - Primary: `#014226`
+  - Secondary: `#4EB333`
+- Theme entry points:
+  - Tokens: [`lib/core/theme/app_tokens.dart`](lib/core/theme/app_tokens.dart)
+  - Theme: [`lib/core/theme/app_theme.dart`](lib/core/theme/app_theme.dart)
 
-Edit that file and restart the app to see the Compose editor update.
+Guidelines:
 
-## App Store screenshots (Maestro + Storepix)
+- Prefer `Theme.of(context).colorScheme` for UI colors.
+- Don’t hard-code hex colors in widgets unless there is a strong reason.
 
-The project includes a Maestro flow for capturing iOS screenshots and a Storepix
-configuration for producing App Store-ready assets.
+## App Store screenshots (Maestro + storepix)
+
+The project includes a Maestro flow for capturing iOS screenshots and a storepix configuration for producing App Store-ready assets.
 
 ### Prerequisites
 
-- Maestro installed globally
-- Storepix installed globally
-- Xcode + iOS Simulator
+- [Maestro](https://docs.maestro.dev/getting-started/installing-maestro) installed globally
+- [storepix](https://www.npmjs.com/package/storepix) installed globally
+- Xcode + iOS Simulator for iOS screenshots
+- Android Studio + Android Emulator for Android screenshots
 - FVM Flutter (`fvm`)
 
 ### Generate raw screenshots (Maestro)
@@ -67,7 +104,7 @@ Run the mixed flow (dark for 1-3, light for 4-6):
 
 Outputs are saved to:
 
-- `.maestro/screenshots/`
+- [`.maestro/screenshots/`](.maestro/screenshots/)
 
 ### Prepare Storepix inputs
 
@@ -77,38 +114,29 @@ Copy the Maestro outputs into Storepix inputs:
 cp .maestro/screenshots/*.png storepix/screenshots/iPhone/
 ```
 
-### Generate App Store assets (Storepix)
+### Generate App Store assets (storepix)
+
+Run from the project root:
 
 ```bash
-cd storepix
-storepix
+storepix generate
 ```
 
 Outputs are saved to:
 
-- `storepix/output/iphone-6.5/`
+- [`storepix/output/iphone-6.5/`](storepix/output/iphone-6.5/)
 
-### Screenshot set
+or elsewhere depending on your storepix configuration.
 
-1. Home dashboard (dark)
-2. Servers list (dark)
-3. Server detail (dark)
-4. Containers (light)
-5. Deployments (light)
-6. Settings (light)
+## License
 
-## Design system / theming
+This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE).
 
-The app uses a single unified Material 3 theme on both iOS and Android (no platform-specific split).
+## Contributing
 
-- Brand colors:
-  - Primary: `#014226`
-  - Secondary: `#4EB333`
-- Theme entry points:
-  - Tokens: `lib/core/theme/app_tokens.dart`
-  - Theme: `lib/core/theme/app_theme.dart`
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, and test guidance.
 
-Guidelines:
+## Community
 
-- Prefer `Theme.of(context).colorScheme` for UI colors.
-- Don’t hard-code hex colors in widgets unless there is a strong reason.
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security Policy](SECURITY.md)

@@ -21,9 +21,9 @@ void registerVariableContractTests() {
     late RpcRecorder recorder;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
+      await resetBackendIfConfigured(requireConfig(config));
       recorder = RpcRecorder();
-      repository = VariableRepository(buildTestClient(config!, recorder));
+      repository = VariableRepository(buildTestClient(requireConfig(config), recorder));
     });
 
     test('create/update/delete variable + goldens', () async {
@@ -42,8 +42,8 @@ void registerVariableContractTests() {
         final requestData = recorder.lastRequest?.data;
         final responseData = recorder.lastResponse?.data;
 
-        expect(requestData, isA<Map>());
-        expect(responseData, isA<Map>());
+        expect(requestData, isA<Map<String, dynamic>>());
+        expect(responseData, isA<Map<String, dynamic>>());
 
         final normalizedRequest = normalizeJson(
           requestData as Map<String, dynamic>,

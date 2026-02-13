@@ -23,9 +23,9 @@ void registerStackContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
+      await resetBackendIfConfigured(requireConfig(config));
       recorder = RpcRecorder();
-      client = buildTestClient(config!, recorder);
+      client = buildTestClient(requireConfig(config), recorder);
       repository = StackRepository(client);
     });
 
@@ -47,10 +47,10 @@ void registerStackContractTests() {
       expect(updated.config.environment.trim(), 'komodo-test');
 
       final requestData = recorder.lastRequest?.data;
-      expect(requestData, isA<Map>());
+      expect(requestData, isA<Map<String, dynamic>>());
 
       final normalizedRequest = normalizeStackUpdateRequest(
-        (requestData as Map).cast<String, dynamic>(),
+        requestData as Map<String, dynamic>,
       );
       expect(
         normalizedRequest,
@@ -117,21 +117,22 @@ void registerStackContractTests() {
           },
           name: name,
         );
+        final createdIdValue = createdId;
 
         await retryAsync(() async {
           await client.write(
             RpcRequest(
               type: 'DeleteStack',
-              params: <String, dynamic>{'id': createdId},
+              params: <String, dynamic>{'id': createdIdValue},
             ),
           );
         });
         deleted = true;
         await expectEventuallyServerFailure(
-          () => repository.getStack(createdId!),
+          () => repository.getStack(createdIdValue),
         );
         final afterDelete = expectRight(await repository.listStacks());
-        expect(afterDelete.any((s) => s.id == createdId), isFalse);
+        expect(afterDelete.any((s) => s.id == createdIdValue), isFalse);
       } finally {
         final idToDelete = createdId ?? created?.id;
         if (!deleted && idToDelete != null) {
@@ -156,8 +157,8 @@ void registerStackContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = StackRepository(client);
     });
 
@@ -242,9 +243,9 @@ void registerStackContractTests() {
     late StackRepository repository;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
+      await resetBackendIfConfigured(requireConfig(config));
       repository = StackRepository(
-        buildTestClient(config!, RpcRecorder()),
+        buildTestClient(requireConfig(config), RpcRecorder()),
       );
     });
 

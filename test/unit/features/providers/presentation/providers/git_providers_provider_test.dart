@@ -155,7 +155,6 @@ void main() {
           domain: 'b.example.com',
           username: 'new',
           https: false,
-          token: null,
         ),
       ).thenAnswer(
         (_) async => Right(

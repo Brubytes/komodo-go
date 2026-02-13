@@ -19,7 +19,6 @@ class AppSkeletonCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: AppCardSurface(
         padding: EdgeInsets.zero,
         child: Padding(
@@ -47,10 +46,10 @@ class AppSkeletonCard extends StatelessWidget {
               Text('Loading data', style: textTheme.bodyMedium),
               if (showChips) ...[
                 const Gap(8),
-                Wrap(
+                const Wrap(
                   spacing: 8,
                   runSpacing: 6,
-                  children: const [
+                  children: [
                     Chip(label: Text('Loading')),
                     Chip(label: Text('Loading')),
                     Chip(label: Text('Loading')),
@@ -78,7 +77,6 @@ class AppSkeletonSurface extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: DetailSurface(
         child: Padding(
           padding: padding,
@@ -89,10 +87,10 @@ class AppSkeletonSurface extends StatelessWidget {
               const Gap(8),
               Text('Please wait', style: textTheme.bodySmall),
               const Gap(12),
-              Wrap(
+              const Wrap(
                 spacing: 8,
                 runSpacing: 6,
-                children: const [
+                children: [
                   Chip(label: Text('Loading')),
                   Chip(label: Text('Loading')),
                 ],
@@ -122,11 +120,10 @@ class AppSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: ListView.separated(
         padding: padding,
         itemCount: itemCount,
-        separatorBuilder: (_, __) => Gap(itemSpacing),
+        separatorBuilder: (context, index) => Gap(itemSpacing),
         itemBuilder: (context, index) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
@@ -171,7 +168,6 @@ class AppInlineSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Skeletonizer(
-      enabled: true,
       child: SizedBox(
         width: size,
         height: size,

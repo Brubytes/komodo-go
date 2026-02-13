@@ -19,7 +19,7 @@ ProviderSubscription<AsyncValue<T>> listenProvider<T>(
   ProviderContainer container,
   ProviderListenable<AsyncValue<T>> provider,
 ) {
-  return container.listen(provider, (_, __) {}, fireImmediately: true);
+  return container.listen(provider, (previous, next) {}, fireImmediately: true);
 }
 
 Future<T> readAsyncProvider<T>(

@@ -542,12 +542,11 @@ class _ProceduresSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: 6,
-        separatorBuilder: (_, __) => const Gap(12),
-        itemBuilder: (_, __) => AppCardSurface(
+        separatorBuilder: (_, _) => const Gap(12),
+        itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -569,8 +568,8 @@ class _ProceduresSkeletonList extends StatelessWidget {
                 Text('Owner - Last run - Duration',
                     style: textTheme.bodySmall),
                 const Gap(10),
-                Row(
-                  children: const [
+                const Row(
+                  children: [
                     Chip(label: Text('Idle')),
                     Gap(8),
                     Chip(label: Text('Steps 5')),

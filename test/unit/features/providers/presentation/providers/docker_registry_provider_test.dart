@@ -157,7 +157,6 @@ void main() {
           id: 'd1',
           domain: 'b.registry.io',
           username: 'new',
-          token: null,
         ),
       ).thenAnswer(
         (_) async => Right(

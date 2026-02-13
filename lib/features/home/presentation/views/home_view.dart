@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
-import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
@@ -168,7 +168,7 @@ class HomeView extends ConsumerWidget {
                         final name = (serverName?.trim().isNotEmpty ?? false)
                             ? serverName!.trim()
                             : null;
-                        final parts = <String>[label, if (name != null) name];
+                        final parts = <String>[label, ?name];
                         return parts.join(' · ');
                       }
 
@@ -250,7 +250,7 @@ class HomeView extends ConsumerWidget {
                             child: ListView.separated(
                               scrollDirection: Axis.horizontal,
                               itemCount: servers.length,
-                              separatorBuilder: (_, __) => const Gap(8),
+                              separatorBuilder: (_, _) => const Gap(8),
                               itemBuilder: (context, index) {
                                 return HomeServerStatTile(
                                   server: servers[index],

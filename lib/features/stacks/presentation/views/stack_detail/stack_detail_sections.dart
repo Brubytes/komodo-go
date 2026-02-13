@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
-import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
@@ -187,7 +187,7 @@ class StackHeroPanel extends StatelessWidget {
 
   String _formatDirectory(String path) {
     if (path.isEmpty) return path;
-    final normalized = path.replaceAll('\\', '/');
+    final normalized = path.replaceAll(r'\', '/');
     final parts = normalized
         .split('/')
         .where((segment) => segment.isNotEmpty)
@@ -650,12 +650,14 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
   void _disposeConfigFileControllers() {
     for (final c in _configFilePathControllers) {
-      c.removeListener(_notifyDirtyIfChanged);
-      c.dispose();
+      c
+        ..removeListener(_notifyDirtyIfChanged)
+        ..dispose();
     }
     for (final c in _configFileServicesControllers) {
-      c.removeListener(_notifyDirtyIfChanged);
-      c.dispose();
+      c
+        ..removeListener(_notifyDirtyIfChanged)
+        ..dispose();
     }
     _configFilePathControllers.clear();
     _configFileServicesControllers.clear();
@@ -667,10 +669,10 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
     final cleaned = values.where((e) => e.path.trim().isNotEmpty);
     for (final dep in cleaned) {
-      final path = TextEditingController(text: dep.path.trim());
-      final services = TextEditingController(text: dep.services.join(', '));
-      path.addListener(_notifyDirtyIfChanged);
-      services.addListener(_notifyDirtyIfChanged);
+      final path = TextEditingController(text: dep.path.trim())
+        ..addListener(_notifyDirtyIfChanged);
+      final services = TextEditingController(text: dep.services.join(', '))
+        ..addListener(_notifyDirtyIfChanged);
       _configFilePathControllers.add(path);
       _configFileServicesControllers.add(services);
       _configFileRequires.add(dep.requires);
@@ -679,10 +681,9 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
   void _addConfigFileRow() {
     setState(() {
-      final path = TextEditingController();
-      final services = TextEditingController();
-      path.addListener(_notifyDirtyIfChanged);
-      services.addListener(_notifyDirtyIfChanged);
+      final path = TextEditingController()..addListener(_notifyDirtyIfChanged);
+      final services =
+          TextEditingController()..addListener(_notifyDirtyIfChanged);
       _configFilePathControllers.add(path);
       _configFileServicesControllers.add(services);
       _configFileRequires.add(StackFileRequires.none);
@@ -696,10 +697,12 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
       final path = _configFilePathControllers.removeAt(index);
       final services = _configFileServicesControllers.removeAt(index);
       _configFileRequires.removeAt(index);
-      path.removeListener(_notifyDirtyIfChanged);
-      services.removeListener(_notifyDirtyIfChanged);
-      path.dispose();
-      services.dispose();
+      path
+        ..removeListener(_notifyDirtyIfChanged)
+        ..dispose();
+      services
+        ..removeListener(_notifyDirtyIfChanged)
+        ..dispose();
     });
     _notifyDirtyIfChanged();
   }
@@ -723,8 +726,9 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
   void _disposeRowControllers(List<TextEditingController> controllers) {
     for (final c in controllers) {
-      c.removeListener(_notifyDirtyIfChanged);
-      c.dispose();
+      c
+        ..removeListener(_notifyDirtyIfChanged)
+        ..dispose();
     }
     controllers.clear();
   }
@@ -744,8 +748,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
   void _addRow(List<TextEditingController> target) {
     setState(() {
-      final c = TextEditingController();
-      c.addListener(_notifyDirtyIfChanged);
+      final c = TextEditingController()..addListener(_notifyDirtyIfChanged);
       target.add(c);
     });
     _notifyDirtyIfChanged();
@@ -754,9 +757,9 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
   void _removeRow(List<TextEditingController> target, int index) {
     if (index < 0 || index >= target.length) return;
     setState(() {
-      final c = target.removeAt(index);
-      c.removeListener(_notifyDirtyIfChanged);
-      c.dispose();
+      target.removeAt(index)
+        ..removeListener(_notifyDirtyIfChanged)
+        ..dispose();
     });
     _notifyDirtyIfChanged();
   }
@@ -1300,7 +1303,6 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   children: [
                     for (var i = 0; i < _filePathControllers.length; i++) ...[
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: TextFormField(
@@ -1405,7 +1407,6 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                       i++
                     ) ...[
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: TextFormField(
@@ -1479,7 +1480,6 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                       i++
                     ) ...[
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: TextFormField(
@@ -1504,7 +1504,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                       ),
                       const Gap(8),
                       DropdownButtonFormField<StackFileRequires>(
-                        value: _configFileRequires[i],
+                        initialValue: _configFileRequires[i],
                         decoration: const InputDecoration(
                           labelText: 'Requires',
                           prefixIcon: Icon(AppIcons.refresh),
@@ -1631,7 +1631,6 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   children: [
                     for (var i = 0; i < _linkControllers.length; i++) ...[
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: TextFormField(
@@ -1816,7 +1815,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                         'Select a Docker registry account for private images.',
                   ),
                   items: [
-                    KomodoSelectMenuItem(value: '', label: 'None'),
+                    const KomodoSelectMenuItem(value: '', label: 'None'),
                     for (final account in sortedRegistries)
                       KomodoSelectMenuItem(
                         value: account.id,
@@ -1885,7 +1884,6 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   children: [
                     for (var i = 0; i < _extraArgControllers.length; i++) ...[
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: TextFormField(
@@ -1956,7 +1954,6 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                       i++
                     ) ...[
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: TextFormField(
@@ -2237,12 +2234,6 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
     });
   }
 
-  bool _isDirty(String path) {
-    final controller = _controllers[path];
-    if (controller == null) return false;
-    return controller.text != (_initialContents[path] ?? '');
-  }
-
   String _requiresLabel(StackFileRequires value) {
     return switch (value) {
       StackFileRequires.none => 'None',
@@ -2251,36 +2242,6 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
     };
   }
 
-  Future<void> _saveFile(StackRemoteFileContents file) async {
-    final path = file.path;
-    final controller = _controllers[path];
-    if (controller == null || _savingPaths.contains(path)) return;
-
-    setState(() => _savingPaths.add(path));
-    final success = await widget.onSaveFile(
-      path,
-      controller.text,
-      showSnackBar: true,
-    );
-    if (!mounted) return;
-    setState(() {
-      _savingPaths.remove(path);
-      if (success) {
-        _initialContents[path] = controller.text;
-        _dirtyPaths.remove(path);
-      }
-    });
-    _notifyDirtyChanged();
-  }
-
-  void _resetFile(String path) {
-    final controller = _controllers[path];
-    if (controller == null) return;
-    controller.text = _initialContents[path] ?? '';
-    _updateDirtyForPath(path);
-    if (!mounted) return;
-    setState(() {});
-  }
 
   Future<bool> saveAll() async {
     final dirtyPaths = _dirtyPaths.toList();
@@ -2323,12 +2284,14 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
   @override
   Widget build(BuildContext context) {
     final deployedConfig = widget.info.deployedConfig?.trim() ?? '';
+    final hasFiles = _files.isNotEmpty;
+    final hasDeployedConfig = deployedConfig.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_files.isEmpty)
-          const EmptyStateView.inline(
+        if (!hasFiles)
+          const EmptyStateView(
             icon: AppIcons.package,
             title: 'No file contents',
             message: 'Stack file contents will appear here once configured.',
@@ -2362,7 +2325,6 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
                       ],
                       DetailCodeEditor(
                         controller: _controllerForFile(file),
-                        maxHeight: 360,
                         fullscreenTitle: file.path.trim().isNotEmpty
                             ? file.path.trim()
                             : '',
@@ -2374,24 +2336,26 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
               ],
             ],
           ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Deployed config',
-          icon: AppIcons.stacks,
-          child: deployedConfig.isNotEmpty
-              ? DetailCodeBlock(
-                  code: deployedConfig,
-                  language: DetailCodeLanguage.yaml,
-                )
-              : Text(
-                  'No deployed config yet',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+        if (hasFiles || hasDeployedConfig) ...[
+          const Gap(12),
+          DetailSubCard(
+            title: 'Deployed config',
+            icon: AppIcons.stacks,
+            child: hasDeployedConfig
+                ? DetailCodeBlock(
+                    code: deployedConfig,
+                    language: DetailCodeLanguage.yaml,
+                  )
+                : Text(
+                    'No deployed config yet',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
                   ),
-                ),
-        ),
+          ),
+        ],
       ],
     );
   }

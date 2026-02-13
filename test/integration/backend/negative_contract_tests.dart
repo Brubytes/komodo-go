@@ -4,12 +4,12 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:komodo_go/features/actions/data/repositories/action_repository.dart';
 import 'package:komodo_go/features/alerters/data/repositories/alerter_repository.dart';
-import 'package:komodo_go/features/builds/data/repositories/build_repository.dart';
 import 'package:komodo_go/features/builders/data/repositories/builder_repository.dart';
+import 'package:komodo_go/features/builds/data/repositories/build_repository.dart';
 import 'package:komodo_go/features/deployments/data/repositories/deployment_repository.dart';
+import 'package:komodo_go/features/procedures/data/repositories/procedure_repository.dart';
 import 'package:komodo_go/features/providers/data/repositories/docker_registry_repository.dart';
 import 'package:komodo_go/features/providers/data/repositories/git_provider_repository.dart';
-import 'package:komodo_go/features/procedures/data/repositories/procedure_repository.dart';
 import 'package:komodo_go/features/repos/data/repositories/repo_repository.dart';
 import 'package:komodo_go/features/servers/data/repositories/server_repository.dart';
 import 'package:komodo_go/features/stacks/data/repositories/stack_repository.dart';
@@ -29,12 +29,13 @@ void registerNegativeContractTests() {
 
   group('Backend auth errors (real backend)', () {
     test('invalid credentials return auth failure across repositories', () async {
+      final requiredConfig = requireConfig(config);
       final badConfig = BackendTestConfig(
-        baseUrl: config!.baseUrl,
-        apiKey: config.apiKey,
+        baseUrl: requiredConfig.baseUrl,
+        apiKey: requiredConfig.apiKey,
         apiSecret: 'invalid-secret',
-        allowDestructive: config.allowDestructive,
-        resetCommand: config.resetCommand,
+        allowDestructive: requiredConfig.allowDestructive,
+        resetCommand: requiredConfig.resetCommand,
       );
 
       expectAuthFailure(
@@ -99,44 +100,48 @@ void registerNegativeContractTests() {
     test('missing ids return server failure across repositories', () async {
       final random = Random(20261);
       final token = _randomToken(random);
+      final requiredConfig = requireConfig(config);
 
-      final stackRepository = StackRepository(buildTestClient(config!, RpcRecorder()));
+      final stackRepository =
+          StackRepository(buildTestClient(requiredConfig, RpcRecorder()));
       expectServerFailure(await stackRepository.getStack('missing-stack-$token'));
 
       final deploymentRepository =
-          DeploymentRepository(buildTestClient(config, RpcRecorder()));
+          DeploymentRepository(buildTestClient(requiredConfig, RpcRecorder()));
       expectServerFailure(
         await deploymentRepository.getDeployment('missing-deploy-$token'),
       );
 
-      final repoRepository = RepoRepository(buildTestClient(config, RpcRecorder()));
+      final repoRepository =
+          RepoRepository(buildTestClient(requiredConfig, RpcRecorder()));
       expectServerFailure(await repoRepository.getRepo('missing-repo-$token'));
 
-      final syncRepository = SyncRepository(buildTestClient(config, RpcRecorder()));
+      final syncRepository =
+          SyncRepository(buildTestClient(requiredConfig, RpcRecorder()));
       expectServerFailure(await syncRepository.getSync('missing-sync-$token'));
 
       final buildRepository =
-          BuildRepository(buildTestClient(config, RpcRecorder()));
+          BuildRepository(buildTestClient(requiredConfig, RpcRecorder()));
       expectServerFailure(await buildRepository.getBuild('missing-build-$token'));
 
       final actionRepository =
-          ActionRepository(buildTestClient(config, RpcRecorder()));
+          ActionRepository(buildTestClient(requiredConfig, RpcRecorder()));
       expectServerFailure(
         await actionRepository.getAction('missing-action-$token'),
       );
 
       final procedureRepository =
-          ProcedureRepository(buildTestClient(config, RpcRecorder()));
+          ProcedureRepository(buildTestClient(requiredConfig, RpcRecorder()));
       expectServerFailure(
         await procedureRepository.getProcedure('missing-proc-$token'),
       );
 
       final serverRepository =
-          ServerRepository(buildTestClient(config, RpcRecorder()));
+          ServerRepository(buildTestClient(requiredConfig, RpcRecorder()));
       expectServerFailure(await serverRepository.getServer('missing-srv-$token'));
 
       final alerterRepository =
-          AlerterRepository(buildTestClient(config, RpcRecorder()));
+          AlerterRepository(buildTestClient(requiredConfig, RpcRecorder()));
       expectServerFailure(
         await alerterRepository.getAlerterDetail(
           alerterIdOrName: 'missing-alerter-$token',
@@ -144,7 +149,7 @@ void registerNegativeContractTests() {
       );
 
       final builderRepository =
-          BuilderRepository(buildTestClient(config, RpcRecorder()));
+          BuilderRepository(buildTestClient(requiredConfig, RpcRecorder()));
       expectServerFailure(
         await builderRepository.getBuilderJson(
           builderIdOrName: 'missing-builder-$token',
@@ -162,7 +167,7 @@ void registerNegativeContractTests() {
         .toLowerCase();
 
     test('invalid write payload returns 4xx error', () async {
-      final dio = buildTestDio(config!);
+      final dio = buildTestDio(requireConfig(config));
       dio.options.validateStatus = (status) => true;
       // Missing required 'params' field triggers 422 Unprocessable Entity
       final response = await dio.post<Map<String, dynamic>>(
@@ -172,14 +177,15 @@ void registerNegativeContractTests() {
         },
       );
 
-      expect(response.statusCode, isNotNull);
-      expect(response.statusCode!, inInclusiveRange(400, 499));
+      final statusCode = response.statusCode;
+      expect(statusCode, isNotNull);
+      expect(statusCode, inInclusiveRange(400, 499));
     });
 
     test(
       'server error returns 5xx',
       () async {
-        final dio = buildTestDio(config!);
+        final dio = buildTestDio(requireConfig(config));
         dio.options.validateStatus = (status) => true;
         final response = await dio.post<Map<String, dynamic>>(
           '/read',
@@ -189,8 +195,9 @@ void registerNegativeContractTests() {
           },
         );
 
-        expect(response.statusCode, isNotNull);
-        expect(response.statusCode!, greaterThanOrEqualTo(500));
+        final statusCode = response.statusCode;
+        expect(statusCode, isNotNull);
+        expect(statusCode, greaterThanOrEqualTo(500));
       },
       skip: allow500 == 'true'
           ? null

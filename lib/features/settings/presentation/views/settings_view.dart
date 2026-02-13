@@ -135,11 +135,20 @@ class SettingsView extends ConsumerWidget {
             onTap: () async {
               final uri = Uri(
                 scheme: 'mailto',
-                path: 'support@example.com',
-                queryParameters: {'subject': 'Komodo Go Feedback'},
+                path: 'info@komodogo.eu',
+                // Some email clients keep '+' instead of decoding it to spaces.
+                query: 'subject=${Uri.encodeComponent('Komodo Go Feedback')}',
               );
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri);
+              final launched = await launchUrl(
+                uri,
+                mode: LaunchMode.externalApplication,
+              );
+              if (!launched && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('No email app available to handle this.'),
+                  ),
+                );
               }
             },
           ),
@@ -321,6 +330,7 @@ class _SettingsCardTile extends StatelessWidget {
     );
   }
 }
+
 
 class _CardTrailing extends StatelessWidget {
   const _CardTrailing({required this.showChevron, this.label});

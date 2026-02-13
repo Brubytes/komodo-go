@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
-
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 
@@ -24,7 +22,6 @@ class ContainerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final name = item.container.name.isEmpty ? 'Unnamed' : item.container.name;
     final image = item.container.image ?? '';
@@ -449,7 +446,6 @@ class _IoRow extends StatelessWidget {
     return AppCardSurface(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       radius: AppTokens.radiusMd,
-      enableGradientInDark: false,
       child: Row(
         children: [
           Expanded(

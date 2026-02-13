@@ -37,7 +37,6 @@ class HomeLoadingTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: AppCardSurface(
         padding: EdgeInsets.zero,
         child: Padding(
@@ -64,10 +63,10 @@ class HomeLoadingTile extends StatelessWidget {
               const Gap(12),
               Text('Loading details', style: textTheme.bodyMedium),
               const Gap(8),
-              Wrap(
+              const Wrap(
                 spacing: 8,
                 runSpacing: 6,
-                children: const [
+                children: [
                   Chip(label: Text('Loading')),
                   Chip(label: Text('Loading')),
                   Chip(label: Text('Loading')),

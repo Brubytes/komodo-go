@@ -22,8 +22,8 @@ void registerProviderContractTests() {
     late GitProviderRepository repository;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      repository = GitProviderRepository(buildTestClient(config!, RpcRecorder()));
+      await resetBackendIfConfigured(requireConfig(config));
+      repository = GitProviderRepository(buildTestClient(requireConfig(config), RpcRecorder()));
     });
 
     test('create/update/delete account', () async {
@@ -40,31 +40,33 @@ void registerProviderContractTests() {
             https: true,
           ),
         );
+        final createdValue = created ??
+            (throw StateError('Expected created git provider account.'));
 
         final listed = expectRight(await repository.listAccounts());
-        expect(listed.any((a) => a.id == created!.id), isTrue);
+        expect(listed.any((a) => a.id == createdValue.id), isTrue);
 
         final filtered = expectRight(
           await repository.listAccounts(domain: 'example.com', username: username),
         );
-        expect(filtered.any((a) => a.id == created!.id), isTrue);
+        expect(filtered.any((a) => a.id == createdValue.id), isTrue);
 
         final updated = expectRight(
           await repository.updateAccount(
-            id: created!.id,
+            id: createdValue.id,
             domain: 'example.org',
             username: '$username-updated',
             token: 'token-$suffix-updated',
             https: false,
           ),
         );
-        expect(updated.id, created!.id);
+        expect(updated.id, createdValue.id);
         expect(updated.domain, 'example.org');
         expect(updated.https, isFalse);
 
-        expectRight(await repository.deleteAccount(id: created!.id));
+        expectRight(await repository.deleteAccount(id: createdValue.id));
         final afterDelete = expectRight(await repository.listAccounts());
-        expect(afterDelete.any((a) => a.id == created!.id), isFalse);
+        expect(afterDelete.any((a) => a.id == createdValue.id), isFalse);
       } finally {
         if (created != null) {
           await repository.deleteAccount(id: created.id);
@@ -89,9 +91,9 @@ void registerProviderContractTests() {
     late DockerRegistryRepository repository;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
+      await resetBackendIfConfigured(requireConfig(config));
       repository = DockerRegistryRepository(
-        buildTestClient(config!, RpcRecorder()),
+        buildTestClient(requireConfig(config), RpcRecorder()),
       );
     });
 
@@ -108,9 +110,11 @@ void registerProviderContractTests() {
             token: 'token-$suffix',
           ),
         );
+        final createdValue = created ??
+            (throw StateError('Expected created docker registry account.'));
 
         final listed = expectRight(await repository.listAccounts());
-        expect(listed.any((a) => a.id == created!.id), isTrue);
+        expect(listed.any((a) => a.id == createdValue.id), isTrue);
 
         final filtered = expectRight(
           await repository.listAccounts(
@@ -118,22 +122,22 @@ void registerProviderContractTests() {
             username: username,
           ),
         );
-        expect(filtered.any((a) => a.id == created!.id), isTrue);
+        expect(filtered.any((a) => a.id == createdValue.id), isTrue);
 
         final updated = expectRight(
           await repository.updateAccount(
-            id: created!.id,
+            id: createdValue.id,
             domain: 'registry.example.org',
             username: '$username-updated',
             token: 'token-$suffix-updated',
           ),
         );
-        expect(updated.id, created!.id);
+        expect(updated.id, createdValue.id);
         expect(updated.domain, 'registry.example.org');
 
-        expectRight(await repository.deleteAccount(id: created!.id));
+        expectRight(await repository.deleteAccount(id: createdValue.id));
         final afterDelete = expectRight(await repository.listAccounts());
-        expect(afterDelete.any((a) => a.id == created!.id), isFalse);
+        expect(afterDelete.any((a) => a.id == createdValue.id), isFalse);
       } finally {
         if (created != null) {
           await repository.deleteAccount(id: created.id);

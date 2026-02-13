@@ -56,6 +56,13 @@ KomodoApiClient buildTestClient(BackendTestConfig config, RpcRecorder recorder) 
   return KomodoApiClient(buildTestDio(config, recorder: recorder));
 }
 
+BackendTestConfig requireConfig(BackendTestConfig? config) {
+  if (config == null) {
+    fail('Missing backend test configuration.');
+  }
+  return config;
+}
+
 Future<void> resetBackendIfConfigured(BackendTestConfig config) async {
   final resetCommand = config.resetCommand;
   if (resetCommand == null) return;

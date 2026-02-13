@@ -18,9 +18,9 @@ import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_filters_provider.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class ContainersView extends ConsumerStatefulWidget {
   const ContainersView({super.key});
@@ -219,16 +219,20 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                                 final containerKey =
                                     filtered[i].container.id ??
                                     filtered[i].container.name;
-                                context.push(
-                                  '${AppRoutes.containers}/${filtered[i].serverId}/${Uri.encodeComponent(containerKey)}',
-                                  extra: filtered[i],
+                                unawaited(
+                                  context.push(
+                                    '${AppRoutes.containers}/${filtered[i].serverId}/${Uri.encodeComponent(containerKey)}',
+                                    extra: filtered[i],
+                                  ),
                                 );
                               },
-                              onAction: (action) => _handleAction(
-                                context,
-                                ref,
-                                filtered[i],
-                                action,
+                              onAction: (action) => unawaited(
+                                _handleAction(
+                                  context,
+                                  ref,
+                                  filtered[i],
+                                  action,
+                                ),
                               ),
                             ),
                           ),
@@ -339,7 +343,6 @@ class _FiltersRow extends StatelessWidget {
           prefixIcon: Icon(AppIcons.server),
         ),
         items: const [KomodoSelectMenuItem(value: null, label: 'All servers')],
-        onChanged: null,
       ),
     );
 
@@ -613,7 +616,6 @@ class _ContainersSkeletonBlock extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: Column(
         children: List.generate(
           3,
@@ -643,8 +645,8 @@ class _ContainersSkeletonBlock extends StatelessWidget {
                     const Gap(10),
                     Text('Image • Status • Server', style: textTheme.bodySmall),
                     const Gap(10),
-                    Row(
-                      children: const [
+                    const Row(
+                      children: [
                         Chip(label: Text('Running')),
                         Gap(8),
                         Chip(label: Text('CPU 12%')),

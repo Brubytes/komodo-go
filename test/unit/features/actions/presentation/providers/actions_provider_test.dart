@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/data/repositories/action_repository.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
@@ -114,7 +113,7 @@ void main() {
 
     test('run returns true on success', () async {
       final repository = _MockActionRepository();
-      when(() => repository.runAction('a1', args: null))
+      when(() => repository.runAction('a1'))
           .thenAnswer((_) async => const Right(null));
 
       final container = createProviderContainer(

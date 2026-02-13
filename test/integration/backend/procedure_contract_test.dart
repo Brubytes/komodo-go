@@ -22,8 +22,8 @@ void registerProcedureContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = ProcedureRepository(client);
     });
 
@@ -58,11 +58,12 @@ void registerProcedureContractTests() {
           },
           name: name,
         );
+        final createdIdValue = createdId;
 
         final updated = await retryAsync(() async {
           return expectRight(
             await repository.updateProcedureConfig(
-              procedureId: createdId!,
+              procedureId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'schedule_enabled': !seedDetail.config.scheduleEnabled,
               },
@@ -74,7 +75,7 @@ void registerProcedureContractTests() {
         final alertsUpdated = await retryAsync(() async {
           return expectRight(
             await repository.updateProcedureConfig(
-              procedureId: createdId!,
+              procedureId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'schedule_alert': !seedDetail.config.scheduleAlert,
                 'failure_alert': !seedDetail.config.failureAlert,
@@ -82,26 +83,33 @@ void registerProcedureContractTests() {
             ),
           );
         });
-        expect(alertsUpdated.id, createdId);
+        expect(alertsUpdated.id, createdIdValue);
 
-        final refreshed = expectRight(await repository.getProcedure(createdId!));
-        expect(refreshed.config.scheduleAlert, alertsUpdated.config.scheduleAlert);
-        expect(refreshed.config.failureAlert, alertsUpdated.config.failureAlert);
+        final refreshed =
+            expectRight(await repository.getProcedure(createdIdValue));
+        expect(
+          refreshed.config.scheduleAlert,
+          alertsUpdated.config.scheduleAlert,
+        );
+        expect(
+          refreshed.config.failureAlert,
+          alertsUpdated.config.failureAlert,
+        );
 
         await retryAsync(() async {
           await client.write(
             RpcRequest(
               type: 'DeleteProcedure',
-              params: <String, dynamic>{'id': createdId},
+              params: <String, dynamic>{'id': createdIdValue},
             ),
           );
         });
         deleted = true;
         await expectEventuallyServerFailure(
-          () => repository.getProcedure(createdId!),
+          () => repository.getProcedure(createdIdValue),
         );
         final afterDelete = expectRight(await repository.listProcedures());
-        expect(afterDelete.any((p) => p.id == createdId), isFalse);
+        expect(afterDelete.any((p) => p.id == createdIdValue), isFalse);
       } finally {
         final idToDelete = createdId ?? created?.id;
         if (!deleted && idToDelete != null) {

@@ -5,7 +5,6 @@ const bool demoAvailable = bool.fromEnvironment(
 
 const bool demoAutoConnect = bool.fromEnvironment(
   'KOMODO_DEMO_MODE',
-  defaultValue: false,
 );
 
 const String demoConnectionName = String.fromEnvironment(

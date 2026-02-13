@@ -15,14 +15,10 @@ InputDecoration _decorationWithoutSubText(
     labelText: decoration.labelText,
     labelStyle: decoration.labelStyle,
     floatingLabelStyle: decoration.floatingLabelStyle,
-    helper: null,
-    helperText: null,
     hintText: decoration.hintText,
     hintStyle: decoration.hintStyle,
     hintTextDirection: decoration.hintTextDirection,
     hintMaxLines: decoration.hintMaxLines,
-    error: null,
-    errorText: null,
     floatingLabelBehavior: decoration.floatingLabelBehavior,
     floatingLabelAlignment: decoration.floatingLabelAlignment,
     isDense: decoration.isDense,
@@ -39,8 +35,6 @@ InputDecoration _decorationWithoutSubText(
     suffixText: decoration.suffixText,
     suffixStyle: decoration.suffixStyle,
     suffixIconColor: decoration.suffixIconColor,
-    counter: null,
-    counterText: null,
     filled: decoration.filled,
     fillColor: decoration.fillColor,
     focusColor: decoration.focusColor,
@@ -268,7 +262,7 @@ class KomodoSelectMenuField<T> extends StatelessWidget {
           ),
         );
       },
-      pageBuilder: (dialogContext, _, __) {
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
         return Stack(
           children: [
             Positioned.fill(
@@ -387,23 +381,18 @@ class KomodoSelectMenuField<T> extends StatelessWidget {
 /// Use this as a drop-in replacement for `DropdownButtonFormField`.
 class KomodoSelectMenuFormField<T> extends FormField<T> {
   KomodoSelectMenuFormField({
-    super.key,
     required this.items,
     required this.decoration,
     this.onChanged,
     this.hintText,
     this.menuMaxHeight,
-    T? initialValue,
-    bool enabled = true,
-    AutovalidateMode? autovalidateMode,
-    FormFieldValidator<T>? validator,
-    FormFieldSetter<T>? onSaved,
+    super.initialValue,
+    super.enabled = true,
+    super.autovalidateMode,
+    super.validator,
+    super.onSaved,
+    super.key,
   }) : super(
-         initialValue: initialValue,
-         enabled: enabled,
-         autovalidateMode: autovalidateMode,
-         validator: validator,
-         onSaved: onSaved,
          builder: (state) {
            final effectiveOnChanged =
                (state.widget.enabled && onChanged != null)

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 /// Context menu builder that always includes a Paste action.
@@ -13,9 +15,8 @@ Widget alwaysPasteContextMenu(BuildContext context, EditableTextState state) {
       ContextMenuButtonItem(
         type: ContextMenuButtonType.paste,
         onPressed: () {
-          state
-            ..pasteText(SelectionChangedCause.toolbar)
-            ..hideToolbar();
+          unawaited(state.pasteText(SelectionChangedCause.toolbar));
+          state.hideToolbar();
         },
       ),
     ...items,

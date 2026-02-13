@@ -7,10 +7,7 @@ part 'storage_provider.g.dart';
 /// Provides the FlutterSecureStorage instance.
 @riverpod
 FlutterSecureStorage flutterSecureStorage(Ref ref) {
-  return const FlutterSecureStorage(
-    aOptions: AndroidOptions(),
-    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-  );
+  return const FlutterSecureStorage();
 }
 
 /// Provides the SecureStorageService for storing credentials.

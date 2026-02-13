@@ -165,8 +165,8 @@ void main() {
           stackDetailProvider.overrideWith((ref, id) async => stack),
           stackServicesProvider.overrideWith((ref, id) async => <StackService>[]),
           stackLogProvider.overrideWith((ref, id) async => null),
-          stackUpdatesProvider.overrideWith(
-            () => _TestStackUpdates(
+          stackUpdatesProvider.overrideWith2(
+            (stackId) => _TestStackUpdates(
               const UpdatesState(items: <UpdateListItem>[], nextPage: null),
             ),
           ),

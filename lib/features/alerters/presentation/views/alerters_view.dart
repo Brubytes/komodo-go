@@ -44,7 +44,7 @@ class AlertersView extends ConsumerWidget {
                 return ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const Gap(12),
+                  separatorBuilder: (_, _) => const Gap(12),
                   itemBuilder: (context, index) => AppFadeSlide(
                     delay: AppMotion.stagger(index),
                     play: index < 10,
@@ -106,7 +106,6 @@ class _AlerterTile extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Container(
                               width: 32,
@@ -320,12 +319,11 @@ class _AlertersSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: 6,
-        separatorBuilder: (_, __) => const Gap(12),
-        itemBuilder: (_, __) => AppCardSurface(
+        separatorBuilder: (_, _) => const Gap(12),
+        itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
@@ -344,10 +342,10 @@ class _AlertersSkeletonList extends StatelessWidget {
                 const Gap(8),
                 Text('Endpoint type', style: textTheme.bodySmall),
                 const Gap(10),
-                Wrap(
+                const Wrap(
                   spacing: 8,
                   runSpacing: 6,
-                  children: const [
+                  children: [
                     Chip(label: Text('Enabled')),
                     Chip(label: Text('Template')),
                     Chip(label: Text('Tag')),

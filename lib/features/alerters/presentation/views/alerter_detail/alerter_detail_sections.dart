@@ -27,7 +27,6 @@ class AlerterSummaryPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return DetailSurface(
       radius: 20,
-      enableGradientInDark: false,
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
@@ -71,7 +70,6 @@ class AlerterNameSection extends StatelessWidget {
         DetailSurface(
           padding: const EdgeInsets.all(14),
           radius: 16,
-          enableGradientInDark: false,
           child: TextFormField(
             controller: controller,
             textInputAction: TextInputAction.next,
@@ -115,7 +113,6 @@ class AlerterEnabledSection extends StatelessWidget {
         DetailSurface(
           padding: const EdgeInsets.all(8),
           radius: 16,
-          enableGradientInDark: false,
           child: SwitchListTile.adaptive(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 8,
@@ -160,7 +157,6 @@ class AlerterEndpointSection extends StatelessWidget {
         DetailSurface(
           padding: const EdgeInsets.all(14),
           radius: 16,
-          enableGradientInDark: false,
           child: Column(
             children: [
               KomodoSelectMenuField<String>(
@@ -239,7 +235,6 @@ class AlerterAlertTypesSection extends StatelessWidget {
         DetailSurface(
           padding: const EdgeInsets.all(14),
           radius: 16,
-          enableGradientInDark: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -299,7 +294,6 @@ class AlerterResourceSection extends StatelessWidget {
         DetailSurface(
           padding: const EdgeInsets.all(14),
           radius: 16,
-          enableGradientInDark: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -348,7 +342,6 @@ class AlerterMaintenanceSection extends StatelessWidget {
         DetailSurface(
           padding: const EdgeInsets.all(14),
           radius: 16,
-          enableGradientInDark: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

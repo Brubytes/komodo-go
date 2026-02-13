@@ -1,5 +1,6 @@
 import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/connections/connections_store.dart';
+import 'package:komodo_go/core/onboarding/onboarding_storage.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/providers/shared_preferences_provider.dart';
 import 'package:komodo_go/core/providers/storage_provider.dart';
@@ -45,11 +46,13 @@ class Connections extends _$Connections {
   @override
   Future<ConnectionsState> build() async {
     final store = await ref.watch(connectionsStoreProvider.future);
+    final prefs = await ref.watch(sharedPreferencesProvider.future);
 
     final connections = await store.listConnections();
     var activeId = await store.getActiveConnectionId();
+    final hasChosenConnection = prefs.getBool(onboardingSeenKey) ?? false;
 
-    if (activeId == null && connections.length == 1) {
+    if (activeId == null && connections.length == 1 && hasChosenConnection) {
       activeId = connections.first.id;
       await store.setActiveConnectionId(activeId);
     }

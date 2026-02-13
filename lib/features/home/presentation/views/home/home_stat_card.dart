@@ -163,7 +163,7 @@ class HomeStatCard<T> extends StatelessWidget {
                         height: isTight ? 32 : 48,
                         child: const Center(child: AppInlineSkeleton(size: 20)),
                       ),
-                      error: (_, __) => SizedBox(
+                      error: (_, _) => SizedBox(
                         height: isTight ? 32 : 48,
                         child: const Center(child: Icon(AppIcons.formError)),
                       ),

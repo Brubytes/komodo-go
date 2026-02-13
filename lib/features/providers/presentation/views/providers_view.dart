@@ -149,11 +149,13 @@ class ProvidersView extends ConsumerWidget {
   Future<void> _createProvider(BuildContext context, WidgetRef ref) async {
     final type = await _ProviderTypeSheet.show(context);
     if (type == null) return;
+    if (!context.mounted) return;
 
     switch (type) {
       case _ProviderType.git:
         final result = await GitProviderEditorSheet.show(context);
         if (result == null) return;
+        if (!context.mounted) return;
 
         final ok = await ref
             .read(gitProviderActionsProvider.notifier)
@@ -173,6 +175,7 @@ class ProvidersView extends ConsumerWidget {
       case _ProviderType.registry:
         final result = await DockerRegistryEditorSheet.show(context);
         if (result == null) return;
+        if (!context.mounted) return;
 
         final ok = await ref
             .read(dockerRegistryActionsProvider.notifier)
@@ -329,7 +332,6 @@ class _ProvidersSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      enabled: true,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [

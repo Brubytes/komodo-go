@@ -13,6 +13,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.centerTitle,
     this.actions,
     this.bottom,
+    this.onTitleLongPress,
     super.key,
   });
 
@@ -24,6 +25,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool? centerTitle;
   final List<Widget>? actions;
   final PreferredSizeWidget? bottom;
+  final VoidCallback? onTitleLongPress;
 
   @override
   Size get preferredSize =>
@@ -47,13 +49,17 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
           color: scheme.outlineVariant.withValues(alpha: 0.35),
         ),
       ),
-      title: MainAppBarTitle(
-        title: title,
-        subtitle: subtitle,
-        icon: icon,
-        markColor: markColor,
-        markUseGradient: markUseGradient,
-        centered: isCentered,
+      title: GestureDetector(
+        onLongPress: onTitleLongPress,
+        behavior: HitTestBehavior.opaque,
+        child: MainAppBarTitle(
+          title: title,
+          subtitle: subtitle,
+          icon: icon,
+          markColor: markColor,
+          markUseGradient: markUseGradient,
+          centered: isCentered,
+        ),
       ),
       actions: actions,
       bottom: bottom,

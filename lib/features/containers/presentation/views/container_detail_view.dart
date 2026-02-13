@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-
-import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/containers/presentation/providers/container_log_provider.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
+import 'package:riverpod/misc.dart' show FutureProviderFamily;
 
 class ContainerDetailView extends ConsumerWidget {
   const ContainerDetailView({
@@ -112,8 +112,9 @@ class ContainerDetailView extends ConsumerWidget {
   }
 }
 
-final _containerItemProviderFamily = FutureProvider.family
-    .autoDispose<ContainerOverviewItem?, _ContainerItemArgs>((ref, args) async {
+final FutureProviderFamily<ContainerOverviewItem?, _ContainerItemArgs>
+    _containerItemProviderFamily = FutureProvider.autoDispose
+        .family<ContainerOverviewItem?, _ContainerItemArgs>((ref, args) async {
       if (args.initialItem != null) return args.initialItem;
 
       final result = await ref.watch(containersProvider.future);
@@ -159,7 +160,6 @@ class _NotFound extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const AppCardSurface(
-      padding: EdgeInsets.all(16),
       child: Text('Container not found.'),
     );
   }
@@ -192,7 +192,7 @@ class _LogBox extends StatelessWidget {
         child: isLoading
             ? Row(
                 children: [
-                  const AppInlineSkeleton(size: 16),
+                  const AppInlineSkeleton(),
                   const Gap(10),
                   Text(content, style: textTheme.bodySmall),
                 ],
@@ -220,7 +220,6 @@ class _ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCardSurface(
-      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

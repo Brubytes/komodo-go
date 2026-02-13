@@ -22,8 +22,8 @@ void registerDeploymentContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = DeploymentRepository(client);
     });
 
@@ -60,11 +60,12 @@ void registerDeploymentContractTests() {
           },
           name: name,
         );
+        final createdIdValue = createdId;
 
         final updated = await retryAsync(() async {
           return expectRight(
             await repository.updateDeploymentConfig(
-              deploymentId: createdId!,
+              deploymentId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'poll_for_updates': !seedConfig.pollForUpdates,
               },
@@ -76,7 +77,7 @@ void registerDeploymentContractTests() {
         final updatedFields = await retryAsync(() async {
           return expectRight(
             await repository.updateDeploymentConfig(
-              deploymentId: createdId!,
+              deploymentId: createdIdValue,
               partialConfig: <String, dynamic>{
                 'environment': 'FOO=bar\nHELLO=world',
                 'labels': 'app=komodo-test',
@@ -84,9 +85,10 @@ void registerDeploymentContractTests() {
             ),
           );
         });
-        expect(updatedFields.id, createdId);
+        expect(updatedFields.id, createdIdValue);
 
-        final refreshed = expectRight(await repository.getDeployment(createdId!));
+        final refreshed =
+            expectRight(await repository.getDeployment(createdIdValue));
         expect(refreshed.config?.environment.trim(), 'FOO=bar\nHELLO=world');
         expect(refreshed.config?.labels.trim(), 'app=komodo-test');
 
@@ -94,16 +96,16 @@ void registerDeploymentContractTests() {
           await client.write(
             RpcRequest(
               type: 'DeleteDeployment',
-              params: <String, dynamic>{'id': createdId},
+              params: <String, dynamic>{'id': createdIdValue},
             ),
           );
         });
         deleted = true;
         await expectEventuallyServerFailure(
-          () => repository.getDeployment(createdId!),
+          () => repository.getDeployment(createdIdValue),
         );
         final afterDelete = expectRight(await repository.listDeployments());
-        expect(afterDelete.any((d) => d.id == createdId), isFalse);
+        expect(afterDelete.any((d) => d.id == createdIdValue), isFalse);
       } finally {
         final idToDelete = createdId ?? created?.id;
         if (!deleted && idToDelete != null) {
@@ -128,8 +130,8 @@ void registerDeploymentContractTests() {
     late KomodoApiClient client;
 
     setUp(() async {
-      await resetBackendIfConfigured(config!);
-      client = buildTestClient(config!, RpcRecorder());
+      await resetBackendIfConfigured(requireConfig(config));
+      client = buildTestClient(requireConfig(config), RpcRecorder());
       repository = DeploymentRepository(client);
     });
 

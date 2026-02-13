@@ -6,7 +6,6 @@ part 'stack.g.dart';
 /// Stack list item returned by `ListStacks` (`StackListItem` in `komodo_client`).
 @freezed
 sealed class StackListItem with _$StackListItem {
-  const StackListItem._();
   const factory StackListItem({
     required String id,
     required String name,
@@ -14,6 +13,7 @@ sealed class StackListItem with _$StackListItem {
     @Default(false) bool template,
     @Default([]) List<String> tags,
   }) = _StackListItem;
+  const StackListItem._();
 
   factory StackListItem.fromJson(Map<String, dynamic> json) =>
       _$StackListItemFromJson(json);

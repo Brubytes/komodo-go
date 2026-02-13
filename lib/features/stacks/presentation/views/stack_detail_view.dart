@@ -548,13 +548,15 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                           onNotification: (notification) {
                             if (notification.metrics.pixels >=
                                 notification.metrics.maxScrollExtent - 200) {
-                              ref
-                                  .read(
-                                    stackUpdatesProvider(
-                                      widget.stackId,
-                                    ).notifier,
-                                  )
-                                  .fetchNextPage();
+                              unawaited(
+                                ref
+                                    .read(
+                                      stackUpdatesProvider(
+                                        widget.stackId,
+                                      ).notifier,
+                                    )
+                                    .fetchNextPage(),
+                              );
                             }
                             return false;
                           },
@@ -948,9 +950,11 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       contents: contents,
     );
 
+    if (!mounted) return success;
+
     if (success) {
       ref.invalidate(stackDetailProvider(stackId));
-      if (context.mounted && showSnackBar) {
+      if (showSnackBar) {
         AppSnackBar.show(
           context,
           'File updated',
@@ -961,7 +965,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     }
 
     final err = ref.read(stackActionsProvider).asError?.error;
-    if (context.mounted && showSnackBar) {
+    if (showSnackBar) {
       AppSnackBar.show(
         context,
         err != null ? 'Failed: $err' : 'Failed to update file',
