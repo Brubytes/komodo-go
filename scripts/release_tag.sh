@@ -198,8 +198,41 @@ current_branch="$(git rev-parse --abbrev-ref HEAD)"
 echo "Current branch: $current_branch"
 echo "Current pubspec version: $CUR_VERSION"
 
-if [[ "$current_branch" != "main" ]]; then
-  confirm "Branch is '$current_branch', not 'main'. Continue anyway?" "n" || exit 1
+FORCE_NO_TAGS="n"
+if [[ "$current_branch" == "main" ]]; then
+  echo
+  echo "Main branch detected."
+  echo "Typical release sequence:"
+  echo "1) create rc tag"
+  echo "2) wait for Codemagic verify"
+  echo "3) create v tag"
+else
+  echo
+  echo "You are on '$current_branch' (not main)."
+  echo "Recommended on non-main branches:"
+  echo "1) bump pubspec version only (no tags)"
+  echo "2) push branch and merge PR to main"
+  echo "3) run this script again on main for rc/v tags"
+  echo
+  echo "Choose branch mode:"
+  echo "1) PR prep mode (force no tags) [recommended]"
+  echo "2) Manual mode (allow tags on this branch)"
+  echo "3) abort"
+  read -r -p "Choose option [1-3] (default 1): " non_main_choice
+  non_main_choice="${non_main_choice:-1}"
+  case "$non_main_choice" in
+    1)
+      FORCE_NO_TAGS="y"
+      ;;
+    2)
+      ;;
+    3)
+      exit 0
+      ;;
+    *)
+      abort "Invalid selection '$non_main_choice'."
+      ;;
+  esac
 fi
 
 if confirm "Fetch latest tags from origin first?" "y"; then
@@ -207,13 +240,23 @@ if confirm "Fetch latest tags from origin first?" "y"; then
 fi
 
 echo
-echo "Version change:"
+if [[ "$FORCE_NO_TAGS" == "y" ]]; then
+  echo "Version change (PR prep mode, tags will be skipped):"
+else
+  echo "Version change:"
+fi
 echo "1) patch (x.y.Z+build)"
 echo "2) minor (x.Y.0+build)"
 echo "3) major (X.0.0+build)"
 echo "4) custom (enter x.y.z)"
 echo "5) keep current version (no pubspec change)"
-read -r -p "Choose option [1-5]: " version_choice
+if [[ "$current_branch" == "main" && "$FORCE_NO_TAGS" != "y" ]]; then
+  echo "Hint: for tagging an already-merged release, choose 5."
+  read -r -p "Choose option [1-5] (default 5): " version_choice
+  version_choice="${version_choice:-5}"
+else
+  read -r -p "Choose option [1-5]: " version_choice
+fi
 
 NEW_SEMVER="$CUR_SEMVER"
 NEW_BUILD="$CUR_BUILD"
@@ -261,12 +304,18 @@ else
 fi
 
 echo
-echo "Tag mode:"
-echo "1) release candidate only (rc-<version>-N, verify build)"
-echo "2) release only (v<version>, real release)"
-echo "3) both rc and release tags (not recommended for normal flow)"
-echo "4) no tags (version commit only, good for PRs)"
-read -r -p "Choose option [1-4]: " tag_choice
+if [[ "$FORCE_NO_TAGS" == "y" ]]; then
+  tag_choice="4"
+  echo "Tag mode: PR prep mode active -> forcing 'no tags'."
+else
+  echo "Tag mode:"
+  echo "1) release candidate only (rc-<version>-N, verify build) [recommended first]"
+  echo "2) release only (v<version>, real release) [after RC passed]"
+  echo "3) both rc and release tags (not recommended for normal flow)"
+  echo "4) no tags (version commit only, good for PRs)"
+  read -r -p "Choose option [1-4] (default 1): " tag_choice
+  tag_choice="${tag_choice:-1}"
+fi
 
 declare -a TAGS=()
 if [[ "$tag_choice" == "1" || "$tag_choice" == "3" ]]; then
@@ -280,7 +329,10 @@ if [[ "$tag_choice" != "1" && "$tag_choice" != "2" && "$tag_choice" != "3" && "$
 fi
 
 if [[ "$current_branch" != "main" && "$tag_choice" != "4" ]]; then
-  confirm "You are on '$current_branch'. Create release tags from this non-main branch?" "n" || exit 1
+  echo
+  echo "Warning: this will create tags from non-main branch '$current_branch'."
+  echo "If this commit is not merged into main yet, tags may point to the wrong commit."
+  confirm "Continue creating tags from '$current_branch'?" "n" || exit 1
 fi
 
 for tag in "${TAGS[@]}"; do
