@@ -30,6 +30,7 @@ workflows:
             exit 1
           fi
           BUILD_NUMBER=$(date +%s)
+          echo "Using version/build: tag='$CM_TAG' version_name='$VERSION_NAME' build_number='$BUILD_NUMBER' (source=epoch_seconds)"
           flutter build appbundle --release \
             --build-name="$VERSION_NAME" \
             --build-number=$BUILD_NUMBER
@@ -77,6 +78,7 @@ workflows:
             exit 1
           fi
           BUILD_NUMBER=$(date +%s)
+          echo "Using version/build: tag='$CM_TAG' version_name='$VERSION_NAME' build_number='$BUILD_NUMBER' (source=epoch_seconds)"
           flutter build ipa --release \
             --build-name="$VERSION_NAME" \
             --build-number=$BUILD_NUMBER \
@@ -96,7 +98,7 @@ workflows:
         - google_play
       vars:
         PACKAGE_NAME: "com.brubytes.komodoGo"
-        GOOGLE_PLAY_TRACK: "Internal"
+        GOOGLE_PLAY_TRACK: "Closed"
     cache:
       cache_paths:
         - ~/.pub-cache
@@ -119,7 +121,9 @@ workflows:
             echo "Invalid release tag format '$CM_TAG'. Expected vX.Y.Z"
             exit 1
           fi
-          BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))      
+          LATEST_BUILD_NUMBER=$(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK")
+          BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          echo "Using version/build: tag='$CM_TAG' version_name='$VERSION_NAME' build_number='$BUILD_NUMBER' (source=google_play latest='$LATEST_BUILD_NUMBER' track='$GOOGLE_PLAY_TRACK' package='$PACKAGE_NAME')"
           flutter build appbundle --release \
             --build-name="$VERSION_NAME" \
             --build-number=$BUILD_NUMBER
@@ -180,7 +184,9 @@ workflows:
             echo "Invalid release tag format '$CM_TAG'. Expected vX.Y.Z"
             exit 1
           fi
-          BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number --platform=IOS "$APP_ID") + 1))
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --platform=IOS "$APP_ID")
+          BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          echo "Using version/build: tag='$CM_TAG' version_name='$VERSION_NAME' build_number='$BUILD_NUMBER' (source=testflight latest='$LATEST_BUILD_NUMBER' app_id='$APP_ID')"
           flutter build ipa --release \
             --build-name="$VERSION_NAME" \
             --build-number=$BUILD_NUMBER \
