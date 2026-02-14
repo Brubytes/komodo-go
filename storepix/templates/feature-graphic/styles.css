@@ -1,0 +1,178 @@
+/* storepix - Feature Graphic Template Styles */
+/* For Android Play Store feature graphics (1024x500) */
+
+:root {
+  /* Primary brand color - customize via config */
+  --primary: #007AFF;
+  --primary-dark: #0056b3;
+
+  /* Accent colors for decorative blurs */
+  --accent-1: #5AC8FA;
+  --accent-2: #AF52DE;
+  --accent-3: #FF9500;
+
+  /* Light theme (default) */
+  --background: #F6F6F6;
+  --foreground: #FFFFFF;
+  --foreground-secondary: rgba(255, 255, 255, 0.9);
+
+  /* Typography */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Dynamic viewport (set by JavaScript) */
+  --viewport-width: 1024px;
+  --viewport-height: 500px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--background);
+  overflow: hidden;
+}
+
+/* ============================================
+   Main Feature Graphic Frame
+   ============================================ */
+.feature-graphic {
+  width: var(--viewport-width);
+  height: var(--viewport-height);
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    #667eea 0%,
+    #764ba2 50%,
+    #f093fb 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 60px;
+  padding: 40px 80px;
+  overflow: hidden;
+}
+
+/* ============================================
+   Dark Theme
+   ============================================ */
+.dark-theme .feature-graphic {
+  background: linear-gradient(
+    135deg,
+    #1a1a2e 0%,
+    #16213e 50%,
+    #0f3460 100%
+  );
+}
+
+.dark-theme {
+  --foreground: #E0E0E0;
+  --foreground-secondary: rgba(224, 224, 224, 0.8);
+}
+
+/* ============================================
+   Decorative Background Blurs
+   ============================================ */
+.bg-blur {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.bg-blur-1 {
+  width: 400px;
+  height: 400px;
+  background: var(--accent-1);
+  top: -150px;
+  right: -100px;
+  opacity: 0.25;
+}
+
+.bg-blur-2 {
+  width: 300px;
+  height: 300px;
+  background: var(--primary);
+  bottom: -100px;
+  left: -50px;
+  opacity: 0.2;
+}
+
+.bg-blur-3 {
+  width: 250px;
+  height: 250px;
+  background: var(--accent-2);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.15;
+}
+
+/* ============================================
+   Logo
+   ============================================ */
+.logo-container {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.logo-container img {
+  max-width: 200px;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  border-radius: 44px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   Content
+   ============================================ */
+.content-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  z-index: 10;
+}
+
+.headline {
+  font-size: 56px;
+  font-weight: 700;
+  color: var(--foreground);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+}
+
+.subheadline {
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--foreground-secondary);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* ============================================
+   No Logo Layout (text centered)
+   ============================================ */
+.feature-graphic:not(:has(.logo-container[style*="display: flex"])) {
+  justify-content: center;
+}
+
+.feature-graphic:not(:has(.logo-container[style*="display: flex"])) .content-container {
+  text-align: center;
+  align-items: center;
+}

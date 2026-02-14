@@ -1,0 +1,37 @@
+{
+  "$schema": "https://storepix.dev/schema/template-schema.json",
+  "name": "feature-graphic",
+  "description": "Android Play Store feature graphic (1024x500)",
+  "version": "1.0.0",
+
+  "fields": {
+    "headline": {
+      "type": "string",
+      "required": true,
+      "default": "Your App Name",
+      "description": "Main text (app name or tagline)"
+    },
+    "subheadline": {
+      "type": "string",
+      "required": false,
+      "description": "Secondary text below headline"
+    },
+    "logo": {
+      "type": "path",
+      "required": false,
+      "description": "Path to app logo/icon image (displayed on left)"
+    },
+    "theme": {
+      "type": "enum",
+      "values": ["light", "dark"],
+      "default": "light",
+      "description": "Color theme for background"
+    }
+  },
+
+  "supports": {
+    "statusBar": false,
+    "customContent": true,
+    "locales": true
+  }
+}

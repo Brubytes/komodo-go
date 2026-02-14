@@ -143,6 +143,25 @@ Outputs are saved to:
 
 or elsewhere depending on your storepix configuration.
 
+### Generate Google Play feature graphic (storepix)
+
+This repo includes a dedicated Storepix config for the Google Play feature graphic (1024×500):
+
+- `storepix/storepix.feature-graphic.config.js`
+
+Run from the project root:
+
+```bash
+storepix generate \
+  --device android-feature-graphic \
+  --template feature-graphic \
+  --config ./storepix/storepix.feature-graphic.config.js
+```
+
+Output:
+
+- `storepix/output/feature-graphic/android-feature-graphic/feature-graphic.png`
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE).
