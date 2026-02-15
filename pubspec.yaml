@@ -45,6 +45,11 @@ dev_dependencies:
   very_good_analysis: ^10.0.0
 dependency_overrides:
   test_api: 0.7.9 # To-Do: Remove this override with the next flutter upgrade (if new flutter version uses test_api >=0.7.9)
+  super_native_extensions: # To-Do: Remove this override when super_native_extensions is updated to support 16KB
+    git:
+      url: https://github.com/dilumdesilva/super_native_extensions
+      ref: main
+      path: super_native_extensions
 
 
 patrol:
