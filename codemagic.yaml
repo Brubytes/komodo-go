@@ -141,7 +141,7 @@ workflows:
       google_play:
         credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
         track: $GOOGLE_PLAY_TRACK
-        submit_as_draft: true
+        submit_as_draft: false
   release-ios:
     name: Release iOS (signed)
     instance_type: mac_mini_m2
