@@ -97,7 +97,7 @@ workflows:
       groups:
         - google_play
       vars:
-        PACKAGE_NAME: "com.brubytes.komodoGo"
+        PACKAGE_NAME: "com.brubytes.komodo_go"
         GOOGLE_PLAY_TRACK: "Closed"
     cache:
       cache_paths:
