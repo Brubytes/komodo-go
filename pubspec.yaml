@@ -1,7 +1,7 @@
 name: komodo_go
 description: "Flutter app to control Komodo infrastructure management platform."
 publish_to: 'none'
-version: 0.3.1+10
+version: 0.3.2+10
 
 environment:
   sdk: ^3.8.1
@@ -44,6 +44,11 @@ dev_dependencies:
   test_api: any
   very_good_analysis: ^10.0.0
 dependency_overrides:
+  super_native_extensions: # To-Do: Remove this override when super_native_extensions is updated to support 16KB
+    git:
+      url: https://github.com/dilumdesilva/super_native_extensions
+      ref: main
+      path: super_native_extensions
   test_api: 0.7.9 # To-Do: Remove this override with the next flutter upgrade (if new flutter version uses test_api >=0.7.9)
 
 
@@ -85,4 +90,4 @@ flutter_native_splash:
   ios_content_mode: center
   android_12:
     color: "#014226"
-    image: assets/komodo-go-logo_rounded.png
+    image: assets/komodo-go-logo_rounded_android12.png

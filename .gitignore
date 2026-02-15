@@ -11,6 +11,8 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+check_elf_alignment.sh
+key.properties
 
 # IntelliJ related
 *.iml
