@@ -97,8 +97,8 @@ workflows:
       groups:
         - google_play
       vars:
-        PACKAGE_NAME: "com.brubytes.komodoGo"
-        GOOGLE_PLAY_TRACK: "Closed"
+        PACKAGE_NAME: "com.brubytes.komodo_go"
+        GOOGLE_PLAY_TRACK: "alpha" # options: internal, alpha, beta, production
     cache:
       cache_paths:
         - ~/.pub-cache
@@ -130,7 +130,7 @@ workflows:
     artifacts:
       - build/**/outputs/**/*.aab
       - build/**/outputs/**/*.apk
-    # publishing:
+    publishing:
       # email:
       #   recipients:
       #     - user_1@example.com
@@ -138,10 +138,10 @@ workflows:
       #   notify:
       #     success: true
       #     failure: false
-      # google_play:
-      #   credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
-      #   track: internal
-      #   submit_as_draft: true
+      google_play:
+        credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+        track: $GOOGLE_PLAY_TRACK
+        submit_as_draft: true
   release-ios:
     name: Release iOS (signed)
     instance_type: mac_mini_m2
