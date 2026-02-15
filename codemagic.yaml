@@ -98,7 +98,7 @@ workflows:
         - google_play
       vars:
         PACKAGE_NAME: "com.brubytes.komodo_go"
-        GOOGLE_PLAY_TRACK: "Closed"
+        GOOGLE_PLAY_TRACK: "alpha" # options: internal, alpha, beta, production
     cache:
       cache_paths:
         - ~/.pub-cache
