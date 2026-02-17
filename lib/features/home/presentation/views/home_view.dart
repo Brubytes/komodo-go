@@ -19,6 +19,7 @@ import 'package:komodo_go/features/home/presentation/views/home/home_sections.da
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/utils/alerts_error_utils.dart';
 import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
@@ -322,8 +323,8 @@ class HomeView extends ConsumerWidget {
                       final summaryColor = criticalCount > 0
                           ? scheme.error
                           : warningCount > 0
-                              ? AppTokens.statusOrange
-                              : scheme.onSurfaceVariant;
+                          ? AppTokens.statusOrange
+                          : scheme.onSurfaceVariant;
 
                       return Column(
                         children: [
@@ -346,7 +347,16 @@ class HomeView extends ConsumerWidget {
                       );
                     },
                     loading: () => const HomeLoadingTile(),
-                    error: (e, _) => HomeErrorTile(message: e.toString()),
+                    error: (e, _) {
+                      if (isAlertsPermissionError(e)) {
+                        return const HomeEmptyListTile(
+                          icon: AppIcons.notifications,
+                          message:
+                              'Alerts unavailable for this account. Check Updates instead.',
+                        );
+                      }
+                      return HomeErrorTile(message: e.toString());
+                    },
                   ),
                   const Gap(20),
                 ],
@@ -401,8 +411,7 @@ class HomeView extends ConsumerWidget {
                             .map(
                               (update) => Padding(
                                 padding: const EdgeInsets.only(bottom: 8),
-                                child:
-                                    HomeUpdatePreviewTile(update: update),
+                                child: HomeUpdatePreviewTile(update: update),
                               ),
                             )
                             .toList(),

@@ -16,10 +16,13 @@ import 'package:komodo_go/features/notifications/data/models/update_list_item.da
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/target_display_name_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/utils/alerts_error_utils.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class AlertsTab extends ConsumerWidget {
-  const AlertsTab({super.key});
+  const AlertsTab({this.onOpenUpdates, super.key});
+
+  final VoidCallback? onOpenUpdates;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -71,11 +74,17 @@ class AlertsTab extends ConsumerWidget {
           );
         },
         loading: () => const _AlertsSkeletonList(),
-        error: (error, stack) => NotificationsErrorState(
-          title: 'Failed to load alerts',
-          message: error.toString(),
-          onRetry: () => ref.invalidate(alertsProvider),
-        ),
+        error: (error, stack) {
+          final title = alertsUnavailableTitle(error);
+          final message = alertsUnavailableMessage(error);
+          return NotificationsErrorState(
+            title: title,
+            message: message,
+            onRetry: () => ref.invalidate(alertsProvider),
+            secondaryActionLabel: onOpenUpdates == null ? null : 'Open updates',
+            onSecondaryAction: onOpenUpdates,
+          );
+        },
       ),
     );
   }
@@ -501,12 +510,18 @@ class NotificationsErrorState extends StatelessWidget {
     required this.title,
     required this.message,
     required this.onRetry,
+    this.retryLabel = 'Retry',
+    this.secondaryActionLabel,
+    this.onSecondaryAction,
     super.key,
   });
 
   final String title;
   final String message;
   final VoidCallback onRetry;
+  final String retryLabel;
+  final String? secondaryActionLabel;
+  final VoidCallback? onSecondaryAction;
 
   @override
   Widget build(BuildContext context) {
@@ -536,11 +551,21 @@ class NotificationsErrorState extends StatelessWidget {
           ),
         ),
         const Gap(24),
-        Center(
-          child: FilledButton.tonal(
-            onPressed: onRetry,
-            child: const Text('Retry'),
-          ),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            FilledButton.tonal(
+              onPressed: onRetry,
+              child: Text(retryLabel),
+            ),
+            if (secondaryActionLabel != null && onSecondaryAction != null)
+              FilledButton(
+                onPressed: onSecondaryAction,
+                child: Text(secondaryActionLabel!),
+              ),
+          ],
         ),
       ],
     );
