@@ -1,6 +1,7 @@
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
+import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 
 String? routeForAlert(Alert alert) {
   final direct = routeForTarget(alert.target);
@@ -8,6 +9,10 @@ String? routeForAlert(Alert alert) {
 
   final inferred = _inferTargetFromPayload(alert.payload);
   return routeForTarget(inferred);
+}
+
+String? routeForUpdate(UpdateListItem update) {
+  return routeForTarget(update.target);
 }
 
 String? routeForTarget(ResourceTarget? target) {

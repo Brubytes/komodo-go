@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
+import 'package:komodo_go/features/notifications/data/models/semantic_version.dart';
+import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 import 'package:komodo_go/features/notifications/presentation/utils/alert_navigation_utils.dart';
 
 void main() {
@@ -122,6 +124,21 @@ void main() {
       expect(routeForAlert(alert), isNull);
     });
   });
+
+  group('routeForUpdate', () {
+    test('routes update by its target', () {
+      final update = _update(
+        target: const ResourceTarget(type: ResourceTargetType.action, id: 'a7'),
+      );
+
+      expect(routeForUpdate(update), '${AppRoutes.actions}/a7');
+    });
+
+    test('returns null when update has no target', () {
+      final update = _update(target: null);
+      expect(routeForUpdate(update), isNull);
+    });
+  });
 }
 
 Alert _alert({AlertPayload? payload, ResourceTarget? target}) {
@@ -137,5 +154,20 @@ Alert _alert({AlertPayload? payload, ResourceTarget? target}) {
           data: <String, dynamic>{'id': 'server-1'},
         ),
     target: target,
+  );
+}
+
+UpdateListItem _update({required ResourceTarget? target}) {
+  return UpdateListItem(
+    id: 'u1',
+    operation: 'RunAction',
+    startTs: 1,
+    success: true,
+    username: 'user',
+    operatorName: 'operator',
+    target: target,
+    status: UpdateStatus.success,
+    version: const SemanticVersion(major: 0, minor: 0, patch: 0),
+    otherData: '',
   );
 }

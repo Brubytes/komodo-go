@@ -400,6 +400,7 @@ class HomeUpdatePreviewTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final statusColor = _statusColor(update.status, scheme);
+    final route = routeForUpdate(update);
     final label = update.operation.isNotEmpty
         ? _humanizeVariant(update.operation)
         : 'Update';
@@ -441,6 +442,7 @@ class HomeUpdatePreviewTile extends StatelessWidget {
             label: _statusLabel(update.status, update.success),
             color: statusColor,
           ),
+          onTap: route == null ? null : () => context.go(route),
         ),
       ),
     );

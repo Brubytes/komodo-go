@@ -251,6 +251,7 @@ class UpdateTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final route = routeForUpdate(update);
 
     final title = update.operation.isNotEmpty
         ? _humanizeVariant(update.operation)
@@ -335,6 +336,7 @@ class UpdateTile extends ConsumerWidget {
               ),
             ],
           ),
+          onTap: route == null ? null : () => context.go(route),
         ),
       ),
     );
