@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
@@ -16,6 +15,7 @@ import 'package:komodo_go/features/notifications/data/models/update_list_item.da
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/target_display_name_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/utils/alert_navigation_utils.dart';
 import 'package:komodo_go/features/notifications/presentation/utils/alerts_error_utils.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -161,6 +161,7 @@ class AlertTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final route = routeForAlert(alert);
 
     final title = alert.payload.displayTitle;
     final primary = alert.payload.primaryName;
@@ -235,12 +236,7 @@ class AlertTile extends ConsumerWidget {
                   label: _labelForSeverity(alert.level),
                   kind: _chipKindForAlertLevel(alert.level),
                 ),
-          onTap: () {
-            final route = _routeForTarget(target);
-            if (route != null) {
-              context.go(route);
-            }
-          },
+          onTap: route == null ? null : () => context.go(route),
         ),
       ),
     );
@@ -619,21 +615,6 @@ class NotificationsStatusChip extends StatelessWidget {
       ),
     );
   }
-}
-
-String? _routeForTarget(ResourceTarget? target) {
-  if (target == null) return null;
-  final id = Uri.encodeComponent(target.id);
-
-  return switch (target.type) {
-    ResourceTargetType.server => '${AppRoutes.servers}/$id',
-    ResourceTargetType.stack => '${AppRoutes.stacks}/$id',
-    ResourceTargetType.repo => '${AppRoutes.repos}/$id',
-    ResourceTargetType.build => '${AppRoutes.builds}/$id',
-    ResourceTargetType.procedure => '${AppRoutes.procedures}/$id',
-    ResourceTargetType.action => '${AppRoutes.actions}/$id',
-    _ => null,
-  };
 }
 
 String _formatTimestamp(DateTime dateTime) {

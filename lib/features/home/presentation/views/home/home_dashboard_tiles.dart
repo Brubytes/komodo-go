@@ -10,6 +10,7 @@ import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
+import 'package:komodo_go/features/notifications/presentation/utils/alert_navigation_utils.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 
@@ -232,6 +233,7 @@ class HomeAlertPreviewTile extends StatelessWidget {
     final color = _alertColor(alert.level, scheme);
     final title = alert.payload.displayTitle;
     final primary = alert.payload.primaryName;
+    final route = routeForAlert(alert);
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
@@ -265,6 +267,7 @@ class HomeAlertPreviewTile extends StatelessWidget {
               ),
             ],
           ),
+          onTap: route == null ? null : () => context.go(route),
         ),
       ),
     );
