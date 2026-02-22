@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
@@ -16,10 +15,14 @@ import 'package:komodo_go/features/notifications/data/models/update_list_item.da
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/target_display_name_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/utils/alert_navigation_utils.dart';
+import 'package:komodo_go/features/notifications/presentation/utils/alerts_error_utils.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class AlertsTab extends ConsumerWidget {
-  const AlertsTab({super.key});
+  const AlertsTab({this.onOpenUpdates, super.key});
+
+  final VoidCallback? onOpenUpdates;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -71,11 +74,17 @@ class AlertsTab extends ConsumerWidget {
           );
         },
         loading: () => const _AlertsSkeletonList(),
-        error: (error, stack) => NotificationsErrorState(
-          title: 'Failed to load alerts',
-          message: error.toString(),
-          onRetry: () => ref.invalidate(alertsProvider),
-        ),
+        error: (error, stack) {
+          final title = alertsUnavailableTitle(error);
+          final message = alertsUnavailableMessage(error);
+          return NotificationsErrorState(
+            title: title,
+            message: message,
+            onRetry: () => ref.invalidate(alertsProvider),
+            secondaryActionLabel: onOpenUpdates == null ? null : 'Open updates',
+            onSecondaryAction: onOpenUpdates,
+          );
+        },
       ),
     );
   }
@@ -152,6 +161,7 @@ class AlertTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final route = routeForAlert(alert);
 
     final title = alert.payload.displayTitle;
     final primary = alert.payload.primaryName;
@@ -226,12 +236,7 @@ class AlertTile extends ConsumerWidget {
                   label: _labelForSeverity(alert.level),
                   kind: _chipKindForAlertLevel(alert.level),
                 ),
-          onTap: () {
-            final route = _routeForTarget(target);
-            if (route != null) {
-              context.go(route);
-            }
-          },
+          onTap: route == null ? null : () => context.go(route),
         ),
       ),
     );
@@ -246,6 +251,7 @@ class UpdateTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final route = routeForUpdate(update);
 
     final title = update.operation.isNotEmpty
         ? _humanizeVariant(update.operation)
@@ -330,6 +336,7 @@ class UpdateTile extends ConsumerWidget {
               ),
             ],
           ),
+          onTap: route == null ? null : () => context.go(route),
         ),
       ),
     );
@@ -501,12 +508,18 @@ class NotificationsErrorState extends StatelessWidget {
     required this.title,
     required this.message,
     required this.onRetry,
+    this.retryLabel = 'Retry',
+    this.secondaryActionLabel,
+    this.onSecondaryAction,
     super.key,
   });
 
   final String title;
   final String message;
   final VoidCallback onRetry;
+  final String retryLabel;
+  final String? secondaryActionLabel;
+  final VoidCallback? onSecondaryAction;
 
   @override
   Widget build(BuildContext context) {
@@ -536,11 +549,21 @@ class NotificationsErrorState extends StatelessWidget {
           ),
         ),
         const Gap(24),
-        Center(
-          child: FilledButton.tonal(
-            onPressed: onRetry,
-            child: const Text('Retry'),
-          ),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            FilledButton.tonal(
+              onPressed: onRetry,
+              child: Text(retryLabel),
+            ),
+            if (secondaryActionLabel != null && onSecondaryAction != null)
+              FilledButton(
+                onPressed: onSecondaryAction,
+                child: Text(secondaryActionLabel!),
+              ),
+          ],
         ),
       ],
     );
@@ -594,21 +617,6 @@ class NotificationsStatusChip extends StatelessWidget {
       ),
     );
   }
-}
-
-String? _routeForTarget(ResourceTarget? target) {
-  if (target == null) return null;
-  final id = Uri.encodeComponent(target.id);
-
-  return switch (target.type) {
-    ResourceTargetType.server => '${AppRoutes.servers}/$id',
-    ResourceTargetType.stack => '${AppRoutes.stacks}/$id',
-    ResourceTargetType.repo => '${AppRoutes.repos}/$id',
-    ResourceTargetType.build => '${AppRoutes.builds}/$id',
-    ResourceTargetType.procedure => '${AppRoutes.procedures}/$id',
-    ResourceTargetType.action => '${AppRoutes.actions}/$id',
-    _ => null,
-  };
 }
 
 String _formatTimestamp(DateTime dateTime) {

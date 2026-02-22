@@ -18,22 +18,29 @@ class AlertPayload {
 
   factory AlertPayload.fromJson(Object? json) {
     if (json is Map) {
-      final entries = json.entries.toList();
+      final map = json.map((k, v) => MapEntry(k.toString(), v));
+
+      final taggedVariant =
+          _readVariant(map['type']) ?? _readVariant(map['variant']);
+      if (taggedVariant != null) {
+        final taggedData =
+            _asStringKeyedMap(
+                    map['data'] ??
+                        map['payload'] ??
+                        map['params'] ??
+                        map['value'],
+                  ) ??
+                  Map<String, dynamic>.from(map)
+              ..removeWhere((key, _) => key == 'type' || key == 'variant');
+        return AlertPayload(variant: taggedVariant, data: taggedData);
+      }
+
+      final entries = map.entries.toList();
       if (entries.length == 1) {
         final variant = entries.first.key;
         final value = entries.first.value;
-        if (variant is String) {
-          if (value is Map<String, dynamic>) {
-            return AlertPayload(variant: variant, data: value);
-          }
-          if (value is Map) {
-            return AlertPayload(
-              variant: variant,
-              data: value.map((k, v) => MapEntry(k.toString(), v)),
-            );
-          }
-          return AlertPayload(variant: variant, data: <String, dynamic>{});
-        }
+        final data = _asStringKeyedMap(value) ?? <String, dynamic>{};
+        return AlertPayload(variant: variant, data: data);
       }
     }
 
@@ -140,4 +147,18 @@ String _humanizeVariant(String value) {
   );
   if (withSpaces.isEmpty) return value;
   return withSpaces[0].toUpperCase() + withSpaces.substring(1);
+}
+
+String? _readVariant(Object? value) {
+  if (value is! String) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
+}
+
+Map<String, dynamic>? _asStringKeyedMap(Object? value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) {
+    return value.map((k, v) => MapEntry(k.toString(), v));
+  }
+  return null;
 }
