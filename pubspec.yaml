@@ -19,7 +19,7 @@ dependencies:
   gap: ^3.0.1
   go_router: ^17.0.1
   hooks_riverpod: ^3.2.0
-  json_annotation: ^4.10.0
+  json_annotation: ^4.11.0
   lucide_icons_flutter: ^3.1.9
   riverpod: any
   riverpod_annotation: ^4.0.1
@@ -34,7 +34,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   freezed: ^3.2.4
-  image: ^4.7.2
+  image: ^4.8.0
   integration_test:
     sdk: flutter
   json_serializable: ^6.12.0
@@ -42,7 +42,7 @@ dev_dependencies:
   patrol: ^4.1.0
   riverpod_generator: ^4.0.2
   test_api: any
-  very_good_analysis: ^10.0.0
+  very_good_analysis: ^10.2.0
 dependency_overrides:
   super_native_extensions: # To-Do: Remove this override when super_native_extensions is updated to support 16KB
     git:
