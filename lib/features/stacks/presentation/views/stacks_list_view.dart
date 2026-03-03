@@ -342,12 +342,21 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
       StackAction.stop => actions.stop(stackId),
       StackAction.destroy => actions.destroy(stackId),
     };
+    final actionError = ref.read(stackActionsProvider).asError?.error;
+    final actionErrorMessage =
+      actionError is String
+        ? actionError.trim()
+        : actionError?.toString().trim();
+    final hasActionError =
+      actionErrorMessage != null && actionErrorMessage.isNotEmpty;
 
     if (context.mounted) {
       AppSnackBar.show(
         context,
         success
             ? 'Action completed successfully'
+            : hasActionError
+            ? 'Action failed: $actionErrorMessage'
             : 'Action failed. Please try again.',
         tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
       );

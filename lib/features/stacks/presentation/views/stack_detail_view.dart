@@ -805,6 +805,13 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       StackAction.stop => actions.stop(stackId),
       StackAction.destroy => actions.destroy(stackId),
     };
+    final actionError = ref.read(stackActionsProvider).asError?.error;
+    final actionErrorMessage =
+      actionError is String
+        ? actionError.trim()
+        : actionError?.toString().trim();
+    final hasActionError =
+      actionErrorMessage != null && actionErrorMessage.isNotEmpty;
 
     if (success) {
       ref
@@ -818,6 +825,8 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
         context,
         success
             ? 'Action completed successfully'
+            : hasActionError
+            ? 'Action failed: $actionErrorMessage'
             : 'Action failed. Please try again.',
         tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
       );
