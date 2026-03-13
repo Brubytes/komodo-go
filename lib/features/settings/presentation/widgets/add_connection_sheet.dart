@@ -191,8 +191,15 @@ class AddConnectionSheet extends HookConsumerWidget {
                     enableInteractiveSelection: true,
                     contextMenuBuilder: alwaysPasteContextMenu,
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) {
                         return 'Please enter the server URL';
+                      }
+                      final uri = Uri.tryParse(text);
+                      if (uri == null ||
+                          !uri.hasScheme ||
+                          (uri.scheme != 'http' && uri.scheme != 'https')) {
+                        return 'Please enter a valid URL starting with http:// or https://';
                       }
                       return null;
                     },
