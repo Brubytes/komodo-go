@@ -38,18 +38,17 @@ class AppSnackBar {
 
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
 
-    Duration remaining = _defaultDuration;
+    var remaining = _defaultDuration;
     DateTime? lastStartedAt;
     var isPaused = false;
 
-    late final ScaffoldFeatureController<SnackBar, SnackBarClosedReason>
-    controller;
+    final controllerRef = _SnackBarControllerRef();
 
     void scheduleDismiss() {
       _dismissTimer?.cancel();
       lastStartedAt = DateTime.now();
       _dismissTimer = Timer(remaining, () {
-        controller.close();
+        controllerRef.value?.close();
       });
     }
 
@@ -74,13 +73,13 @@ class AppSnackBar {
       }
       isPaused = false;
       if (remaining <= Duration.zero) {
-        controller.close();
+        controllerRef.value?.close();
         return;
       }
       scheduleDismiss();
     }
 
-    controller = messenger.showSnackBar(
+    controllerRef.value = messenger.showSnackBar(
       SnackBar(
         duration: const Duration(days: 1),
         backgroundColor: backgroundColor,
@@ -101,9 +100,18 @@ class AppSnackBar {
     );
 
     scheduleDismiss();
-    controller.closed.whenComplete(() {
-      _dismissTimer?.cancel();
-      _dismissTimer = null;
-    });
+    final closed = controllerRef.value?.closed;
+    if (closed != null) {
+      unawaited(
+        closed.whenComplete(() {
+          _dismissTimer?.cancel();
+          _dismissTimer = null;
+        }),
+      );
+    }
   }
+}
+
+class _SnackBarControllerRef {
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? value;
 }

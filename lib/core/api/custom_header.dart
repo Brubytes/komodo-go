@@ -14,6 +14,13 @@ bool isReservedManagedHeaderName(String name) {
 class CustomHeader {
   const CustomHeader({required this.key, required this.value});
 
+  factory CustomHeader.fromJson(Map<String, dynamic> json) {
+    return CustomHeader(
+      key: (json['key'] ?? '').toString(),
+      value: (json['value'] ?? '').toString(),
+    );
+  }
+
   final String key;
   final String value;
 
@@ -40,13 +47,6 @@ class CustomHeader {
       'key': normalized.key,
       'value': normalized.value,
     };
-  }
-
-  static CustomHeader fromJson(Map<String, dynamic> json) {
-    return CustomHeader(
-      key: (json['key'] ?? '').toString(),
-      value: (json['value'] ?? '').toString(),
-    );
   }
 }
 

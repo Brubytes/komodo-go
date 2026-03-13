@@ -6,7 +6,7 @@ import 'package:komodo_go/core/api/proxy_auth.dart';
 void main() {
   group('ProxyAuthConfig.headers', () {
     test('uses Authorization for basic auth', () {
-      final config = ProxyAuthConfig(
+      const config = ProxyAuthConfig(
         scheme: ProxyAuthScheme.basic,
         username: 'user',
         password: 'pass',
@@ -22,7 +22,7 @@ void main() {
     });
 
     test('returns empty map when credentials are incomplete', () {
-      final config = ProxyAuthConfig(
+      const config = ProxyAuthConfig(
         scheme: ProxyAuthScheme.basic,
         username: 'user',
         password: '   ',
@@ -32,7 +32,7 @@ void main() {
     });
 
     test('returns empty map when auth is disabled', () {
-      final config = ProxyAuthConfig(
+      const config = ProxyAuthConfig(
         scheme: ProxyAuthScheme.basic,
         username: 'user',
         password: 'pass',

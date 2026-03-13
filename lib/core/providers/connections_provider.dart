@@ -1,7 +1,7 @@
-import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/api/custom_header.dart';
-import 'package:komodo_go/core/connections/connections_store.dart';
 import 'package:komodo_go/core/api/proxy_auth.dart';
+import 'package:komodo_go/core/connections/connection_profile.dart';
+import 'package:komodo_go/core/connections/connections_store.dart';
 import 'package:komodo_go/core/onboarding/onboarding_storage.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/providers/shared_preferences_provider.dart';

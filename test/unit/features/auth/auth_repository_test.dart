@@ -82,12 +82,11 @@ void main() {
         expect(credentials.proxyAuth?.password, equals('pass'));
       });
 
-      test('keeps proxy auth stored but inactive when disabled', () {
+      test('keeps proxy auth stored but inactive by default', () {
         final credentials = normalizeCredentials(
           baseUrl: 'https://komodo.example.com',
           apiKey: 'key',
           apiSecret: 'secret',
-          proxyAuthEnabled: false,
           proxyAuthUsername: 'user',
           proxyAuthPassword: 'pass',
         );

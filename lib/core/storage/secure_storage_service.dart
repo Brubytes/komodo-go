@@ -134,7 +134,7 @@ class SecureStorageService {
     final apiKey = results[1];
     final apiSecret = results[2];
     final proxyAuthScheme = ProxyAuthSchemeX.fromStorage(results[3]);
-    final proxyAuthEnabled = results[4] == null ? true : results[4] == 'true';
+    final proxyAuthEnabled = results[4] == null || results[4] == 'true';
     final proxyAuthUsername = results[5]?.trim();
     final proxyAuthPassword = results[6]?.trim();
     final customHeaders = _decodeCustomHeaders(results[7]);
