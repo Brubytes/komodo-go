@@ -49,7 +49,6 @@ dependency_overrides:
       url: https://github.com/dilumdesilva/super_native_extensions
       ref: main
       path: super_native_extensions
-  test_api: 0.7.9 # To-Do: Remove this override with the next flutter upgrade (if new flutter version uses test_api >=0.7.9)
 
 
 patrol:
