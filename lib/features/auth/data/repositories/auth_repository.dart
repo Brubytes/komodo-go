@@ -12,6 +12,12 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'auth_repository.g.dart';
 
+typedef ValidationDioFactory =
+    Dio Function(
+      String baseUrl,
+      ApiCredentials credentials,
+    );
+
 ApiCredentials normalizeCredentials({
   required String baseUrl,
   required String apiKey,
@@ -63,10 +69,15 @@ String? _normalizeOptionalSecret(String? value) {
 
 /// Repository for handling authentication operations.
 class AuthRepository {
+  AuthRepository({ValidationDioFactory? validationDioFactory})
+    : _validationDioFactory = validationDioFactory ?? createValidationDio;
+
   static const _executeProbePayload = <String, dynamic>{
     'type': '__komodo_go_proxy_probe__',
     'params': <String, dynamic>{},
   };
+
+  final ValidationDioFactory _validationDioFactory;
 
   /// Validates credentials by making a test API call.
   Future<Either<Failure, void>> validateCredentials(
@@ -74,19 +85,23 @@ class AuthRepository {
   ) async {
     return apiCall(
       () async {
-        final dio = createValidationDio(credentials.baseUrl, credentials);
+        final dio = _validationDioFactory(credentials.baseUrl, credentials);
         final client = KomodoApiClient(dio);
 
         // Try to get the API version to validate credentials
-        await client.read(
+        final versionResponse = await client.read(
           const RpcRequest(type: 'GetVersion', params: <String, dynamic>{}),
         );
+        _validateVersionProbeResponse(versionResponse);
 
         await _probeExecutePath(dio);
 
         return;
       },
       onApiException: (e) {
+        if (_looksLikeExecutePathBlocked(e)) {
+          return Failure.server(message: e.message, statusCode: e.statusCode);
+        }
         if (e.isUnauthorized || e.isForbidden) {
           if ((credentials.proxyAuth?.shouldApply ?? false) &&
               _looksLikeForwardedProxyAuth(e)) {
@@ -107,11 +122,31 @@ class AuthRepository {
     );
   }
 
+  void _validateVersionProbeResponse(Object? response) {
+    if (response case {
+      'version': final String version,
+    } when version.trim().isNotEmpty) {
+      return;
+    }
+
+    throw const ApiException(
+      message:
+          'Received an unexpected response for GetVersion. Your reverse proxy may be serving a login page instead of the Komodo API.',
+    );
+  }
+
   bool _looksLikeForwardedProxyAuth(ApiException error) {
     final message = error.message.toLowerCase();
     return message.contains('authenticate jwt') ||
         message.contains('invalidtoken') ||
         message.contains('token');
+  }
+
+  bool _looksLikeExecutePathBlocked(ApiException error) {
+    final message = error.message.toLowerCase();
+    return message.contains(
+      'connection works for /read, but your reverse proxy',
+    );
   }
 
   Future<void> _probeExecutePath(Dio dio) async {
@@ -126,7 +161,14 @@ class AuthRepository {
     );
 
     final statusCode = response.statusCode;
-    if (statusCode != null && statusCode >= 300 && statusCode < 400) {
+    if (statusCode == null) {
+      throw const ApiException(
+        message:
+            'Connection works for /read, but /execute returned no HTTP status. Check your reverse proxy configuration.',
+      );
+    }
+
+    if (statusCode >= 300 && statusCode < 400) {
       final location = response.headers.value('location')?.trim();
       final locationInfo = location != null && location.isNotEmpty
           ? ' Redirect target: $location.'
@@ -138,6 +180,43 @@ class AuthRepository {
         statusCode: statusCode,
       );
     }
+
+    if (statusCode == 401 || statusCode == 403) {
+      throw ApiException(
+        message:
+            'Connection works for /read, but your reverse proxy still requires authentication for /execute. Configure machine access for /execute as well (same policy as /read and /write).',
+        statusCode: statusCode,
+      );
+    }
+
+    if (!_looksLikeApiResponsePayload(response.data)) {
+      throw ApiException(
+        message:
+            'Connection works for /read, but /execute returned a non-API response. Your reverse proxy may still be serving a login page for /execute.',
+        statusCode: statusCode,
+      );
+    }
+  }
+
+  bool _looksLikeApiResponsePayload(Object? data) {
+    if (data is Map || data is List) {
+      return true;
+    }
+
+    if (data is String) {
+      final trimmed = data.trimLeft();
+      if (trimmed.isEmpty) {
+        return false;
+      }
+
+      final lower = trimmed.toLowerCase();
+      return !(lower.startsWith('<!doctype html') ||
+          lower.startsWith('<html') ||
+          lower.startsWith('<head') ||
+          lower.startsWith('<body'));
+    }
+
+    return false;
   }
 
   /// Authenticates with the given credentials.

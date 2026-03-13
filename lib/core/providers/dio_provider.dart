@@ -89,6 +89,8 @@ Dio createValidationDio(String baseUrl, ApiCredentials credentials) {
       contentType: 'application/json',
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
+      followRedirects: false,
+      maxRedirects: 0,
       headers: {
         'X-Api-Key': credentials.apiKey,
         'X-Api-Secret': credentials.apiSecret,

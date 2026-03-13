@@ -1,10 +1,19 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:komodo_go/core/api/custom_header.dart';
+import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/storage/secure_storage_service.dart';
 import 'package:komodo_go/features/auth/data/repositories/auth_repository.dart';
 
 void main() {
   group('AuthRepository', () {
+    const credentials = ApiCredentials(
+      baseUrl: 'https://komodo.example.com',
+      apiKey: 'key',
+      apiSecret: 'secret',
+    );
+
     group('normalizeCredentials', () {
       test('keeps URL as entered when protocol is omitted', () {
         final credentials = normalizeCredentials(
@@ -130,5 +139,110 @@ void main() {
         expect(credentials.customHeaders.single.value, equals('two'));
       });
     });
+
+    group('validateCredentials', () {
+      test('rejects HTML responses returned for GetVersion', () async {
+        final repository = AuthRepository(
+          validationDioFactory: (_, _) => _createValidationDio((options) {
+            if (options.path == '/read') {
+              return _response(
+                options,
+                statusCode: 200,
+                data: '<!doctype html><html><body>Login</body></html>',
+              );
+            }
+            return _unexpectedRequest(options);
+          }),
+        );
+
+        final result = await repository.validateCredentials(credentials);
+
+        result.fold(
+          (failure) => expect(
+            failure,
+            const Failure.server(
+              message:
+                  'Received an unexpected response for GetVersion. Your reverse proxy may be serving a login page instead of the Komodo API.',
+            ),
+          ),
+          (_) => fail('Expected validation to fail'),
+        );
+      });
+
+      test('rejects execute paths still blocked by proxy auth', () async {
+        final repository = AuthRepository(
+          validationDioFactory: (_, _) => _createValidationDio((options) {
+            if (options.path == '/read') {
+              return _response(
+                options,
+                statusCode: 200,
+                data: const <String, dynamic>{'version': '1.0.0'},
+              );
+            }
+            if (options.path == '/execute') {
+              return _response(
+                options,
+                statusCode: 401,
+                data: const <String, dynamic>{'error': 'Unauthorized'},
+              );
+            }
+            return _unexpectedRequest(options);
+          }),
+        );
+
+        final result = await repository.validateCredentials(credentials);
+
+        result.fold(
+          (failure) => expect(
+            failure,
+            const Failure.server(
+              message:
+                  'Connection works for /read, but your reverse proxy still requires authentication for /execute. Configure machine access for /execute as well (same policy as /read and /write).',
+              statusCode: 401,
+            ),
+          ),
+          (_) => fail('Expected validation to fail'),
+        );
+      });
+    });
+
+    test('createValidationDio disables redirects during validation', () {
+      final dio = createValidationDio(credentials.baseUrl, credentials);
+
+      expect(dio.options.followRedirects, isFalse);
+      expect(dio.options.maxRedirects, 0);
+    });
   });
+}
+
+Dio _createValidationDio(
+  Response<dynamic> Function(RequestOptions options) responder,
+) {
+  final dio = Dio();
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) {
+        handler.resolve(responder(options));
+      },
+    ),
+  );
+  return dio;
+}
+
+Response<dynamic> _response(
+  RequestOptions requestOptions, {
+  required int statusCode,
+  Object? data,
+  Map<String, List<String>> headers = const <String, List<String>>{},
+}) {
+  return Response<dynamic>(
+    requestOptions: requestOptions,
+    statusCode: statusCode,
+    headers: Headers.fromMap(headers),
+    data: data,
+  );
+}
+
+Never _unexpectedRequest(RequestOptions options) {
+  fail('Unexpected request to ${options.path}');
 }
