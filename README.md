@@ -12,14 +12,11 @@
 | Android | [![Android CI](https://api.codemagic.io/apps/697fac44dbc045a607ea177d/release-android/status_badge.svg)](https://codemagic.io/app/697fac44dbc045a607ea177d/release-android/latest_build) |
 | iOS | [![iOS CI](https://api.codemagic.io/apps/697fac44dbc045a607ea177d/release-ios/status_badge.svg)](https://codemagic.io/app/697fac44dbc045a607ea177d/release-ios/latest_build) |
 
-
-Flutter app to control the Komodo infrastructure management platform.
-
-Website: https://komodogo.eu
+ Komodo Go is a native iOS/Android application that allows you to control Komodo on the go. While it covers many options, it is not feature-complete compared to the Komodo Web UI.
 
 ## Komodo project
 
-Komodo Go is a third-party client for [Komodo 🦎](https://komo.do). Komodo Go is a native iOS/Android application that allows you to control Komodo on the go. While it covers many options, it is not feature-complete compared to the Komodo Web UI.
+Komodo Go is a third-party client for [Komodo 🦎](https://komo.do).
 
 ## Requirements
 
