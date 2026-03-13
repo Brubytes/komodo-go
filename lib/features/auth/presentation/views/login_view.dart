@@ -404,9 +404,20 @@ class LoginView extends HookConsumerWidget {
                         enableInteractiveSelection: true,
                         contextMenuBuilder: alwaysPasteContextMenu,
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
+                          final trimmed = value?.trim() ?? '';
+                          if (trimmed.isEmpty) {
                             return 'Please enter the server URL';
                           }
+
+                          final uri = Uri.tryParse(trimmed);
+                          final hasValidScheme =
+                              uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+                          final hasHost = uri != null && uri.host.isNotEmpty;
+
+                          if (!hasValidScheme || !hasHost) {
+                            return 'Please enter a valid URL starting with http:// or https://';
+                          }
+
                           return null;
                         },
                       ),
