@@ -31,6 +31,11 @@ ApiCredentials normalizeCredentials({
   if (normalizedUrl.endsWith('/')) {
     normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length - 1);
   }
+  if (normalizedUrl.isNotEmpty &&
+      !normalizedUrl.startsWith('http://') &&
+      !normalizedUrl.startsWith('https://')) {
+    normalizedUrl = 'https://$normalizedUrl';
+  }
 
   final normalizedProxyAuthUsername = _normalizeOptionalSecret(
     proxyAuthUsername,
