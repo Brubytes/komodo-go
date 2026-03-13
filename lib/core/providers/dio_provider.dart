@@ -61,6 +61,7 @@ Dio? dio(Ref ref) {
     AuthInterceptor(
       apiKey: credentials.apiKey,
       apiSecret: credentials.apiSecret,
+      additionalHeaders: credentials.additionalHeaders(),
     ),
     if (kDebugMode) LoggingInterceptor(),
   ]);
@@ -91,6 +92,7 @@ Dio createValidationDio(String baseUrl, ApiCredentials credentials) {
       headers: {
         'X-Api-Key': credentials.apiKey,
         'X-Api-Secret': credentials.apiSecret,
+        ...credentials.additionalHeaders(),
       },
     ),
   )..interceptors.addAll([if (kDebugMode) LoggingInterceptor()]);

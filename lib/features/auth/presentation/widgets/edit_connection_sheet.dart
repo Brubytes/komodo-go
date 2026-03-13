@@ -4,11 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/api/custom_header.dart';
 import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
+import 'package:komodo_go/core/widgets/server_url_warning.dart';
+import 'package:komodo_go/features/auth/presentation/widgets/advanced_connection_settings_card.dart';
 
 class EditConnectionSheet extends HookConsumerWidget {
   const EditConnectionSheet({
@@ -36,13 +39,23 @@ class EditConnectionSheet extends HookConsumerWidget {
     final formKey = useMemoized(GlobalKey<FormState>.new);
 
     final nameController = useTextEditingController(text: connection.name);
-    final baseUrlController = useTextEditingController(text: connection.baseUrl);
+    final baseUrlController = useTextEditingController(
+      text: connection.baseUrl,
+    );
     final apiKeyController = useTextEditingController();
     final apiSecretController = useTextEditingController();
+    final proxyAuthUsernameController = useTextEditingController();
+    final proxyAuthPasswordController = useTextEditingController();
 
     final obscureSecret = useState(true);
+    final obscureProxyAuthPassword = useState(true);
+    final showAdvancedConfig = useState(false);
+    final proxyAuthEnabled = useState(false);
+    final customHeaders = useState<List<CustomHeader>>(const []);
     final isSaving = useState(false);
     final hasExistingCredentials = useState<bool?>(null);
+
+    useListenable(baseUrlController);
 
     useEffect(() {
       Future<void> load() async {
@@ -57,6 +70,21 @@ class EditConnectionSheet extends HookConsumerWidget {
         }
         if (apiSecretController.text.isEmpty) {
           apiSecretController.text = creds.apiSecret;
+        }
+        if (proxyAuthUsernameController.text.isEmpty) {
+          proxyAuthUsernameController.text = creds.proxyAuth?.username ?? '';
+        }
+        if (proxyAuthPasswordController.text.isEmpty) {
+          proxyAuthPasswordController.text = creds.proxyAuth?.password ?? '';
+        }
+        proxyAuthEnabled.value = creds.proxyAuth?.enabled ?? false;
+        customHeaders.value = creds.customHeaders;
+        if ((proxyAuthEnabled.value ||
+                proxyAuthUsernameController.text.trim().isNotEmpty ||
+                proxyAuthPasswordController.text.trim().isNotEmpty ||
+                creds.customHeaders.isNotEmpty) &&
+            !showAdvancedConfig.value) {
+          showAdvancedConfig.value = true;
         }
         if (baseUrlController.text.isEmpty ||
             baseUrlController.text == connection.baseUrl) {
@@ -75,12 +103,18 @@ class EditConnectionSheet extends HookConsumerWidget {
 
       isSaving.value = true;
       try {
-        await ref.read(connectionsProvider.notifier).updateConnectionDetails(
+        await ref
+            .read(connectionsProvider.notifier)
+            .updateConnectionDetails(
               connectionId: connection.id,
               name: nameController.text,
               baseUrl: baseUrlController.text,
               apiKey: apiKeyController.text,
               apiSecret: apiSecretController.text,
+              proxyAuthEnabled: proxyAuthEnabled.value,
+              proxyAuthUsername: proxyAuthUsernameController.text,
+              proxyAuthPassword: proxyAuthPasswordController.text,
+              customHeaders: customHeaders.value,
             );
 
         if (!context.mounted) return;
@@ -112,23 +146,21 @@ class EditConnectionSheet extends HookConsumerWidget {
                   Text(
                     'Edit connection',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const Gap(8),
                   Text(
                     'Update the connection details. You can leave API key/secret empty to keep the existing credentials.',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.7),
-                        ),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const Gap(24),
-
                   TextFormField(
                     controller: nameController,
                     decoration: const InputDecoration(
@@ -141,7 +173,6 @@ class EditConnectionSheet extends HookConsumerWidget {
                     contextMenuBuilder: alwaysPasteContextMenu,
                   ),
                   const Gap(16),
-
                   TextFormField(
                     controller: baseUrlController,
                     decoration: const InputDecoration(
@@ -160,8 +191,11 @@ class EditConnectionSheet extends HookConsumerWidget {
                       return null;
                     },
                   ),
+                  if (baseUrlController.text.trim().isNotEmpty) ...[
+                    const Gap(8),
+                    ServerUrlWarning(value: baseUrlController.text),
+                  ],
                   const Gap(16),
-
                   TextFormField(
                     controller: apiKeyController,
                     decoration: const InputDecoration(
@@ -183,7 +217,6 @@ class EditConnectionSheet extends HookConsumerWidget {
                     },
                   ),
                   const Gap(16),
-
                   TextFormField(
                     controller: apiSecretController,
                     decoration: InputDecoration(
@@ -199,11 +232,10 @@ class EditConnectionSheet extends HookConsumerWidget {
                       ),
                     ),
                     obscureText: obscureSecret.value,
-                    textInputAction: TextInputAction.done,
+                    textInputAction: TextInputAction.next,
                     autocorrect: false,
                     enableInteractiveSelection: true,
                     contextMenuBuilder: alwaysPasteContextMenu,
-                    onFieldSubmitted: (_) => save(),
                     validator: (value) {
                       if (canKeepCredentials) {
                         return null;
@@ -214,7 +246,31 @@ class EditConnectionSheet extends HookConsumerWidget {
                       return null;
                     },
                   ),
-
+                  const Gap(24),
+                  AdvancedConnectionSettingsCard(
+                    expanded: showAdvancedConfig.value,
+                    onToggle: () {
+                      showAdvancedConfig.value = !showAdvancedConfig.value;
+                    },
+                    children: [
+                      ProxyHeaderAuthSection(
+                        enabled: proxyAuthEnabled.value,
+                        onEnabledChanged: (value) {
+                          proxyAuthEnabled.value = value;
+                        },
+                        usernameController: proxyAuthUsernameController,
+                        passwordController: proxyAuthPasswordController,
+                        obscurePassword: obscureProxyAuthPassword,
+                        onSubmitted: save,
+                      ),
+                      CustomHeadersSection(
+                        headers: customHeaders.value,
+                        onChanged: (headers) {
+                          customHeaders.value = headers;
+                        },
+                      ),
+                    ],
+                  ),
                   const Gap(24),
                   SizedBox(
                     width: double.infinity,

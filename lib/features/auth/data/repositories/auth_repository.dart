@@ -1,6 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/custom_header.dart';
+import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/api/proxy_auth.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/storage/secure_storage_service.dart';
@@ -12,25 +16,58 @@ ApiCredentials normalizeCredentials({
   required String baseUrl,
   required String apiKey,
   required String apiSecret,
+  bool proxyAuthEnabled = false,
+  String? proxyAuthUsername,
+  String? proxyAuthPassword,
+  List<CustomHeader> customHeaders = const <CustomHeader>[],
 }) {
-  // Normalize base URL
   var normalizedUrl = baseUrl.trim();
   if (normalizedUrl.endsWith('/')) {
     normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length - 1);
   }
-  if (!normalizedUrl.startsWith('http')) {
-    normalizedUrl = 'https://$normalizedUrl';
-  }
+
+  final normalizedProxyAuthUsername = _normalizeOptionalSecret(
+    proxyAuthUsername,
+  );
+  final normalizedProxyAuthPassword = _normalizeOptionalSecret(
+    proxyAuthPassword,
+  );
 
   return ApiCredentials(
     baseUrl: normalizedUrl,
     apiKey: apiKey.trim(),
     apiSecret: apiSecret.trim(),
+    proxyAuth: switch ((
+      normalizedProxyAuthUsername,
+      normalizedProxyAuthPassword,
+    )) {
+      (final username?, final password?) => ProxyAuthConfig(
+        scheme: ProxyAuthScheme.basic,
+        username: username,
+        password: password,
+        enabled: proxyAuthEnabled,
+      ),
+      _ => null,
+    },
+    customHeaders: sanitizeCustomHeaders(customHeaders),
   );
+}
+
+String? _normalizeOptionalSecret(String? value) {
+  if (value == null) {
+    return null;
+  }
+  final normalized = value.trim();
+  return normalized.isEmpty ? null : normalized;
 }
 
 /// Repository for handling authentication operations.
 class AuthRepository {
+  static const _executeProbePayload = <String, dynamic>{
+    'type': '__komodo_go_proxy_probe__',
+    'params': <String, dynamic>{},
+  };
+
   /// Validates credentials by making a test API call.
   Future<Either<Failure, void>> validateCredentials(
     ApiCredentials credentials,
@@ -45,10 +82,20 @@ class AuthRepository {
           const RpcRequest(type: 'GetVersion', params: <String, dynamic>{}),
         );
 
+        await _probeExecutePath(dio);
+
         return;
       },
       onApiException: (e) {
         if (e.isUnauthorized || e.isForbidden) {
+          if ((credentials.proxyAuth?.shouldApply ?? false) &&
+              _looksLikeForwardedProxyAuth(e)) {
+            return const Failure.auth(
+              message:
+                  'Your reverse proxy forwarded the Authorization header to Komodo. '
+                  'Configure the proxy to clear or override Authorization before forwarding requests.',
+            );
+          }
           return const Failure.auth(message: 'Invalid API credentials');
         }
         return Failure.server(message: e.message, statusCode: e.statusCode);
@@ -60,17 +107,58 @@ class AuthRepository {
     );
   }
 
+  bool _looksLikeForwardedProxyAuth(ApiException error) {
+    final message = error.message.toLowerCase();
+    return message.contains('authenticate jwt') ||
+        message.contains('invalidtoken') ||
+        message.contains('token');
+  }
+
+  Future<void> _probeExecutePath(Dio dio) async {
+    final response = await dio.post<dynamic>(
+      '/execute',
+      data: _executeProbePayload,
+      options: Options(
+        followRedirects: false,
+        maxRedirects: 0,
+        validateStatus: (status) => status != null,
+      ),
+    );
+
+    final statusCode = response.statusCode;
+    if (statusCode != null && statusCode >= 300 && statusCode < 400) {
+      final location = response.headers.value('location')?.trim();
+      final locationInfo = location != null && location.isNotEmpty
+          ? ' Redirect target: $location.'
+          : '';
+      throw ApiException(
+        message:
+            'Connection works for /read, but your reverse proxy redirected /execute to authentication.$locationInfo '
+            'Configure machine access for /execute as well (same policy as /read and /write).',
+        statusCode: statusCode,
+      );
+    }
+  }
+
   /// Authenticates with the given credentials.
   /// Validates the credentials and returns normalized credentials if valid.
   Future<Either<Failure, ApiCredentials>> authenticate({
     required String baseUrl,
     required String apiKey,
     required String apiSecret,
+    bool proxyAuthEnabled = false,
+    String? proxyAuthUsername,
+    String? proxyAuthPassword,
+    List<CustomHeader> customHeaders = const <CustomHeader>[],
   }) async {
     final credentials = normalizeCredentials(
       baseUrl: baseUrl,
       apiKey: apiKey,
       apiSecret: apiSecret,
+      proxyAuthEnabled: proxyAuthEnabled,
+      proxyAuthUsername: proxyAuthUsername,
+      proxyAuthPassword: proxyAuthPassword,
+      customHeaders: customHeaders,
     );
 
     // Validate credentials

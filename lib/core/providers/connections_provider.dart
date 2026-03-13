@@ -1,5 +1,7 @@
 import 'package:komodo_go/core/connections/connection_profile.dart';
+import 'package:komodo_go/core/api/custom_header.dart';
 import 'package:komodo_go/core/connections/connections_store.dart';
+import 'package:komodo_go/core/api/proxy_auth.dart';
 import 'package:komodo_go/core/onboarding/onboarding_storage.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/providers/shared_preferences_provider.dart';
@@ -136,6 +138,10 @@ class Connections extends _$Connections {
     String? baseUrl,
     String? apiKey,
     String? apiSecret,
+    bool? proxyAuthEnabled,
+    String? proxyAuthUsername,
+    String? proxyAuthPassword,
+    List<CustomHeader>? customHeaders,
   }) async {
     final store = await ref.read(connectionsStoreProvider.future);
 
@@ -154,7 +160,8 @@ class Connections extends _$Connections {
         : nextNameTrimmed;
 
     final nextBaseUrlTrimmed = baseUrl?.trim();
-    final nextBaseUrl = (nextBaseUrlTrimmed == null || nextBaseUrlTrimmed.isEmpty)
+    final nextBaseUrl =
+        (nextBaseUrlTrimmed == null || nextBaseUrlTrimmed.isEmpty)
         ? currentProfile.baseUrl
         : nextBaseUrlTrimmed;
 
@@ -167,21 +174,47 @@ class Connections extends _$Connections {
 
     final nextApiKeyTrimmed = apiKey?.trim();
     final nextApiSecretTrimmed = apiSecret?.trim();
+    final nextProxyAuthEnabled =
+        proxyAuthEnabled ?? currentCredentials?.proxyAuth?.enabled ?? false;
+    final nextProxyAuthUsernameTrimmed = proxyAuthUsername?.trim();
+    final nextProxyAuthPasswordTrimmed = proxyAuthPassword?.trim();
+    final nextCustomHeaders = customHeaders == null
+        ? currentCredentials?.customHeaders ?? const <CustomHeader>[]
+        : sanitizeCustomHeaders(customHeaders);
     final hasKey = nextApiKeyTrimmed != null && nextApiKeyTrimmed.isNotEmpty;
     final hasSecret =
         nextApiSecretTrimmed != null && nextApiSecretTrimmed.isNotEmpty;
+    final hasProxyAuthUsername =
+        nextProxyAuthUsernameTrimmed != null &&
+        nextProxyAuthUsernameTrimmed.isNotEmpty;
+    final hasProxyAuthPassword =
+        nextProxyAuthPasswordTrimmed != null &&
+        nextProxyAuthPasswordTrimmed.isNotEmpty;
 
     if (currentCredentials != null) {
       final updatedCredentials = ApiCredentials(
         baseUrl: nextBaseUrl,
         apiKey: hasKey ? nextApiKeyTrimmed : currentCredentials.apiKey,
-        apiSecret: hasSecret ? nextApiSecretTrimmed : currentCredentials.apiSecret,
+        apiSecret: hasSecret
+            ? nextApiSecretTrimmed
+            : currentCredentials.apiSecret,
+        proxyAuth: hasProxyAuthUsername && hasProxyAuthPassword
+            ? ProxyAuthConfig(
+                scheme: ProxyAuthScheme.basic,
+                username: nextProxyAuthUsernameTrimmed,
+                password: nextProxyAuthPasswordTrimmed,
+                enabled: nextProxyAuthEnabled,
+              )
+            : null,
+        customHeaders: nextCustomHeaders,
       );
       await store.saveCredentials(connectionId, updatedCredentials);
 
       final active = ref.read(activeConnectionProvider);
       if (active?.connectionId == connectionId) {
-        ref.read(activeConnectionProvider.notifier).active = ActiveConnectionData(
+        ref
+            .read(activeConnectionProvider.notifier)
+            .active = ActiveConnectionData(
           connectionId: connectionId,
           name: updatedProfile.name,
           credentials: updatedCredentials,
@@ -194,6 +227,15 @@ class Connections extends _$Connections {
           baseUrl: nextBaseUrl,
           apiKey: nextApiKeyTrimmed,
           apiSecret: nextApiSecretTrimmed,
+          proxyAuth: hasProxyAuthUsername && hasProxyAuthPassword
+              ? ProxyAuthConfig(
+                  scheme: ProxyAuthScheme.basic,
+                  username: nextProxyAuthUsernameTrimmed,
+                  password: nextProxyAuthPasswordTrimmed,
+                  enabled: nextProxyAuthEnabled,
+                )
+              : null,
+          customHeaders: nextCustomHeaders,
         ),
       );
     }

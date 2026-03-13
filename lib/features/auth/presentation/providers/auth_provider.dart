@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:komodo_go/core/api/custom_header.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
@@ -66,6 +67,10 @@ class Auth extends _$Auth {
     required String apiKey,
     required String apiSecret,
     String? name,
+    bool proxyAuthEnabled = false,
+    String? proxyAuthUsername,
+    String? proxyAuthPassword,
+    List<CustomHeader> customHeaders = const <CustomHeader>[],
   }) async {
     state = const AsyncValue.loading();
 
@@ -75,6 +80,10 @@ class Auth extends _$Auth {
       baseUrl: baseUrl,
       apiKey: apiKey,
       apiSecret: apiSecret,
+      proxyAuthEnabled: proxyAuthEnabled,
+      proxyAuthUsername: proxyAuthUsername,
+      proxyAuthPassword: proxyAuthPassword,
+      customHeaders: customHeaders,
     );
 
     state = await result.fold(

@@ -51,6 +51,13 @@ class LoggingInterceptor extends Interceptor {
       if (response.data != null) {
         developer.log('  Response: ${_sanitize(response.data)}', name: 'HTTP');
       }
+      final statusCode = response.statusCode;
+      if (statusCode != null && statusCode >= 300 && statusCode < 400) {
+        final location = response.headers.value('location')?.trim();
+        if (location != null && location.isNotEmpty) {
+          developer.log('  Redirect location: $location', name: 'HTTP');
+        }
+      }
     }
     handler.next(response);
   }
@@ -63,6 +70,13 @@ class LoggingInterceptor extends Interceptor {
         name: 'HTTP',
         error: err.message,
       );
+
+      final responseHeaders = err.response?.headers.map;
+      if (responseHeaders != null && responseHeaders.isNotEmpty) {
+        final safeHeaders = _redactHeaders(_flattenHeaders(responseHeaders));
+        developer.log('  Response headers: $safeHeaders', name: 'HTTP');
+      }
+
       final data = err.response?.data;
       if (data != null) {
         developer.log('  Error response: ${_sanitize(data)}', name: 'HTTP');
@@ -97,6 +111,13 @@ class LoggingInterceptor extends Interceptor {
       return value.map(_sanitize).toList();
     }
     return value;
+  }
+
+  Map<String, String> _flattenHeaders(Map<String, List<String>> headers) {
+    return {
+      for (final entry in headers.entries)
+        entry.key: entry.value.where((value) => value.isNotEmpty).join(', '),
+    };
   }
 
   Object? _sanitizeEntry(Object? key, Object? value) {

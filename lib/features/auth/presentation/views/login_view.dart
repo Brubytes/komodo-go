@@ -13,9 +13,11 @@ import 'package:komodo_go/core/providers/onboarding_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
+import 'package:komodo_go/core/widgets/server_url_warning.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/auth/presentation/providers/connection_draft_provider.dart';
+import 'package:komodo_go/features/auth/presentation/widgets/advanced_connection_settings_card.dart';
 import 'package:komodo_go/features/auth/presentation/widgets/edit_connection_sheet.dart';
 
 /// Login screen for entering Komodo API credentials.
@@ -34,9 +36,24 @@ class LoginView extends HookConsumerWidget {
     final baseUrlController = useTextEditingController(text: draft.baseUrl);
     final apiKeyController = useTextEditingController(text: draft.apiKey);
     final apiSecretController = useTextEditingController(text: draft.apiSecret);
+    final proxyAuthUsernameController = useTextEditingController(
+      text: draft.proxyAuthUsername,
+    );
+    final proxyAuthPasswordController = useTextEditingController(
+      text: draft.proxyAuthPassword,
+    );
 
     final showAddForm = useState(false);
     final obscureSecret = useState(true);
+    final obscureProxyAuthPassword = useState(true);
+    final showAdvancedConfig = useState(
+      draft.proxyAuthEnabled ||
+          draft.proxyAuthUsername.trim().isNotEmpty ||
+          draft.proxyAuthPassword.trim().isNotEmpty ||
+          draft.customHeaders.isNotEmpty,
+    );
+
+    useListenable(baseUrlController);
 
     ref.listen(authProvider, (previous, next) {
       final nextState = next.value;
@@ -62,6 +79,8 @@ class LoginView extends HookConsumerWidget {
             baseUrl: baseUrlController.text,
             apiKey: apiKeyController.text,
             apiSecret: apiSecretController.text,
+            proxyAuthUsername: proxyAuthUsernameController.text,
+            proxyAuthPassword: proxyAuthPasswordController.text,
           );
         }
 
@@ -69,12 +88,16 @@ class LoginView extends HookConsumerWidget {
         baseUrlController.addListener(syncDraft);
         apiKeyController.addListener(syncDraft);
         apiSecretController.addListener(syncDraft);
+        proxyAuthUsernameController.addListener(syncDraft);
+        proxyAuthPasswordController.addListener(syncDraft);
 
         return () {
           connectionNameController.removeListener(syncDraft);
           baseUrlController.removeListener(syncDraft);
           apiKeyController.removeListener(syncDraft);
           apiSecretController.removeListener(syncDraft);
+          proxyAuthUsernameController.removeListener(syncDraft);
+          proxyAuthPasswordController.removeListener(syncDraft);
         };
       },
       [
@@ -82,6 +105,8 @@ class LoginView extends HookConsumerWidget {
         baseUrlController,
         apiKeyController,
         apiSecretController,
+        proxyAuthUsernameController,
+        proxyAuthPasswordController,
       ],
     );
 
@@ -94,6 +119,10 @@ class LoginView extends HookConsumerWidget {
               baseUrl: baseUrlController.text,
               apiKey: apiKeyController.text,
               apiSecret: apiSecretController.text,
+              proxyAuthEnabled: draft.proxyAuthEnabled,
+              proxyAuthUsername: proxyAuthUsernameController.text,
+              proxyAuthPassword: proxyAuthPasswordController.text,
+              customHeaders: draft.customHeaders,
             );
       }
     }
@@ -271,8 +300,8 @@ class LoginView extends HookConsumerWidget {
                                       onLongPress: authState.isLoading
                                           ? null
                                           : () => showConnectionActions(
-                                                connection,
-                                              ),
+                                              connection,
+                                            ),
                                     ),
                                 ],
                               ),
@@ -365,7 +394,8 @@ class LoginView extends HookConsumerWidget {
                         controller: baseUrlController,
                         decoration: const InputDecoration(
                           labelText: 'Server URL',
-                          hintText: 'https://komodo.example.com',
+                          hintText:
+                              'https://komodo.example.com or http://100.64.0.5',
                           prefixIcon: Icon(AppIcons.server),
                         ),
                         keyboardType: TextInputType.url,
@@ -380,6 +410,10 @@ class LoginView extends HookConsumerWidget {
                           return null;
                         },
                       ),
+                      if (baseUrlController.text.trim().isNotEmpty) ...[
+                        const Gap(8),
+                        ServerUrlWarning(value: baseUrlController.text),
+                      ],
                       const Gap(16),
 
                       // API Key
@@ -422,17 +456,42 @@ class LoginView extends HookConsumerWidget {
                           ),
                         ),
                         obscureText: obscureSecret.value,
-                        textInputAction: TextInputAction.done,
+                        textInputAction: TextInputAction.next,
                         autocorrect: false,
                         enableInteractiveSelection: true,
                         contextMenuBuilder: alwaysPasteContextMenu,
-                        onFieldSubmitted: (_) => handleLogin(),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your API secret';
                           }
                           return null;
                         },
+                      ),
+                      const Gap(24),
+
+                      AdvancedConnectionSettingsCard(
+                        expanded: showAdvancedConfig.value,
+                        onToggle: () {
+                          showAdvancedConfig.value = !showAdvancedConfig.value;
+                        },
+                        children: [
+                          ProxyHeaderAuthSection(
+                            enabled: draft.proxyAuthEnabled,
+                            onEnabledChanged: (value) {
+                              draftNotifier.update(proxyAuthEnabled: value);
+                            },
+                            usernameController: proxyAuthUsernameController,
+                            passwordController: proxyAuthPasswordController,
+                            obscurePassword: obscureProxyAuthPassword,
+                            onSubmitted: handleLogin,
+                          ),
+                          CustomHeadersSection(
+                            headers: draft.customHeaders,
+                            onChanged: (headers) {
+                              draftNotifier.update(customHeaders: headers);
+                            },
+                          ),
+                        ],
                       ),
                       const Gap(24),
 
@@ -453,7 +512,9 @@ class LoginView extends HookConsumerWidget {
                       // Help text
                       Text(
                         'You can generate API keys in the Komodo web interface '
-                        'under your user settings.',
+                        'under your user settings. Advanced header options are '
+                        'available in the collapsed section above when your '
+                        'proxy or deployment requires them.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(
                             context,

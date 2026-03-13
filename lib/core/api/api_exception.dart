@@ -7,6 +7,14 @@ class ApiException implements Exception {
   /// Creates an [ApiException] from a [DioException].
   factory ApiException.fromDioException(DioException error) {
     final response = error.response;
+    final proxyRedirectMessage = _proxyRedirectMessage(response);
+    if (proxyRedirectMessage != null) {
+      return ApiException(
+        message: proxyRedirectMessage,
+        statusCode: response?.statusCode,
+      );
+    }
+
     final responseData = response?.data;
     final serverMessage = _extractServerMessage(responseData);
     final serverTrace = _extractServerTrace(responseData);
@@ -51,6 +59,38 @@ class ApiException implements Exception {
 
   @override
   String toString() => 'ApiException: $message (status: $statusCode)';
+
+  static String? _proxyRedirectMessage(Response<dynamic>? response) {
+    final statusCode = response?.statusCode;
+    if (statusCode == null || statusCode < 300 || statusCode >= 400) {
+      return null;
+    }
+
+    final location = response?.headers.value('location')?.trim();
+    final locationInfo = location != null && location.isNotEmpty
+        ? ' Redirect target: $location.'
+        : '';
+
+    if (location != null &&
+        location.isNotEmpty &&
+        _looksLikeAuthRedirect(location)) {
+      return 'Request was redirected to an authentication page (HTTP $statusCode).$locationInfo '
+          'Your reverse proxy is likely enforcing browser login for API requests. '
+          'Allow machine access for API paths like /read, /write, and /execute.';
+    }
+
+    return 'Request was redirected by a reverse proxy (HTTP $statusCode).$locationInfo '
+        'Ensure API paths support non-interactive machine access.';
+  }
+
+  static bool _looksLikeAuthRedirect(String location) {
+    final lower = location.toLowerCase();
+    return lower.contains('/auth') ||
+        lower.contains('login') ||
+        lower.contains('signin') ||
+        lower.contains('oauth') ||
+        lower.contains('sso');
+  }
 
   static String _fallbackBadResponseMessage(DioException error) {
     final response = error.response;
