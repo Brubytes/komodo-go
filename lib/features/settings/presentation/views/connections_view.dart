@@ -31,39 +31,6 @@ class ConnectionsView extends ConsumerWidget {
         icon: AppIcons.network,
         centerTitle: true,
         onTitleLongPress: () => _showDemoEnableSheet(context, ref),
-        actions: [
-          IconButton(
-            tooltip: 'Disconnect',
-            icon: const Icon(AppIcons.disconnect),
-            onPressed: authAsync.isLoading
-                ? null
-                : () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Disconnect'),
-                        content: const Text(
-                          'Disconnect from the current instance?',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Cancel'),
-                          ),
-                          FilledButton(
-                            onPressed: () => Navigator.of(context).pop(true),
-                            child: const Text('Disconnect'),
-                          ),
-                        ],
-                      ),
-                    );
-
-                    if (confirmed ?? false) {
-                      await ref.read(authProvider.notifier).logout();
-                    }
-                  },
-          ),
-        ],
       ),
       floatingActionButton: AppSecondaryFab.extended(
         onPressed: authAsync.isLoading
