@@ -1073,7 +1073,7 @@ packages:
     dependency: "direct overridden"
     description:
       path: super_native_extensions
-      ref: main
+      ref: "1d413d5e333058ed90274e44ac703c9d96f4e567"
       resolved-ref: "1d413d5e333058ed90274e44ac703c9d96f4e567"
       url: "https://github.com/dilumdesilva/super_native_extensions"
     source: git

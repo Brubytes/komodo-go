@@ -47,7 +47,7 @@ dependency_overrides:
   super_native_extensions: # To-Do: Remove this override when super_native_extensions is updated to support 16KB
     git:
       url: https://github.com/dilumdesilva/super_native_extensions
-      ref: main
+      ref: 1d413d5e333058ed90274e44ac703c9d96f4e567
       path: super_native_extensions
 
 
