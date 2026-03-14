@@ -34,16 +34,27 @@ Required environment:
 
 Recommended workflow:
 
-1) Create a local `.env` file with the variables above.
-2) Run the tests with the provided helper (loads `.env` automatically):
-   - `./scripts/run_test.sh test/integration/backend/stack_contract_test.dart`
-3) Or run the whole backend contract suite directly:
-   - `KOMODO_TEST_ALLOW_DESTRUCTIVE=true fvm flutter test test/integration/backend`
+1. Create a local `.env` file with the variables above.
+
+1. Run backend contract tests one file at a time with the provided helper (loads `.env` automatically):
+
+  ```bash
+  ./scripts/run_test.sh test/integration/backend/stack_contract_test.dart
+  ./scripts/run_test.sh test/integration/backend/repo_contract_test.dart
+  ./scripts/run_test.sh test/integration/backend/providers_contract_test.dart
+  ```
+
+1. If you want to run the whole backend contract suite, use the serial helper. Many of these tests call `KOMODO_TEST_RESET_COMMAND` and reset the same real backend database, so parallel file execution can cause restore collisions and inconsistent state.
+
+  ```bash
+  ./scripts/run_backend_tests_serial.sh
+  ```
 
 Notes:
 
 - Golden snapshots live in `test/golden/` and are checked by backend contract tests.
 - Some tests will skip if `KOMODO_TEST_RESET_COMMAND` is not provided.
+- Avoid running `test/integration/backend/` as a parallel batch against a shared real backend unless you have disabled parallelism in the test runner.
 
 ## Patrol integration tests (UI + backend)
 
