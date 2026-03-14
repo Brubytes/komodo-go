@@ -198,7 +198,8 @@ class AddConnectionSheet extends HookConsumerWidget {
                       final uri = Uri.tryParse(text);
                       if (uri == null ||
                           !uri.hasScheme ||
-                          (uri.scheme != 'http' && uri.scheme != 'https')) {
+                          (uri.scheme != 'http' && uri.scheme != 'https') ||
+                          uri.host.isEmpty) {
                         return 'Please enter a valid URL starting with http:// or https://';
                       }
                       return null;
