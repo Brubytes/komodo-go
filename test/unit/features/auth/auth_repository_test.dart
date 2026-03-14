@@ -211,6 +211,21 @@ void main() {
       expect(dio.options.followRedirects, isFalse);
       expect(dio.options.maxRedirects, 0);
     });
+
+    test('createValidationDio adds https for host-only URLs', () {
+      const hostOnlyCredentials = ApiCredentials(
+        baseUrl: 'komodo.example.com',
+        apiKey: 'key',
+        apiSecret: 'secret',
+      );
+
+      final dio = createValidationDio(
+        hostOnlyCredentials.baseUrl,
+        hostOnlyCredentials,
+      );
+
+      expect(dio.options.baseUrl, equals('https://komodo.example.com'));
+    });
   });
 }
 
