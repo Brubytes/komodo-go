@@ -14,6 +14,8 @@
 
  Komodo Go is a native iOS/Android application that allows you to control Komodo on the go. While it covers many options, it is not feature-complete compared to the Komodo Web UI.
 
+ The app is currently in beta, if you want to join you can find the download links [on the website](https://komodogo.eu/beta).
+
 ## Komodo project
 
 Komodo Go is a third-party client for [Komodo 🦎](https://komo.do).
