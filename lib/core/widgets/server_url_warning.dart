@@ -41,7 +41,7 @@ class ServerUrlWarning extends StatelessWidget {
           const Gap(10),
           Expanded(
             child: Text(
-              'Include http:// or https:// explicitly. The app will use this address exactly as entered and will not auto-upgrade it to HTTPS.',
+              'Include http:// or https:// explicitly. If you omit a scheme, the app will default to https://. To use http://, you must include it explicitly.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurface.withValues(alpha: 0.82),
               ),
