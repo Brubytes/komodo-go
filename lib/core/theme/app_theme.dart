@@ -50,8 +50,9 @@ class AppTheme {
     final isDark = colorScheme.brightness == Brightness.dark;
 
     final scaffoldSurface = colorScheme.surface;
-    final cardSurface =
-        isDark ? colorScheme.surfaceContainer : colorScheme.surface;
+    final cardSurface = isDark
+        ? colorScheme.surfaceContainer
+        : colorScheme.surface;
 
     return ThemeData(
       useMaterial3: true,
@@ -152,6 +153,7 @@ class AppTheme {
         floatingLabelStyle: TextStyle(
           color: isDark ? colorScheme.secondary : colorScheme.primary,
         ),
+        floatingLabelBehavior: FloatingLabelBehavior.always,
         border: OutlineInputBorder(
           borderRadius: radius,
           borderSide: BorderSide.none,
@@ -175,7 +177,10 @@ class AppTheme {
           borderRadius: radius,
           borderSide: BorderSide(color: colorScheme.error, width: 2),
         ),
-        contentPadding: AppTokens.inputPadding,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 18,
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

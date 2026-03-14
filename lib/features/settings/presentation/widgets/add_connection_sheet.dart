@@ -6,6 +6,7 @@ import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
+import 'package:komodo_go/core/widgets/server_url_warning.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/auth/presentation/providers/connection_draft_provider.dart';
@@ -37,6 +38,8 @@ class AddConnectionSheet extends HookConsumerWidget {
     final apiSecretController = useTextEditingController(text: draft.apiSecret);
 
     final obscureSecret = useState(true);
+
+    useListenable(baseUrlController);
 
     ref.listen(authProvider, (previous, next) {
       final nextState = next.value;
@@ -178,7 +181,8 @@ class AddConnectionSheet extends HookConsumerWidget {
                     controller: baseUrlController,
                     decoration: const InputDecoration(
                       labelText: 'Server URL',
-                      hintText: 'https://komodo.example.com',
+                      hintText:
+                          'https://komodo.example.com or http://100.64.0.5',
                       prefixIcon: Icon(AppIcons.server),
                     ),
                     keyboardType: TextInputType.url,
@@ -187,12 +191,24 @@ class AddConnectionSheet extends HookConsumerWidget {
                     enableInteractiveSelection: true,
                     contextMenuBuilder: alwaysPasteContextMenu,
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) {
                         return 'Please enter the server URL';
+                      }
+                      final uri = Uri.tryParse(text);
+                      if (uri == null ||
+                          !uri.hasScheme ||
+                          (uri.scheme != 'http' && uri.scheme != 'https') ||
+                          uri.host.isEmpty) {
+                        return 'Please enter a valid URL starting with http:// or https://';
                       }
                       return null;
                     },
                   ),
+                  if (baseUrlController.text.trim().isNotEmpty) ...[
+                    const Gap(8),
+                    ServerUrlWarning(value: baseUrlController.text),
+                  ],
                   const Gap(16),
                   TextFormField(
                     controller: apiKeyController,

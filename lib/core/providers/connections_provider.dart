@@ -1,3 +1,5 @@
+import 'package:komodo_go/core/api/custom_header.dart';
+import 'package:komodo_go/core/api/proxy_auth.dart';
 import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/connections/connections_store.dart';
 import 'package:komodo_go/core/onboarding/onboarding_storage.dart';
@@ -30,6 +32,56 @@ class ConnectionsState {
     }
     return null;
   }
+}
+
+ApiCredentials mergeConnectionCredentialsForUpdate({
+  required ApiCredentials currentCredentials,
+  required String baseUrl,
+  String? apiKey,
+  String? apiSecret,
+  bool? proxyAuthEnabled,
+  String? proxyAuthUsername,
+  String? proxyAuthPassword,
+  List<CustomHeader>? customHeaders,
+}) {
+  final nextApiKeyTrimmed = apiKey?.trim();
+  final nextApiSecretTrimmed = apiSecret?.trim();
+  final currentProxyAuth = currentCredentials.proxyAuth;
+  final nextProxyAuthEnabled =
+      proxyAuthEnabled ?? currentProxyAuth?.enabled ?? false;
+  final nextProxyAuthUsernameTrimmed = proxyAuthUsername?.trim();
+  final nextProxyAuthPasswordTrimmed = proxyAuthPassword?.trim();
+  final effectiveProxyAuthUsername =
+      nextProxyAuthUsernameTrimmed ?? currentProxyAuth?.username;
+  final effectiveProxyAuthPassword =
+      nextProxyAuthPasswordTrimmed ?? currentProxyAuth?.password;
+  final nextCustomHeaders = customHeaders == null
+      ? currentCredentials.customHeaders
+      : sanitizeCustomHeaders(customHeaders);
+  final hasKey = nextApiKeyTrimmed != null && nextApiKeyTrimmed.isNotEmpty;
+  final hasSecret =
+      nextApiSecretTrimmed != null && nextApiSecretTrimmed.isNotEmpty;
+  final hasProxyAuthUsername =
+      effectiveProxyAuthUsername != null &&
+      effectiveProxyAuthUsername.isNotEmpty;
+  final hasProxyAuthPassword =
+      effectiveProxyAuthPassword != null &&
+      effectiveProxyAuthPassword.isNotEmpty;
+
+  return ApiCredentials(
+    baseUrl: baseUrl,
+    apiKey: hasKey ? nextApiKeyTrimmed : currentCredentials.apiKey,
+    apiSecret: hasSecret ? nextApiSecretTrimmed : currentCredentials.apiSecret,
+    proxyAuth: hasProxyAuthUsername && hasProxyAuthPassword
+        ? ProxyAuthConfig(
+            scheme: ProxyAuthScheme.basic,
+            username: effectiveProxyAuthUsername,
+            password: effectiveProxyAuthPassword,
+            enabled: nextProxyAuthEnabled,
+          )
+        : null,
+    customHeaders: nextCustomHeaders,
+  );
 }
 
 @riverpod
@@ -136,6 +188,10 @@ class Connections extends _$Connections {
     String? baseUrl,
     String? apiKey,
     String? apiSecret,
+    bool? proxyAuthEnabled,
+    String? proxyAuthUsername,
+    String? proxyAuthPassword,
+    List<CustomHeader>? customHeaders,
   }) async {
     final store = await ref.read(connectionsStoreProvider.future);
 
@@ -154,7 +210,8 @@ class Connections extends _$Connections {
         : nextNameTrimmed;
 
     final nextBaseUrlTrimmed = baseUrl?.trim();
-    final nextBaseUrl = (nextBaseUrlTrimmed == null || nextBaseUrlTrimmed.isEmpty)
+    final nextBaseUrl =
+        (nextBaseUrlTrimmed == null || nextBaseUrlTrimmed.isEmpty)
         ? currentProfile.baseUrl
         : nextBaseUrlTrimmed;
 
@@ -165,35 +222,73 @@ class Connections extends _$Connections {
 
     await store.updateConnection(updatedProfile);
 
-    final nextApiKeyTrimmed = apiKey?.trim();
-    final nextApiSecretTrimmed = apiSecret?.trim();
-    final hasKey = nextApiKeyTrimmed != null && nextApiKeyTrimmed.isNotEmpty;
-    final hasSecret =
-        nextApiSecretTrimmed != null && nextApiSecretTrimmed.isNotEmpty;
-
     if (currentCredentials != null) {
-      final updatedCredentials = ApiCredentials(
+      final updatedCredentials = mergeConnectionCredentialsForUpdate(
+        currentCredentials: currentCredentials,
         baseUrl: nextBaseUrl,
-        apiKey: hasKey ? nextApiKeyTrimmed : currentCredentials.apiKey,
-        apiSecret: hasSecret ? nextApiSecretTrimmed : currentCredentials.apiSecret,
+        apiKey: apiKey,
+        apiSecret: apiSecret,
+        proxyAuthEnabled: proxyAuthEnabled,
+        proxyAuthUsername: proxyAuthUsername,
+        proxyAuthPassword: proxyAuthPassword,
+        customHeaders: customHeaders,
       );
       await store.saveCredentials(connectionId, updatedCredentials);
 
       final active = ref.read(activeConnectionProvider);
       if (active?.connectionId == connectionId) {
-        ref.read(activeConnectionProvider.notifier).active = ActiveConnectionData(
+        ref
+            .read(activeConnectionProvider.notifier)
+            .active = ActiveConnectionData(
           connectionId: connectionId,
           name: updatedProfile.name,
           credentials: updatedCredentials,
         );
       }
-    } else if (hasKey && hasSecret) {
+    } else {
+      final nextApiKeyTrimmed = apiKey?.trim();
+      final nextApiSecretTrimmed = apiSecret?.trim();
+      final nextProxyAuthEnabled = proxyAuthEnabled ?? false;
+      final hasKey = nextApiKeyTrimmed != null && nextApiKeyTrimmed.isNotEmpty;
+      final hasSecret =
+          nextApiSecretTrimmed != null && nextApiSecretTrimmed.isNotEmpty;
+      final nextProxyAuthUsernameTrimmed = proxyAuthUsername?.trim();
+      final nextProxyAuthPasswordTrimmed = proxyAuthPassword?.trim();
+      final hasProxyAuthUsername =
+          nextProxyAuthUsernameTrimmed != null &&
+          nextProxyAuthUsernameTrimmed.isNotEmpty;
+      final hasProxyAuthPassword =
+          nextProxyAuthPasswordTrimmed != null &&
+          nextProxyAuthPasswordTrimmed.isNotEmpty;
+      final nextCustomHeaders = customHeaders == null
+          ? const <CustomHeader>[]
+          : sanitizeCustomHeaders(customHeaders);
+
+      if (!(hasKey && hasSecret)) {
+        state = AsyncValue.data(
+          ConnectionsState(
+            connections: await store.listConnections(),
+            activeConnectionId: state.asData?.value.activeConnectionId,
+          ),
+        );
+        return;
+      }
+
       await store.saveCredentials(
         connectionId,
         ApiCredentials(
           baseUrl: nextBaseUrl,
           apiKey: nextApiKeyTrimmed,
           apiSecret: nextApiSecretTrimmed,
+          proxyAuth: hasProxyAuthUsername && hasProxyAuthPassword
+              ? ProxyAuthConfig(
+                  scheme: ProxyAuthScheme.basic,
+                  username: nextProxyAuthUsernameTrimmed,
+                  password: nextProxyAuthPasswordTrimmed,
+                  enabled: nextProxyAuthEnabled,
+                )
+              : null,
+          customHeaders: nextCustomHeaders,
         ),
       );
     }

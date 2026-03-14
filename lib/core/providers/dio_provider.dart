@@ -50,7 +50,7 @@ Dio? dio(Ref ref) {
 
   final dio = Dio(
     BaseOptions(
-      baseUrl: credentials.baseUrl,
+      baseUrl: _normalizeTransportBaseUrl(credentials.baseUrl),
       contentType: 'application/json',
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
@@ -61,6 +61,7 @@ Dio? dio(Ref ref) {
     AuthInterceptor(
       apiKey: credentials.apiKey,
       apiSecret: credentials.apiSecret,
+      additionalHeaders: credentials.additionalHeaders(),
     ),
     if (kDebugMode) LoggingInterceptor(),
   ]);
@@ -84,14 +85,27 @@ KomodoApiClient? apiClient(Ref ref) {
 Dio createValidationDio(String baseUrl, ApiCredentials credentials) {
   return Dio(
     BaseOptions(
-      baseUrl: baseUrl,
+      baseUrl: _normalizeTransportBaseUrl(baseUrl),
       contentType: 'application/json',
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
+      followRedirects: false,
+      maxRedirects: 0,
       headers: {
         'X-Api-Key': credentials.apiKey,
         'X-Api-Secret': credentials.apiSecret,
+        ...credentials.additionalHeaders(),
       },
     ),
   )..interceptors.addAll([if (kDebugMode) LoggingInterceptor()]);
+}
+
+String _normalizeTransportBaseUrl(String baseUrl) {
+  final normalized = baseUrl.trim();
+  if (normalized.isEmpty ||
+      normalized.startsWith('http://') ||
+      normalized.startsWith('https://')) {
+    return normalized;
+  }
+  return 'https://$normalized';
 }
