@@ -7,7 +7,7 @@ environment:
   sdk: ^3.8.1
 
 dependencies:
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^1.0.9
   dio: ^5.9.1
   flutter:
     sdk: flutter
@@ -20,10 +20,10 @@ dependencies:
   go_router: ^17.0.1
   hooks_riverpod: ^3.2.0
   json_annotation: ^4.10.0
-  lucide_icons_flutter: ^3.1.9
+  lucide_icons_flutter: ^3.1.11
   riverpod: any
   riverpod_annotation: ^4.0.1
-  shared_preferences: ^2.5.4
+  shared_preferences: ^2.5.5
   skeletonizer: ^2.1.2
   syntax_highlight: ^0.5.0
   url_launcher: ^6.3.2
@@ -39,7 +39,7 @@ dev_dependencies:
     sdk: flutter
   json_serializable: ^6.12.0
   mocktail: ^1.0.4
-  patrol: ^4.1.0
+  patrol: ^4.5.0
   riverpod_generator: ^4.0.2
   test_api: any
   very_good_analysis: ^10.0.0
