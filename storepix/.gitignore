@@ -3,6 +3,7 @@ output/
 
 # Screenshots (these come from Maestro)
 screenshots/iPhone/*.png
+screenshots/iPad/*.png
 
 # Keep directories but ignore contents
 !screenshots/iPhone/.gitkeep
