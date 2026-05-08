@@ -57,27 +57,35 @@ class HomeStatCard<T> extends StatelessWidget {
               // In tests and very compact layouts the grid can become quite short.
               // Keep this threshold generous to avoid overflows.
               final isTight = constraints.maxHeight < 110;
-              final padding = isTight ? 6.0 : 14.0;
-              final iconSize = isTight ? 14.0 : 22.0;
-              final iconPadding = isTight ? 3.0 : 8.0;
+              final isSpacious = !isTight && constraints.maxHeight >= 155;
+
+              final padding = isTight ? 6.0 : (isSpacious ? 18.0 : 14.0);
+              final iconSize = isTight ? 14.0 : (isSpacious ? 28.0 : 22.0);
+              final iconPadding = isTight ? 3.0 : (isSpacious ? 10.0 : 8.0);
               final showSubtitle = !isTight;
 
-              final valueStyle =
-                  (isTight ? textTheme.titleMedium : textTheme.headlineMedium)
-                      ?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.3,
-                      );
-              final titleStyle =
-                  (isTight ? textTheme.titleSmall : textTheme.titleMedium)
-                      ?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurfaceVariant,
-                        letterSpacing: -0.1,
-                      );
-              final subtitleStyle =
-                  (isTight ? textTheme.labelMedium : textTheme.labelLarge)
-                      ?.copyWith(color: color, fontWeight: FontWeight.w700);
+              final valueStyle = (isTight
+                      ? textTheme.titleMedium
+                      : isSpacious
+                      ? textTheme.headlineLarge
+                      : textTheme.headlineMedium)
+                  ?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.5);
+              final titleStyle = (isTight
+                      ? textTheme.titleSmall
+                      : isSpacious
+                      ? textTheme.titleLarge
+                      : textTheme.titleMedium)
+                  ?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurfaceVariant,
+                    letterSpacing: -0.1,
+                  );
+              final subtitleStyle = (isTight
+                      ? textTheme.labelMedium
+                      : isSpacious
+                      ? textTheme.titleSmall
+                      : textTheme.labelLarge)
+                  ?.copyWith(color: color, fontWeight: FontWeight.w700);
 
               return Padding(
                 padding: EdgeInsets.all(padding),
@@ -99,7 +107,7 @@ class HomeStatCard<T> extends StatelessWidget {
                         if (!isTight)
                           Icon(
                             AppIcons.chevron,
-                            size: 20,
+                            size: isSpacious ? 22.0 : 20.0,
                             color: scheme.onSurfaceVariant.withValues(
                               alpha: 0.55,
                             ),
@@ -121,6 +129,34 @@ class HomeStatCard<T> extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: titleStyle,
                                 ),
+                              ),
+                            ],
+                          );
+                        }
+
+                        if (isSpacious) {
+                          // Spacious (iPad) layout: value and title stacked vertically
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                valueBuilder(data),
+                                style: valueStyle,
+                                maxLines: 1,
+                              ),
+                              const Gap(2),
+                              Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: titleStyle,
+                              ),
+                              const Gap(5),
+                              Text(
+                                subtitleBuilder(data),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: subtitleStyle,
                               ),
                             ],
                           );

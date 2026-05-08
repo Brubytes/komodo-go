@@ -36,6 +36,7 @@ class DetailMetricGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final crossAxisCount = constraints.maxWidth >= 520 ? 3 : 2;
+        final isTablet = constraints.maxWidth >= 520;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -44,10 +45,10 @@ class DetailMetricGrid extends StatelessWidget {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.55,
+            childAspectRatio: isTablet ? 1.7 : 1.55,
           ),
           itemBuilder: (context, index) =>
-              _DetailMetricTile(item: items[index]),
+              _DetailMetricTile(item: items[index], isTablet: isTablet),
         );
       },
     );
@@ -55,9 +56,10 @@ class DetailMetricGrid extends StatelessWidget {
 }
 
 class _DetailMetricTile extends StatelessWidget {
-  const _DetailMetricTile({required this.item});
+  const _DetailMetricTile({required this.item, required this.isTablet});
 
   final DetailMetricTileData item;
+  final bool isTablet;
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +84,7 @@ class _DetailMetricTile extends StatelessWidget {
     final iconColor = scheme.primary;
 
     final content = AppCardSurface(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(isTablet ? 16 : 12),
       radius: 18,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,22 +92,25 @@ class _DetailMetricTile extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 30,
-                height: 30,
+                width: isTablet ? 36 : 30,
+                height: isTablet ? 36 : 30,
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(item.icon, size: 18, color: iconColor),
+                child: Icon(item.icon, size: isTablet ? 20 : 18, color: iconColor),
               ),
               const Gap(10),
               Expanded(
                 child: Text(
                   item.label,
-                  style: textTheme.labelMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: (isTablet
+                          ? textTheme.labelLarge
+                          : textTheme.labelMedium)
+                      ?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -115,9 +120,10 @@ class _DetailMetricTile extends StatelessWidget {
           const Spacer(),
           Text(
             item.value,
-            style: textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.2,
+            style: (isTablet ? textTheme.titleLarge : textTheme.titleMedium)
+                ?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

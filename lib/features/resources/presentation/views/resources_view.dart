@@ -166,26 +166,21 @@ class ResourcesView extends ConsumerWidget {
     final width = MediaQuery.sizeOf(context).width;
     final isTablet = width >= 720;
     final quickStatsColumns = switch (width) {
-      >= 1200 => 6,
-      >= 900 => 5,
-      >= 720 => 4,
+      >= 1200 => 4,
+      >= 720 => 3,
       >= 520 => 3,
       _ => 2,
     };
-    final quickStatsAspectRatio = switch (quickStatsColumns) {
-      >= 4 => 1.38,
-      3 => 1.55,
+    final quickStatsAspectRatio = switch (width) {
+      >= 720 => 1.2,
+      >= 520 => 1.55,
       _ => 1.35,
     };
     final gridSpacing = isTablet ? 12.0 : 8.0;
     final listPadding = isTablet
         ? const EdgeInsets.fromLTRB(24, 24, 24, 28)
         : const EdgeInsets.fromLTRB(12, 12, 12, 20);
-    final maxGridWidth = switch (width) {
-      >= 1200 => 1180.0,
-      >= 900 => 1040.0,
-      _ => double.infinity,
-    };
+    final maxGridWidth = width >= 1200 ? 1180.0 : double.infinity;
 
     final grid = GridView.count(
       crossAxisCount: quickStatsColumns,
