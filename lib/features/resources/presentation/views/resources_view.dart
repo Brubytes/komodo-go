@@ -37,14 +37,6 @@ class ResourcesView extends ConsumerWidget {
       unawaited(context.push(_routeFor(next)));
     });
 
-    final width = MediaQuery.sizeOf(context).width;
-    final quickStatsColumns = width >= 720 ? 4 : (width >= 520 ? 3 : 2);
-    final quickStatsAspectRatio = switch (quickStatsColumns) {
-      4 => 1.85,
-      3 => 1.65,
-      _ => 1.35,
-    };
-
     final serversAsync = ref.watch(serversProvider);
     final deploymentsAsync = ref.watch(deploymentsProvider);
     final stacksAsync = ref.watch(stacksProvider);
@@ -62,7 +54,7 @@ class ResourcesView extends ConsumerWidget {
         valueBuilder: (servers) => servers.length.toString(),
         subtitleBuilder: (servers) {
           final online = servers
-              .where((s) => s.info?.state == ServerState.ok)
+              .where((server) => server.info?.state == ServerState.ok)
               .length;
           return '$online online';
         },
@@ -76,7 +68,10 @@ class ResourcesView extends ConsumerWidget {
         valueBuilder: (deployments) => deployments.length.toString(),
         subtitleBuilder: (deployments) {
           final running = deployments
-              .where((d) => d.info?.state == DeploymentState.running)
+              .where(
+                (deployment) =>
+                    deployment.info?.state == DeploymentState.running,
+              )
               .length;
           return '$running running';
         },
@@ -89,8 +84,9 @@ class ResourcesView extends ConsumerWidget {
         asyncValue: stacksAsync,
         valueBuilder: (stacks) => stacks.length.toString(),
         subtitleBuilder: (stacks) {
-          final running =
-              stacks.where((s) => s.info.state == StackState.running).length;
+          final running = stacks
+              .where((stack) => stack.info.state == StackState.running)
+              .length;
           return '$running running';
         },
         onTap: () => context.push(_routeFor(ResourceType.stacks)),
@@ -102,7 +98,7 @@ class ResourcesView extends ConsumerWidget {
         asyncValue: reposAsync,
         valueBuilder: (repos) => repos.length.toString(),
         subtitleBuilder: (repos) {
-          final busy = repos.where((r) => r.info.state.isBusy).length;
+          final busy = repos.where((repo) => repo.info.state.isBusy).length;
           return '$busy busy';
         },
         onTap: () => context.push(_routeFor(ResourceType.repos)),
@@ -114,8 +110,9 @@ class ResourcesView extends ConsumerWidget {
         asyncValue: syncsAsync,
         valueBuilder: (syncs) => syncs.length.toString(),
         subtitleBuilder: (syncs) {
-          final running =
-              syncs.where((s) => s.info.state.isRunning).length;
+          final running = syncs
+              .where((sync) => sync.info.state.isRunning)
+              .length;
           return '$running running';
         },
         onTap: () => context.push(_routeFor(ResourceType.syncs)),
@@ -127,8 +124,9 @@ class ResourcesView extends ConsumerWidget {
         asyncValue: buildsAsync,
         valueBuilder: (builds) => builds.length.toString(),
         subtitleBuilder: (builds) {
-          final running =
-              builds.where((b) => b.info.state == BuildState.building).length;
+          final running = builds
+              .where((build) => build.info.state == BuildState.building)
+              .length;
           return '$running running';
         },
         onTap: () => context.push(_routeFor(ResourceType.builds)),
@@ -141,7 +139,9 @@ class ResourcesView extends ConsumerWidget {
         valueBuilder: (procedures) => procedures.length.toString(),
         subtitleBuilder: (procedures) {
           final running = procedures
-              .where((p) => p.info.state == ProcedureState.running)
+              .where(
+                (procedure) => procedure.info.state == ProcedureState.running,
+              )
               .length;
           return '$running running';
         },
@@ -154,13 +154,54 @@ class ResourcesView extends ConsumerWidget {
         asyncValue: actionsAsync,
         valueBuilder: (actions) => actions.length.toString(),
         subtitleBuilder: (actions) {
-          final running =
-              actions.where((a) => a.info.state == ActionState.running).length;
+          final running = actions
+              .where((action) => action.info.state == ActionState.running)
+              .length;
           return '$running running';
         },
         onTap: () => context.push(_routeFor(ResourceType.actions)),
       ),
     ];
+
+    final width = MediaQuery.sizeOf(context).width;
+    final isTablet = width >= 720;
+    final quickStatsColumns = switch (width) {
+      >= 1200 => 6,
+      >= 900 => 5,
+      >= 720 => 4,
+      >= 520 => 3,
+      _ => 2,
+    };
+    final quickStatsAspectRatio = switch (quickStatsColumns) {
+      >= 4 => 1.38,
+      3 => 1.55,
+      _ => 1.35,
+    };
+    final gridSpacing = isTablet ? 12.0 : 8.0;
+    final listPadding = isTablet
+        ? const EdgeInsets.fromLTRB(24, 24, 24, 28)
+        : const EdgeInsets.fromLTRB(12, 12, 12, 20);
+    final maxGridWidth = switch (width) {
+      >= 1200 => 1180.0,
+      >= 900 => 1040.0,
+      _ => double.infinity,
+    };
+
+    final grid = GridView.count(
+      crossAxisCount: quickStatsColumns,
+      crossAxisSpacing: gridSpacing,
+      mainAxisSpacing: gridSpacing,
+      childAspectRatio: quickStatsAspectRatio,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        for (var i = 0; i < tiles.length; i++)
+          AppFadeSlide(
+            delay: AppMotion.stagger(i),
+            child: tiles[i],
+          ),
+      ],
+    );
 
     return Scaffold(
       appBar: const MainAppBar(title: 'Resources', icon: AppIcons.resources),
@@ -177,23 +218,17 @@ class ResourcesView extends ConsumerWidget {
             ..invalidate(actionsProvider);
         },
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+          padding: listPadding,
           children: [
-            GridView.count(
-              crossAxisCount: quickStatsColumns,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: quickStatsAspectRatio,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                for (var i = 0; i < tiles.length; i++)
-                  AppFadeSlide(
-                    delay: AppMotion.stagger(i),
-                    child: tiles[i],
-                  ),
-              ],
-            ),
+            if (maxGridWidth.isFinite)
+              Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxGridWidth),
+                  child: grid,
+                ),
+              )
+            else
+              grid,
           ],
         ),
       ),

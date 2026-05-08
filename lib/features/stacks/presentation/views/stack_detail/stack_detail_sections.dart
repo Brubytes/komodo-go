@@ -2465,7 +2465,10 @@ class StackLogContent extends StatelessWidget {
           DetailKeyValueRow(label: 'Command', value: log.command),
           const Gap(10),
         ],
-        DetailCodeBlock(code: output.isNotEmpty ? output : 'No output'),
+        DetailCodeBlock(
+          code: output.isNotEmpty ? output : 'No output',
+          tabletMaxHeight: 560,
+        ),
       ],
     );
   }

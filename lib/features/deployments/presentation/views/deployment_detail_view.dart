@@ -294,48 +294,17 @@ class _DeploymentDetailViewState
                       scrollKey: PageStorageKey(
                         'deployment_${widget.deploymentId}_logs',
                       ),
+                      maxContentWidth: 1100,
                       children: [
-                        Text(
-                          'Auto refresh logs',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        const Gap(4),
-                        Text(
-                          'When enabled, logs refresh every 2.5 seconds while this tab is visible. Pull down to refresh once.',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                        const Gap(10),
-                        Row(
-                          children: [
-                            Tooltip(
-                              message:
-                                  'When enabled, logs refresh every 2.5 seconds while this tab is visible.',
-                              child: Icon(
-                                AppIcons.refresh,
-                                size: 16,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const Gap(8),
-                            Expanded(
-                              child: Text(
-                                _autoRefreshLogs ? 'Enabled' : 'Disabled',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: scheme.onSurfaceVariant),
-                              ),
-                            ),
-                            Switch.adaptive(
-                              value: _autoRefreshLogs,
-                              onChanged: (value) {
-                                setState(() => _autoRefreshLogs = value);
-                                _syncLogPolling(
-                                  isShellTabActive:
-                                      ref.read(mainShellIndexProvider) == 1,
-                                );
-                              },
-                            ),
-                          ],
+                        DetailLogAutoRefreshControl(
+                          enabled: _autoRefreshLogs,
+                          onChanged: (value) {
+                            setState(() => _autoRefreshLogs = value);
+                            _syncLogPolling(
+                              isShellTabActive:
+                                  ref.read(mainShellIndexProvider) == 1,
+                            );
+                          },
                         ),
                         const Gap(12),
                         deploymentAsync.when(

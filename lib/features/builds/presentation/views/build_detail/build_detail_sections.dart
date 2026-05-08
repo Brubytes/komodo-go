@@ -4,7 +4,6 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
-import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
@@ -982,18 +981,10 @@ class BuildLogsContent extends StatelessWidget {
             ),
           ),
           const Gap(8),
-          SizedBox(
-            width: double.infinity,
-            child: AppCardSurface(
-              padding: const EdgeInsets.all(12),
-              radius: 12,
-              child: SelectableText(
-                info.remoteError!.trim(),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ),
+          DetailCodeBlock(
+            code: info.remoteError!.trim(),
+            maxHeight: 280,
+            tabletMaxHeight: 420,
           ),
         ],
         if (info.remoteError != null &&
@@ -1012,7 +1003,10 @@ class BuildLogsContent extends StatelessWidget {
             ),
           ),
           const Gap(8),
-          DetailCodeBlock(code: info.remoteContents!.trim()),
+          DetailCodeBlock(
+            code: info.remoteContents!.trim(),
+            tabletMaxHeight: 560,
+          ),
         ],
         if (info.remoteContents != null &&
             info.remoteContents!.trim().isNotEmpty &&
@@ -1028,7 +1022,10 @@ class BuildLogsContent extends StatelessWidget {
             ),
           ),
           const Gap(8),
-          DetailCodeBlock(code: info.builtContents!.trim()),
+          DetailCodeBlock(
+            code: info.builtContents!.trim(),
+            tabletMaxHeight: 560,
+          ),
         ],
       ],
     );

@@ -188,8 +188,9 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                       ref.invalidate(buildDetailProvider(buildId));
                     },
                     child: DetailTabScrollView.box(
-                      scrollKey:
-                          PageStorageKey('build_${widget.buildId}_config'),
+                      scrollKey: PageStorageKey(
+                        'build_${widget.buildId}_config',
+                      ),
                       child: buildAsync.when(
                         data: (build) {
                           if (build == null) {
@@ -245,8 +246,8 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                       ref.invalidate(buildDetailProvider(buildId));
                     },
                     child: DetailTabScrollView.box(
-                      scrollKey:
-                          PageStorageKey('build_${widget.buildId}_logs'),
+                      scrollKey: PageStorageKey('build_${widget.buildId}_logs'),
+                      maxContentWidth: 1100,
                       child: buildAsync.when(
                         data: (build) {
                           if (build == null) {
@@ -263,9 +264,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                                       .trim()
                                       .isNotEmpty) ||
                               (build.info.builtContents != null &&
-                                  build.info.builtContents!
-                                      .trim()
-                                      .isNotEmpty);
+                                  build.info.builtContents!.trim().isNotEmpty);
 
                           if (!hasAnyLogs) {
                             return const BuildMessageSurface(
