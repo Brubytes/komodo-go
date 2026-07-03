@@ -37,6 +37,7 @@ class VariablesView extends ConsumerWidget {
             : () async {
                 final result = await VariableEditorSheet.show(context);
                 if (result == null) return;
+                if (!context.mounted) return;
 
                 final ok = await ref
                     .read(variableActionsProvider.notifier)
@@ -83,6 +84,7 @@ class VariablesView extends ConsumerWidget {
                           initial: variable,
                         );
                         if (result == null) return;
+                        if (!context.mounted) return;
 
                         final ok = await ref
                             .read(variableActionsProvider.notifier)
@@ -124,6 +126,7 @@ class VariablesView extends ConsumerWidget {
                           ),
                         );
                         if (confirmed != true) return;
+                        if (!context.mounted) return;
 
                         final ok = await ref
                             .read(variableActionsProvider.notifier)

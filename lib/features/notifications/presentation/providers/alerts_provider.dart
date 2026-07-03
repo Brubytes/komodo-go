@@ -65,6 +65,7 @@ class Alerts extends _$Alerts {
     state = AsyncValue.data(current.copyWith(isLoadingMore: true));
 
     final result = await repository.listAlerts(page: nextPage);
+    if (!ref.mounted) return;
     state = result.fold(
       (_) {
         return AsyncValue.data(current.copyWith(isLoadingMore: false));

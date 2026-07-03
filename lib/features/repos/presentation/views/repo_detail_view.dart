@@ -321,6 +321,8 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
       RepoAction.build => actions.buildRepo(repoId),
     };
 
+    if (!context.mounted) return;
+
     if (success) {
       ref.invalidate(repoDetailProvider(repoId));
     }

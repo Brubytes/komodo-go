@@ -103,7 +103,9 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
           IconButton(
             icon: const Icon(AppIcons.play),
             tooltip: 'Run',
-            onPressed: () => _runAction(context, actionId),
+            onPressed: actionsState.isLoading
+                ? null
+                : () => _runAction(context, actionId),
           ),
         ],
       ),
@@ -258,6 +260,8 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
   Future<void> _runAction(BuildContext context, String actionId) async {
     final actions = ref.read(actionActionsProvider.notifier);
     final success = await actions.run(actionId);
+
+    if (!mounted) return;
 
     if (success) {
       ref

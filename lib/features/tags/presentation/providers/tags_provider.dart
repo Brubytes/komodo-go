@@ -57,6 +57,7 @@ class TagActions extends _$TagActions {
 
     if (name.trim() != original.name.trim()) {
       final r = await repository.renameTag(id: original.id, name: name.trim());
+      if (!ref.mounted) return false;
       final ok = r.fold((failure) {
         state = AsyncValue.error(failure.displayMessage, StackTrace.current);
         return false;
@@ -69,6 +70,7 @@ class TagActions extends _$TagActions {
         tagIdOrName: original.id,
         color: color,
       );
+      if (!ref.mounted) return false;
       return r.fold(
         (failure) {
           state = AsyncValue.error(failure.displayMessage, StackTrace.current);
@@ -98,6 +100,8 @@ class TagActions extends _$TagActions {
 
     state = const AsyncValue.loading();
     final result = await action(repository);
+
+    if (!ref.mounted) return false;
 
     return result.fold(
       (failure) {

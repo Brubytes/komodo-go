@@ -60,7 +60,7 @@ class SettingsView extends ConsumerWidget {
                 currentMode: themeMode,
               );
 
-              if (selectedMode != null) {
+              if (selectedMode != null && context.mounted) {
                 await ref
                     .read(themeModeProvider.notifier)
                     .setThemeMode(selectedMode);
@@ -187,7 +187,7 @@ class SettingsView extends ConsumerWidget {
                 ),
               );
 
-              if (confirmed ?? false) {
+              if ((confirmed ?? false) && context.mounted) {
                 await ref.read(authProvider.notifier).logout();
               }
             },

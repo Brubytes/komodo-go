@@ -331,6 +331,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
         ),
       );
       if (confirmed != true) return;
+      if (!context.mounted) return;
     }
 
     final success = await switch (action) {
@@ -342,6 +343,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
       StackAction.stop => actions.stop(stackId),
       StackAction.destroy => actions.destroy(stackId),
     };
+    if (!context.mounted) return;
     final actionError = ref.read(stackActionsProvider).asError?.error;
     final actionErrorMessage =
       actionError is String

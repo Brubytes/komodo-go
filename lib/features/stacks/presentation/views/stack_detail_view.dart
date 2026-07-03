@@ -763,6 +763,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
         ),
       );
       if (confirmed != true) return;
+      if (!mounted) return;
     }
 
     final success = await switch (action) {
@@ -774,6 +775,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       StackAction.stop => actions.stop(stackId),
       StackAction.destroy => actions.destroy(stackId),
     };
+    if (!mounted) return;
     final actionError = ref.read(stackActionsProvider).asError?.error;
     final actionErrorMessage =
       actionError is String

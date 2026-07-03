@@ -55,7 +55,7 @@ class TargetNameCache extends _$TargetNameCache {
 
     try {
       final name = await fetch();
-      if (name.trim().isNotEmpty) {
+      if (ref.mounted && name.trim().isNotEmpty) {
         state = {...state, key: name.trim()};
       }
       completer.complete(name);

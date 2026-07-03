@@ -81,6 +81,8 @@ class ProcedureActions extends _$ProcedureActions {
 
     final result = await action(repository);
 
+    if (!ref.mounted) return false;
+
     return result.fold(
       (failure) {
         state = AsyncValue.error(failure.displayMessage, StackTrace.current);
@@ -106,6 +108,8 @@ class ProcedureActions extends _$ProcedureActions {
     state = const AsyncValue.loading();
 
     final result = await request(repository);
+
+    if (!ref.mounted) return null;
 
     return result.fold(
       (failure) {

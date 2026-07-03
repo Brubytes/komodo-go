@@ -49,6 +49,8 @@ class StackUpdates extends _$StackUpdates {
       query: _stackUpdatesQuery(stackId),
     );
 
+    if (!ref.mounted) return;
+
     state = result.fold(
       (_) => AsyncValue.data(current.copyWith(isLoadingMore: false)),
       (page) => AsyncValue.data(

@@ -229,6 +229,7 @@ class BuilderTile extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
+    if (!context.mounted) return;
 
     final ok = await ref
         .read(builderActionsProvider.notifier)

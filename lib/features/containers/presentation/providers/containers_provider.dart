@@ -193,6 +193,8 @@ class ContainerActions extends _$ContainerActions {
 
     final result = await action(repository);
 
+    if (!ref.mounted) return false;
+
     return result.fold(
       (failure) {
         state = AsyncValue.error(failure.displayMessage, StackTrace.current);

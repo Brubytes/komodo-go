@@ -301,6 +301,8 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
       BuildAction.cancel => actions.cancel(buildId),
     };
 
+    if (!mounted) return;
+
     if (success) {
       ref.invalidate(buildDetailProvider(buildId));
     }
@@ -347,6 +349,8 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
       partialConfig: partialConfig,
     );
     _configSaveInFlight = false;
+
+    if (!mounted) return;
 
     if (updated != null) {
       ref

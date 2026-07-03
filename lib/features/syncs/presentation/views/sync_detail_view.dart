@@ -59,7 +59,9 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
           IconButton(
             icon: const Icon(AppIcons.play),
             tooltip: 'Run',
-            onPressed: () => _runSync(context, widget.syncId),
+            onPressed: actionsState.isLoading
+                ? null
+                : () => _runSync(context, widget.syncId),
           ),
         ],
       ),
@@ -154,6 +156,8 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
     );
     _configSaveInFlight = false;
 
+    if (!mounted) return;
+
     final success = updated != null;
     if (success) {
       ref
@@ -191,6 +195,8 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
   Future<void> _runSync(BuildContext context, String syncId) async {
     final actions = ref.read(syncActionsProvider.notifier);
     final success = await actions.run(syncId);
+
+    if (!mounted) return;
 
     if (success) {
       ref

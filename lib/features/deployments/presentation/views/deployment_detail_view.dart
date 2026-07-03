@@ -603,6 +603,7 @@ class _DeploymentDetailViewState
         ),
       );
       if (confirmed != true) return;
+      if (!mounted) return;
     }
 
     final success = await switch (action) {
@@ -615,6 +616,8 @@ class _DeploymentDetailViewState
       DeploymentAction.deploy => actions.deploy(deploymentId),
       DeploymentAction.pullImages => actions.pullImages(deploymentId),
     };
+
+    if (!mounted) return;
 
     if (success) {
       ref.invalidate(deploymentDetailProvider(deploymentId));

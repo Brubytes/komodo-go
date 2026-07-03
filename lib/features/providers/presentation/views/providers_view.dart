@@ -204,6 +204,7 @@ class ProvidersView extends ConsumerWidget {
       initial: provider,
     );
     if (result == null) return;
+    if (!context.mounted) return;
 
     final ok = await ref
         .read(gitProviderActionsProvider.notifier)
@@ -246,6 +247,7 @@ class ProvidersView extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
+    if (!context.mounted) return;
 
     final ok = await ref
         .read(gitProviderActionsProvider.notifier)
@@ -269,6 +271,7 @@ class ProvidersView extends ConsumerWidget {
       initial: registry,
     );
     if (result == null) return;
+    if (!context.mounted) return;
 
     final ok = await ref
         .read(dockerRegistryActionsProvider.notifier)
@@ -310,6 +313,7 @@ class ProvidersView extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
+    if (!context.mounted) return;
 
     final ok = await ref
         .read(dockerRegistryActionsProvider.notifier)

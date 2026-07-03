@@ -378,6 +378,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
         ),
       );
       if (confirmed != true) return;
+      if (!context.mounted) return;
     }
 
     final actions = ref.read(deploymentActionsProvider.notifier);
