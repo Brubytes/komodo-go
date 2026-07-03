@@ -59,7 +59,8 @@ fvm flutter clean
   - Types: `UpperCamelCase`
   - Locals: `lowerCamelCase`
 - Riverpod:
-  - Keep providers in `lib/features/**/presentation/providers/` or `lib/core/providers/`.
+  - Keep UI/state providers in `lib/features/**/presentation/providers/` or `lib/core/providers/`.
+  - Repository providers are declared next to their repository in `lib/features/**/data/repositories/*.dart`.
   - Don’t modify generated `*.g.dart` files.
 
 ## Architecture
