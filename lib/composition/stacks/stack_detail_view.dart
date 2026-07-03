@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/stacks/stack_config_editor.dart';
+import 'package:komodo_go/composition/stacks/stack_updates_tab.dart';
 import 'package:komodo_go/core/providers/core_info_provider.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
@@ -14,13 +16,6 @@ import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
-import 'package:komodo_go/features/notifications/presentation/providers/stack_updates_provider.dart';
-import 'package:komodo_go/features/notifications/presentation/views/notifications/notifications_sections.dart'
-    show
-        NotificationsEmptyState,
-        NotificationsErrorState,
-        PaginationFooter,
-        UpdateTile;
 import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
@@ -185,7 +180,6 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     final coreInfoAsync = ref.watch(coreInfoProvider);
     final servicesAsync = ref.watch(stackServicesProvider(widget.stackId));
     final logAsync = ref.watch(stackLogProvider(widget.stackId));
-    final stackUpdatesAsync = ref.watch(stackUpdatesProvider(widget.stackId));
     final stacksListAsync = ref.watch(stacksProvider);
     final serversListAsync = ref.watch(serversProvider);
     final reposListAsync = ref.watch(reposProvider);
@@ -518,103 +512,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                     ),
                   ),
                 ),
-                _KeepAlive(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      await ref
-                          .read(stackUpdatesProvider(widget.stackId).notifier)
-                          .refresh();
-                    },
-                    child: stackUpdatesAsync.when(
-                      data: (state) {
-                        if (state.items.isEmpty) {
-                          return DetailTabScrollView.box(
-                            child: const NotificationsEmptyState(
-                              icon: AppIcons.updateAvailable,
-                              title: 'No updates',
-                              description: 'No recent activity for this stack.',
-                            ),
-                          );
-                        }
-
-                        final itemCount =
-                            state.items.length +
-                            (state.nextPage == null ? 0 : 1);
-                        final sliverChildCount = itemCount == 0
-                            ? 0
-                            : itemCount * 2 - 1;
-
-                        return NotificationListener<ScrollNotification>(
-                          onNotification: (notification) {
-                            if (notification.metrics.pixels >=
-                                notification.metrics.maxScrollExtent - 200) {
-                              unawaited(
-                                ref
-                                    .read(
-                                      stackUpdatesProvider(
-                                        widget.stackId,
-                                      ).notifier,
-                                    )
-                                    .fetchNextPage(),
-                              );
-                            }
-                            return false;
-                          },
-                          child: DetailTabScrollView(
-                            scrollKey: PageStorageKey(
-                              'stack_${widget.stackId}_updates',
-                            ),
-                            sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate((
-                                context,
-                                index,
-                              ) {
-                                if (index.isOdd) {
-                                  return const Gap(12);
-                                }
-
-                                final itemIndex = index ~/ 2;
-                                final isFooter =
-                                    itemIndex >= state.items.length;
-                                if (isFooter) {
-                                  return PaginationFooter(
-                                    isLoading: state.isLoadingMore,
-                                    onLoadMore: () => ref
-                                        .read(
-                                          stackUpdatesProvider(
-                                            widget.stackId,
-                                          ).notifier,
-                                        )
-                                        .fetchNextPage(),
-                                  );
-                                }
-
-                                final update = state.items[itemIndex];
-                                return UpdateTile(update: update);
-                              }, childCount: sliverChildCount),
-                            ),
-                          ),
-                        );
-                      },
-                      loading: () => DetailTabScrollView.box(
-                        padding: EdgeInsets.zero,
-                        child: const AppSkeletonList(
-                          padding: EdgeInsets.fromLTRB(16, 12, 16, 16),
-                        ),
-                      ),
-                      error: (error, _) => DetailTabScrollView.box(
-                        padding: EdgeInsets.zero,
-                        child: NotificationsErrorState(
-                          title: 'Failed to load updates',
-                          message: error.toString(),
-                          onRetry: () => ref.invalidate(
-                            stackUpdatesProvider(widget.stackId),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                _KeepAlive(child: StackUpdatesTab(stackId: widget.stackId)),
                 _KeepAlive(
                   child: RefreshIndicator(
                     onRefresh: () async {
@@ -777,12 +675,11 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     };
     if (!mounted) return;
     final actionError = ref.read(stackActionsProvider).asError?.error;
-    final actionErrorMessage =
-      actionError is String
+    final actionErrorMessage = actionError is String
         ? actionError.trim()
         : actionError?.toString().trim();
     final hasActionError =
-      actionErrorMessage != null && actionErrorMessage.isNotEmpty;
+        actionErrorMessage != null && actionErrorMessage.isNotEmpty;
 
     if (success) {
       ref

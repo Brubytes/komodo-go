@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide Actions;
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/resources/resource_tag_options_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -34,6 +35,7 @@ final _actionsListConfig = ResourceListConfig<ActionListItem>(
   skeletonChipLeft: 'Idle',
   skeletonChipRight: 'Last run 1h',
   watchList: (ref) => ref.watch(actionsProvider),
+  watchTagOptions: (ref) => ref.watch(resourceTagOptionsProvider),
   refreshList: (ref) => ref.read(actionsProvider.notifier).refresh(),
   invalidateList: (ref) => ref.invalidate(actionsProvider),
   watchActionsState: (ref) => ref.watch(actionActionsProvider),

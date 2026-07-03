@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/settings/connections_view.dart';
 import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
-import 'package:komodo_go/features/settings/presentation/views/connections_view.dart';
 
 class _TestAuth extends Auth {
   _TestAuth(this._initialState);

@@ -81,9 +81,9 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
       orElse: () => <TagOption>[],
     );
     final fallbackTags = serversAsync.maybeWhen(
-      data: (servers) => _collectTags(servers)
-          .map((name) => TagOption(id: name, name: name))
-          .toList(),
+      data: (servers) => _collectTags(
+        servers,
+      ).map((name) => TagOption(id: name, name: name)).toList(),
       orElse: () => <TagOption>[],
     );
     final availableTags = tagOptions.isNotEmpty ? tagOptions : fallbackTags;
@@ -139,12 +139,16 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
                       selectedTags: selectedTags,
                       availableTags: availableTags,
                       tagNameById: tagNameById,
-                      onTemplateFilterChanged: (value) => ref
-                          .read(serversTemplateFilterStateProvider.notifier)
-                          .value = value,
-                      onSelectTags: (value) => ref
-                          .read(serversTagFilterProvider.notifier)
-                          .selected = value,
+                      onTemplateFilterChanged: (value) =>
+                          ref
+                                  .read(
+                                    serversTemplateFilterStateProvider.notifier,
+                                  )
+                                  .value =
+                              value,
+                      onSelectTags: (value) =>
+                          ref.read(serversTagFilterProvider.notifier).selected =
+                              value,
                       onClearTags: () =>
                           ref.read(serversTagFilterProvider.notifier).clear(),
                     )
@@ -161,9 +165,11 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
                       child: _SearchField(
                         focusNode: _searchFocusNode,
                         controller: _searchController,
-                        onChanged: (value) => ref
-                            .read(serversSearchQueryProvider.notifier)
-                            .query = value,
+                        onChanged: (value) =>
+                            ref
+                                    .read(serversSearchQueryProvider.notifier)
+                                    .query =
+                                value,
                         onClear: () {
                           _searchController.clear();
                           ref.read(serversSearchQueryProvider.notifier).query =
@@ -197,32 +203,33 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
                       ref.read(serversSearchQueryProvider.notifier).query = '';
                       ref.read(serversTagFilterProvider.notifier).clear();
                       ref
-                          .read(serversTemplateFilterStateProvider.notifier)
-                          .value = TemplateFilter.exclude;
+                              .read(serversTemplateFilterStateProvider.notifier)
+                              .value =
+                          TemplateFilter.exclude;
                     },
                     tagOptions: availableTags,
-                    onSelectTags: (value) => ref
-                        .read(serversTagFilterProvider.notifier)
-                        .selected = value,
+                    onSelectTags: (value) =>
+                        ref.read(serversTagFilterProvider.notifier).selected =
+                            value,
                   );
                 }
 
                 return Column(
                   children: [
                     for (var i = 0; i < filtered.length; i++) ...[
-                          AppFadeSlide(
-                            delay: AppMotion.stagger(i),
-                            play: i < 10,
-                            child: ServerCard(
-                              server: filtered[i],
-                              displayTags: _displayTags(
-                                filtered[i].tags,
-                                tagNameById,
-                              ),
-                              onTap: () => context.push(
-                                '${AppRoutes.servers}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
-                              ),
-                            ),
+                      AppFadeSlide(
+                        delay: AppMotion.stagger(i),
+                        play: i < 10,
+                        child: ServerCard(
+                          server: filtered[i],
+                          displayTags: _displayTags(
+                            filtered[i].tags,
+                            tagNameById,
+                          ),
+                          onTap: () => context.push(
+                            '${AppRoutes.servers}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
+                          ),
+                        ),
                       ),
                       const Gap(12),
                     ],
@@ -266,8 +273,9 @@ class _FiltersPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final tagLabel =
-        selectedTags.isEmpty ? 'Tags' : 'Tags (${selectedTags.length})';
+    final tagLabel = selectedTags.isEmpty
+        ? 'Tags'
+        : 'Tags (${selectedTags.length})';
     final templateLabel = switch (templateFilter) {
       TemplateFilter.exclude => 'Exclude',
       TemplateFilter.include => 'Include',
@@ -418,8 +426,9 @@ class _FilterValueButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? scheme.surfaceContainerHigh : scheme.surfaceContainerHighest;
+    final bg = isDark
+        ? scheme.surfaceContainerHigh
+        : scheme.surfaceContainerHighest;
 
     return Material(
       color: bg,
@@ -435,9 +444,9 @@ class _FilterValueButton extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
               ),
               const Gap(6),
               Icon(icon, size: 16, color: scheme.onSurfaceVariant),
@@ -590,8 +599,7 @@ class _ServersSkeletonList extends StatelessWidget {
                   ],
                 ),
                 const Gap(10),
-                Text('Status - Region - Provider',
-                    style: textTheme.bodySmall),
+                Text('Status - Region - Provider', style: textTheme.bodySmall),
                 const Gap(10),
                 const Wrap(
                   spacing: 8,
@@ -646,8 +654,8 @@ List<Server> _applyFilters(
     final name = server.name.toLowerCase();
     final address = server.address.toLowerCase();
     final description = (server.description ?? '').toLowerCase();
-    final region =
-        (server.info?.region ?? server.config?.region ?? '').toLowerCase();
+    final region = (server.info?.region ?? server.config?.region ?? '')
+        .toLowerCase();
     final version = (server.info?.version ?? '').toLowerCase();
     final state = server.state.name.toLowerCase();
     final displayTags = _displayTags(server.tags, tagNameById);

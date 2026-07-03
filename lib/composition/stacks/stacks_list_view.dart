@@ -93,13 +93,12 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
       orElse: () => <StackTagOption>[],
     );
     final fallbackTags = stacksAsync.maybeWhen(
-      data: (stacks) => _collectTags(stacks)
-          .map((name) => StackTagOption(id: name, name: name))
-          .toList(),
+      data: (stacks) => _collectTags(
+        stacks,
+      ).map((name) => StackTagOption(id: name, name: name)).toList(),
       orElse: () => <StackTagOption>[],
     );
-    final availableTags =
-        tagOptions.isNotEmpty ? tagOptions : fallbackTags;
+    final availableTags = tagOptions.isNotEmpty ? tagOptions : fallbackTags;
     final tagNameById = {
       for (final tag in availableTags) tag.id: tag.name,
     };
@@ -155,21 +154,30 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                           selectedTags: selectedTags,
                           availableTags: availableTags,
                           tagNameById: tagNameById,
-                          onPendingUpdateChanged: (value) => ref
-                              .read(
-                                stacksPendingUpdateFilterProvider.notifier,
-                              )
-                              .enabled = value,
-                          onTemplateFilterChanged: (value) => ref
-                              .read(
-                                stacksTemplateFilterStateProvider.notifier,
-                              )
-                              .value = value,
-                          onSelectTags: (value) => ref
+                          onPendingUpdateChanged: (value) =>
+                              ref
+                                      .read(
+                                        stacksPendingUpdateFilterProvider
+                                            .notifier,
+                                      )
+                                      .enabled =
+                                  value,
+                          onTemplateFilterChanged: (value) =>
+                              ref
+                                      .read(
+                                        stacksTemplateFilterStateProvider
+                                            .notifier,
+                                      )
+                                      .value =
+                                  value,
+                          onSelectTags: (value) =>
+                              ref
+                                      .read(stacksTagFilterProvider.notifier)
+                                      .selected =
+                                  value,
+                          onClearTags: () => ref
                               .read(stacksTagFilterProvider.notifier)
-                              .selected = value,
-                          onClearTags: () =>
-                              ref.read(stacksTagFilterProvider.notifier).clear(),
+                              .clear(),
                         )
                       : const SizedBox.shrink(),
                 ),
@@ -228,28 +236,28 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                         ),
                         onClearFilters: () {
                           _searchController.clear();
-                          ref
-                                  .read(stacksSearchQueryProvider.notifier)
-                                  .query =
+                          ref.read(stacksSearchQueryProvider.notifier).query =
                               '';
+                          ref.read(stacksTagFilterProvider.notifier).clear();
                           ref
-                              .read(stacksTagFilterProvider.notifier)
-                              .clear();
+                                  .read(
+                                    stacksPendingUpdateFilterProvider.notifier,
+                                  )
+                                  .enabled =
+                              false;
                           ref
-                              .read(
-                                stacksPendingUpdateFilterProvider.notifier,
-                              )
-                              .enabled = false;
-                          ref
-                              .read(
-                                stacksTemplateFilterStateProvider.notifier,
-                              )
-                              .value = StacksTemplateFilter.exclude;
+                                  .read(
+                                    stacksTemplateFilterStateProvider.notifier,
+                                  )
+                                  .value =
+                              StacksTemplateFilter.exclude;
                         },
                         tagOptions: availableTags,
-                        onSelectTags: (value) => ref
-                            .read(stacksTagFilterProvider.notifier)
-                            .selected = value,
+                        onSelectTags: (value) =>
+                            ref
+                                    .read(stacksTagFilterProvider.notifier)
+                                    .selected =
+                                value,
                       );
                     }
 
@@ -270,9 +278,12 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                               onTap: () => context.push(
                                 '${AppRoutes.stacks}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
                               ),
-                              onAction: (action) =>
-                                  _handleAction(context, ref, filtered[i].id,
-                                      action),
+                              onAction: (action) => _handleAction(
+                                context,
+                                ref,
+                                filtered[i].id,
+                                action,
+                              ),
                             ),
                           ),
                           const Gap(12),
@@ -345,12 +356,11 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
     };
     if (!context.mounted) return;
     final actionError = ref.read(stackActionsProvider).asError?.error;
-    final actionErrorMessage =
-      actionError is String
+    final actionErrorMessage = actionError is String
         ? actionError.trim()
         : actionError?.toString().trim();
     final hasActionError =
-      actionErrorMessage != null && actionErrorMessage.isNotEmpty;
+        actionErrorMessage != null && actionErrorMessage.isNotEmpty;
 
     if (context.mounted) {
       AppSnackBar.show(
@@ -793,8 +803,7 @@ List<StackListItem> _applyFilters(
     final repo = stack.info.repo.toLowerCase();
     final branch = stack.info.branch.toLowerCase();
     final linkedRepo = stack.info.linkedRepo.toLowerCase();
-    final serverName =
-        (serverNames[stack.info.serverId] ?? '').toLowerCase();
+    final serverName = (serverNames[stack.info.serverId] ?? '').toLowerCase();
     final displayTags = _displayTags(stack.tags, tagNameById);
     final tagMatch = displayTags.any(
       (tag) => tag.trim().toLowerCase().contains(normalizedQuery),
@@ -840,7 +849,6 @@ List<String> _displayTags(
 ) {
   if (tags.isEmpty) return const [];
   return [
-    for (final tag in tags)
-      tagNameById[tag] ?? tag,
+    for (final tag in tags) tagNameById[tag] ?? tag,
   ];
 }

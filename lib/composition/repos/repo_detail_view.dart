@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/repos/repo_detail_sections.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
@@ -14,7 +15,6 @@ import 'package:komodo_go/features/providers/data/models/git_provider_account.da
 import 'package:komodo_go/features/providers/presentation/providers/git_providers_provider.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
-import 'package:komodo_go/features/repos/presentation/views/repo_detail/repo_detail_sections.dart';
 import 'package:komodo_go/features/repos/presentation/widgets/repo_card.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
@@ -179,8 +179,7 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                       ref.invalidate(repoDetailProvider(widget.repoId));
                     },
                     child: DetailTabScrollView.box(
-                      scrollKey:
-                          PageStorageKey('repo_${widget.repoId}_config'),
+                      scrollKey: PageStorageKey('repo_${widget.repoId}_config'),
                       child: repoAsync.when(
                         data: (repo) => repo != null
                             ? RepoConfigEditorContent(
@@ -425,7 +424,6 @@ class _RepoHeroPanel extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _RepoBuildContent extends StatelessWidget {

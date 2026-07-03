@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:komodo_go/composition/builds/build_detail_sections.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
-import 'package:komodo_go/features/builds/presentation/views/build_detail/build_detail_sections.dart';
 
 void main() {
   testWidgets('clearing a text field produces a clearing partial update', (
@@ -27,7 +27,8 @@ void main() {
     // Clear the commit field (un-pin the commit).
     await tester.enterText(
       find.byWidgetPredicate(
-        (widget) => widget is EditableText && widget.controller.text == 'abc123',
+        (widget) =>
+            widget is EditableText && widget.controller.text == 'abc123',
       ),
       '',
     );

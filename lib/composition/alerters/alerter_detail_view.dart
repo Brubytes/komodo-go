@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/alerters/resource_targets_editor_sheet.dart';
 import 'package:komodo_go/composition/resources/resource_catalog_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
@@ -13,7 +14,6 @@ import 'package:komodo_go/features/alerters/presentation/providers/alerters_prov
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/alert_types_picker_sheet.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/alerter_detail_sections.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/maintenance_windows_editor_sheet.dart';
-import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/resource_targets_editor_sheet.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_ref.dart';
 import 'package:komodo_go/shared/resources/resource_helpers.dart';
@@ -28,7 +28,7 @@ class AlerterDetailView extends ConsumerStatefulWidget {
 }
 
 class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
-  with DetailDirtySnackBarMixin<AlerterDetailView> {
+    with DetailDirtySnackBarMixin<AlerterDetailView> {
   final _formKey = GlobalKey<FormState>();
 
   String? _loadedMarker;
@@ -55,7 +55,7 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
       <AlerterResourceTarget>[];
   List<AlerterMaintenanceWindow> _initialMaintenanceWindows =
       <AlerterMaintenanceWindow>[];
-    var _suppressDirtySnackBar = false;
+  var _suppressDirtySnackBar = false;
 
   @override
   void initState() {
@@ -404,9 +404,11 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
     setState(() => _suppressDirtySnackBar = true);
 
     final nextName = _nameController.text.trim();
-    final renameOk = !(nextName != _initialName) || await ref
-              .read(alerterActionsProvider.notifier)
-              .rename(id: widget.alerterIdOrName, name: nextName);
+    final renameOk =
+        !(nextName != _initialName) ||
+        await ref
+            .read(alerterActionsProvider.notifier)
+            .rename(id: widget.alerterIdOrName, name: nextName);
 
     if (!context.mounted) return;
     if (!renameOk) {

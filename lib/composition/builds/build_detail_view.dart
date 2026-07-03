@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/builds/build_detail_sections.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
@@ -11,7 +12,6 @@ import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
-import 'package:komodo_go/features/builds/presentation/views/build_detail/build_detail_sections.dart';
 import 'package:komodo_go/features/builds/presentation/widgets/build_card.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
 

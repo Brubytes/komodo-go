@@ -86,12 +86,12 @@ class _ResourceTargetsEditorSheetState
     final filtered = query.isEmpty
         ? options
         : options
-            .where(
-              (option) =>
-                  option.name.toLowerCase().contains(query) ||
-                  option.variant.toLowerCase().contains(query),
-            )
-            .toList();
+              .where(
+                (option) =>
+                    option.name.toLowerCase().contains(query) ||
+                    option.variant.toLowerCase().contains(query),
+              )
+              .toList();
 
     final selectedKeys = _items.map((e) => e.key).toSet();
     final optionKeys = options.map((e) => e.key).toSet();
@@ -264,8 +264,9 @@ class _ResourceTargetsEditorSheetState
                         if (index > 0)
                           Divider(
                             height: 1,
-                            color:
-                                scheme.outlineVariant.withValues(alpha: 0.35),
+                            color: scheme.outlineVariant.withValues(
+                              alpha: 0.35,
+                            ),
                           ),
                         Padding(
                           padding: const EdgeInsets.symmetric(
@@ -310,7 +311,7 @@ class _ResourceTargetsEditorSheetState
                                 width: 84,
                                 child: Align(
                                   alignment: Alignment.centerRight,
-                                    child: Switch.adaptive(
+                                  child: Switch.adaptive(
                                     value: selectedKeys.contains(option.key),
                                     onChanged: (next) =>
                                         _toggleOption(option, next),
@@ -352,8 +353,9 @@ class _ResourceTargetsEditorSheetState
                         if (index > 0)
                           Divider(
                             height: 1,
-                            color:
-                                scheme.outlineVariant.withValues(alpha: 0.35),
+                            color: scheme.outlineVariant.withValues(
+                              alpha: 0.35,
+                            ),
                           ),
                         ListTile(
                           contentPadding: EdgeInsets.zero,

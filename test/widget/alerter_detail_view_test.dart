@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/alerters/alerter_detail_view.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
 import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
-import 'package:komodo_go/features/alerters/presentation/views/alerter_detail_view.dart';
 
 void main() {
   testWidgets('detail reload does not clobber unsaved edits', (tester) async {

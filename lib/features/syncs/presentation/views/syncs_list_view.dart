@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/resources/resource_tag_options_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -34,6 +35,7 @@ final _syncsListConfig = ResourceListConfig<ResourceSyncListItem>(
   skeletonChipLeft: 'Idle',
   skeletonChipRight: 'Last run 2m',
   watchList: (ref) => ref.watch(syncsProvider),
+  watchTagOptions: (ref) => ref.watch(resourceTagOptionsProvider),
   refreshList: (ref) => ref.read(syncsProvider.notifier).refresh(),
   invalidateList: (ref) => ref.invalidate(syncsProvider),
   watchActionsState: (ref) => ref.watch(syncActionsProvider),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
-import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 import 'package:komodo_go/features/containers/presentation/views/container_detail_view.dart';
 
 class _TestContainers extends Containers {
@@ -38,7 +38,10 @@ void main() {
         overrides: [
           containersProvider.overrideWith(
             () => _TestContainers(
-              () => ContainersResult(items: [_item(image: image)], errors: []),
+              () => ContainersResult(
+                items: [_item(image: image)],
+                errors: [],
+              ),
             ),
           ),
           containerRepositoryProvider.overrideWith((ref) => null),

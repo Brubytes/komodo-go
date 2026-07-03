@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/resources/resource_tag_options_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -34,6 +35,7 @@ final _buildsListConfig = ResourceListConfig<BuildListItem>(
   skeletonChipLeft: 'Queued',
   skeletonChipRight: 'Duration 3m',
   watchList: (ref) => ref.watch(buildsProvider),
+  watchTagOptions: (ref) => ref.watch(resourceTagOptionsProvider),
   refreshList: (ref) => ref.read(buildsProvider.notifier).refresh(),
   invalidateList: (ref) => ref.invalidate(buildsProvider),
   watchActionsState: (ref) => ref.watch(buildActionsProvider),

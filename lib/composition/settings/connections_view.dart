@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/settings/add_connection_sheet.dart';
 import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/demo/demo_config.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
@@ -14,7 +15,6 @@ import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/auth/presentation/widgets/edit_connection_sheet.dart';
-import 'package:komodo_go/features/settings/presentation/widgets/add_connection_sheet.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class ConnectionsView extends ConsumerWidget {
@@ -173,9 +173,7 @@ class ConnectionsView extends ConsumerWidget {
 
     if (confirmed ?? false) {
       if (isDemoConnection(connection)) {
-        await ref
-            .read(demoModeProvider.notifier)
-            .setEnabled(enabled: false);
+        await ref.read(demoModeProvider.notifier).setEnabled(enabled: false);
         return;
       }
       await ref
@@ -252,9 +250,7 @@ class ConnectionsView extends ConsumerWidget {
     );
 
     if (shouldEnable ?? false) {
-      await ref
-          .read(demoModeProvider.notifier)
-          .setEnabled(enabled: true);
+      await ref.read(demoModeProvider.notifier).setEnabled(enabled: true);
     }
   }
 }

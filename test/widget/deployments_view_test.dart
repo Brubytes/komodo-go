@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart' hide Tags;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/deployments/deployment_detail_view.dart';
+import 'package:komodo_go/composition/deployments/deployments_list_view.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
-import 'package:komodo_go/features/deployments/presentation/views/deployment_detail_view.dart';
-import 'package:komodo_go/features/deployments/presentation/views/deployments_list_view.dart';
 import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
 import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';

@@ -1,20 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart' hide Tags;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_list_view.dart';
-import 'package:komodo_go/features/tags/data/models/tag.dart';
-import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
-
-class _TestTags extends Tags {
-  _TestTags(this._tags);
-
-  final List<KomodoTag> _tags;
-
-  @override
-  Future<List<KomodoTag>> build() async => _tags;
-}
 
 class _FakeItem {
   const _FakeItem({
@@ -46,6 +36,7 @@ ResourceListConfig<_FakeItem> _config({
     skeletonChipLeft: 'Idle',
     skeletonChipRight: 'Last run 1h',
     watchList: watchList,
+    watchTagOptions: (ref) => const AsyncValue.data(<TagOption>[]),
     refreshList: (ref) async {},
     invalidateList: invalidateList ?? (ref) {},
     watchActionsState: (ref) => const AsyncValue.data(null),
@@ -64,7 +55,6 @@ ResourceListConfig<_FakeItem> _config({
 
 Widget _app(ResourceListConfig<_FakeItem> config) {
   return ProviderScope(
-    overrides: [tagsProvider.overrideWith(() => _TestTags(const []))],
     child: MaterialApp(home: ResourceListView<_FakeItem>(config: config)),
   );
 }
@@ -76,8 +66,9 @@ void main() {
     _FakeItem(id: 'f3', name: 'Tmpl', template: true),
   ];
 
-  testWidgets('renders title and cards; excludes templates by default',
-      (tester) async {
+  testWidgets('renders title and cards; excludes templates by default', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _app(_config(watchList: (ref) => const AsyncValue.data(items))),
     );
@@ -91,8 +82,9 @@ void main() {
     expect(find.text('t1'), findsOneWidget);
   });
 
-  testWidgets('search filters cards; Clear filters restores them',
-      (tester) async {
+  testWidgets('search filters cards; Clear filters restores them', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _app(_config(watchList: (ref) => const AsyncValue.data(items))),
     );
@@ -120,8 +112,9 @@ void main() {
     expect(find.byKey(const ValueKey('fake_card_f2')), findsOneWidget);
   });
 
-  testWidgets('empty data without filters shows create-in-web copy',
-      (tester) async {
+  testWidgets('empty data without filters shows create-in-web copy', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _app(
         _config(
@@ -139,8 +132,9 @@ void main() {
     expect(find.text('Clear filters'), findsNothing);
   });
 
-  testWidgets('error state shows retry and invokes invalidateList',
-      (tester) async {
+  testWidgets('error state shows retry and invokes invalidateList', (
+    tester,
+  ) async {
     var invalidated = false;
     await tester.pumpWidget(
       _app(
