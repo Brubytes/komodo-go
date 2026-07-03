@@ -1,8 +1,7 @@
-import 'package:fpdart/fpdart.dart';
-import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 import 'package:komodo_go/features/procedures/data/repositories/procedure_repository.dart';
+import 'package:komodo_go/shared/resources/providers/resource_action_executor.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'procedures_provider.g.dart';
@@ -51,76 +50,31 @@ Future<KomodoProcedure?> procedureDetail(
 
 /// Action state for procedure operations.
 @riverpod
-class ProcedureActions extends _$ProcedureActions {
+class ProcedureActions extends _$ProcedureActions
+    with ResourceActionExecutor<ProcedureRepository> {
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);
 
+  @override
+  ProcedureRepository? readRepository() =>
+      ref.read(procedureRepositoryProvider);
+
+  @override
+  void invalidateList() => ref.invalidate(proceduresProvider);
+
+  @override
+  bool get isMounted => ref.mounted;
+
   Future<bool> run(String procedureIdOrName) =>
-      _executeAction((repo) => repo.runProcedure(procedureIdOrName));
+      executeAction((repo) => repo.runProcedure(procedureIdOrName));
 
   Future<KomodoProcedure?> updateProcedureConfig({
     required String procedureId,
     required Map<String, dynamic> partialConfig,
-  }) => _executeRequest(
+  }) => executeRequest(
     (repo) => repo.updateProcedureConfig(
       procedureId: procedureId,
       partialConfig: partialConfig,
     ),
   );
-
-  Future<bool> _executeAction(
-    Future<Either<Failure, void>> Function(ProcedureRepository repo) action,
-  ) async {
-    final repository = ref.read(procedureRepositoryProvider);
-    if (repository == null) {
-      state = AsyncValue.error('Not authenticated', StackTrace.current);
-      return false;
-    }
-
-    state = const AsyncValue.loading();
-
-    final result = await action(repository);
-
-    if (!ref.mounted) return false;
-
-    return result.fold(
-      (failure) {
-        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
-        return false;
-      },
-      (_) {
-        state = const AsyncValue.data(null);
-        ref.invalidate(proceduresProvider);
-        return true;
-      },
-    );
-  }
-
-  Future<T?> _executeRequest<T>(
-    Future<Either<Failure, T>> Function(ProcedureRepository repo) request,
-  ) async {
-    final repository = ref.read(procedureRepositoryProvider);
-    if (repository == null) {
-      state = AsyncValue.error('Not authenticated', StackTrace.current);
-      return null;
-    }
-
-    state = const AsyncValue.loading();
-
-    final result = await request(repository);
-
-    if (!ref.mounted) return null;
-
-    return result.fold(
-      (failure) {
-        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
-        return null;
-      },
-      (value) {
-        state = const AsyncValue.data(null);
-        ref.invalidate(proceduresProvider);
-        return value;
-      },
-    );
-  }
 }

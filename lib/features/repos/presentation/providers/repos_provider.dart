@@ -1,8 +1,7 @@
-import 'package:fpdart/fpdart.dart';
-import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/data/repositories/repo_repository.dart';
+import 'package:komodo_go/shared/resources/providers/resource_action_executor.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'repos_provider.g.dart';
@@ -48,80 +47,34 @@ Future<KomodoRepo?> repoDetail(Ref ref, String repoIdOrName) async {
 
 /// Action state for repo operations.
 @riverpod
-class RepoActions extends _$RepoActions {
+class RepoActions extends _$RepoActions
+    with ResourceActionExecutor<RepoRepository> {
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);
 
+  @override
+  RepoRepository? readRepository() => ref.read(repoRepositoryProvider);
+
+  @override
+  void invalidateList() => ref.invalidate(reposProvider);
+
+  @override
+  bool get isMounted => ref.mounted;
+
   Future<bool> clone(String repoIdOrName) =>
-      _executeAction((repo) => repo.cloneRepo(repoIdOrName));
+      executeAction((repo) => repo.cloneRepo(repoIdOrName));
 
   Future<bool> pull(String repoIdOrName) =>
-      _executeAction((repo) => repo.pullRepo(repoIdOrName));
+      executeAction((repo) => repo.pullRepo(repoIdOrName));
 
   Future<bool> buildRepo(String repoIdOrName) =>
-      _executeAction((repo) => repo.buildRepo(repoIdOrName));
+      executeAction((repo) => repo.buildRepo(repoIdOrName));
 
   Future<KomodoRepo?> updateRepoConfig({
     required String repoId,
     required Map<String, dynamic> partialConfig,
-  }) => _executeRequest(
+  }) => executeRequest(
     (repo) =>
         repo.updateRepoConfig(repoId: repoId, partialConfig: partialConfig),
   );
-
-  Future<bool> _executeAction(
-    Future<Either<Failure, void>> Function(RepoRepository repo) action,
-  ) async {
-    final repository = ref.read(repoRepositoryProvider);
-    if (repository == null) {
-      state = AsyncValue.error('Not authenticated', StackTrace.current);
-      return false;
-    }
-
-    state = const AsyncValue.loading();
-
-    final result = await action(repository);
-
-    if (!ref.mounted) return false;
-
-    return result.fold(
-      (failure) {
-        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
-        return false;
-      },
-      (_) {
-        state = const AsyncValue.data(null);
-        ref.invalidate(reposProvider);
-        return true;
-      },
-    );
-  }
-
-  Future<T?> _executeRequest<T>(
-    Future<Either<Failure, T>> Function(RepoRepository repo) request,
-  ) async {
-    final repository = ref.read(repoRepositoryProvider);
-    if (repository == null) {
-      state = AsyncValue.error('Not authenticated', StackTrace.current);
-      return null;
-    }
-
-    state = const AsyncValue.loading();
-
-    final result = await request(repository);
-
-    if (!ref.mounted) return null;
-
-    return result.fold(
-      (failure) {
-        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
-        return null;
-      },
-      (value) {
-        state = const AsyncValue.data(null);
-        ref.invalidate(reposProvider);
-        return value;
-      },
-    );
-  }
 }
