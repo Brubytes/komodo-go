@@ -148,7 +148,7 @@ class ConnectionsView extends ConsumerWidget {
     WidgetRef ref,
     ConnectionProfile connection,
   ) async {
-    final isDemo = connection.name == demoConnectionName;
+    final isDemo = isDemoConnection(connection);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -172,7 +172,7 @@ class ConnectionsView extends ConsumerWidget {
     );
 
     if (confirmed ?? false) {
-      if (connection.name == demoConnectionName) {
+      if (isDemoConnection(connection)) {
         await ref
             .read(demoModeProvider.notifier)
             .setEnabled(enabled: false);

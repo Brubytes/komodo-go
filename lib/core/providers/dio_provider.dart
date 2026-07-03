@@ -54,6 +54,12 @@ Dio? dio(Ref ref) {
       contentType: 'application/json',
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
+      // Never follow redirects: dart:io re-sends all headers (including
+      // X-Api-Key/X-Api-Secret) to the redirect target, which could leak
+      // credentials cross-origin. A 3xx surfaces as a badResponse and is
+      // translated into proxy-redirect guidance by ApiException.
+      followRedirects: false,
+      maxRedirects: 0,
     ),
   );
 
@@ -65,6 +71,10 @@ Dio? dio(Ref ref) {
     ),
     if (kDebugMode) LoggingInterceptor(),
   ]);
+
+  // Close the previous instance's keep-alive sockets when the active
+  // connection changes and this provider is rebuilt.
+  ref.onDispose(dio.close);
 
   return dio;
 }

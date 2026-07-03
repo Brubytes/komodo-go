@@ -29,7 +29,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
       final connections = await store.listConnections();
       ConnectionProfile? demoConnection;
       for (final connection in connections) {
-        if (connection.name == demoConnectionName) {
+        if (isDemoConnection(connection)) {
           demoConnection = connection;
           break;
         }
@@ -43,7 +43,9 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         return;
       }
 
+      if (!mounted) return;
       await ref.read(onboardingProvider.notifier).markCompleted();
+      if (!mounted) return;
       await ref
           .read(authProvider.notifier)
           .selectConnection(demoConnection.id);
@@ -60,6 +62,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
 
     try {
       await ref.read(onboardingProvider.notifier).markCompleted();
+      if (!mounted) return;
       await ref.read(authProvider.notifier).logout();
       if (!mounted) return;
       context.go(AppRoutes.login);

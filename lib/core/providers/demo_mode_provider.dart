@@ -24,9 +24,7 @@ class DemoModeNotifier extends AsyncNotifier<bool> {
 
     final store = await ref.read(connectionsStoreProvider.future);
     final connections = await store.listConnections();
-    final demoConnections = connections
-        .where((c) => c.name == demoConnectionName)
-        .toList();
+    final demoConnections = connections.where(isDemoConnection).toList();
 
     if (!enabled) {
       final activeId = await store.getActiveConnectionId();
