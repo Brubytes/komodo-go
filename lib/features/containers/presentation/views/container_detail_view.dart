@@ -31,7 +31,6 @@ class ContainerDetailView extends ConsumerWidget {
         _ContainerItemArgs(
           serverId: serverId,
           containerIdOrName: containerIdOrName,
-          initialItem: initialItem,
         ),
       ),
     );
@@ -42,14 +41,19 @@ class ContainerDetailView extends ConsumerWidget {
         containerIdOrName: decodedContainerIdOrName,
       ),
     );
+    final initialItem = this.initialItem;
     final itemContent = itemAsync.when(
       data: (item) =>
           item == null ? const _NotFound() : ContainerCard(item: item),
-      loading: () => const AppSkeletonCard(),
+      // While (re)loading, keep showing the item passed in from the list as
+      // a placeholder instead of a skeleton.
+      loading: () => initialItem == null
+          ? const AppSkeletonCard()
+          : ContainerCard(item: initialItem),
       error: (error, stack) => _ErrorState(
         title: 'Failed to load container',
         message: error.toString(),
-        onRetry: () => ref.invalidate(_containerItemProviderFamily),
+        onRetry: () => ref.invalidate(containersProvider),
       ),
     );
     final logContent = _ContainerLogPanel(
@@ -67,7 +71,7 @@ class ContainerDetailView extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () async {
           ref
-            ..invalidate(_containerItemProviderFamily)
+            ..invalidate(containersProvider)
             ..invalidate(
               containerLogProvider(
                 serverIdOrName: serverId,
@@ -159,8 +163,6 @@ class _ContainerLogPanel extends StatelessWidget {
 final FutureProviderFamily<ContainerOverviewItem?, _ContainerItemArgs>
 _containerItemProviderFamily = FutureProvider.autoDispose
     .family<ContainerOverviewItem?, _ContainerItemArgs>((ref, args) async {
-      if (args.initialItem != null) return args.initialItem;
-
       final result = await ref.watch(containersProvider.future);
 
       final normalized = Uri.decodeComponent(args.containerIdOrName);
@@ -179,23 +181,20 @@ class _ContainerItemArgs {
   const _ContainerItemArgs({
     required this.serverId,
     required this.containerIdOrName,
-    required this.initialItem,
   });
 
   final String serverId;
   final String containerIdOrName;
-  final ContainerOverviewItem? initialItem;
 
   @override
   bool operator ==(Object other) {
     return other is _ContainerItemArgs &&
         other.serverId == serverId &&
-        other.containerIdOrName == containerIdOrName &&
-        other.initialItem == initialItem;
+        other.containerIdOrName == containerIdOrName;
   }
 
   @override
-  int get hashCode => Object.hash(serverId, containerIdOrName, initialItem);
+  int get hashCode => Object.hash(serverId, containerIdOrName);
 }
 
 class _NotFound extends StatelessWidget {

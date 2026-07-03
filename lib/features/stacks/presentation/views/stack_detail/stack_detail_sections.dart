@@ -491,6 +491,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
   late bool _webhookEnabled;
   late bool _webhookForceDeploy;
+  bool _obscureWebhookSecret = true;
 
   @override
   void initState() {
@@ -1717,11 +1718,22 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
               ),
               TextFormField(
                 controller: _webhookSecret,
-                decoration: const InputDecoration(
+                obscureText: _obscureWebhookSecret,
+                decoration: InputDecoration(
                   labelText: 'Webhook secret',
                   helperText:
                       'Leave empty to use the global default (if configured).',
-                  prefixIcon: Icon(AppIcons.lock),
+                  prefixIcon: const Icon(AppIcons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureWebhookSecret ? AppIcons.eye : AppIcons.eyeOff,
+                    ),
+                    onPressed: () {
+                      setState(
+                        () => _obscureWebhookSecret = !_obscureWebhookSecret,
+                      );
+                    },
+                  ),
                 ),
               ),
             ],
@@ -2150,11 +2162,14 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
   void _syncFiles(List<StackRemoteFileContents> files) {
     final nextPaths = {for (final f in files) f.path};
 
-    final removed = _controllers.keys.where((p) => !nextPaths.contains(p));
+    final removed = _controllers.keys
+        .where((p) => !nextPaths.contains(p))
+        .toList();
     for (final path in removed) {
       _controllers.remove(path)?.dispose();
       _initialContents.remove(path);
       _savingPaths.remove(path);
+      _dirtyPaths.remove(path);
     }
 
     for (final file in files) {
@@ -2227,11 +2242,11 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
   }
 
   CodeEditorController _controllerForFile(StackRemoteFileContents file) {
-    return _controllers.putIfAbsent(file.path, () {
-      final controller = _createCodeController(text: file.contents);
-      _registerController(file.path, controller);
-      return controller;
-    });
+    final existing = _controllers[file.path];
+    if (existing != null) return existing;
+    final controller = _createCodeController(text: file.contents);
+    _registerController(file.path, controller);
+    return controller;
   }
 
   String _requiresLabel(StackFileRequires value) {

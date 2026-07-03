@@ -25,5 +25,51 @@ void main() {
         ),
       );
     });
+
+    test('throws FailureException carrying the original failure', () {
+      const failure = Failure.network(message: 'offline');
+      const result = Left<Failure, int>(failure);
+
+      expect(
+        () => unwrapOrThrow(result),
+        throwsA(
+          isA<FailureException>().having((e) => e.failure, 'failure', failure),
+        ),
+      );
+    });
+
+    test('FailureException.toString is the user-facing display message', () {
+      const failure = Failure.server(message: 'Boom');
+
+      expect(const FailureException(failure).toString(), 'Boom');
+    });
+  });
+
+  group('providerRetry', () {
+    test('retries network failures with exponential backoff', () {
+      const error = FailureException(Failure.network());
+
+      expect(providerRetry(0, error), const Duration(milliseconds: 200));
+      expect(providerRetry(1, error), const Duration(milliseconds: 400));
+      expect(providerRetry(2, error), const Duration(milliseconds: 800));
+    });
+
+    test('stops after 3 retries', () {
+      const error = FailureException(Failure.network());
+
+      expect(providerRetry(3, error), isNull);
+    });
+
+    test('does not retry non-network failures', () {
+      expect(
+        providerRetry(0, const FailureException(Failure.server(message: 'x'))),
+        isNull,
+      );
+      expect(
+        providerRetry(0, const FailureException(Failure.auth())),
+        isNull,
+      );
+      expect(providerRetry(0, Exception('plain')), isNull);
+    });
   });
 }

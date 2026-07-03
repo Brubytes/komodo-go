@@ -507,7 +507,6 @@ class BuildConfigEditorContentState extends State<BuildConfigEditorContent> {
       params['version'] = version;
     }
 
-    params.removeWhere((k, v) => v is String && v.trim().isEmpty);
     return params;
   }
 

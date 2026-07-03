@@ -246,6 +246,10 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
   void _maybeLoadFromDetail(AlerterDetail detail) {
     final marker = '${detail.id}::${detail.updatedAt}';
     if (_loadedMarker == marker) return;
+    // Don't clobber in-progress edits when the detail reloads underneath the
+    // form (e.g. a background refresh or a partially failed save). Once the
+    // user saves or discards, the next reload picks up server state again.
+    if (_loadedMarker != null && _isDirty()) return;
     _loadedMarker = marker;
 
     _name = detail.name;

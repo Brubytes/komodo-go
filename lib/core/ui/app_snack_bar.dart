@@ -9,6 +9,10 @@ class AppSnackBar {
 
   static Timer? _dismissTimer;
 
+  /// Identifies the `show` invocation that owns [_dismissTimer], so callbacks
+  /// from an already-dismissed snackbar can't cancel its successor's timer.
+  static Object? _activeSession;
+
   static void show(
     BuildContext context,
     String message, {
@@ -36,6 +40,9 @@ class AppSnackBar {
 
     _dismissTimer?.cancel();
 
+    final session = Object();
+    _activeSession = session;
+
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
 
     var remaining = _defaultDuration;
@@ -45,6 +52,7 @@ class AppSnackBar {
     final controllerRef = _SnackBarControllerRef();
 
     void scheduleDismiss() {
+      if (_activeSession != session) return;
       _dismissTimer?.cancel();
       lastStartedAt = DateTime.now();
       _dismissTimer = Timer(remaining, () {
@@ -53,7 +61,7 @@ class AppSnackBar {
     }
 
     void pauseDismissTimer() {
-      if (isPaused || _dismissTimer == null) {
+      if (_activeSession != session || isPaused || _dismissTimer == null) {
         return;
       }
       isPaused = true;
@@ -68,7 +76,7 @@ class AppSnackBar {
     }
 
     void resumeDismissTimer() {
-      if (!isPaused) {
+      if (_activeSession != session || !isPaused) {
         return;
       }
       isPaused = false;
@@ -104,6 +112,8 @@ class AppSnackBar {
     if (closed != null) {
       unawaited(
         closed.whenComplete(() {
+          if (_activeSession != session) return;
+          _activeSession = null;
           _dismissTimer?.cancel();
           _dismissTimer = null;
         }),
