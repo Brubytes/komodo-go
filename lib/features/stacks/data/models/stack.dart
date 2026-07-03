@@ -45,7 +45,7 @@ sealed class StackListItemInfo with _$StackListItemInfo {
     String? status,
     @Default('') String repo,
     @Default('') String branch,
-    @Default('') String linkedRepo,
+    @JsonKey(name: 'linked_repo') @Default('') String linkedRepo,
     @JsonKey(name: 'repo_link') @Default('') String repoLink,
     @Default([]) List<StackServiceWithUpdate> services,
     @JsonKey(name: 'missing_files') @Default([]) List<String> missingFiles,

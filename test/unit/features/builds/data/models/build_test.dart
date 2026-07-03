@@ -13,6 +13,7 @@ void main() {
           'last_built_at': 1,
           'version': {'major': 1, 'minor': 2, 'patch': 3},
           'builder_id': 'builder-1',
+          'linked_repo': 'linked-repo-1',
           'repo': 'acme/api',
           'branch': 'main',
           'built_hash': 'deadbeef',
@@ -25,6 +26,7 @@ void main() {
       expect(build.info.state, BuildState.ok);
       expect(build.info.version.label, '1.2.3');
       expect(build.info.repo, 'acme/api');
+      expect(build.info.linkedRepo, 'linked-repo-1');
     });
 
     test('parses detail payload (Build)', () {
@@ -36,9 +38,11 @@ void main() {
           'version': {'major': 1, 'minor': 2, 'patch': 3},
           'image_name': 'ghcr.io/acme/api',
           'image_tag': 'latest',
+          'linked_repo': 'linked-repo-1',
           'repo': 'acme/api',
           'branch': 'main',
           'webhook_enabled': true,
+          'extra_args': ['--platform=linux/amd64', '--no-cache'],
         },
         'info': {
           'last_built_at': 1,
@@ -52,6 +56,8 @@ void main() {
       expect(build.config.builderId, 'builder-1');
       expect(build.config.version.label, '1.2.3');
       expect(build.config.webhookEnabled, isTrue);
+      expect(build.config.linkedRepo, 'linked-repo-1');
+      expect(build.config.extraArgs, ['--platform=linux/amd64', '--no-cache']);
       expect(build.info.builtHash, 'deadbeef');
     });
   });

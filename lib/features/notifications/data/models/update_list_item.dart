@@ -3,12 +3,17 @@ import 'package:komodo_go/features/notifications/data/models/semantic_version.da
 
 enum UpdateStatus { queued, running, success, failed, canceled, unknown }
 
-UpdateStatus updateStatusFromJson(Object? value) {
+/// Komodo serializes `UpdateStatus` as `Queued` / `InProgress` / `Complete`;
+/// whether a `Complete` update succeeded comes from the separate `success`
+/// flag on the update.
+UpdateStatus updateStatusFromJson(Object? value, {bool success = false}) {
   if (value is! String) return UpdateStatus.unknown;
   final normalized = value.trim().toLowerCase().replaceAll('_', '');
   return switch (normalized) {
     'queued' => UpdateStatus.queued,
-    'running' => UpdateStatus.running,
+    'inprogress' || 'running' => UpdateStatus.running,
+    'complete' || 'completed' =>
+      success ? UpdateStatus.success : UpdateStatus.failed,
     'success' => UpdateStatus.success,
     'failed' => UpdateStatus.failed,
     'canceled' => UpdateStatus.canceled,
@@ -31,15 +36,16 @@ class UpdateListItem {
   });
 
   factory UpdateListItem.fromJson(Map<String, dynamic> json) {
+    final success = (json['success'] as bool?) ?? false;
     return UpdateListItem(
       id: (json['id'] as String?) ?? '',
       operation: (json['operation'] as String?) ?? '',
       startTs: _readInt(json['start_ts']),
-      success: (json['success'] as bool?) ?? false,
+      success: success,
       username: (json['username'] as String?) ?? '',
       operatorName: (json['operator'] as String?) ?? '',
       target: ResourceTarget.tryFromJson(json['target']),
-      status: updateStatusFromJson(json['status']),
+      status: updateStatusFromJson(json['status'], success: success),
       version: SemanticVersion.fromJson(json['version']),
       otherData: (json['other_data'] as String?) ?? '',
     );
