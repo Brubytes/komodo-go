@@ -16,7 +16,9 @@ class Auth extends _$Auth {
     if (kDebugMode) {
       const delayMs = int.fromEnvironment('AUTH_BOOT_DELAY_MS');
       if (delayMs > 0) {
-        await Future<void>.delayed(Duration.zero);
+        // The analyzer const-folds delayMs to 0 without --dart-define.
+        // ignore: avoid_redundant_argument_values, use_named_constants
+        await Future<void>.delayed(const Duration(milliseconds: delayMs));
       }
     }
 
@@ -86,83 +88,35 @@ class Auth extends _$Auth {
       customHeaders: customHeaders,
     );
 
-    state = await result.fold(
-      (failure) async => AsyncValue.data(AuthState.error(failure: failure)),
+    await result.fold(
+      (failure) async {
+        state = AsyncValue.data(AuthState.error(failure: failure));
+      },
       (credentials) async {
         final displayName = (name == null || name.trim().isEmpty)
             ? _deriveNameFromBaseUrl(credentials.baseUrl)
             : name.trim();
-        final profile = await ref
+        // Adding the connection (and making it active) rebuilds this
+        // provider, which validates the stored credentials and publishes the
+        // resulting auth state — build() is the single writer, so no second
+        // validation can race with a manual state assignment here.
+        await ref
             .read(connectionsProvider.notifier)
             .addConnection(name: displayName, credentials: credentials);
-
-        ref
-            .read(activeConnectionProvider.notifier)
-            .active = ActiveConnectionData(
-          connectionId: profile.id,
-          name: profile.name,
-          credentials: credentials,
-        );
-        final store = await ref.read(connectionsStoreProvider.future);
-        await store.touchLastUsed(profile.id);
-
-        return AsyncValue.data(
-          AuthState.authenticated(
-            connection: profile,
-            credentials: credentials,
-          ),
-        );
+        await future;
       },
     );
   }
 
   Future<void> selectConnection(String connectionId) async {
     state = const AsyncValue.loading();
+    // Changing the active connection rebuilds this provider (build() watches
+    // connectionsProvider), which performs the single credential validation
+    // and publishes the resulting auth state.
     await ref
         .read(connectionsProvider.notifier)
         .setActiveConnection(connectionId);
-
-    final store = await ref.read(connectionsStoreProvider.future);
-    final credentials = await store.getCredentials(connectionId);
-    if (credentials == null) {
-      await ref.read(connectionsProvider.notifier).setActiveConnection(null);
-      ref.read(activeConnectionProvider.notifier).clear();
-      state = const AsyncValue.data(AuthState.unauthenticated());
-      return;
-    }
-
-    final repository = ref.read(authRepositoryProvider);
-    final validation = await repository.validateCredentials(credentials);
-
-    state = await validation.fold(
-      (failure) async {
-        ref.read(activeConnectionProvider.notifier).clear();
-        return AsyncValue.data(AuthState.error(failure: failure));
-      },
-      (_) async {
-        final connectionsState = ref.read(connectionsProvider).asData?.value;
-        final profile = connectionsState?.activeConnection;
-        if (profile != null) {
-          ref
-              .read(activeConnectionProvider.notifier)
-              .active = ActiveConnectionData(
-            connectionId: profile.id,
-            name: profile.name,
-            credentials: credentials,
-          );
-          await store.touchLastUsed(profile.id);
-          return AsyncValue.data(
-            AuthState.authenticated(
-              connection: profile,
-              credentials: credentials,
-            ),
-          );
-        }
-
-        ref.read(activeConnectionProvider.notifier).clear();
-        return const AsyncValue.data(AuthState.unauthenticated());
-      },
-    );
+    await future;
   }
 
   /// Logs out the current user.
