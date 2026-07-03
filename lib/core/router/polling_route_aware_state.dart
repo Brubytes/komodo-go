@@ -16,7 +16,9 @@ abstract class PollingRouteAwareState<T extends ConsumerStatefulWidget>
 
   @override
   void dispose() {
-    appRouteObserver.unsubscribe(this);
+    for (final observer in allAppRouteObservers) {
+      observer.unsubscribe(this);
+    }
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -26,7 +28,11 @@ abstract class PollingRouteAwareState<T extends ConsumerStatefulWidget>
     super.didChangeDependencies();
     final route = ModalRoute.of(context);
     if (route is PageRoute) {
-      appRouteObserver.subscribe(this, route);
+      // Subscribe to all observers: only the one attached to this widget's
+      // navigator (root or shell branch) will deliver callbacks.
+      for (final observer in allAppRouteObservers) {
+        observer.subscribe(this, route);
+      }
     }
   }
 

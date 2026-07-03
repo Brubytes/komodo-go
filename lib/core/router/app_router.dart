@@ -99,37 +99,57 @@ String _withQuery(String location, Uri uri) {
   return '$location?$query';
 }
 
-@riverpod
+/// Decides where to send the user based on the current auth state.
+///
+/// Exposed as a top-level function so the redirect policy is unit-testable.
+String? authRedirect({
+  required AsyncValue<AuthState> authState,
+  required String matchedLocation,
+}) {
+  final isOnSplash = matchedLocation == AppRoutes.splash;
+  final isOnLogin = matchedLocation == AppRoutes.login;
+
+  // Gate on the splash screen only while no auth state exists yet (initial
+  // restore, explicit login/logout). During refreshes — e.g. a connection was
+  // renamed — the previous value is retained and navigation stays untouched.
+  if (authState.isLoading && !authState.hasValue) {
+    return isOnSplash ? null : AppRoutes.splash;
+  }
+
+  final isAuthenticated = authState.value?.isAuthenticated ?? false;
+
+  // If not authenticated and not on login page, redirect to login
+  if (!isAuthenticated) {
+    return isOnLogin ? null : AppRoutes.login;
+  }
+
+  // If authenticated and on auth pages, redirect to home
+  if (isOnLogin || isOnSplash) {
+    return AppRoutes.home;
+  }
+
+  return null;
+}
+
+@Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
-  final authState = ref.watch(authProvider);
+  // Recreating the router would reset the entire navigation stack, so it is
+  // created exactly once; auth changes only re-run `redirect` via
+  // refreshListenable.
+  final authListenable = ValueNotifier(ref.read(authProvider));
+  ref
+    ..listen(authProvider, (_, next) => authListenable.value = next)
+    ..onDispose(authListenable.dispose);
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: kDebugMode,
     observers: [appRouteObserver],
-    redirect: (context, state) {
-      final isOnSplash = state.matchedLocation == AppRoutes.splash;
-      final isOnLogin = state.matchedLocation == AppRoutes.login;
-      final isAuthLoading = authState.isLoading;
-
-      if (isAuthLoading) {
-        return isOnSplash ? null : AppRoutes.splash;
-      }
-
-      final isAuthenticated = authState.value?.isAuthenticated ?? false;
-
-      // If not authenticated and not on login page, redirect to login
-      if (!isAuthenticated) {
-        return isOnLogin ? null : AppRoutes.login;
-      }
-
-      // If authenticated and on auth pages, redirect to home
-      if (isAuthenticated && (isOnLogin || isOnSplash)) {
-        return AppRoutes.home;
-      }
-
-      return null;
-    },
+    refreshListenable: authListenable,
+    redirect: (context, state) => authRedirect(
+      authState: authListenable.value,
+      matchedLocation: state.matchedLocation,
+    ),
     routes: [
       // Startup splash while auth state is being restored/validated
       GoRoute(
@@ -253,6 +273,7 @@ GoRouter appRouter(Ref ref) {
             MainShell(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
+            observers: [appShellBranchObservers[0]],
             routes: [
               GoRoute(
                 path: AppRoutes.home,
@@ -262,6 +283,7 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
           StatefulShellBranch(
+            observers: [appShellBranchObservers[1]],
             routes: [
               GoRoute(
                 path: AppRoutes.resources,
@@ -431,6 +453,7 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
           StatefulShellBranch(
+            observers: [appShellBranchObservers[2]],
             routes: [
               GoRoute(
                 path: AppRoutes.containers,
@@ -459,6 +482,7 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
           StatefulShellBranch(
+            observers: [appShellBranchObservers[3]],
             routes: [
               GoRoute(
                 path: AppRoutes.notifications,
@@ -468,6 +492,7 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
           StatefulShellBranch(
+            observers: [appShellBranchObservers[4]],
             routes: [
               GoRoute(
                 path: AppRoutes.settings,
@@ -543,6 +568,7 @@ class MainShell extends ConsumerWidget {
     final storedIndex = ref.watch(mainShellIndexProvider);
     if (storedIndex != currentIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
         ref.read(mainShellIndexProvider.notifier).index = currentIndex;
       });
     }
