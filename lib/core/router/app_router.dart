@@ -2,45 +2,47 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/alerters/alerter_detail_view.dart';
+import 'package:komodo_go/composition/builds/build_detail_view.dart';
+import 'package:komodo_go/composition/containers/containers_provider.dart';
+import 'package:komodo_go/composition/containers/containers_view.dart';
+import 'package:komodo_go/composition/deployments/deployment_detail_view.dart';
+import 'package:komodo_go/composition/deployments/deployments_list_view.dart';
 import 'package:komodo_go/composition/home/home_view.dart';
+import 'package:komodo_go/composition/repos/repo_detail_view.dart';
+import 'package:komodo_go/composition/resources/resource_name_resolver_provider.dart';
 import 'package:komodo_go/composition/resources/resources_view.dart';
+import 'package:komodo_go/composition/servers/servers_list_view.dart';
+import 'package:komodo_go/composition/settings/connections_view.dart';
+import 'package:komodo_go/composition/settings/settings_view.dart';
+import 'package:komodo_go/composition/stacks/stack_detail_view.dart';
+import 'package:komodo_go/composition/stacks/stacks_list_view.dart';
+import 'package:komodo_go/composition/syncs/sync_detail_view.dart';
 import 'package:komodo_go/core/router/route_observer.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/adaptive_bottom_navigation_bar.dart';
 import 'package:komodo_go/features/actions/presentation/views/action_detail_view.dart';
 import 'package:komodo_go/features/actions/presentation/views/actions_list_view.dart';
-import 'package:komodo_go/features/alerters/presentation/views/alerter_detail_view.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerters_view.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/auth/presentation/views/auth_loading_view.dart';
 import 'package:komodo_go/features/auth/presentation/views/login_view.dart';
 import 'package:komodo_go/features/builders/presentation/views/builders_view.dart';
-import 'package:komodo_go/features/builds/presentation/views/build_detail_view.dart';
 import 'package:komodo_go/features/builds/presentation/views/builds_list_view.dart';
-import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 import 'package:komodo_go/features/containers/presentation/views/container_detail_view.dart';
-import 'package:komodo_go/features/containers/presentation/views/containers_view.dart';
-import 'package:komodo_go/features/deployments/presentation/views/deployment_detail_view.dart';
-import 'package:komodo_go/features/deployments/presentation/views/deployments_list_view.dart';
 import 'package:komodo_go/features/notifications/presentation/views/notifications_view.dart';
 import 'package:komodo_go/features/procedures/presentation/views/procedure_detail_view.dart';
 import 'package:komodo_go/features/procedures/presentation/views/procedures_list_view.dart';
 import 'package:komodo_go/features/providers/presentation/views/providers_view.dart';
-import 'package:komodo_go/features/repos/presentation/views/repo_detail_view.dart';
 import 'package:komodo_go/features/repos/presentation/views/repos_list_view.dart';
 import 'package:komodo_go/features/servers/presentation/views/server_detail_view.dart';
-import 'package:komodo_go/features/servers/presentation/views/servers_list_view.dart';
-import 'package:komodo_go/features/settings/presentation/views/connections_view.dart';
 import 'package:komodo_go/features/settings/presentation/views/credits_view.dart';
-import 'package:komodo_go/features/settings/presentation/views/settings_view.dart';
-import 'package:komodo_go/features/stacks/presentation/views/stack_detail_view.dart';
-import 'package:komodo_go/features/stacks/presentation/views/stacks_list_view.dart';
-import 'package:komodo_go/features/syncs/presentation/views/sync_detail_view.dart';
 import 'package:komodo_go/features/syncs/presentation/views/syncs_list_view.dart';
 import 'package:komodo_go/features/tags/presentation/views/tags_view.dart';
 import 'package:komodo_go/features/variables/presentation/views/variables_view.dart';
+import 'package:komodo_go/shared/resources/providers/resource_name_resolver_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'app_router.g.dart';
@@ -486,8 +488,17 @@ GoRouter appRouter(Ref ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.notifications,
-                pageBuilder: (context, state) =>
-                    _noTransitionTabPage(const NotificationsView()),
+                pageBuilder: (context, state) => _noTransitionTabPage(
+                  ProviderScope(
+                    overrides: [
+                      resourceNameResolverProvider.overrideWith(
+                        (ref) =>
+                            ref.watch(composedResourceNameResolverProvider),
+                      ),
+                    ],
+                    child: const NotificationsView(),
+                  ),
+                ),
               ),
             ],
           ),

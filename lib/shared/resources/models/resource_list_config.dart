@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 
 /// Per-resource configuration consumed by `ResourceListView<T>`.
@@ -20,6 +21,7 @@ class ResourceListConfig<T> {
     required this.skeletonChipLeft,
     required this.skeletonChipRight,
     required this.watchList,
+    required this.watchTagOptions,
     required this.refreshList,
     required this.invalidateList,
     required this.watchActionsState,
@@ -62,6 +64,9 @@ class ResourceListConfig<T> {
   /// Watches the list provider.
   final AsyncValue<List<T>> Function(WidgetRef ref) watchList;
 
+  /// Watches globally configured tag options for this list.
+  final AsyncValue<List<TagOption>> Function(WidgetRef ref) watchTagOptions;
+
   /// Pull-to-refresh target.
   final Future<void> Function(WidgetRef ref) refreshList;
 
@@ -86,5 +91,6 @@ class ResourceListConfig<T> {
     WidgetRef ref,
     T item,
     List<String> displayTags,
-  ) cardBuilder;
+  )
+  cardBuilder;
 }

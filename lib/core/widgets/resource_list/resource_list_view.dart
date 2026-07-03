@@ -10,7 +10,6 @@ import 'package:komodo_go/core/widgets/filters/template_filter.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
-import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
 import 'package:komodo_go/shared/resources/providers/resource_filters_provider.dart';
 import 'package:komodo_go/shared/resources/resource_list_filtering.dart';
@@ -69,7 +68,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
     final config = widget.config;
     final itemsAsync = config.watchList(ref);
     final actionsState = config.watchActionsState(ref);
-    final tagsAsync = ref.watch(tagsProvider);
+    final tagsAsync = config.watchTagOptions(ref);
     final searchQuery = ref.watch(resourceSearchQueryProvider(config.kind));
     final selectedTags = ref.watch(resourceTagFilterProvider(config.kind));
     final templateFilter = ref.watch(
@@ -77,17 +76,14 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
     );
 
     final tagOptions = tagsAsync.maybeWhen(
-      data: (tags) => [
-        for (final tag in tags)
-          if (tag.name.trim().isNotEmpty)
-            TagOption(id: tag.id, name: tag.name.trim()),
-      ],
+      data: (tags) => tags,
       orElse: () => <TagOption>[],
     );
     final fallbackTags = itemsAsync.maybeWhen(
-      data: (items) => collectResourceTags(items, config.tagsOf)
-          .map((name) => TagOption(id: name, name: name))
-          .toList(),
+      data: (items) => collectResourceTags(
+        items,
+        config.tagsOf,
+      ).map((name) => TagOption(id: name, name: name)).toList(),
       orElse: () => <TagOption>[],
     );
     final availableTags = tagOptions.isNotEmpty ? tagOptions : fallbackTags;
@@ -145,18 +141,24 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                           templateFilter: templateFilter,
                           selectedTags: selectedTags,
                           availableTags: availableTags,
-                          onTemplateFilterChanged: (value) => ref
-                              .read(
-                                resourceTemplateFilterStateProvider(
-                                  config.kind,
-                                ).notifier,
-                              )
-                              .value = value,
-                          onSelectTags: (value) => ref
-                              .read(
-                                resourceTagFilterProvider(config.kind).notifier,
-                              )
-                              .selected = value,
+                          onTemplateFilterChanged: (value) =>
+                              ref
+                                      .read(
+                                        resourceTemplateFilterStateProvider(
+                                          config.kind,
+                                        ).notifier,
+                                      )
+                                      .value =
+                                  value,
+                          onSelectTags: (value) =>
+                              ref
+                                      .read(
+                                        resourceTagFilterProvider(
+                                          config.kind,
+                                        ).notifier,
+                                      )
+                                      .selected =
+                                  value,
                           onClearTags: () => ref
                               .read(
                                 resourceTagFilterProvider(config.kind).notifier,
@@ -177,22 +179,25 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                             fieldKey: config.searchFieldKey,
                             focusNode: _searchFocusNode,
                             controller: _searchController,
-                            onChanged: (value) => ref
-                                .read(
-                                  resourceSearchQueryProvider(
-                                    config.kind,
-                                  ).notifier,
-                                )
-                                .query = value,
+                            onChanged: (value) =>
+                                ref
+                                        .read(
+                                          resourceSearchQueryProvider(
+                                            config.kind,
+                                          ).notifier,
+                                        )
+                                        .query =
+                                    value,
                             onClear: () {
                               _searchController.clear();
                               ref
-                                  .read(
-                                    resourceSearchQueryProvider(
-                                      config.kind,
-                                    ).notifier,
-                                  )
-                                  .query = '';
+                                      .read(
+                                        resourceSearchQueryProvider(
+                                          config.kind,
+                                        ).notifier,
+                                      )
+                                      .query =
+                                  '';
                             },
                           ),
                         )
@@ -225,31 +230,37 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                         onClearFilters: () {
                           _searchController.clear();
                           ref
-                              .read(
-                                resourceSearchQueryProvider(
-                                  config.kind,
-                                ).notifier,
-                              )
-                              .query = '';
+                                  .read(
+                                    resourceSearchQueryProvider(
+                                      config.kind,
+                                    ).notifier,
+                                  )
+                                  .query =
+                              '';
                           ref
                               .read(
                                 resourceTagFilterProvider(config.kind).notifier,
                               )
                               .clear();
                           ref
-                              .read(
-                                resourceTemplateFilterStateProvider(
-                                  config.kind,
-                                ).notifier,
-                              )
-                              .value = TemplateFilter.exclude;
+                                  .read(
+                                    resourceTemplateFilterStateProvider(
+                                      config.kind,
+                                    ).notifier,
+                                  )
+                                  .value =
+                              TemplateFilter.exclude;
                         },
                         tagOptions: availableTags,
-                        onSelectTags: (value) => ref
-                            .read(
-                              resourceTagFilterProvider(config.kind).notifier,
-                            )
-                            .selected = value,
+                        onSelectTags: (value) =>
+                            ref
+                                    .read(
+                                      resourceTagFilterProvider(
+                                        config.kind,
+                                      ).notifier,
+                                    )
+                                    .selected =
+                                value,
                       );
                     }
 
@@ -323,8 +334,9 @@ class _FiltersPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final tagLabel =
-        selectedTags.isEmpty ? 'Tags' : 'Tags (${selectedTags.length})';
+    final tagLabel = selectedTags.isEmpty
+        ? 'Tags'
+        : 'Tags (${selectedTags.length})';
     final templateLabel = switch (templateFilter) {
       TemplateFilter.exclude => 'Exclude',
       TemplateFilter.include => 'Include',
@@ -476,8 +488,9 @@ class _FilterValueButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? scheme.surfaceContainerHigh : scheme.surfaceContainerHighest;
+    final bg = isDark
+        ? scheme.surfaceContainerHigh
+        : scheme.surfaceContainerHighest;
 
     return Material(
       color: bg,
@@ -493,9 +506,9 @@ class _FilterValueButton extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
               ),
               const Gap(6),
               Icon(icon, size: 16, color: scheme.onSurfaceVariant),
