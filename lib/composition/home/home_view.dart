@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/home/widgets/home_dashboard_tiles.dart';
+import 'package:komodo_go/composition/home/widgets/home_sections.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -14,8 +16,6 @@ import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
-import 'package:komodo_go/features/home/presentation/views/home/home_dashboard_tiles.dart';
-import 'package:komodo_go/features/home/presentation/views/home/home_sections.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
@@ -24,7 +24,6 @@ import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
-import 'package:komodo_go/features/resources/presentation/providers/resources_tab_provider.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
@@ -32,6 +31,7 @@ import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
+import 'package:komodo_go/shared/resources/providers/resources_target_provider.dart';
 
 /// Home dashboard view.
 class HomeView extends ConsumerWidget {

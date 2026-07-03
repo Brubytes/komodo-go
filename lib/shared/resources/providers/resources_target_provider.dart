@@ -3,7 +3,7 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-part 'resources_tab_provider.g.dart';
+part 'resources_target_provider.g.dart';
 
 enum ResourceType {
   servers('Servers', AppIcons.server, AppTokens.resourceServers),
