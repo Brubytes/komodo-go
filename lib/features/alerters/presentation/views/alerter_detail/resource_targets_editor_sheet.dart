@@ -1,30 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/resources/resource_catalog_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_surface.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
-import 'package:komodo_go/features/actions/data/models/action.dart';
-import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
-import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
-import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
-import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
-import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
-import 'package:komodo_go/features/builds/data/models/build.dart';
-import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
-import 'package:komodo_go/features/deployments/data/models/deployment.dart';
-import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
-import 'package:komodo_go/features/procedures/data/models/procedure.dart';
-import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
-import 'package:komodo_go/features/repos/data/models/repo.dart';
-import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
-import 'package:komodo_go/features/servers/data/models/server.dart';
-import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
-import 'package:komodo_go/features/stacks/data/models/stack.dart';
-import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
-import 'package:komodo_go/features/syncs/data/models/sync.dart';
-import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
+import 'package:komodo_go/shared/resources/models/resource_option.dart';
 
 class ResourceTargetsEditorSheet extends ConsumerStatefulWidget {
   const ResourceTargetsEditorSheet({
@@ -94,112 +76,11 @@ class _ResourceTargetsEditorSheetState
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final serversAsync = ref.watch(serversProvider);
-    final stacksAsync = ref.watch(stacksProvider);
-    final deploymentsAsync = ref.watch(deploymentsProvider);
-    final buildsAsync = ref.watch(buildsProvider);
-    final reposAsync = ref.watch(reposProvider);
-    final proceduresAsync = ref.watch(proceduresProvider);
-    final actionsAsync = ref.watch(actionsProvider);
-    final syncsAsync = ref.watch(syncsProvider);
-    final buildersAsync = ref.watch(buildersProvider);
-    final alertersAsync = ref.watch(alertersProvider);
-
-    final options = <_ResourceOption>[];
-
-    void addOptions<T>(
-      List<T> items, {
-      required String variant,
-      required IconData icon,
-      required String Function(T) getId,
-      required String Function(T) getName,
-    }) {
-      for (final item in items) {
-        final id = getId(item).trim();
-        final name = getName(item).trim();
-        if (id.isEmpty || name.isEmpty) continue;
-        options.add(
-          _ResourceOption(variant: variant, id: id, name: name, icon: icon),
-        );
-      }
-    }
-
-    addOptions<Server>(
-      _asyncListOrEmpty(serversAsync),
-      variant: 'Server',
-      icon: AppIcons.server,
-      getId: (server) => server.id,
-      getName: (server) => server.name,
+    final optionsAsync = ref.watch(resourceOptionsProvider);
+    final options = optionsAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => const <ResourceOption>[],
     );
-    addOptions<StackListItem>(
-      _asyncListOrEmpty(stacksAsync),
-      variant: 'Stack',
-      icon: AppIcons.stacks,
-      getId: (stack) => stack.id,
-      getName: (stack) => stack.name,
-    );
-    addOptions<Deployment>(
-      _asyncListOrEmpty(deploymentsAsync),
-      variant: 'Deployment',
-      icon: AppIcons.deployments,
-      getId: (deployment) => deployment.id,
-      getName: (deployment) => deployment.name,
-    );
-    addOptions<BuildListItem>(
-      _asyncListOrEmpty(buildsAsync),
-      variant: 'Build',
-      icon: AppIcons.builds,
-      getId: (build) => build.id,
-      getName: (build) => build.name,
-    );
-    addOptions<RepoListItem>(
-      _asyncListOrEmpty(reposAsync),
-      variant: 'Repo',
-      icon: AppIcons.repos,
-      getId: (repo) => repo.id,
-      getName: (repo) => repo.name,
-    );
-    addOptions<ProcedureListItem>(
-      _asyncListOrEmpty(proceduresAsync),
-      variant: 'Procedure',
-      icon: AppIcons.procedures,
-      getId: (procedure) => procedure.id,
-      getName: (procedure) => procedure.name,
-    );
-    addOptions<ActionListItem>(
-      _asyncListOrEmpty(actionsAsync),
-      variant: 'Action',
-      icon: AppIcons.actions,
-      getId: (action) => action.id,
-      getName: (action) => action.name,
-    );
-    addOptions<ResourceSyncListItem>(
-      _asyncListOrEmpty(syncsAsync),
-      variant: 'ResourceSync',
-      icon: AppIcons.syncs,
-      getId: (sync) => sync.id,
-      getName: (sync) => sync.name,
-    );
-    addOptions<BuilderListItem>(
-      _asyncListOrEmpty(buildersAsync),
-      variant: 'Builder',
-      icon: AppIcons.factory,
-      getId: (builder) => builder.id,
-      getName: (builder) => builder.name,
-    );
-    addOptions<AlerterListItem>(
-      _asyncListOrEmpty(alertersAsync),
-      variant: 'Alerter',
-      icon: AppIcons.notifications,
-      getId: (alerter) => alerter.id,
-      getName: (alerter) => alerter.name,
-    );
-
-    options.sort((a, b) {
-      final typeSort = a.variant.compareTo(b.variant);
-      if (typeSort != 0) return typeSort;
-      return a.name.compareTo(b.name);
-    });
 
     final query = _searchController.text.trim().toLowerCase();
     final filtered = query.isEmpty
@@ -218,30 +99,8 @@ class _ResourceTargetsEditorSheetState
         .where((entry) => !optionKeys.contains(entry.key))
         .toList();
 
-    final hasErrors = [
-      serversAsync,
-      stacksAsync,
-      deploymentsAsync,
-      buildsAsync,
-      reposAsync,
-      proceduresAsync,
-      actionsAsync,
-      syncsAsync,
-      buildersAsync,
-      alertersAsync,
-    ].any((async) => async.hasError);
-    final isLoading = [
-      serversAsync,
-      stacksAsync,
-      deploymentsAsync,
-      buildsAsync,
-      reposAsync,
-      proceduresAsync,
-      actionsAsync,
-      syncsAsync,
-      buildersAsync,
-      alertersAsync,
-    ].any((async) => async.isLoading);
+    final hasErrors = optionsAsync.hasError;
+    final isLoading = optionsAsync.isLoading;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -530,11 +389,19 @@ class _ResourceTargetsEditorSheetState
     );
   }
 
-  void _toggleOption(_ResourceOption option, bool next) {
+  void _toggleOption(ResourceOption option, bool next) {
     final nextItems = List<AlerterResourceTarget>.from(_items);
     final index = nextItems.indexWhere((item) => item.key == option.key);
     if (next) {
-      if (index == -1) nextItems.add(option.toEntry());
+      if (index == -1) {
+        nextItems.add(
+          AlerterResourceTarget(
+            variant: option.variant,
+            value: option.ref.id,
+            name: option.name,
+          ),
+        );
+      }
     } else {
       if (index != -1) nextItems.removeAt(index);
     }
@@ -546,27 +413,4 @@ class _ResourceTargetsEditorSheetState
       ..removeWhere((item) => item.key == entry.key);
     setState(() => _items = nextItems);
   }
-}
-
-class _ResourceOption {
-  const _ResourceOption({
-    required this.variant,
-    required this.id,
-    required this.name,
-    required this.icon,
-  });
-
-  final String variant;
-  final String id;
-  final String name;
-  final IconData icon;
-
-  String get key => '${variant.toLowerCase()}:$id';
-
-  AlerterResourceTarget toEntry() =>
-      AlerterResourceTarget(variant: variant, value: id, name: name);
-}
-
-List<T> _asyncListOrEmpty<T>(AsyncValue<List<T>> async) {
-  return async.maybeWhen(data: (value) => value, orElse: () => <T>[]);
 }

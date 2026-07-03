@@ -1,27 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/resources/resource_catalog_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
-import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
 import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/alert_types_picker_sheet.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/alerter_detail_sections.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/maintenance_windows_editor_sheet.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerter_detail/resource_targets_editor_sheet.dart';
-import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
-import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
-import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
-import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
-import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
-import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
-import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
-import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/models/resource_ref.dart';
 import 'package:komodo_go/shared/resources/resource_helpers.dart';
 
 class AlerterDetailView extends ConsumerStatefulWidget {
@@ -85,18 +79,7 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
     final alerterAsync = ref.watch(
       alerterDetailProvider(widget.alerterIdOrName),
     );
-    final resourceNameLookupMap = resourceNameLookup(
-      servers: _asyncListOrEmpty(ref.watch(serversProvider)),
-      stacks: _asyncListOrEmpty(ref.watch(stacksProvider)),
-      deployments: _asyncListOrEmpty(ref.watch(deploymentsProvider)),
-      builds: _asyncListOrEmpty(ref.watch(buildsProvider)),
-      repos: _asyncListOrEmpty(ref.watch(reposProvider)),
-      procedures: _asyncListOrEmpty(ref.watch(proceduresProvider)),
-      actions: _asyncListOrEmpty(ref.watch(actionsProvider)),
-      syncs: _asyncListOrEmpty(ref.watch(syncsProvider)),
-      builders: _asyncListOrEmpty(ref.watch(buildersProvider)),
-      alerters: _asyncListOrEmpty(ref.watch(alertersProvider)),
-    );
+    final resourceNameLookupMap = ref.watch(resourceNameLookupProvider);
 
     final title = alerterAsync.maybeWhen(
       data: (detail) {
@@ -146,16 +129,30 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
             final resourcePills = _resources
                 .map(
                   (entry) => PillData(
-                    resourceLabel(entry, resourceNameLookupMap),
-                    resourceIcon(entry.variant),
+                    resourceLabel(
+                      ref: ResourceRef(
+                        kind: ResourceKindX.fromVariant(entry.variant),
+                        id: entry.value,
+                      ),
+                      directName: entry.name,
+                      lookup: resourceNameLookupMap,
+                    ),
+                    resourceIconForVariant(entry.variant),
                   ),
                 )
                 .toList();
             final exceptPills = _exceptResources
                 .map(
                   (entry) => PillData(
-                    resourceLabel(entry, resourceNameLookupMap),
-                    resourceIcon(entry.variant),
+                    resourceLabel(
+                      ref: ResourceRef(
+                        kind: ResourceKindX.fromVariant(entry.variant),
+                        id: entry.value,
+                      ),
+                      directName: entry.name,
+                      lookup: resourceNameLookupMap,
+                    ),
+                    resourceIconForVariant(entry.variant),
                   ),
                 )
                 .toList();
@@ -552,10 +549,6 @@ bool _maintenanceEquals(
     if (a[i] != b[i]) return false;
   }
   return true;
-}
-
-List<T> _asyncListOrEmpty<T>(AsyncValue<List<T>> async) {
-  return async.maybeWhen(data: (value) => value, orElse: () => <T>[]);
 }
 
 String _humanizeEnum(String v) {
