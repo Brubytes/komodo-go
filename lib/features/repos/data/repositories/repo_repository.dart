@@ -1,7 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
-import 'package:komodo_go/core/api/query_templates.dart';
+import 'package:komodo_go/core/api/paginated_read.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
@@ -17,21 +17,19 @@ class RepoRepository {
   final KomodoApiClient _client;
 
   /// Lists all repos.
-  Future<Either<Failure, List<RepoListItem>>> listRepos() async {
+  Future<Either<Failure, List<RepoListItem>>> listRepos([
+    ResourceListOptions options = const ResourceListOptions(),
+  ]) async {
     return apiCall(
       () async {
-        final response = await _client.read(
-          RpcRequest(
-            type: 'ListRepos',
-            params: <String, dynamic>{
-              'query': emptyQuery(
-                specific: <String, dynamic>{'repos': <String>[]},
-              ),
-            },
+        final reposJson = await readAllPages(
+          _client,
+          type: 'ListRepos',
+          params: options.params(
+            specific: <String, dynamic>{'repos': <String>[]},
           ),
+          pageSize: options.pageSize,
         );
-
-        final reposJson = response as List<dynamic>? ?? [];
         return reposJson
             .map((json) => RepoListItem.fromJson(json as Map<String, dynamic>))
             .toList();

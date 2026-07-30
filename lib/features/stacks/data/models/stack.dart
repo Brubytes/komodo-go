@@ -36,6 +36,9 @@ sealed class StackListItem with _$StackListItem {
 sealed class StackListItemInfo with _$StackListItemInfo {
   const factory StackListItemInfo({
     @JsonKey(name: 'server_id') @Default('') String serverId,
+    @JsonKey(name: 'server_name') @Default('') String serverName,
+    @JsonKey(name: 'swarm_id') @Default('') String swarmId,
+    @JsonKey(name: 'swarm_name') @Default('') String swarmName,
     @JsonKey(name: 'files_on_host') @Default(false) bool filesOnHost,
     @JsonKey(name: 'file_contents') @Default(false) bool fileContents,
     @JsonKey(name: 'git_provider') @Default('') String gitProvider,
@@ -46,6 +49,7 @@ sealed class StackListItemInfo with _$StackListItemInfo {
     @Default('') String repo,
     @Default('') String branch,
     @JsonKey(name: 'linked_repo') @Default('') String linkedRepo,
+    @JsonKey(name: 'linked_repo_name') @Default('') String linkedRepoName,
     @JsonKey(name: 'repo_link') @Default('') String repoLink,
     @Default([]) List<StackServiceWithUpdate> services,
     @JsonKey(name: 'missing_files') @Default([]) List<String> missingFiles,
@@ -256,6 +260,8 @@ sealed class FileContents with _$FileContents {
 sealed class StackContainerListItem with _$StackContainerListItem {
   const factory StackContainerListItem({
     required String name,
+    @JsonKey(name: 'server_id') String? serverId,
+    @JsonKey(name: 'server_name') String? serverName,
     @Default('') String state,
     String? status,
     String? image,
@@ -271,8 +277,12 @@ sealed class StackContainerListItem with _$StackContainerListItem {
 sealed class StackService with _$StackService {
   const factory StackService({
     required String service,
+    @JsonKey(name: 'stack_id') @Default('') String stackId,
+    @JsonKey(name: 'stack_name') @Default('') String stackName,
     @Default('') String image,
+    @Default('') String state,
     @JsonKey(name: 'update_available') @Default(false) bool updateAvailable,
+    @JsonKey(name: 'swarm_service') dynamic swarmService,
     StackContainerListItem? container,
   }) = _StackService;
 

@@ -1,7 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
-import 'package:komodo_go/core/api/query_templates.dart';
+import 'package:komodo_go/core/api/paginated_read.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
@@ -17,17 +17,17 @@ class ProcedureRepository {
   final KomodoApiClient _client;
 
   /// Lists all procedures.
-  Future<Either<Failure, List<ProcedureListItem>>> listProcedures() async {
+  Future<Either<Failure, List<ProcedureListItem>>> listProcedures([
+    ResourceListOptions options = const ResourceListOptions(),
+  ]) async {
     return apiCall(
       () async {
-        final response = await _client.read(
-          RpcRequest(
-            type: 'ListProcedures',
-            params: <String, dynamic>{'query': emptyQuery()},
-          ),
+        final proceduresJson = await readAllPages(
+          _client,
+          type: 'ListProcedures',
+          params: options.params(),
+          pageSize: options.pageSize,
         );
-
-        final proceduresJson = response as List<dynamic>? ?? [];
         return proceduresJson
             .map(
               (json) =>
@@ -80,6 +80,25 @@ class ProcedureRepository {
         return;
       },
     );
+  }
+
+  /// Cancels the currently running update for the target procedure.
+  Future<Either<Failure, void>> cancelProcedure(
+    String procedureIdOrName, {
+    String? updateId,
+  }) async {
+    return apiCall(() async {
+      await _client.execute(
+        RpcRequest(
+          type: 'CancelProcedure',
+          params: <String, dynamic>{
+            'procedure': procedureIdOrName,
+            'update_id': ?updateId,
+          },
+        ),
+      );
+      return;
+    });
   }
 
   /// Updates a procedure configuration and returns the updated procedure.

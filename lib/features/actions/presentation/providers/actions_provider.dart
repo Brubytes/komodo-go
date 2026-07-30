@@ -64,6 +64,11 @@ class ActionActions extends _$ActionActions
   Future<bool> run(String actionIdOrName, {Map<String, dynamic>? args}) =>
       executeAction((repo) => repo.runAction(actionIdOrName, args: args));
 
+  Future<bool> cancel(String actionIdOrName, {String? updateId}) =>
+      executeAction(
+        (repo) => repo.cancelAction(actionIdOrName, updateId: updateId),
+      );
+
   Future<KomodoAction?> updateActionConfig({
     required String actionId,
     required Map<String, dynamic> partialConfig,

@@ -25,7 +25,7 @@ class ContainerRepository {
       try {
         final response = await _client.read(
           RpcRequest(
-            type: 'ListDockerContainers',
+            type: 'ListContainers',
             params: {'server': serverIdOrName},
           ),
         );
@@ -33,7 +33,8 @@ class ContainerRepository {
         final itemsJson = response as List<dynamic>? ?? [];
         return itemsJson
             .map(
-              (json) => ContainerListItem.fromJson(json as Map<String, dynamic>),
+              (json) =>
+                  ContainerListItem.fromJson(json as Map<String, dynamic>),
             )
             .toList();
       } catch (e, stackTrace) {

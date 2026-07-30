@@ -25,7 +25,7 @@ class DockerRegistryRepository {
       };
 
       final response = await _client.read(
-        RpcRequest(type: 'ListDockerRegistryAccounts', params: params),
+        RpcRequest(type: 'ListImageRegistryAccounts', params: params),
       );
 
       final itemsJson = response as List<dynamic>? ?? [];
@@ -47,7 +47,7 @@ class DockerRegistryRepository {
     return apiCall(() async {
       final response = await _client.write(
         RpcRequest(
-          type: 'CreateDockerRegistryAccount',
+          type: 'CreateImageRegistryAccount',
           params: <String, dynamic>{
             'account': <String, dynamic>{
               'domain': domain.trim(),
@@ -78,7 +78,7 @@ class DockerRegistryRepository {
 
       final response = await _client.write(
         RpcRequest(
-          type: 'UpdateDockerRegistryAccount',
+          type: 'UpdateImageRegistryAccount',
           params: <String, dynamic>{'id': id, 'account': account},
         ),
       );
@@ -93,7 +93,7 @@ class DockerRegistryRepository {
     return apiCall(() async {
       final response = await _client.write(
         RpcRequest(
-          type: 'DeleteDockerRegistryAccount',
+          type: 'DeleteImageRegistryAccount',
           params: <String, dynamic>{'id': id},
         ),
       );
