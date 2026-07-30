@@ -57,12 +57,17 @@ void main() {
       expect(request.type, 'ListProcedures');
       expect(request.params, <String, dynamic>{
         'query': <String, dynamic>{
+          'terms': '',
           'names': <String>[],
           'templates': 'Include',
           'tags': <String>[],
           'tag_behavior': 'All',
           'specific': <String, dynamic>{},
         },
+        'sort_by': 'Name',
+        'sort_desc': false,
+        'page': 0,
+        'limit': 50,
       });
     });
 
@@ -98,6 +103,23 @@ void main() {
       expect(request.type, 'RunProcedure');
       expect(request.params, <String, dynamic>{'procedure': 'proc-1'});
       verifyNever(() => client.write(any()));
+    });
+
+    test('cancelProcedure sends CancelProcedure with an optional update id',
+        () async {
+      when(() => client.execute(any()))
+          .thenAnswer((_) async => <String, dynamic>{});
+
+      _rightOrFail(
+        await repository.cancelProcedure('proc-1', updateId: 'update-1'),
+      );
+
+      final request = capturedExecute();
+      expect(request.type, 'CancelProcedure');
+      expect(request.params, <String, dynamic>{
+        'procedure': 'proc-1',
+        'update_id': 'update-1',
+      });
     });
 
     test(

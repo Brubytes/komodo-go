@@ -56,6 +56,7 @@ void main() {
       expect(request.type, 'ListBuilds');
       expect(request.params, <String, dynamic>{
         'query': <String, dynamic>{
+          'terms': '',
           'names': <String>[],
           'templates': 'Include',
           'tags': <String>[],
@@ -66,6 +67,10 @@ void main() {
             'built_since': 0,
           },
         },
+        'sort_by': 'Name',
+        'sort_desc': false,
+        'page': 0,
+        'limit': 50,
       });
     });
 

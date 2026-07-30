@@ -37,7 +37,7 @@ void main() {
         verify(() => client.execute(captureAny())).captured.single
             as RpcRequest<dynamic>;
 
-    test('listDockerContainers sends ListDockerContainers with server param',
+    test('listDockerContainers sends ListContainers with server param',
         () async {
       when(() => client.read(any())).thenAnswer(
         (_) async => [
@@ -50,7 +50,7 @@ void main() {
       expect(_rightOrFail(result).single.name, 'web');
 
       final request = capturedRead();
-      expect(request.type, 'ListDockerContainers');
+      expect(request.type, 'ListContainers');
       expect(request.params, <String, dynamic>{'server': 'server-1'});
     });
 

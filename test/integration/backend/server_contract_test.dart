@@ -114,7 +114,9 @@ void registerServerContractTests() {
         expect(stats.cpuPercent, greaterThanOrEqualTo(0));
         expect(stats.memTotalGb, greaterThanOrEqualTo(0));
       } on TestFailure catch (error) {
-        if ((error.message ?? '').contains('server stats not available')) {
+        final message = (error.message ?? '').toLowerCase();
+        if (message.contains('server stats not available') ||
+            message.contains('missing system stats')) {
           return;
         }
         rethrow;
@@ -126,7 +128,9 @@ void registerServerContractTests() {
         );
         expect(info.cpuBrand, isA<String>());
       } on TestFailure catch (error) {
-        if ((error.message ?? '').contains('server info not available')) {
+        final message = (error.message ?? '').toLowerCase();
+        if (message.contains('server info not available') ||
+            message.contains('missing system information')) {
           return;
         }
         rethrow;

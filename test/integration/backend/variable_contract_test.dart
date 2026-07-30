@@ -28,7 +28,7 @@ void registerVariableContractTests() {
 
     test('create/update/delete variable + goldens', () async {
       KomodoVariable? created;
-      const name = 'Contract Variable';
+      const name = 'CONTRACT_VARIABLE';
 
       try {
         final createResult = await repository.createVariable(
@@ -100,7 +100,7 @@ void registerVariableContractTests() {
     });
 
     test('update missing variable returns server failure', () async {
-      final missingName = 'missing-var-${_randomToken(Random(991))}';
+      final missingName = 'missing_var_${_randomToken(Random(991))}';
       final result = await repository.updateVariableValue(
         name: missingName,
         value: 'noop',
@@ -129,7 +129,7 @@ void registerVariableContractTests() {
 
       try {
         for (var i = 0; i < 20; i++) {
-          final name = 'prop-var-$i-${_randomToken(random)}';
+          final name = 'prop_var_${i}_${_randomToken(random)}';
           final value = 'val-${_randomToken(random)}';
           final description = 'desc-${_randomToken(random)}';
           final isSecret = random.nextBool();

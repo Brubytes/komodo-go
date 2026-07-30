@@ -56,12 +56,17 @@ void main() {
       expect(request.type, 'ListRepos');
       expect(request.params, <String, dynamic>{
         'query': <String, dynamic>{
+          'terms': '',
           'names': <String>[],
           'templates': 'Include',
           'tags': <String>[],
           'tag_behavior': 'All',
           'specific': <String, dynamic>{'repos': <String>[]},
         },
+        'sort_by': 'Name',
+        'sort_desc': false,
+        'page': 0,
+        'limit': 50,
       });
     });
 

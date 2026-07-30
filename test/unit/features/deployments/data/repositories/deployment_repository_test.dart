@@ -58,6 +58,7 @@ void main() {
         expect(request.type, 'ListDeployments');
         expect(request.params, <String, dynamic>{
           'query': <String, dynamic>{
+            'terms': '',
             'names': <String>[],
             'templates': 'Include',
             'tags': <String>[],
@@ -68,6 +69,10 @@ void main() {
               'update_available': false,
             },
           },
+          'sort_by': 'Name',
+          'sort_desc': false,
+          'page': 0,
+          'limit': 50,
         });
       });
 

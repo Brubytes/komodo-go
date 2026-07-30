@@ -56,6 +56,7 @@ void main() {
       expect(request.type, 'ListAlerters');
       expect(request.params, <String, dynamic>{
         'query': <String, dynamic>{
+          'terms': '',
           'names': <String>[],
           'templates': 'Include',
           'tags': <String>[],
@@ -65,6 +66,10 @@ void main() {
             'types': <String>[],
           },
         },
+        'sort_by': 'Name',
+        'sort_desc': false,
+        'page': 0,
+        'limit': 50,
       });
     });
 

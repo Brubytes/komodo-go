@@ -51,12 +51,17 @@ void main() {
       expect(request.type, 'ListBuilders');
       expect(request.params, <String, dynamic>{
         'query': <String, dynamic>{
+          'terms': '',
           'names': <String>[],
           'templates': 'Include',
           'tags': <String>[],
           'tag_behavior': 'All',
           'specific': <String, dynamic>{},
         },
+        'sort_by': 'Name',
+        'sort_desc': false,
+        'page': 0,
+        'limit': 50,
       });
     });
 

@@ -56,12 +56,17 @@ void main() {
       expect(request.type, 'ListActions');
       expect(request.params, <String, dynamic>{
         'query': <String, dynamic>{
+          'terms': '',
           'names': <String>[],
           'templates': 'Include',
           'tags': <String>[],
           'tag_behavior': 'All',
           'specific': <String, dynamic>{},
         },
+        'sort_by': 'Name',
+        'sort_desc': false,
+        'page': 0,
+        'limit': 50,
       });
     });
 
@@ -119,6 +124,23 @@ void main() {
       expect(request.params, <String, dynamic>{
         'action': 'action-1',
         'args': {'target': 'web'},
+      });
+    });
+
+    test('cancelAction sends CancelAction with an optional update id',
+        () async {
+      when(() => client.execute(any()))
+          .thenAnswer((_) async => <String, dynamic>{});
+
+      _rightOrFail(
+        await repository.cancelAction('action-1', updateId: 'update-1'),
+      );
+
+      final request = capturedExecute();
+      expect(request.type, 'CancelAction');
+      expect(request.params, <String, dynamic>{
+        'action': 'action-1',
+        'update_id': 'update-1',
       });
     });
 

@@ -42,7 +42,7 @@ void main() {
         verify(() => client.write(captureAny())).captured.single
             as RpcRequest<dynamic>;
 
-    test('listAccounts sends ListDockerRegistryAccounts with empty params',
+    test('listAccounts sends ListImageRegistryAccounts with empty params',
         () async {
       when(() => client.read(any())).thenAnswer((_) async => [_accountJson]);
 
@@ -51,7 +51,7 @@ void main() {
       expect(_rightOrFail(result).single.id, 'reg-1');
 
       final request = capturedRead();
-      expect(request.type, 'ListDockerRegistryAccounts');
+      expect(request.type, 'ListImageRegistryAccounts');
       expect(request.params, <String, dynamic>{});
     });
 
@@ -62,7 +62,7 @@ void main() {
       await repository.listAccounts(domain: ' docker.io ', username: ' me ');
 
       final request = capturedRead();
-      expect(request.type, 'ListDockerRegistryAccounts');
+      expect(request.type, 'ListImageRegistryAccounts');
       expect(request.params, <String, dynamic>{
         'domain': 'docker.io',
         'username': 'me',
@@ -70,7 +70,7 @@ void main() {
     });
 
     test(
-        'createAccount sends CreateDockerRegistryAccount via write '
+        'createAccount sends CreateImageRegistryAccount via write '
         'with nested trimmed account', () async {
       when(() => client.write(any())).thenAnswer((_) async => _accountJson);
 
@@ -83,7 +83,7 @@ void main() {
       expect(_rightOrFail(result).domain, 'docker.io');
 
       final request = capturedWrite();
-      expect(request.type, 'CreateDockerRegistryAccount');
+      expect(request.type, 'CreateImageRegistryAccount');
       expect(request.params, <String, dynamic>{
         'account': <String, dynamic>{
           'domain': 'docker.io',
@@ -95,7 +95,7 @@ void main() {
     });
 
     test(
-        'updateAccount sends UpdateDockerRegistryAccount via write '
+        'updateAccount sends UpdateImageRegistryAccount via write '
         'with id and only provided fields', () async {
       when(() => client.write(any())).thenAnswer((_) async => _accountJson);
 
@@ -107,14 +107,14 @@ void main() {
       expect(_rightOrFail(result).id, 'reg-1');
 
       final request = capturedWrite();
-      expect(request.type, 'UpdateDockerRegistryAccount');
+      expect(request.type, 'UpdateImageRegistryAccount');
       expect(request.params, <String, dynamic>{
         'id': 'reg-1',
         'account': <String, dynamic>{'token': 'new-tok'},
       });
     });
 
-    test('deleteAccount sends DeleteDockerRegistryAccount via write with id',
+    test('deleteAccount sends DeleteImageRegistryAccount via write with id',
         () async {
       when(() => client.write(any())).thenAnswer((_) async => _accountJson);
 
@@ -123,7 +123,7 @@ void main() {
       expect(_rightOrFail(result).id, 'reg-1');
 
       final request = capturedWrite();
-      expect(request.type, 'DeleteDockerRegistryAccount');
+      expect(request.type, 'DeleteImageRegistryAccount');
       expect(request.params, <String, dynamic>{'id': 'reg-1'});
       verifyNever(() => client.execute(any()));
     });

@@ -81,12 +81,17 @@ void main() {
       expect(request.type, 'ListServers');
       expect(request.params, <String, dynamic>{
         'query': <String, dynamic>{
+          'terms': '',
           'names': <String>[],
           'templates': 'Include',
           'tags': <String>[],
           'tag_behavior': 'All',
           'specific': <String, dynamic>{},
         },
+        'sort_by': 'Name',
+        'sort_desc': false,
+        'page': 0,
+        'limit': 50,
       });
     });
 
@@ -133,7 +138,7 @@ void main() {
       expect(request.params, <String, dynamic>{'server': 'server-1'});
     });
 
-    test('listDockerNetworks sends ListDockerNetworks and parses names',
+    test('listDockerNetworks sends ListNetworks and parses names',
         () async {
       when(() => client.read(any())).thenAnswer(
         (_) async => [
@@ -148,7 +153,7 @@ void main() {
       expect(_rightOrFail(result), ['bridge']);
 
       final request = capturedRead();
-      expect(request.type, 'ListDockerNetworks');
+      expect(request.type, 'ListNetworks');
       expect(request.params, <String, dynamic>{'server': 'server-1'});
     });
 
