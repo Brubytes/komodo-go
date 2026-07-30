@@ -82,8 +82,11 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
     _passkeyController = TextEditingController(
       text: (inner['passkey'] ?? '').toString(),
     );
+    final serverIds = _stringList(inner['server_ids']);
     _serverIdController = TextEditingController(
-      text: (inner['server_id'] ?? '').toString(),
+      text: serverIds.isNotEmpty
+          ? serverIds.join(', ')
+          : (inner['server_id'] ?? '').toString(),
     );
 
     _awsRegionController = TextEditingController(
@@ -235,7 +238,8 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
         controller: _serverIdController,
         textInputAction: TextInputAction.done,
         decoration: const InputDecoration(
-          labelText: 'Server ID',
+          labelText: 'Server IDs',
+          helperText: 'Separate multiple server IDs with commas',
           prefixIcon: Icon(AppIcons.server),
         ),
       ),
@@ -320,20 +324,8 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
           'address': _addressController.text.trim(),
           'passkey': _passkeyController.text,
         },
-        'Server' => <String, dynamic>{
-          ...inner,
-          'server_id': _serverIdController.text.trim(),
-        },
-        'Aws' => <String, dynamic>{
-          ...inner,
-          'region': _awsRegionController.text.trim(),
-          'instance_type': _awsInstanceTypeController.text.trim(),
-          'volume_gb': int.tryParse(_awsVolumeGbController.text.trim()),
-          'port': int.tryParse(_awsPortController.text.trim()),
-          'use_https': _awsUseHttps,
-          'assign_public_ip': _awsAssignPublicIp,
-          'use_public_ip': _awsUsePublicIp,
-        }..removeWhere((k, v) => v == null),
+        'Server' => _serverBuilderConfig(inner),
+        'Aws' => _awsBuilderConfig(inner),
         _ => inner,
       };
     });
@@ -345,6 +337,44 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
       ),
     );
   }
+
+  Map<String, dynamic> _serverBuilderConfig(Map<String, dynamic> inner) {
+    final next = <String, dynamic>{...inner}
+      ..remove('server_id')
+      ..remove('servers');
+    next['server_ids'] = _serverIdController.text
+        .split(',')
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList();
+    return next;
+  }
+
+  Map<String, dynamic> _awsBuilderConfig(Map<String, dynamic> inner) {
+    final next = <String, dynamic>{...inner};
+    if (!next.containsKey('image_registries') &&
+        next.containsKey('docker_registries')) {
+      next['image_registries'] = next['docker_registries'];
+    }
+    next
+      ..remove('docker_registries')
+      ..addAll(<String, dynamic>{
+        'region': _awsRegionController.text.trim(),
+        'instance_type': _awsInstanceTypeController.text.trim(),
+        'volume_gb': int.tryParse(_awsVolumeGbController.text.trim()),
+        'port': int.tryParse(_awsPortController.text.trim()),
+        'use_https': _awsUseHttps,
+        'assign_public_ip': _awsAssignPublicIp,
+        'use_public_ip': _awsUsePublicIp,
+      })
+      ..removeWhere((key, value) => value == null);
+    return next;
+  }
+}
+
+List<String> _stringList(Object? value) {
+  if (value is! List) return const [];
+  return value.map((item) => item.toString()).toList();
 }
 
 enum _ConfigEncoding { externalTagged, map }

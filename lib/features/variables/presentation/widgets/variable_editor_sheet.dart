@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/features/variables/data/models/variable.dart';
+import 'package:komodo_go/features/variables/domain/variable_validation.dart';
 
 class VariableEditorResult {
   const VariableEditorResult({
@@ -47,6 +48,7 @@ class _VariableEditorSheetState extends State<VariableEditorSheet> {
   late final TextEditingController _descriptionController;
   var _isSecret = false;
   var _obscureValue = false;
+  String? _nameError;
 
   @override
   void initState() {
@@ -105,9 +107,15 @@ class _VariableEditorSheetState extends State<VariableEditorSheet> {
             controller: _nameController,
             enabled: !isEditing,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
+            maxLength: variableNameMaxLength,
+            onChanged: (_) {
+              if (_nameError != null) setState(() => _nameError = null);
+            },
+            decoration: InputDecoration(
               labelText: 'Name',
-              prefixIcon: Icon(AppIcons.tag),
+              prefixIcon: const Icon(AppIcons.tag),
+              errorText: _nameError,
+              helperText: 'Letters, numbers, and underscores only',
             ),
           ),
           const Gap(12),
@@ -155,7 +163,9 @@ class _VariableEditorSheetState extends State<VariableEditorSheet> {
             child: FilledButton(
               onPressed: () {
                 final name = _nameController.text.trim();
-                if (name.isEmpty) {
+                final validationError = validateVariableName(name);
+                if (validationError != null) {
+                  setState(() => _nameError = validationError);
                   return;
                 }
                 Navigator.of(context).pop(
