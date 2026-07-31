@@ -1,11 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/providers/data/repositories/docker_registry_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
-class _MockApiClient extends Mock implements KomodoApiClient {}
+class _MockApiClient extends Mock implements KomodoApiClient {
+  KomodoApiCapabilities capabilitiesValue =
+      KomodoApiCapabilities.v23AndNewer;
+
+  @override
+  KomodoApiCapabilities get capabilities => capabilitiesValue;
+}
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
 
@@ -53,6 +60,35 @@ void main() {
       final request = capturedRead();
       expect(request.type, 'ListImageRegistryAccounts');
       expect(request.params, <String, dynamic>{});
+    });
+
+    test('Komodo 2.2 uses DockerRegistry account RPC names', () async {
+      client.capabilitiesValue = KomodoApiCapabilities.v22;
+      when(() => client.read(any())).thenAnswer((_) async => [_accountJson]);
+      when(() => client.write(any())).thenAnswer((_) async => _accountJson);
+
+      await repository.listAccounts();
+      expect(capturedRead().type, 'ListDockerRegistryAccounts');
+
+      await repository.createAccount(
+        domain: 'docker.io',
+        username: 'me',
+        token: 'token',
+      );
+      await repository.updateAccount(id: 'reg-1', username: 'other');
+      await repository.deleteAccount(id: 'reg-1');
+
+      final requests = verify(() => client.write(captureAny()))
+          .captured
+          .cast<RpcRequest<dynamic>>();
+      expect(
+        requests.map((request) => request.type),
+        <String>[
+          'CreateDockerRegistryAccount',
+          'UpdateDockerRegistryAccount',
+          'DeleteDockerRegistryAccount',
+        ],
+      );
     });
 
     test('listAccounts trims and forwards domain and username filters',

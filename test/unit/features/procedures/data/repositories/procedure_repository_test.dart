@@ -2,11 +2,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/procedures/data/repositories/procedure_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
-class _MockApiClient extends Mock implements KomodoApiClient {}
+class _MockApiClient extends Mock implements KomodoApiClient {
+  KomodoApiCapabilities capabilitiesValue =
+      KomodoApiCapabilities.v23AndNewer;
+
+  @override
+  KomodoApiCapabilities get capabilities => capabilitiesValue;
+}
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
 
@@ -120,6 +127,24 @@ void main() {
         'procedure': 'proc-1',
         'update_id': 'update-1',
       });
+    });
+
+    test('Komodo 2.2 reports procedure cancellation as unsupported',
+        () async {
+      client.capabilitiesValue = KomodoApiCapabilities.v22;
+
+      final result = await repository.cancelProcedure('procedure-1');
+
+      result.fold(
+        (failure) => expect(
+          failure,
+          const Failure.server(
+            message: 'Canceling procedures requires Komodo 2.3 or newer.',
+          ),
+        ),
+        (_) => fail('Expected cancellation to be unsupported'),
+      );
+      verifyNever(() => client.execute(any()));
     });
 
     test(

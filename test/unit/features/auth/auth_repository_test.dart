@@ -140,6 +140,35 @@ void main() {
     });
 
     group('validateCredentials', () {
+      test('returns the Core version reported by GetVersion', () async {
+        final repository = AuthRepository(
+          validationDioFactory: (_, _) => _createValidationDio((options) {
+            if (options.path == '/read') {
+              return _response(
+                options,
+                statusCode: 200,
+                data: const <String, dynamic>{'version': '2.2.0'},
+              );
+            }
+            if (options.path == '/execute') {
+              return _response(
+                options,
+                statusCode: 400,
+                data: const <String, dynamic>{'error': 'unknown request'},
+              );
+            }
+            return _unexpectedRequest(options);
+          }),
+        );
+
+        final result = await repository.validateCredentials(credentials);
+
+        result.fold(
+          (failure) => fail('Expected validation to succeed, got $failure'),
+          (version) => expect(version.display, 'v2.2.0'),
+        );
+      });
+
       test('rejects HTML responses returned for GetVersion', () async {
         final repository = AuthRepository(
           validationDioFactory: (_, _) => _createValidationDio((options) {

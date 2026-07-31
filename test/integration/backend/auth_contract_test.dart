@@ -18,6 +18,7 @@ void registerAuthContractTests() {
         baseUrl: requiredConfig.baseUrl,
         apiKey: requiredConfig.apiKey,
         apiSecret: 'invalid-secret',
+        coreVersion: requiredConfig.coreVersion,
         allowDestructive: requiredConfig.allowDestructive,
         resetCommand: requiredConfig.resetCommand,
       );

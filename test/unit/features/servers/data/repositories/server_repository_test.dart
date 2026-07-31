@@ -2,11 +2,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/servers/data/repositories/server_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
-class _MockApiClient extends Mock implements KomodoApiClient {}
+class _MockApiClient extends Mock implements KomodoApiClient {
+  KomodoApiCapabilities capabilitiesValue =
+      KomodoApiCapabilities.v23AndNewer;
+
+  @override
+  KomodoApiCapabilities get capabilities => capabilitiesValue;
+}
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
 
@@ -155,6 +162,15 @@ void main() {
       final request = capturedRead();
       expect(request.type, 'ListNetworks');
       expect(request.params, <String, dynamic>{'server': 'server-1'});
+    });
+
+    test('Komodo 2.2 lists networks with ListDockerNetworks', () async {
+      client.capabilitiesValue = KomodoApiCapabilities.v22;
+      when(() => client.read(any())).thenAnswer((_) async => <dynamic>[]);
+
+      await repository.listDockerNetworks('server-1');
+
+      expect(capturedRead().type, 'ListDockerNetworks');
     });
 
     test('updateServerConfig sends UpdateServer via write with id and config',

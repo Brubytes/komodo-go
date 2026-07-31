@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/api/paginated_read.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -14,6 +15,9 @@ void main() {
 
   test('readAllPages reads subsequent pages until a short page', () async {
     final client = _MockApiClient();
+    when(
+      () => client.capabilities,
+    ).thenReturn(KomodoApiCapabilities.v23AndNewer);
     when(() => client.read(any())).thenAnswer((invocation) async {
       final request =
           invocation.positionalArguments.single as RpcRequest<dynamic>;
@@ -36,6 +40,39 @@ void main() {
     expect((requests[0].params as Map<String, dynamic>)['page'], 0);
     expect((requests[1].params as Map<String, dynamic>)['page'], 1);
     expect((requests[1].params as Map<String, dynamic>)['limit'], 50);
+  });
+
+  test('Komodo 2.2 performs one unpaginated list request', () async {
+    final client = _MockApiClient();
+    when(() => client.capabilities).thenReturn(KomodoApiCapabilities.v22);
+    when(
+      () => client.read(any()),
+    ).thenAnswer((_) async => List<dynamic>.generate(80, (index) => index));
+
+    final result = await readAllPages(
+      client,
+      type: 'ListActions',
+      params: const ResourceListOptions(
+        terms: 'deploy',
+        sortDesc: true,
+      ).params(),
+    );
+
+    expect(result, hasLength(80));
+    final request =
+        verify(
+              () => client.read(captureAny()),
+            ).captured.single
+            as RpcRequest<dynamic>;
+    expect(request.params, <String, dynamic>{
+      'query': <String, dynamic>{
+        'names': <String>[],
+        'templates': 'Include',
+        'tags': <String>[],
+        'tag_behavior': 'All',
+        'specific': <String, dynamic>{},
+      },
+    });
   });
 
   test('ResourceListOptions forwards v2.3 filters and ordering', () {

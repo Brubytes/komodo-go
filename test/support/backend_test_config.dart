@@ -5,6 +5,7 @@ class BackendTestConfig {
     required this.baseUrl,
     required this.apiKey,
     required this.apiSecret,
+    required this.coreVersion,
     required this.allowDestructive,
     required this.resetCommand,
   });
@@ -12,6 +13,7 @@ class BackendTestConfig {
   final String baseUrl;
   final String apiKey;
   final String apiSecret;
+  final String coreVersion;
   final bool allowDestructive;
   final String? resetCommand;
 
@@ -20,6 +22,7 @@ class BackendTestConfig {
     final baseUrl = (env['KOMODO_TEST_BASE_URL'] ?? '').trim();
     final apiKey = (env['KOMODO_TEST_API_KEY'] ?? '').trim();
     final apiSecret = (env['KOMODO_TEST_API_SECRET'] ?? '').trim();
+    final coreVersion = (env['KOMODO_TEST_CORE_VERSION'] ?? '2.3.0').trim();
     final allowDestructive = _readBool(env['KOMODO_TEST_ALLOW_DESTRUCTIVE']);
     final resetCommand = (env['KOMODO_TEST_RESET_COMMAND'] ?? '').trim();
 
@@ -31,6 +34,7 @@ class BackendTestConfig {
       baseUrl: baseUrl,
       apiKey: apiKey,
       apiSecret: apiSecret,
+      coreVersion: coreVersion,
       allowDestructive: allowDestructive,
       resetCommand: resetCommand.isEmpty ? null : resetCommand,
     );

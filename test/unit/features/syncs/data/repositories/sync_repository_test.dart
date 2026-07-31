@@ -2,11 +2,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/syncs/data/repositories/sync_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
-class _MockApiClient extends Mock implements KomodoApiClient {}
+class _MockApiClient extends Mock implements KomodoApiClient {
+  @override
+  KomodoApiCapabilities get capabilities =>
+      KomodoApiCapabilities.v23AndNewer;
+}
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
 
