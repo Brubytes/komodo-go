@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
@@ -805,7 +806,9 @@ class DeploymentConfigEditorContentState
     }
 
     setIfChanged('server_id', _serverId.text, _initial.serverId);
-    setIfChanged('custom_name', _customName.text, _initial.customName);
+    if (ref.read(komodoApiCapabilitiesProvider).supportsDeploymentCustomName) {
+      setIfChanged('custom_name', _customName.text, _initial.customName);
+    }
     setIfChanged(
       'image_registry_account',
       _imageRegistryAccount.text,
@@ -984,15 +987,19 @@ class DeploymentConfigEditorContentState
                   ),
                 ),
               ],
-              const Gap(12),
-              TextFormField(
-                controller: _customName,
-                decoration: const InputDecoration(
-                  labelText: 'Container or service name',
-                  prefixIcon: Icon(AppIcons.tag),
-                  helperText: 'Leave empty to use the deployment name.',
+              if (ref
+                  .watch(komodoApiCapabilitiesProvider)
+                  .supportsDeploymentCustomName) ...[
+                const Gap(12),
+                TextFormField(
+                  controller: _customName,
+                  decoration: const InputDecoration(
+                    labelText: 'Container or service name',
+                    prefixIcon: Icon(AppIcons.tag),
+                    helperText: 'Leave empty to use the deployment name.',
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
