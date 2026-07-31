@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/features/builders/data/builder_config_compatibility.dart';
 
 class BuilderConfigEditorResult {
   const BuilderConfigEditorResult({required this.config, required this.name});
@@ -15,18 +17,21 @@ class BuilderConfigEditorSheet extends StatefulWidget {
     required this.builderName,
     required this.builderType,
     required this.builderJson,
+    required this.capabilities,
     super.key,
   });
 
   final String builderName;
   final String builderType;
   final Map<String, dynamic> builderJson;
+  final KomodoApiCapabilities capabilities;
 
   static Future<BuilderConfigEditorResult?> show(
     BuildContext context, {
     required String builderName,
     required String builderType,
     required Map<String, dynamic> builderJson,
+    required KomodoApiCapabilities capabilities,
   }) {
     return showModalBottomSheet<BuilderConfigEditorResult>(
       context: context,
@@ -38,6 +43,7 @@ class BuilderConfigEditorSheet extends StatefulWidget {
         builderName: builderName,
         builderType: builderType,
         builderJson: builderJson,
+        capabilities: capabilities,
       ),
     );
   }
@@ -82,8 +88,11 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
     _passkeyController = TextEditingController(
       text: (inner['passkey'] ?? '').toString(),
     );
+    final serverIds = _stringList(inner['server_ids']);
     _serverIdController = TextEditingController(
-      text: (inner['server_id'] ?? '').toString(),
+      text: serverIds.isNotEmpty
+          ? serverIds.join(', ')
+          : (inner['server_id'] ?? '').toString(),
     );
 
     _awsRegionController = TextEditingController(
@@ -234,9 +243,14 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
       'Server' => TextField(
         controller: _serverIdController,
         textInputAction: TextInputAction.done,
-        decoration: const InputDecoration(
-          labelText: 'Server ID',
-          prefixIcon: Icon(AppIcons.server),
+        decoration: InputDecoration(
+          labelText: widget.capabilities.supportsMultipleServerBuilders
+              ? 'Server IDs'
+              : 'Server ID',
+          helperText: widget.capabilities.supportsMultipleServerBuilders
+              ? 'Separate multiple server IDs with commas'
+              : null,
+          prefixIcon: const Icon(AppIcons.server),
         ),
       ),
       'Aws' => Column(
@@ -320,20 +334,8 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
           'address': _addressController.text.trim(),
           'passkey': _passkeyController.text,
         },
-        'Server' => <String, dynamic>{
-          ...inner,
-          'server_id': _serverIdController.text.trim(),
-        },
-        'Aws' => <String, dynamic>{
-          ...inner,
-          'region': _awsRegionController.text.trim(),
-          'instance_type': _awsInstanceTypeController.text.trim(),
-          'volume_gb': int.tryParse(_awsVolumeGbController.text.trim()),
-          'port': int.tryParse(_awsPortController.text.trim()),
-          'use_https': _awsUseHttps,
-          'assign_public_ip': _awsAssignPublicIp,
-          'use_public_ip': _awsUsePublicIp,
-        }..removeWhere((k, v) => v == null),
+        'Server' => _serverBuilderConfig(inner),
+        'Aws' => _awsBuilderConfig(inner),
         _ => inner,
       };
     });
@@ -345,6 +347,36 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
       ),
     );
   }
+
+  Map<String, dynamic> _serverBuilderConfig(Map<String, dynamic> inner) {
+    return serializeServerBuilderConfig(
+      current: inner,
+      serverIdsText: _serverIdController.text,
+      capabilities: widget.capabilities,
+    );
+  }
+
+  Map<String, dynamic> _awsBuilderConfig(Map<String, dynamic> inner) {
+    return serializeAwsRegistryFields(
+      current: inner,
+      capabilities: widget.capabilities,
+    )
+      ..addAll(<String, dynamic>{
+        'region': _awsRegionController.text.trim(),
+        'instance_type': _awsInstanceTypeController.text.trim(),
+        'volume_gb': int.tryParse(_awsVolumeGbController.text.trim()),
+        'port': int.tryParse(_awsPortController.text.trim()),
+        'use_https': _awsUseHttps,
+        'assign_public_ip': _awsAssignPublicIp,
+        'use_public_ip': _awsUsePublicIp,
+      })
+      ..removeWhere((key, value) => value == null);
+  }
+}
+
+List<String> _stringList(Object? value) {
+  if (value is! List) return const [];
+  return value.map((item) => item.toString()).toList();
 }
 
 enum _ConfigEncoding { externalTagged, map }

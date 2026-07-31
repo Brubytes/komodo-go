@@ -4,6 +4,7 @@ import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
 import 'package:komodo_go/core/api/custom_header.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/api/proxy_auth.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
@@ -80,7 +81,7 @@ class AuthRepository {
   final ValidationDioFactory _validationDioFactory;
 
   /// Validates credentials by making a test API call.
-  Future<Either<Failure, void>> validateCredentials(
+  Future<Either<Failure, KomodoCoreVersion>> validateCredentials(
     ApiCredentials credentials,
   ) async {
     return apiCall(
@@ -92,11 +93,11 @@ class AuthRepository {
         final versionResponse = await client.read(
           const RpcRequest(type: 'GetVersion', params: <String, dynamic>{}),
         );
-        _validateVersionProbeResponse(versionResponse);
+        final version = _validateVersionProbeResponse(versionResponse);
 
         await _probeExecutePath(dio);
 
-        return;
+        return version;
       },
       onApiException: (e) {
         if (_looksLikeExecutePathBlocked(e)) {
@@ -122,11 +123,11 @@ class AuthRepository {
     );
   }
 
-  void _validateVersionProbeResponse(Object? response) {
+  KomodoCoreVersion _validateVersionProbeResponse(Object? response) {
     if (response case {
       'version': final String version,
     } when version.trim().isNotEmpty) {
-      return;
+      return KomodoCoreVersion.parse(version);
     }
 
     throw const ApiException(

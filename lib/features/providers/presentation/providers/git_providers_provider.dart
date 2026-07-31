@@ -96,6 +96,8 @@ class GitProviderActions extends _$GitProviderActions {
       token: hasToken ? trimmedToken : null,
     );
 
+    if (!ref.mounted) return false;
+
     return result.fold(
       (failure) {
         state = AsyncValue.error(failure.displayMessage, StackTrace.current);
@@ -123,6 +125,8 @@ class GitProviderActions extends _$GitProviderActions {
 
     state = const AsyncValue.loading();
     final result = await action(repository);
+
+    if (!ref.mounted) return false;
 
     return result.fold(
       (failure) {

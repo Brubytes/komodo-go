@@ -164,7 +164,7 @@ class LoginView extends HookConsumerWidget {
         case _ConnectionAction.edit:
           await EditConnectionSheet.show(context, connection: connection);
         case _ConnectionAction.delete:
-          final isDemo = connection.name == demoConnectionName;
+          final isDemo = isDemoConnection(connection);
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
@@ -187,8 +187,9 @@ class LoginView extends HookConsumerWidget {
             ),
           );
 
+          if (!context.mounted) return;
           if (confirmed ?? false) {
-            if (connection.name == demoConnectionName) {
+            if (isDemoConnection(connection)) {
               await ref
                   .read(demoModeProvider.notifier)
                   .setEnabled(enabled: false);

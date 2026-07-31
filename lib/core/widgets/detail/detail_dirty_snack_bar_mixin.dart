@@ -119,6 +119,7 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
       final messenger = _dirtySnackBarMessenger;
       if (messenger != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!messenger.mounted) return;
           messenger.removeCurrentSnackBar();
         });
       }

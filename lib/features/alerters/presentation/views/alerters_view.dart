@@ -297,6 +297,7 @@ class _AlerterTile extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
+    if (!context.mounted) return;
 
     final ok = await ref
         .read(alerterActionsProvider.notifier)

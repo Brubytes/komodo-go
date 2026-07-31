@@ -15,28 +15,37 @@ class DetailCodeBlock extends StatelessWidget {
     super.key,
     this.language = DetailCodeLanguage.plainText,
     this.maxHeight = 360,
+    this.tabletMaxHeight,
   });
 
   final String code;
   final DetailCodeLanguage language;
   final double maxHeight;
+  final double? tabletMaxHeight;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final width = MediaQuery.sizeOf(context).width;
+    final effectiveMaxHeight = width >= 720
+        ? tabletMaxHeight ?? maxHeight
+        : maxHeight;
 
     final span = _highlight(context, code);
 
-    return AppCardSurface(
-      radius: 16,
-      padding: const EdgeInsets.all(12),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        child: SingleChildScrollView(
-          child: SelectableText.rich(
-            TextSpan(
-              style: textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
-              children: [span],
+    return SizedBox(
+      width: double.infinity,
+      child: AppCardSurface(
+        radius: 16,
+        padding: const EdgeInsets.all(12),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: effectiveMaxHeight),
+          child: SingleChildScrollView(
+            child: SelectableText.rich(
+              TextSpan(
+                style: textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                children: [span],
+              ),
             ),
           ),
         ),

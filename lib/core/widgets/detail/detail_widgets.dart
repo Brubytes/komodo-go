@@ -3,6 +3,7 @@ export 'detail_code_editor.dart';
 export 'detail_dirty_snack_bar_mixin.dart';
 export 'detail_hero_panel.dart';
 export 'detail_history_row.dart';
+export 'detail_log_controls.dart';
 export 'detail_metric_grid.dart';
 export 'detail_pill_list.dart';
 export 'detail_pills.dart';

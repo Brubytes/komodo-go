@@ -72,6 +72,7 @@ class VariableActions extends _$VariableActions {
         name: original.name,
         description: description.trim(),
       );
+      if (!ref.mounted) return false;
       final ok = result.fold((failure) {
         state = AsyncValue.error(failure.displayMessage, StackTrace.current);
         return false;
@@ -84,6 +85,7 @@ class VariableActions extends _$VariableActions {
         name: original.name,
         isSecret: isSecret,
       );
+      if (!ref.mounted) return false;
       final ok = result.fold((failure) {
         state = AsyncValue.error(failure.displayMessage, StackTrace.current);
         return false;
@@ -96,6 +98,7 @@ class VariableActions extends _$VariableActions {
         name: original.name,
         value: value,
       );
+      if (!ref.mounted) return false;
       return result.fold(
         (failure) {
           state = AsyncValue.error(failure.displayMessage, StackTrace.current);
@@ -126,6 +129,8 @@ class VariableActions extends _$VariableActions {
 
     state = const AsyncValue.loading();
     final result = await action(repository);
+
+    if (!ref.mounted) return false;
 
     return result.fold(
       (failure) {

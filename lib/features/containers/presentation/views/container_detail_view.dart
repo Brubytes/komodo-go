@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+import 'package:komodo_go/features/containers/data/models/container_log.dart';
 import 'package:komodo_go/features/containers/presentation/providers/container_log_provider.dart';
-import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
 import 'package:riverpod/misc.dart' show FutureProviderFamily;
 
@@ -29,7 +31,6 @@ class ContainerDetailView extends ConsumerWidget {
         _ContainerItemArgs(
           serverId: serverId,
           containerIdOrName: containerIdOrName,
-          initialItem: initialItem,
         ),
       ),
     );
@@ -40,13 +41,37 @@ class ContainerDetailView extends ConsumerWidget {
         containerIdOrName: decodedContainerIdOrName,
       ),
     );
+    final initialItem = this.initialItem;
+    final itemContent = itemAsync.when(
+      data: (item) =>
+          item == null ? const _NotFound() : ContainerCard(item: item),
+      // While (re)loading, keep showing the item passed in from the list as
+      // a placeholder instead of a skeleton.
+      loading: () => initialItem == null
+          ? const AppSkeletonCard()
+          : ContainerCard(item: initialItem),
+      error: (error, stack) => _ErrorState(
+        title: 'Failed to load container',
+        message: error.toString(),
+        onRetry: () => ref.invalidate(containersProvider),
+      ),
+    );
+    final logContent = _ContainerLogPanel(
+      logAsync: logAsync,
+      onRetry: () => ref.invalidate(
+        containerLogProvider(
+          serverIdOrName: serverId,
+          containerIdOrName: decodedContainerIdOrName,
+        ),
+      ),
+    );
 
     return Scaffold(
       appBar: const MainAppBar(title: 'Container', icon: AppIcons.containers),
       body: RefreshIndicator(
         onRefresh: () async {
           ref
-            ..invalidate(_containerItemProviderFamily)
+            ..invalidate(containersProvider)
             ..invalidate(
               containerLogProvider(
                 serverIdOrName: serverId,
@@ -57,53 +82,29 @@ class ContainerDetailView extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            itemAsync.when(
-              data: (item) =>
-                  item == null ? const _NotFound() : ContainerCard(item: item),
-              loading: () => const AppSkeletonCard(),
-              error: (error, stack) => _ErrorState(
-                title: 'Failed to load container',
-                message: error.toString(),
-                onRetry: () => ref.invalidate(_containerItemProviderFamily),
-              ),
-            ),
-            const Gap(16),
-            Text(
-              'Log (tail)',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const Gap(8),
-            logAsync.when(
-              data: (log) {
-                if (log == null) {
-                  return const _LogEmpty();
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 720) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [itemContent, const Gap(16), logContent],
+                  );
                 }
 
-                final lines = <String>[
-                  if (log.stdout.trim().isNotEmpty) log.stdout.trim(),
-                  if (log.stderr.trim().isNotEmpty) log.stderr.trim(),
-                ];
-
-                if (lines.isEmpty) {
-                  return const _LogEmpty();
-                }
-
-                return _LogBox(content: lines.join('\n\n'));
-              },
-              loading: () =>
-                  const _LogBox(content: 'Loading…', isLoading: true),
-              error: (error, stack) => _ErrorState(
-                title: 'Failed to load log',
-                message: error.toString(),
-                onRetry: () => ref.invalidate(
-                  containerLogProvider(
-                    serverIdOrName: serverId,
-                    containerIdOrName: decodedContainerIdOrName,
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1120),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 4, child: itemContent),
+                        const Gap(16),
+                        Expanded(flex: 6, child: logContent),
+                      ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ],
         ),
@@ -112,11 +113,56 @@ class ContainerDetailView extends ConsumerWidget {
   }
 }
 
-final FutureProviderFamily<ContainerOverviewItem?, _ContainerItemArgs>
-    _containerItemProviderFamily = FutureProvider.autoDispose
-        .family<ContainerOverviewItem?, _ContainerItemArgs>((ref, args) async {
-      if (args.initialItem != null) return args.initialItem;
+class _ContainerLogPanel extends StatelessWidget {
+  const _ContainerLogPanel({required this.logAsync, required this.onRetry});
 
+  final AsyncValue<ContainerLog?> logAsync;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Log (tail)',
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const Gap(8),
+        logAsync.when(
+          data: (log) {
+            if (log == null) {
+              return const _LogEmpty();
+            }
+
+            final lines = <String>[
+              if (log.stdout.trim().isNotEmpty) log.stdout.trim(),
+              if (log.stderr.trim().isNotEmpty) log.stderr.trim(),
+            ];
+
+            if (lines.isEmpty) {
+              return const _LogEmpty();
+            }
+
+            return _LogBox(content: lines.join('\n\n'));
+          },
+          loading: () => const _LogBox(content: 'Loading...', isLoading: true),
+          error: (error, stack) => _ErrorState(
+            title: 'Failed to load log',
+            message: error.toString(),
+            onRetry: onRetry,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+final FutureProviderFamily<ContainerOverviewItem?, _ContainerItemArgs>
+_containerItemProviderFamily = FutureProvider.autoDispose
+    .family<ContainerOverviewItem?, _ContainerItemArgs>((ref, args) async {
       final result = await ref.watch(containersProvider.future);
 
       final normalized = Uri.decodeComponent(args.containerIdOrName);
@@ -135,23 +181,20 @@ class _ContainerItemArgs {
   const _ContainerItemArgs({
     required this.serverId,
     required this.containerIdOrName,
-    required this.initialItem,
   });
 
   final String serverId;
   final String containerIdOrName;
-  final ContainerOverviewItem? initialItem;
 
   @override
   bool operator ==(Object other) {
     return other is _ContainerItemArgs &&
         other.serverId == serverId &&
-        other.containerIdOrName == containerIdOrName &&
-        other.initialItem == initialItem;
+        other.containerIdOrName == containerIdOrName;
   }
 
   @override
-  int get hashCode => Object.hash(serverId, containerIdOrName, initialItem);
+  int get hashCode => Object.hash(serverId, containerIdOrName);
 }
 
 class _NotFound extends StatelessWidget {
@@ -184,23 +227,19 @@ class _LogBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return SizedBox(
-      width: double.infinity,
-      child: AppCardSurface(
-        padding: const EdgeInsets.all(12),
-        radius: 12,
-        child: isLoading
-            ? Row(
-                children: [
-                  const AppInlineSkeleton(),
-                  const Gap(10),
-                  Text(content, style: textTheme.bodySmall),
-                ],
-              )
-            : SelectableText(
-                content,
-                style: textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
-              ),
+    if (!isLoading) {
+      return DetailCodeBlock(code: content, tabletMaxHeight: 560);
+    }
+
+    return AppCardSurface(
+      padding: const EdgeInsets.all(12),
+      radius: 12,
+      child: Row(
+        children: [
+          const AppInlineSkeleton(),
+          const Gap(10),
+          Text(content, style: textTheme.bodySmall),
+        ],
       ),
     );
   }

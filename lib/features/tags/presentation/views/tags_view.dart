@@ -37,6 +37,7 @@ class TagsView extends ConsumerWidget {
             : () async {
                 final result = await TagEditorSheet.show(context);
                 if (result == null) return;
+                if (!context.mounted) return;
 
                 final ok = await ref
                     .read(tagActionsProvider.notifier)
@@ -78,6 +79,7 @@ class TagsView extends ConsumerWidget {
                           initial: tag,
                         );
                         if (result == null) return;
+                        if (!context.mounted) return;
 
                         final ok = await ref
                             .read(tagActionsProvider.notifier)
@@ -123,6 +125,7 @@ class TagsView extends ConsumerWidget {
                           ),
                         );
                         if (confirmed != true) return;
+                        if (!context.mounted) return;
 
                         final ok = await ref
                             .read(tagActionsProvider.notifier)

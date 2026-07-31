@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
@@ -186,6 +187,7 @@ class BuilderTile extends ConsumerWidget {
       builderName: item.name,
       builderType: item.info.builderType,
       builderJson: json,
+      capabilities: ref.read(komodoApiCapabilitiesProvider),
     );
 
     if (!context.mounted) return;
@@ -229,6 +231,7 @@ class BuilderTile extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
+    if (!context.mounted) return;
 
     final ok = await ref
         .read(builderActionsProvider.notifier)

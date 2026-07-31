@@ -120,7 +120,9 @@ class EditConnectionSheet extends HookConsumerWidget {
         if (!context.mounted) return;
         Navigator.of(context).pop();
       } finally {
-        isSaving.value = false;
+        if (context.mounted) {
+          isSaving.value = false;
+        }
       }
     }
 

@@ -821,7 +821,7 @@ class DemoBackend {
   Object _handleRead(String type, Map<String, dynamic> params) {
     switch (type) {
       case 'GetVersion':
-        return <String, dynamic>{'version': '0.0.0-demo'};
+        return <String, dynamic>{'version': '2.3.0-demo'};
       case 'GetUsername':
         return <String, dynamic>{'username': 'Demo User'};
 
@@ -875,6 +875,7 @@ class DemoBackend {
       case 'GetAction':
         return _actionDetail(id: params['action']?.toString());
 
+      case 'ListContainers':
       case 'ListDockerContainers':
         return List<Map<String, dynamic>>.from(_containers);
       case 'GetContainerLog':
@@ -890,6 +891,7 @@ class DemoBackend {
         return _updatesPage(params);
       case 'ListGitProviderAccounts':
         return List<Map<String, dynamic>>.from(_gitProviderAccounts);
+      case 'ListImageRegistryAccounts':
       case 'ListDockerRegistryAccounts':
         return List<Map<String, dynamic>>.from(_dockerRegistryAccounts);
       case 'ListBuilders':
@@ -981,6 +983,7 @@ class DemoBackend {
         }
         return <String, dynamic>{};
 
+      case 'CreateImageRegistryAccount':
       case 'CreateDockerRegistryAccount':
         final account = params['account'];
         if (account is Map) {
@@ -995,6 +998,7 @@ class DemoBackend {
           return created;
         }
         return <String, dynamic>{};
+      case 'UpdateImageRegistryAccount':
       case 'UpdateDockerRegistryAccount':
         final id = params['id']?.toString() ?? '';
         final account = params['account'];
@@ -1009,6 +1013,7 @@ class DemoBackend {
           return _dockerRegistryAccounts[index];
         }
         return <String, dynamic>{};
+      case 'DeleteImageRegistryAccount':
       case 'DeleteDockerRegistryAccount':
         final id = params['id']?.toString() ?? '';
         final index = _dockerRegistryAccounts.indexWhere((a) => a['id'] == id);

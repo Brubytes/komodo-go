@@ -137,6 +137,8 @@ class ServerActions extends _$ServerActions {
 
     final result = await request(repository);
 
+    if (!ref.mounted) return null;
+
     return result.fold(
       (failure) {
         state = AsyncValue.error(failure.displayMessage, StackTrace.current);

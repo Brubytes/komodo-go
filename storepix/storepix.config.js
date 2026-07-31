@@ -32,7 +32,7 @@ export default {
   // Theme customization (injected as CSS variables)
   // Komodo brand colors
   theme: {
-    primary: '#014226', // Komodo primary green
+    primary: '#01683b', // Komodo primary green
     font: 'Inter',
   },
 

@@ -28,7 +28,7 @@ sealed class BuildListItemInfo with _$BuildListItemInfo {
     @JsonKey(name: 'last_built_at') @Default(0) int lastBuiltAt,
     @Default(BuildVersion()) BuildVersion version,
     @JsonKey(name: 'builder_id') @Default('') String builderId,
-    @Default('') String linkedRepo,
+    @JsonKey(name: 'linked_repo') @Default('') String linkedRepo,
     @Default('') String repo,
     @Default('') String branch,
     @JsonKey(name: 'repo_link') @Default('') String repoLink,
@@ -97,7 +97,7 @@ sealed class BuildConfig with _$BuildConfig {
     bool autoIncrementVersion,
     @JsonKey(name: 'image_name') @Default('') String imageName,
     @JsonKey(name: 'image_tag') @Default('') String imageTag,
-    @Default('') String linkedRepo,
+    @JsonKey(name: 'linked_repo') @Default('') String linkedRepo,
     @Default('') String repo,
     @Default('') String branch,
     @Default('') String commit,
@@ -107,7 +107,7 @@ sealed class BuildConfig with _$BuildConfig {
     @JsonKey(name: 'dockerfile_path') @Default('') String dockerfilePath,
     @JsonKey(name: 'skip_secret_interp') @Default(false) bool skipSecretInterp,
     @JsonKey(name: 'use_buildx') @Default(false) bool useBuildx,
-    @Default([]) List<String> extraArgs,
+    @JsonKey(name: 'extra_args') @Default([]) List<String> extraArgs,
   }) = _BuildConfig;
 
   factory BuildConfig.fromJson(Map<String, dynamic> json) =>

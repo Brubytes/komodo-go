@@ -84,7 +84,9 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
           IconButton(
             icon: const Icon(AppIcons.play),
             tooltip: 'Run',
-            onPressed: () => _runProcedure(context, procedureId),
+            onPressed: actionsState.isLoading
+                ? null
+                : () => _runProcedure(context, procedureId),
           ),
         ],
       ),
@@ -224,6 +226,8 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
   Future<void> _runProcedure(BuildContext context, String procedureId) async {
     final actions = ref.read(procedureActionsProvider.notifier);
     final success = await actions.run(procedureId);
+
+    if (!mounted) return;
 
     if (success) {
       ref

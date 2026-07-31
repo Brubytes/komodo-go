@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
-import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/repositories/server_repository.dart';
 import 'package:mocktail/mocktail.dart';
@@ -38,13 +38,19 @@ void main() {
 
       when(() => containerRepository.listDockerContainers('srv1')).thenAnswer(
         (_) async => Right([
-          ContainerListItem.fromJson(<String, dynamic>{'id': 'c1', 'name': 'zeta'}),
+          ContainerListItem.fromJson(<String, dynamic>{
+            'id': 'c1',
+            'name': 'zeta',
+          }),
         ]),
       );
 
       when(() => containerRepository.listDockerContainers('srv2')).thenAnswer(
         (_) async => Right([
-          ContainerListItem.fromJson(<String, dynamic>{'id': 'c2', 'name': 'alpha'}),
+          ContainerListItem.fromJson(<String, dynamic>{
+            'id': 'c2',
+            'name': 'alpha',
+          }),
         ]),
       );
 
@@ -92,7 +98,10 @@ void main() {
 
       when(() => containerRepository.listDockerContainers('srv2')).thenAnswer(
         (_) async => Right([
-          ContainerListItem.fromJson(<String, dynamic>{'id': 'c2', 'name': 'alpha'}),
+          ContainerListItem.fromJson(<String, dynamic>{
+            'id': 'c2',
+            'name': 'alpha',
+          }),
         ]),
       );
 

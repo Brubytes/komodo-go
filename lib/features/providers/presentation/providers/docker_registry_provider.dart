@@ -88,6 +88,8 @@ class DockerRegistryActions extends _$DockerRegistryActions {
       token: hasToken ? trimmedToken : null,
     );
 
+    if (!ref.mounted) return false;
+
     return result.fold(
       (failure) {
         state = AsyncValue.error(failure.displayMessage, StackTrace.current);
@@ -115,6 +117,8 @@ class DockerRegistryActions extends _$DockerRegistryActions {
 
     state = const AsyncValue.loading();
     final result = await action(repository);
+
+    if (!ref.mounted) return false;
 
     return result.fold(
       (failure) {

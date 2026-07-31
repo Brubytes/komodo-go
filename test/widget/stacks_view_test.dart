@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart' hide Tags;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/stacks/stack_detail_view.dart';
+import 'package:komodo_go/composition/stacks/stack_updates_provider.dart';
+import 'package:komodo_go/composition/stacks/stacks_list_view.dart';
 import 'package:komodo_go/core/data/models/core_info.dart';
 import 'package:komodo_go/core/providers/core_info_provider.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
-import 'package:komodo_go/features/notifications/presentation/providers/stack_updates_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
 import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
 import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
@@ -16,8 +18,6 @@ import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
-import 'package:komodo_go/features/stacks/presentation/views/stack_detail_view.dart';
-import 'package:komodo_go/features/stacks/presentation/views/stacks_list_view.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 

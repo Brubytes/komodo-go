@@ -1,8 +1,7 @@
-import 'package:fpdart/fpdart.dart';
-import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/data/repositories/sync_repository.dart';
+import 'package:komodo_go/shared/resources/providers/resource_action_executor.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'syncs_provider.g.dart';
@@ -48,69 +47,27 @@ Future<KomodoResourceSync?> syncDetail(Ref ref, String syncIdOrName) async {
 
 /// Action state for sync operations.
 @riverpod
-class SyncActions extends _$SyncActions {
+class SyncActions extends _$SyncActions
+    with ResourceActionExecutor<SyncRepository> {
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);
 
+  @override
+  SyncRepository? readRepository() => ref.read(syncRepositoryProvider);
+
+  @override
+  void invalidateList() => ref.invalidate(syncsProvider);
+
+  @override
+  bool get isMounted => ref.mounted;
+
   Future<bool> run(String syncIdOrName) =>
-      _executeAction((repo) => repo.runSync(syncIdOrName));
+      executeAction((repo) => repo.runSync(syncIdOrName));
 
   Future<KomodoResourceSync?> updateSyncConfig({
     required String syncId,
     required Map<String, dynamic> partialConfig,
-  }) => _executeRequest(
+  }) => executeRequest(
     (repo) => repo.updateSyncConfig(syncId: syncId, partialConfig: partialConfig),
   );
-
-  Future<bool> _executeAction(
-    Future<Either<Failure, void>> Function(SyncRepository repo) action,
-  ) async {
-    final repository = ref.read(syncRepositoryProvider);
-    if (repository == null) {
-      state = AsyncValue.error('Not authenticated', StackTrace.current);
-      return false;
-    }
-
-    state = const AsyncValue.loading();
-
-    final result = await action(repository);
-
-    return result.fold(
-      (failure) {
-        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
-        return false;
-      },
-      (_) {
-        state = const AsyncValue.data(null);
-        ref.invalidate(syncsProvider);
-        return true;
-      },
-    );
-  }
-
-  Future<T?> _executeRequest<T>(
-    Future<Either<Failure, T>> Function(SyncRepository repo) request,
-  ) async {
-    final repository = ref.read(syncRepositoryProvider);
-    if (repository == null) {
-      state = AsyncValue.error('Not authenticated', StackTrace.current);
-      return null;
-    }
-
-    state = const AsyncValue.loading();
-
-    final result = await request(repository);
-
-    return result.fold(
-      (failure) {
-        state = AsyncValue.error(failure.displayMessage, StackTrace.current);
-        return null;
-      },
-      (value) {
-        state = const AsyncValue.data(null);
-        ref.invalidate(syncsProvider);
-        return value;
-      },
-    );
-  }
 }

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
 
 import 'backend_test_config.dart';
@@ -53,7 +54,11 @@ Dio buildTestDio(BackendTestConfig config, {RpcRecorder? recorder}) {
 }
 
 KomodoApiClient buildTestClient(BackendTestConfig config, RpcRecorder recorder) {
-  return KomodoApiClient(buildTestDio(config, recorder: recorder));
+  final version = KomodoCoreVersion.parse(config.coreVersion);
+  return KomodoApiClient(
+    buildTestDio(config, recorder: recorder),
+    capabilities: KomodoApiCapabilities.fromVersion(version),
+  );
 }
 
 BackendTestConfig requireConfig(BackendTestConfig? config) {

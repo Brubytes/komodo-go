@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
-import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 
 class ContainerCard extends StatelessWidget {
   const ContainerCard({
@@ -35,12 +35,11 @@ class ContainerCard extends StatelessWidget {
     final pillFg = scheme.onSurface;
 
     final hasActions = _hasActions(item.container.state);
-    final keyId =
-        (item.container.id?.trim().isNotEmpty ?? false)
-            ? item.container.id!.trim()
-            : (item.container.name.trim().isNotEmpty
-                  ? item.container.name.trim()
-                  : 'unknown');
+    final keyId = (item.container.id?.trim().isNotEmpty ?? false)
+        ? item.container.id!.trim()
+        : (item.container.name.trim().isNotEmpty
+              ? item.container.name.trim()
+              : 'unknown');
 
     return AppCardSurface(
       key: ValueKey('container_card_$keyId'),
@@ -69,7 +68,7 @@ class ContainerCard extends StatelessWidget {
                       ),
                     ),
                     const Gap(12),
-                      _StateChip(
+                    _StateChip(
                       state: item.container.state,
                       color: stateColor,
                       showMenu: onAction != null && hasActions,
@@ -120,8 +119,9 @@ class ContainerCard extends StatelessWidget {
                   _UsageRow(
                     icon: AppIcons.cpu,
                     label: 'CPU',
-                    value:
-                        stats.cpuPerc.trim().isNotEmpty ? stats.cpuPerc : '-',
+                    value: stats.cpuPerc.trim().isNotEmpty
+                        ? stats.cpuPerc
+                        : '-',
                     progress: stats.cpuPercentValue != null
                         ? stats.cpuPercentValue! / 100.0
                         : null,

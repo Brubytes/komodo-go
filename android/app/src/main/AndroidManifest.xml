@@ -1,10 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- Backups are disabled: SharedPreferences contains connection
+         metadata (server names + base URLs) that must not sync to cloud
+         backups or migrate to other devices. allowBackup covers API < 31;
+         dataExtractionRules additionally disables cloud backup and
+         device-to-device transfer on API 31+. -->
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"

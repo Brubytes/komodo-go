@@ -2,45 +2,47 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/alerters/alerter_detail_view.dart';
+import 'package:komodo_go/composition/builds/build_detail_view.dart';
+import 'package:komodo_go/composition/containers/containers_provider.dart';
+import 'package:komodo_go/composition/containers/containers_view.dart';
+import 'package:komodo_go/composition/deployments/deployment_detail_view.dart';
+import 'package:komodo_go/composition/deployments/deployments_list_view.dart';
+import 'package:komodo_go/composition/home/home_view.dart';
+import 'package:komodo_go/composition/repos/repo_detail_view.dart';
+import 'package:komodo_go/composition/resources/resource_name_resolver_provider.dart';
+import 'package:komodo_go/composition/resources/resources_view.dart';
+import 'package:komodo_go/composition/servers/servers_list_view.dart';
+import 'package:komodo_go/composition/settings/connections_view.dart';
+import 'package:komodo_go/composition/settings/settings_view.dart';
+import 'package:komodo_go/composition/stacks/stack_detail_view.dart';
+import 'package:komodo_go/composition/stacks/stacks_list_view.dart';
+import 'package:komodo_go/composition/syncs/sync_detail_view.dart';
 import 'package:komodo_go/core/router/route_observer.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/adaptive_bottom_navigation_bar.dart';
 import 'package:komodo_go/features/actions/presentation/views/action_detail_view.dart';
 import 'package:komodo_go/features/actions/presentation/views/actions_list_view.dart';
-import 'package:komodo_go/features/alerters/presentation/views/alerter_detail_view.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerters_view.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/auth/presentation/views/auth_loading_view.dart';
 import 'package:komodo_go/features/auth/presentation/views/login_view.dart';
 import 'package:komodo_go/features/builders/presentation/views/builders_view.dart';
-import 'package:komodo_go/features/builds/presentation/views/build_detail_view.dart';
 import 'package:komodo_go/features/builds/presentation/views/builds_list_view.dart';
-import 'package:komodo_go/features/containers/presentation/providers/containers_provider.dart';
 import 'package:komodo_go/features/containers/presentation/views/container_detail_view.dart';
-import 'package:komodo_go/features/containers/presentation/views/containers_view.dart';
-import 'package:komodo_go/features/deployments/presentation/views/deployment_detail_view.dart';
-import 'package:komodo_go/features/deployments/presentation/views/deployments_list_view.dart';
-import 'package:komodo_go/features/home/presentation/views/home_view.dart';
 import 'package:komodo_go/features/notifications/presentation/views/notifications_view.dart';
 import 'package:komodo_go/features/procedures/presentation/views/procedure_detail_view.dart';
 import 'package:komodo_go/features/procedures/presentation/views/procedures_list_view.dart';
 import 'package:komodo_go/features/providers/presentation/views/providers_view.dart';
-import 'package:komodo_go/features/repos/presentation/views/repo_detail_view.dart';
 import 'package:komodo_go/features/repos/presentation/views/repos_list_view.dart';
-import 'package:komodo_go/features/resources/presentation/views/resources_view.dart';
 import 'package:komodo_go/features/servers/presentation/views/server_detail_view.dart';
-import 'package:komodo_go/features/servers/presentation/views/servers_list_view.dart';
-import 'package:komodo_go/features/settings/presentation/views/connections_view.dart';
 import 'package:komodo_go/features/settings/presentation/views/credits_view.dart';
-import 'package:komodo_go/features/settings/presentation/views/settings_view.dart';
-import 'package:komodo_go/features/stacks/presentation/views/stack_detail_view.dart';
-import 'package:komodo_go/features/stacks/presentation/views/stacks_list_view.dart';
-import 'package:komodo_go/features/syncs/presentation/views/sync_detail_view.dart';
 import 'package:komodo_go/features/syncs/presentation/views/syncs_list_view.dart';
 import 'package:komodo_go/features/tags/presentation/views/tags_view.dart';
 import 'package:komodo_go/features/variables/presentation/views/variables_view.dart';
+import 'package:komodo_go/shared/resources/providers/resource_name_resolver_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'app_router.g.dart';
@@ -99,37 +101,57 @@ String _withQuery(String location, Uri uri) {
   return '$location?$query';
 }
 
-@riverpod
+/// Decides where to send the user based on the current auth state.
+///
+/// Exposed as a top-level function so the redirect policy is unit-testable.
+String? authRedirect({
+  required AsyncValue<AuthState> authState,
+  required String matchedLocation,
+}) {
+  final isOnSplash = matchedLocation == AppRoutes.splash;
+  final isOnLogin = matchedLocation == AppRoutes.login;
+
+  // Gate on the splash screen only while no auth state exists yet (initial
+  // restore, explicit login/logout). During refreshes — e.g. a connection was
+  // renamed — the previous value is retained and navigation stays untouched.
+  if (authState.isLoading && !authState.hasValue) {
+    return isOnSplash ? null : AppRoutes.splash;
+  }
+
+  final isAuthenticated = authState.value?.isAuthenticated ?? false;
+
+  // If not authenticated and not on login page, redirect to login
+  if (!isAuthenticated) {
+    return isOnLogin ? null : AppRoutes.login;
+  }
+
+  // If authenticated and on auth pages, redirect to home
+  if (isOnLogin || isOnSplash) {
+    return AppRoutes.home;
+  }
+
+  return null;
+}
+
+@Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
-  final authState = ref.watch(authProvider);
+  // Recreating the router would reset the entire navigation stack, so it is
+  // created exactly once; auth changes only re-run `redirect` via
+  // refreshListenable.
+  final authListenable = ValueNotifier(ref.read(authProvider));
+  ref
+    ..listen(authProvider, (_, next) => authListenable.value = next)
+    ..onDispose(authListenable.dispose);
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: kDebugMode,
     observers: [appRouteObserver],
-    redirect: (context, state) {
-      final isOnSplash = state.matchedLocation == AppRoutes.splash;
-      final isOnLogin = state.matchedLocation == AppRoutes.login;
-      final isAuthLoading = authState.isLoading;
-
-      if (isAuthLoading) {
-        return isOnSplash ? null : AppRoutes.splash;
-      }
-
-      final isAuthenticated = authState.value?.isAuthenticated ?? false;
-
-      // If not authenticated and not on login page, redirect to login
-      if (!isAuthenticated) {
-        return isOnLogin ? null : AppRoutes.login;
-      }
-
-      // If authenticated and on auth pages, redirect to home
-      if (isAuthenticated && (isOnLogin || isOnSplash)) {
-        return AppRoutes.home;
-      }
-
-      return null;
-    },
+    refreshListenable: authListenable,
+    redirect: (context, state) => authRedirect(
+      authState: authListenable.value,
+      matchedLocation: state.matchedLocation,
+    ),
     routes: [
       // Startup splash while auth state is being restored/validated
       GoRoute(
@@ -253,6 +275,7 @@ GoRouter appRouter(Ref ref) {
             MainShell(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
+            observers: [appShellBranchObservers[0]],
             routes: [
               GoRoute(
                 path: AppRoutes.home,
@@ -262,6 +285,7 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
           StatefulShellBranch(
+            observers: [appShellBranchObservers[1]],
             routes: [
               GoRoute(
                 path: AppRoutes.resources,
@@ -431,6 +455,7 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
           StatefulShellBranch(
+            observers: [appShellBranchObservers[2]],
             routes: [
               GoRoute(
                 path: AppRoutes.containers,
@@ -459,15 +484,26 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
           StatefulShellBranch(
+            observers: [appShellBranchObservers[3]],
             routes: [
               GoRoute(
                 path: AppRoutes.notifications,
-                pageBuilder: (context, state) =>
-                    _noTransitionTabPage(const NotificationsView()),
+                pageBuilder: (context, state) => _noTransitionTabPage(
+                  ProviderScope(
+                    overrides: [
+                      resourceNameResolverProvider.overrideWith(
+                        (ref) =>
+                            ref.watch(composedResourceNameResolverProvider),
+                      ),
+                    ],
+                    child: const NotificationsView(),
+                  ),
+                ),
               ),
             ],
           ),
           StatefulShellBranch(
+            observers: [appShellBranchObservers[4]],
             routes: [
               GoRoute(
                 path: AppRoutes.settings,
@@ -543,6 +579,7 @@ class MainShell extends ConsumerWidget {
     final storedIndex = ref.watch(mainShellIndexProvider);
     if (storedIndex != currentIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
         ref.read(mainShellIndexProvider.notifier).index = currentIndex;
       });
     }

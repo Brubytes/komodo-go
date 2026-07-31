@@ -14,6 +14,10 @@ sealed class SystemStats with _$SystemStats {
     @JsonKey(name: 'mem_free_gb') @Default(0) double memFreeGb,
     @JsonKey(name: 'mem_used_gb') @Default(0) double memUsedGb,
     @JsonKey(name: 'mem_total_gb') @Default(0) double memTotalGb,
+    @JsonKey(name: 'mem_buff_cache_gb') @Default(0) double memBuffCacheGb,
+    @JsonKey(name: 'mem_zfs_arc_gb') @Default(0) double memZfsArcGb,
+    @JsonKey(name: 'swap_total_gb') @Default(0) double swapTotalGb,
+    @JsonKey(name: 'swap_used_gb') @Default(0) double swapUsedGb,
     @Default([]) List<SingleDiskUsage> disks,
     @JsonKey(name: 'network_ingress_bytes')
     @Default(0)

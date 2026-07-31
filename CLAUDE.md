@@ -13,7 +13,8 @@ Komodo Go is a Flutter app for controlling the Komodo infrastructure management 
   - `lib/features/<feature>/`: feature modules split into:
     - `data/` (datasources, repositories, models)
     - `presentation/` (views, widgets, providers)
-  - `lib/shared/`: shared models/providers used across features.
+  - `lib/shared/`: shared models/providers used across features. Must never import `lib/features/`.
+  - `lib/composition/`: the explicit composition layer — the only place (besides `app_router.dart`) allowed to import multiple features. Hub screens and cross-resource wiring (name lookup, resource catalog, cross-feature detail views) live here. Enforced by `test/architecture/dependency_rules_test.dart`; new composition files must be added to its allow-list.
 - `test/`: Flutter tests (`test/unit/**` for unit tests, `test/widget_test.dart` for smoke/widget tests).
 - `android/`, `ios/`, `macos/`, `windows/`, `linux/`, `web/`: Flutter platform projects (tool-managed).
 - Generated output (do not edit by hand): `build/`, `.dart_tool/`, `**/*.g.dart`, `**/*.freezed.dart`.
@@ -59,7 +60,8 @@ fvm flutter clean
   - Types: `UpperCamelCase`
   - Locals: `lowerCamelCase`
 - Riverpod:
-  - Keep providers in `lib/features/**/presentation/providers/` or `lib/core/providers/`.
+  - Keep UI/state providers in `lib/features/**/presentation/providers/` or `lib/core/providers/`.
+  - Repository providers are declared next to their repository in `lib/features/**/data/repositories/*.dart`.
   - Don’t modify generated `*.g.dart` files.
 
 ## Architecture

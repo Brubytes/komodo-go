@@ -1,7 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
-import 'package:komodo_go/core/api/query_templates.dart';
+import 'package:komodo_go/core/api/paginated_read.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
@@ -17,16 +17,17 @@ class ActionRepository {
   final KomodoApiClient _client;
 
   /// Lists all actions.
-  Future<Either<Failure, List<ActionListItem>>> listActions() async {
+  Future<Either<Failure, List<ActionListItem>>> listActions([
+    ResourceListOptions options = const ResourceListOptions(),
+  ]) async {
     return apiCall(
       () async {
-        final response = await _client.read(
-          RpcRequest(
-            type: 'ListActions',
-            params: <String, dynamic>{'query': emptyQuery()},
-          ),
+        final actionsJson = await readAllPages(
+          _client,
+          type: 'ListActions',
+          params: options.params(),
+          pageSize: options.pageSize,
         );
-        final actionsJson = response as List<dynamic>? ?? [];
         return actionsJson
             .map(
               (json) => ActionListItem.fromJson(json as Map<String, dynamic>),
@@ -69,6 +70,32 @@ class ActionRepository {
         RpcRequest(
           type: 'RunAction',
           params: {'action': actionIdOrName, 'args': args},
+        ),
+      );
+      return;
+    });
+  }
+
+  /// Cancels the currently running update for the target action.
+  Future<Either<Failure, void>> cancelAction(
+    String actionIdOrName, {
+    String? updateId,
+  }) async {
+    if (!_client.capabilities.supportsActionCancellation) {
+      return const Left(
+        Failure.server(
+          message: 'Canceling actions requires Komodo 2.3 or newer.',
+        ),
+      );
+    }
+    return apiCall(() async {
+      await _client.execute(
+        RpcRequest(
+          type: 'CancelAction',
+          params: <String, dynamic>{
+            'action': actionIdOrName,
+            'update_id': ?updateId,
+          },
         ),
       );
       return;

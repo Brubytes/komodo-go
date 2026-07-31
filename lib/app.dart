@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/providers/theme_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_theme.dart';
-import 'package:komodo_go/features/settings/presentation/providers/theme_provider.dart';
 
 /// The root application widget.
 class KomodoApp extends ConsumerWidget {

@@ -1,7 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
-import 'package:komodo_go/core/api/query_templates.dart';
+import 'package:komodo_go/core/api/paginated_read.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
@@ -14,16 +14,16 @@ class BuilderRepository {
 
   final KomodoApiClient _client;
 
-  Future<Either<Failure, List<BuilderListItem>>> listBuilders() async {
+  Future<Either<Failure, List<BuilderListItem>>> listBuilders([
+    ResourceListOptions options = const ResourceListOptions(),
+  ]) async {
     return apiCall(() async {
-      final response = await _client.read(
-        RpcRequest(
-          type: 'ListBuilders',
-          params: <String, dynamic>{'query': emptyQuery()},
-        ),
+      final itemsJson = await readAllPages(
+        _client,
+        type: 'ListBuilders',
+        params: options.params(),
+        pageSize: options.pageSize,
       );
-
-      final itemsJson = response as List<dynamic>? ?? [];
       return itemsJson
           .map((json) => BuilderListItem.fromJson(json as Map<String, dynamic>))
           .toList();

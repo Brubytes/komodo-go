@@ -66,12 +66,18 @@ class ConnectionsStore {
     return _secureStorage.deleteCredentialsForConnection(connectionId);
   }
 
+  /// Adds a connection profile and stores its credentials.
+  ///
+  /// [id] can be supplied to create a connection with a well-known,
+  /// reserved id (e.g. the bundled demo connection); when omitted a
+  /// random id is generated.
   Future<ConnectionProfile> addConnection({
     required String name,
     required ApiCredentials credentials,
+    String? id,
   }) async {
     final now = DateTime.now();
-    final connectionId = _newConnectionId();
+    final connectionId = id ?? _newConnectionId();
 
     final profile = ConnectionProfile(
       id: connectionId,

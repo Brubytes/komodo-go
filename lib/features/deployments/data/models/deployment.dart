@@ -97,6 +97,11 @@ sealed class DeploymentListInfo with _$DeploymentListInfo {
     @Default('') String image,
     @JsonKey(name: 'update_available') @Default(false) bool updateAvailable,
     @JsonKey(name: 'server_id') @Default('') String serverId,
+    @JsonKey(name: 'server_name') @Default('') String serverName,
+    @JsonKey(name: 'swarm_id') @Default('') String swarmId,
+    @JsonKey(name: 'swarm_name') @Default('') String swarmName,
+    @JsonKey(name: 'custom_name') @Default('') String customName,
+    @JsonKey(name: 'deployed_name') @Default('') String deployedName,
     @JsonKey(name: 'build_id') String? buildId,
   }) = _DeploymentListInfo;
 
@@ -109,6 +114,8 @@ sealed class DeploymentListInfo with _$DeploymentListInfo {
 sealed class DeploymentConfig with _$DeploymentConfig {
   const factory DeploymentConfig({
     @JsonKey(name: 'server_id') @Default('') String serverId,
+    @JsonKey(name: 'swarm_id') @Default('') String swarmId,
+    @JsonKey(name: 'custom_name') @Default('') String customName,
     dynamic image,
     @JsonKey(name: 'image_registry_account')
     @Default('')
