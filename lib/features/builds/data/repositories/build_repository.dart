@@ -1,7 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
-import 'package:komodo_go/core/api/query_templates.dart';
+import 'package:komodo_go/core/api/paginated_read.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
@@ -17,25 +17,23 @@ class BuildRepository {
   final KomodoApiClient _client;
 
   /// Lists all builds.
-  Future<Either<Failure, List<BuildListItem>>> listBuilds() async {
+  Future<Either<Failure, List<BuildListItem>>> listBuilds([
+    ResourceListOptions options = const ResourceListOptions(),
+  ]) async {
     return apiCall(
       () async {
-        final response = await _client.read(
-          RpcRequest(
-            type: 'ListBuilds',
-            params: <String, dynamic>{
-              'query': emptyQuery(
-                specific: <String, dynamic>{
-                  'builder_ids': <String>[],
-                  'repos': <String>[],
-                  'built_since': 0,
-                },
-              ),
+        final buildsJson = await readAllPages(
+          _client,
+          type: 'ListBuilds',
+          params: options.params(
+            specific: <String, dynamic>{
+              'builder_ids': <String>[],
+              'repos': <String>[],
+              'built_since': 0,
             },
           ),
+          pageSize: options.pageSize,
         );
-
-        final buildsJson = response as List<dynamic>? ?? [];
         return buildsJson
             .map((json) => BuildListItem.fromJson(json as Map<String, dynamic>))
             .toList();

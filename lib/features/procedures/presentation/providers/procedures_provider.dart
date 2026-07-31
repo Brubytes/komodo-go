@@ -68,6 +68,11 @@ class ProcedureActions extends _$ProcedureActions
   Future<bool> run(String procedureIdOrName) =>
       executeAction((repo) => repo.runProcedure(procedureIdOrName));
 
+  Future<bool> cancel(String procedureIdOrName, {String? updateId}) =>
+      executeAction(
+        (repo) => repo.cancelProcedure(procedureIdOrName, updateId: updateId),
+      );
+
   Future<KomodoProcedure?> updateProcedureConfig({
     required String procedureId,
     required Map<String, dynamic> partialConfig,

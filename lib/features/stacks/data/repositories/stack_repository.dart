@@ -1,7 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
-import 'package:komodo_go/core/api/query_templates.dart';
+import 'package:komodo_go/core/api/paginated_read.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
@@ -17,26 +17,24 @@ class StackRepository {
   final KomodoApiClient _client;
 
   /// Lists all stacks.
-  Future<Either<Failure, List<StackListItem>>> listStacks() async {
+  Future<Either<Failure, List<StackListItem>>> listStacks([
+    ResourceListOptions options = const ResourceListOptions(),
+  ]) async {
     return apiCall(
       () async {
-        final response = await _client.read(
-          RpcRequest(
-            type: 'ListStacks',
-            params: <String, dynamic>{
-              'query': emptyQuery(
-                specific: <String, dynamic>{
-                  'server_ids': <String>[],
-                  'linked_repos': <String>[],
-                  'repos': <String>[],
-                  'update_available': false,
-                },
-              ),
+        final stacksJson = await readAllPages(
+          _client,
+          type: 'ListStacks',
+          params: options.params(
+            specific: <String, dynamic>{
+              'server_ids': <String>[],
+              'linked_repos': <String>[],
+              'repos': <String>[],
+              'update_available': false,
             },
           ),
+          pageSize: options.pageSize,
         );
-
-        final stacksJson = response as List<dynamic>? ?? [];
         return stacksJson
             .map((json) => StackListItem.fromJson(json as Map<String, dynamic>))
             .toList();

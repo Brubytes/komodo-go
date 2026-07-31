@@ -1,5 +1,5 @@
 {
-  "name": "Contract Variable",
+  "name": "CONTRACT_VARIABLE",
   "description": "<description>",
   "value": "<value>",
   "is_secret": false

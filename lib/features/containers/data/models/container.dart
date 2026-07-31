@@ -3,11 +3,12 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'container.freezed.dart';
 part 'container.g.dart';
 
-/// Container summary returned by `ListDockerContainers` (`ContainerListItem` in `komodo_client`).
+/// Container summary returned by `ListContainers` (`ContainerListItem` in `komodo_client`).
 @freezed
 sealed class ContainerListItem with _$ContainerListItem {
   const factory ContainerListItem({
     @JsonKey(name: 'server_id') String? serverId,
+    @JsonKey(name: 'server_name') String? serverName,
     @Default('') String name,
     String? id,
     String? image,

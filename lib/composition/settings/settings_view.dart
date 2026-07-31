@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/providers/theme_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
@@ -21,6 +22,8 @@ class SettingsView extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final authAsync = ref.watch(authProvider);
     final connection = authAsync.asData?.value.connection;
+    final coreVersion = ref.watch(komodoCoreVersionProvider);
+    final capabilities = ref.watch(komodoApiCapabilitiesProvider);
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -42,6 +45,21 @@ class SettingsView extends ConsumerWidget {
             trailing: _CardTrailing(label: connection?.name, showChevron: true),
             onTap: () => context.push(AppRoutes.connections),
           ),
+          if (coreVersion != null) ...[
+            const Gap(10),
+            _SettingsCardTile(
+              icon: AppIcons.info,
+              accentColor: scheme.primary,
+              title: 'Komodo Core',
+              subtitle: capabilities.isLegacyV22
+                  ? 'Komodo 2.2 compatibility mode'
+                  : 'Connected instance version',
+              trailing: _CardTrailing(
+                label: coreVersion.display,
+                showChevron: false,
+              ),
+            ),
+          ],
           const Gap(20),
           const _SettingsSectionHeader(title: 'Appearance'),
           const Gap(8),
@@ -246,7 +264,7 @@ class _SettingsCardTile extends StatelessWidget {
     required this.accentColor,
     required this.title,
     required this.subtitle,
-    required this.onTap,
+    this.onTap,
     this.trailing,
     this.enabled = true,
   });
@@ -255,7 +273,7 @@ class _SettingsCardTile extends StatelessWidget {
   final Color accentColor;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Widget? trailing;
   final bool enabled;
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
@@ -404,6 +405,7 @@ class DeploymentConfigEditorContentState
   var _suppressDirtyNotify = false;
 
   late final TextEditingController _serverId;
+  late final TextEditingController _customName;
   late final TextEditingController _imageRegistryAccount;
   late final TextEditingController _network;
   late final TextEditingController _command;
@@ -438,6 +440,7 @@ class DeploymentConfigEditorContentState
     _initial = widget.initialConfig;
 
     _serverId = TextEditingController(text: _initial.serverId);
+    _customName = TextEditingController(text: _initial.customName);
     _imageRegistryAccount = TextEditingController(
       text: _initial.imageRegistryAccount,
     );
@@ -481,6 +484,7 @@ class DeploymentConfigEditorContentState
 
     for (final c in <ChangeNotifier>[
       _serverId,
+      _customName,
       _imageRegistryAccount,
       _network,
       _command,
@@ -519,6 +523,7 @@ class DeploymentConfigEditorContentState
   void dispose() {
     for (final c in <ChangeNotifier>[
       _serverId,
+      _customName,
       _imageRegistryAccount,
       _network,
       _command,
@@ -536,6 +541,7 @@ class DeploymentConfigEditorContentState
     _serverId
       ..removeListener(_maybeRefreshNetworkOptions)
       ..dispose();
+    _customName.dispose();
     _imageRegistryAccount.dispose();
     _network.dispose();
     _command.dispose();
@@ -714,6 +720,7 @@ class DeploymentConfigEditorContentState
     setState(() {
       _initial = config;
       _serverId.text = config.serverId;
+      _customName.text = config.customName;
       _imageRegistryAccount.text = config.imageRegistryAccount;
       _network.text = config.network;
       _command.text = config.command;
@@ -799,6 +806,9 @@ class DeploymentConfigEditorContentState
     }
 
     setIfChanged('server_id', _serverId.text, _initial.serverId);
+    if (ref.read(komodoApiCapabilitiesProvider).supportsDeploymentCustomName) {
+      setIfChanged('custom_name', _customName.text, _initial.customName);
+    }
     setIfChanged(
       'image_registry_account',
       _imageRegistryAccount.text,
@@ -974,6 +984,19 @@ class DeploymentConfigEditorContentState
                     labelText: 'Server ID (manual)',
                     prefixIcon: Icon(AppIcons.tag),
                     helperText: 'Current value not found in server list.',
+                  ),
+                ),
+              ],
+              if (ref
+                  .watch(komodoApiCapabilitiesProvider)
+                  .supportsDeploymentCustomName) ...[
+                const Gap(12),
+                TextFormField(
+                  controller: _customName,
+                  decoration: const InputDecoration(
+                    labelText: 'Container or service name',
+                    prefixIcon: Icon(AppIcons.tag),
+                    helperText: 'Leave empty to use the deployment name.',
                   ),
                 ),
               ],

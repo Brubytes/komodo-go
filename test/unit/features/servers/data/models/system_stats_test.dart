@@ -10,6 +10,10 @@ void main() {
         'mem_free_gb': 3.0,
         'mem_used_gb': 5.0,
         'mem_total_gb': 8.0,
+        'mem_buff_cache_gb': 1.25,
+        'mem_zfs_arc_gb': 0.5,
+        'swap_total_gb': 4.0,
+        'swap_used_gb': 0.75,
         'disks': [
           {
             'mount': '/',
@@ -35,6 +39,10 @@ void main() {
       expect(stats.loadAverage?.one, 0.1);
       expect(stats.memTotalGb, 8.0);
       expect(stats.memUsedGb, 5.0);
+      expect(stats.memBuffCacheGb, 1.25);
+      expect(stats.memZfsArcGb, 0.5);
+      expect(stats.swapTotalGb, 4.0);
+      expect(stats.swapUsedGb, 0.75);
       expect(stats.memPercent, closeTo(62.5, 0.0001));
 
       expect(stats.diskTotalGb, 30.0);

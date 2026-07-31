@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/interceptors/auth_interceptor.dart';
 import 'package:komodo_go/core/api/interceptors/logging_interceptor.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/storage/secure_storage_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -13,11 +14,26 @@ class ActiveConnectionData {
     required this.connectionId,
     required this.name,
     required this.credentials,
+    required this.coreVersion,
   });
 
   final String connectionId;
   final String name;
   final ApiCredentials credentials;
+  final KomodoCoreVersion coreVersion;
+}
+
+@riverpod
+KomodoCoreVersion? komodoCoreVersion(Ref ref) {
+  return ref.watch(activeConnectionProvider)?.coreVersion;
+}
+
+@riverpod
+KomodoApiCapabilities komodoApiCapabilities(Ref ref) {
+  final version = ref.watch(komodoCoreVersionProvider);
+  return version == null
+      ? KomodoApiCapabilities.v23AndNewer
+      : KomodoApiCapabilities.fromVersion(version);
 }
 
 /// In-memory active connection (base URL + credentials) used to configure Dio.
@@ -84,10 +100,11 @@ Dio? dio(Ref ref) {
 @riverpod
 KomodoApiClient? apiClient(Ref ref) {
   final dio = ref.watch(dioProvider);
+  final capabilities = ref.watch(komodoApiCapabilitiesProvider);
   if (dio == null) {
     return null;
   }
-  return KomodoApiClient(dio);
+  return KomodoApiClient(dio, capabilities: capabilities);
 }
 
 /// Creates a Dio instance for validating credentials before saving.

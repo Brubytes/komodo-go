@@ -243,6 +243,7 @@ class Connections extends _$Connections {
           connectionId: connectionId,
           name: updatedProfile.name,
           credentials: updatedCredentials,
+          coreVersion: active!.coreVersion,
         );
       }
     } else {

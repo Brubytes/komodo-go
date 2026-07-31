@@ -2,11 +2,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/actions/data/repositories/action_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
-class _MockApiClient extends Mock implements KomodoApiClient {}
+class _MockApiClient extends Mock implements KomodoApiClient {
+  KomodoApiCapabilities capabilitiesValue =
+      KomodoApiCapabilities.v23AndNewer;
+
+  @override
+  KomodoApiCapabilities get capabilities => capabilitiesValue;
+}
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
 
@@ -56,12 +63,17 @@ void main() {
       expect(request.type, 'ListActions');
       expect(request.params, <String, dynamic>{
         'query': <String, dynamic>{
+          'terms': '',
           'names': <String>[],
           'templates': 'Include',
           'tags': <String>[],
           'tag_behavior': 'All',
           'specific': <String, dynamic>{},
         },
+        'sort_by': 'Name',
+        'sort_desc': false,
+        'page': 0,
+        'limit': 50,
       });
     });
 
@@ -120,6 +132,40 @@ void main() {
         'action': 'action-1',
         'args': {'target': 'web'},
       });
+    });
+
+    test('cancelAction sends CancelAction with an optional update id',
+        () async {
+      when(() => client.execute(any()))
+          .thenAnswer((_) async => <String, dynamic>{});
+
+      _rightOrFail(
+        await repository.cancelAction('action-1', updateId: 'update-1'),
+      );
+
+      final request = capturedExecute();
+      expect(request.type, 'CancelAction');
+      expect(request.params, <String, dynamic>{
+        'action': 'action-1',
+        'update_id': 'update-1',
+      });
+    });
+
+    test('Komodo 2.2 reports action cancellation as unsupported', () async {
+      client.capabilitiesValue = KomodoApiCapabilities.v22;
+
+      final result = await repository.cancelAction('action-1');
+
+      result.fold(
+        (failure) => expect(
+          failure,
+          const Failure.server(
+            message: 'Canceling actions requires Komodo 2.3 or newer.',
+          ),
+        ),
+        (_) => fail('Expected cancellation to be unsupported'),
+      );
+      verifyNever(() => client.execute(any()));
     });
 
     test('updateActionConfig sends UpdateAction via write with id and config',

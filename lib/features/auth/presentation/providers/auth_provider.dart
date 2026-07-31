@@ -46,13 +46,14 @@ class Auth extends _$Auth {
         ref.read(activeConnectionProvider.notifier).clear();
         return AuthState.error(failure: failure);
       },
-      (_) async {
+      (coreVersion) async {
         ref
             .read(activeConnectionProvider.notifier)
             .active = ActiveConnectionData(
           connectionId: activeProfile.id,
           name: activeProfile.name,
           credentials: credentials,
+          coreVersion: coreVersion,
         );
         await store.touchLastUsed(activeProfile.id);
         return AuthState.authenticated(

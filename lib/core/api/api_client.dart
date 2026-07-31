@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 
 /// RPC request structure for Komodo API.
 class RpcRequest<T> {
@@ -22,9 +23,13 @@ class RpcRequest<T> {
 /// - Single object endpoints return `Map<String, dynamic>`
 /// - List endpoints return `List<dynamic>` directly
 class KomodoApiClient {
-  KomodoApiClient(this._dio);
+  KomodoApiClient(
+    this._dio, {
+    this.capabilities = KomodoApiCapabilities.v23AndNewer,
+  });
 
   final Dio _dio;
+  final KomodoApiCapabilities capabilities;
 
   /// Sends a request to the auth module.
   Future<dynamic> auth(RpcRequest<dynamic> request) => _post('/auth', request);

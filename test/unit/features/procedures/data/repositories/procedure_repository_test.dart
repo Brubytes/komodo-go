@@ -2,11 +2,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/procedures/data/repositories/procedure_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
-class _MockApiClient extends Mock implements KomodoApiClient {}
+class _MockApiClient extends Mock implements KomodoApiClient {
+  KomodoApiCapabilities capabilitiesValue =
+      KomodoApiCapabilities.v23AndNewer;
+
+  @override
+  KomodoApiCapabilities get capabilities => capabilitiesValue;
+}
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
 
@@ -57,12 +64,17 @@ void main() {
       expect(request.type, 'ListProcedures');
       expect(request.params, <String, dynamic>{
         'query': <String, dynamic>{
+          'terms': '',
           'names': <String>[],
           'templates': 'Include',
           'tags': <String>[],
           'tag_behavior': 'All',
           'specific': <String, dynamic>{},
         },
+        'sort_by': 'Name',
+        'sort_desc': false,
+        'page': 0,
+        'limit': 50,
       });
     });
 
@@ -98,6 +110,41 @@ void main() {
       expect(request.type, 'RunProcedure');
       expect(request.params, <String, dynamic>{'procedure': 'proc-1'});
       verifyNever(() => client.write(any()));
+    });
+
+    test('cancelProcedure sends CancelProcedure with an optional update id',
+        () async {
+      when(() => client.execute(any()))
+          .thenAnswer((_) async => <String, dynamic>{});
+
+      _rightOrFail(
+        await repository.cancelProcedure('proc-1', updateId: 'update-1'),
+      );
+
+      final request = capturedExecute();
+      expect(request.type, 'CancelProcedure');
+      expect(request.params, <String, dynamic>{
+        'procedure': 'proc-1',
+        'update_id': 'update-1',
+      });
+    });
+
+    test('Komodo 2.2 reports procedure cancellation as unsupported',
+        () async {
+      client.capabilitiesValue = KomodoApiCapabilities.v22;
+
+      final result = await repository.cancelProcedure('procedure-1');
+
+      result.fold(
+        (failure) => expect(
+          failure,
+          const Failure.server(
+            message: 'Canceling procedures requires Komodo 2.3 or newer.',
+          ),
+        ),
+        (_) => fail('Expected cancellation to be unsupported'),
+      );
+      verifyNever(() => client.execute(any()));
     });
 
     test(

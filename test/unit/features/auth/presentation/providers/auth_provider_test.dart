@@ -2,9 +2,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/onboarding/onboarding_storage.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
+import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/providers/shared_preferences_provider.dart';
 import 'package:komodo_go/core/providers/storage_provider.dart';
 import 'package:komodo_go/core/storage/secure_storage_service.dart';
@@ -23,6 +25,7 @@ const _credentials = ApiCredentials(
   apiKey: 'key',
   apiSecret: 'secret',
 );
+final _coreVersion = KomodoCoreVersion.parse('2.3.0');
 
 void main() {
   setUpAll(() {
@@ -92,7 +95,7 @@ void main() {
     test('restores and validates stored credentials on startup', () async {
       when(
         () => authRepository.validateCredentials(any()),
-      ).thenAnswer((_) async => const Right(null));
+      ).thenAnswer((_) async => Right(_coreVersion));
       final connectionId = await seedConnection();
 
       final state = await container.read(authProvider.future);
@@ -100,6 +103,7 @@ void main() {
       expect(state.isAuthenticated, isTrue);
       expect(state.connection?.id, connectionId);
       expect(state.credentials?.apiKey, 'key');
+      expect(container.read(komodoCoreVersionProvider)?.display, 'v2.3.0');
     });
 
     test('failed validation surfaces an error state, not authenticated',
@@ -118,7 +122,7 @@ void main() {
     test('login persists the connection and credentials', () async {
       when(
         () => authRepository.validateCredentials(any()),
-      ).thenAnswer((_) async => const Right(null));
+      ).thenAnswer((_) async => Right(_coreVersion));
       when(
         () => authRepository.authenticate(
           baseUrl: any(named: 'baseUrl'),
@@ -161,7 +165,7 @@ void main() {
     test('logout clears the active connection and authentication', () async {
       when(
         () => authRepository.validateCredentials(any()),
-      ).thenAnswer((_) async => const Right(null));
+      ).thenAnswer((_) async => Right(_coreVersion));
       await seedConnection();
       await container.read(authProvider.future);
 
@@ -179,7 +183,7 @@ void main() {
     test('selectConnection validates the credentials exactly once', () async {
       when(
         () => authRepository.validateCredentials(any()),
-      ).thenAnswer((_) async => const Right(null));
+      ).thenAnswer((_) async => Right(_coreVersion));
       await seedConnection();
       await container.read(authProvider.future);
 

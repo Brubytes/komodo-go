@@ -2,11 +2,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
-class _MockApiClient extends Mock implements KomodoApiClient {}
+class _MockApiClient extends Mock implements KomodoApiClient {
+  KomodoApiCapabilities capabilitiesValue =
+      KomodoApiCapabilities.v23AndNewer;
+
+  @override
+  KomodoApiCapabilities get capabilities => capabilitiesValue;
+}
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
 
@@ -37,7 +44,7 @@ void main() {
         verify(() => client.execute(captureAny())).captured.single
             as RpcRequest<dynamic>;
 
-    test('listDockerContainers sends ListDockerContainers with server param',
+    test('listDockerContainers sends ListContainers with server param',
         () async {
       when(() => client.read(any())).thenAnswer(
         (_) async => [
@@ -50,8 +57,17 @@ void main() {
       expect(_rightOrFail(result).single.name, 'web');
 
       final request = capturedRead();
-      expect(request.type, 'ListDockerContainers');
+      expect(request.type, 'ListContainers');
       expect(request.params, <String, dynamic>{'server': 'server-1'});
+    });
+
+    test('Komodo 2.2 lists containers with ListDockerContainers', () async {
+      client.capabilitiesValue = KomodoApiCapabilities.v22;
+      when(() => client.read(any())).thenAnswer((_) async => <dynamic>[]);
+
+      await repository.listDockerContainers('server-1');
+
+      expect(capturedRead().type, 'ListDockerContainers');
     });
 
     test('getContainerLog sends GetContainerLog with exact default params',
