@@ -38,17 +38,32 @@ class ResourceListOptions {
       };
 }
 
-/// Reads every page from a v2.3 paginated list endpoint.
+/// Reads a complete resource list using the connected Core's API generation.
 ///
 /// Repository list methods historically returned the complete collection. This
-/// helper retains that contract while sending explicit pagination parameters so
-/// the server's new default limit cannot silently truncate results.
+/// helper retains that contract. Komodo 2.2 receives one unpaginated request;
+/// 2.3+ receives explicit pages so its default limit cannot truncate results.
 Future<List<dynamic>> readAllPages(
   KomodoApiClient client, {
   required String type,
   required Map<String, dynamic> params,
   int pageSize = 50,
 }) async {
+  if (!client.capabilities.supportsPaginatedResourceLists) {
+    final legacyParams = Map<String, dynamic>.from(params)
+      ..remove('sort_by')
+      ..remove('sort_desc');
+    final query = legacyParams['query'];
+    if (query is Map) {
+      legacyParams['query'] = Map<String, dynamic>.from(query)..remove('terms');
+    }
+
+    final response = await client.read(
+      RpcRequest(type: type, params: legacyParams),
+    );
+    return response as List<dynamic>? ?? const <dynamic>[];
+  }
+
   final result = <dynamic>[];
   var page = 0;
 

@@ -25,7 +25,7 @@ class ContainerRepository {
       try {
         final response = await _client.read(
           RpcRequest(
-            type: 'ListContainers',
+            type: _client.capabilities.listContainersRpc,
             params: {'server': serverIdOrName},
           ),
         );

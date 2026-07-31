@@ -821,7 +821,7 @@ class DemoBackend {
   Object _handleRead(String type, Map<String, dynamic> params) {
     switch (type) {
       case 'GetVersion':
-        return <String, dynamic>{'version': '0.0.0-demo'};
+        return <String, dynamic>{'version': '2.3.0-demo'};
       case 'GetUsername':
         return <String, dynamic>{'username': 'Demo User'};
 

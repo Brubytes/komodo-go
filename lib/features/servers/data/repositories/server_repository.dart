@@ -128,7 +128,7 @@ class ServerRepository {
       () async {
         final response = await _client.read(
           RpcRequest(
-            type: 'ListNetworks',
+            type: _client.capabilities.listNetworksRpc,
             params: {'server': serverIdOrName},
           ),
         );

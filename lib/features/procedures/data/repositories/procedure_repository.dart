@@ -87,6 +87,13 @@ class ProcedureRepository {
     String procedureIdOrName, {
     String? updateId,
   }) async {
+    if (!_client.capabilities.supportsActionCancellation) {
+      return const Left(
+        Failure.server(
+          message: 'Canceling procedures requires Komodo 2.3 or newer.',
+        ),
+      );
+    }
     return apiCall(() async {
       await _client.execute(
         RpcRequest(
