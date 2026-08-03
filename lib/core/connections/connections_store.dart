@@ -91,8 +91,15 @@ class ConnectionsStore {
     );
 
     final connections = await listConnections();
-    await saveConnections([...connections, profile]);
+    // Persist secrets first so a Keychain failure cannot leave a visible
+    // connection profile that has no usable credentials.
     await saveCredentials(connectionId, credentials);
+    try {
+      await saveConnections([...connections, profile]);
+    } on Exception {
+      await deleteCredentials(connectionId);
+      rethrow;
+    }
 
     return profile;
   }
