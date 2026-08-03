@@ -68,7 +68,7 @@ class DetailSurface extends StatelessWidget {
             ? appCardGradient(tint: tint, base: base)
             : null,
       ),
-      child: child,
+      child: Material(type: MaterialType.transparency, child: child),
     );
   }
 }

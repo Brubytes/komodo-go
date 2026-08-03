@@ -7,9 +7,9 @@ import 'package:komodo_go/shared/resources/providers/resource_action_executor.da
 class _FakeRepo {}
 
 class _Host with ResourceActionExecutor<_FakeRepo> {
-  _Host({_FakeRepo? repo}) : _repo = repo;
+  _Host({this.repo});
 
-  final _FakeRepo? _repo;
+  final _FakeRepo? repo;
   bool mountedFlag = true;
   int invalidations = 0;
 
@@ -17,7 +17,7 @@ class _Host with ResourceActionExecutor<_FakeRepo> {
   AsyncValue<void> state = const AsyncValue.data(null);
 
   @override
-  _FakeRepo? readRepository() => _repo;
+  _FakeRepo? readRepository() => repo;
 
   @override
   void invalidateList() => invalidations++;
@@ -61,19 +61,21 @@ void main() {
       expect(host.state.error, 'Not authenticated');
     });
 
-    test('bails out without touching state when unmounted mid-flight',
-        () async {
-      final host = _Host(repo: _FakeRepo());
+    test(
+      'bails out without touching state when unmounted mid-flight',
+      () async {
+        final host = _Host(repo: _FakeRepo());
 
-      final ok = await host.executeAction((repo) async {
-        host.mountedFlag = false;
-        return const Right(null);
-      });
+        final ok = await host.executeAction((repo) async {
+          host.mountedFlag = false;
+          return const Right(null);
+        });
 
-      expect(ok, isFalse);
-      expect(host.state.isLoading, isTrue);
-      expect(host.invalidations, 0);
-    });
+        expect(ok, isFalse);
+        expect(host.state.isLoading, isTrue);
+        expect(host.invalidations, 0);
+      },
+    );
   });
 
   group('executeRequest', () {

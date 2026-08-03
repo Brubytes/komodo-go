@@ -1,3 +1,6 @@
+// Public named parameters intentionally map to private immutable fields.
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:developer' as developer;
 
 import 'package:dio/dio.dart';
