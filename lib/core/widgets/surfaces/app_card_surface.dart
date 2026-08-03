@@ -68,7 +68,7 @@ class AppCardSurface extends StatelessWidget {
             ? appCardGradient(tint: tint, base: color)
             : null,
       ),
-      child: child,
+      child: Material(type: MaterialType.transparency, child: child),
     );
   }
 }

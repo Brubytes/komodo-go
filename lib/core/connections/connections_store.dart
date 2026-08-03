@@ -1,3 +1,6 @@
+// Public named parameters intentionally map to private immutable fields.
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:math';
 
 import 'package:komodo_go/core/connections/connection_profile.dart';
