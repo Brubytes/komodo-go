@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -53,6 +54,7 @@ class EditConnectionSheet extends HookConsumerWidget {
     final proxyAuthEnabled = useState(false);
     final customHeaders = useState<List<CustomHeader>>(const []);
     final isSaving = useState(false);
+    final saveError = useState<String?>(null);
     final hasExistingCredentials = useState<bool?>(null);
 
     useListenable(baseUrlController);
@@ -102,6 +104,7 @@ class EditConnectionSheet extends HookConsumerWidget {
       }
 
       isSaving.value = true;
+      saveError.value = null;
       try {
         await ref
             .read(connectionsProvider.notifier)
@@ -119,6 +122,10 @@ class EditConnectionSheet extends HookConsumerWidget {
 
         if (!context.mounted) return;
         Navigator.of(context).pop();
+      } on Exception catch (error) {
+        if (context.mounted) {
+          saveError.value = _credentialSaveErrorMessage(error);
+        }
       } finally {
         if (context.mounted) {
           isSaving.value = false;
@@ -282,6 +289,36 @@ class EditConnectionSheet extends HookConsumerWidget {
                     ],
                   ),
                   const Gap(24),
+                  if (saveError.value case final message?) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            AppIcons.formError,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          const Gap(8),
+                          Expanded(
+                            child: Text(
+                              message,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Gap(12),
+                  ],
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
@@ -303,4 +340,13 @@ class EditConnectionSheet extends HookConsumerWidget {
       ),
     );
   }
+}
+
+String _credentialSaveErrorMessage(Exception error) {
+  if (error is PlatformException) {
+    return 'iOS could not update the credentials in Keychain. Retry saving. '
+        'If the problem continues, delete this connection and add it again.';
+  }
+  return 'The credentials could not be saved securely. Retry saving. '
+      'If the problem continues, delete this connection and add it again.';
 }

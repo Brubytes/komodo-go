@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:komodo_go/core/api/custom_header.dart';
 import 'package:komodo_go/core/api/proxy_auth.dart';
@@ -39,6 +41,10 @@ class SecureStorageService {
 
   final FlutterSecureStorage _storage;
 
+  static const _duplicateItemStatus = -25299;
+  static const _migrationIOSOptions = IOSOptions(accessibility: null);
+  static const _migrationMacOSOptions = MacOsOptions(accessibility: null);
+
   static String _baseUrlKey(String connectionId) =>
       'komodo/$connectionId/base_url';
   static String _apiKeyKey(String connectionId) =>
@@ -63,45 +69,45 @@ class SecureStorageService {
   }) async {
     final customHeaders = sanitizeCustomHeaders(credentials.customHeaders);
     final writes = <Future<void>>[
-      _storage.write(
+      _writeValue(
         key: _baseUrlKey(connectionId),
         value: credentials.baseUrl,
       ),
-      _storage.write(key: _apiKeyKey(connectionId), value: credentials.apiKey),
-      _storage.write(
+      _writeValue(key: _apiKeyKey(connectionId), value: credentials.apiKey),
+      _writeValue(
         key: _apiSecretKey(connectionId),
         value: credentials.apiSecret,
       ),
       if (credentials.proxyAuth case final proxyAuth? when proxyAuth.isComplete)
-        _storage.write(
+        _writeValue(
           key: _proxyAuthSchemeKey(connectionId),
           value: proxyAuth.scheme.toStorageValue,
         )
       else
         _storage.delete(key: _proxyAuthSchemeKey(connectionId)),
       if (credentials.proxyAuth case final proxyAuth? when proxyAuth.isComplete)
-        _storage.write(
+        _writeValue(
           key: _proxyAuthEnabledKey(connectionId),
           value: proxyAuth.enabled.toString(),
         )
       else
         _storage.delete(key: _proxyAuthEnabledKey(connectionId)),
       if (credentials.proxyAuth case final proxyAuth? when proxyAuth.isComplete)
-        _storage.write(
+        _writeValue(
           key: _proxyAuthUsernameKey(connectionId),
           value: proxyAuth.username,
         )
       else
         _storage.delete(key: _proxyAuthUsernameKey(connectionId)),
       if (credentials.proxyAuth case final proxyAuth? when proxyAuth.isComplete)
-        _storage.write(
+        _writeValue(
           key: _proxyAuthPasswordKey(connectionId),
           value: proxyAuth.password,
         )
       else
         _storage.delete(key: _proxyAuthPasswordKey(connectionId)),
       if (customHeaders.isNotEmpty)
-        _storage.write(
+        _writeValue(
           key: _customHeadersKey(connectionId),
           value: jsonEncode(
             customHeaders.map((header) => header.toJson()).toList(),
@@ -120,14 +126,14 @@ class SecureStorageService {
     String connectionId,
   ) async {
     final results = await Future.wait([
-      _storage.read(key: _baseUrlKey(connectionId)),
-      _storage.read(key: _apiKeyKey(connectionId)),
-      _storage.read(key: _apiSecretKey(connectionId)),
-      _storage.read(key: _proxyAuthSchemeKey(connectionId)),
-      _storage.read(key: _proxyAuthEnabledKey(connectionId)),
-      _storage.read(key: _proxyAuthUsernameKey(connectionId)),
-      _storage.read(key: _proxyAuthPasswordKey(connectionId)),
-      _storage.read(key: _customHeadersKey(connectionId)),
+      _readValue(_baseUrlKey(connectionId)),
+      _readValue(_apiKeyKey(connectionId)),
+      _readValue(_apiSecretKey(connectionId)),
+      _readValue(_proxyAuthSchemeKey(connectionId)),
+      _readValue(_proxyAuthEnabledKey(connectionId)),
+      _readValue(_proxyAuthUsernameKey(connectionId)),
+      _readValue(_proxyAuthPasswordKey(connectionId)),
+      _readValue(_customHeadersKey(connectionId)),
     ]);
 
     final baseUrl = results[0];
@@ -206,4 +212,54 @@ class SecureStorageService {
       return const [];
     }
   }
+
+  Future<String?> _readValue(String key) async {
+    final value = await _storage.read(key: key);
+    if (value != null || !_usesAppleKeychain) {
+      return value;
+    }
+
+    // flutter_secure_storage_darwin 0.2.x created items with an empty
+    // kSecAttrAccessControl. Version 0.3.x searches using kSecAttrAccessible
+    // instead, so an in-place app upgrade can no longer find those items.
+    // Omitting both attributes searches by the stable generic-password
+    // identity (account/service/synchronizable) and reads either format.
+    return _storage.read(
+      key: key,
+      iOptions: _migrationIOSOptions,
+      mOptions: _migrationMacOSOptions,
+    );
+  }
+
+  Future<void> _writeValue({required String key, required String value}) async {
+    try {
+      await _storage.write(key: key, value: value);
+    } on PlatformException catch (error) {
+      if (!_usesAppleKeychain || !_isDuplicateItem(error)) {
+        rethrow;
+      }
+
+      // A legacy item can be invisible to the plugin's new existence query
+      // while still sharing the same Keychain primary key. The user is
+      // explicitly replacing this value, so remove the primary-key match and
+      // retry using the current accessibility format.
+      await _storage.delete(
+        key: key,
+        iOptions: _migrationIOSOptions,
+        mOptions: _migrationMacOSOptions,
+      );
+      await _storage.write(key: key, value: value);
+    }
+  }
+
+  bool _isDuplicateItem(PlatformException error) {
+    return error.details == _duplicateItemStatus ||
+        error.code == '$_duplicateItemStatus' ||
+        (error.message?.contains('$_duplicateItemStatus') ?? false);
+  }
+
+  bool get _usesAppleKeychain =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
 }
