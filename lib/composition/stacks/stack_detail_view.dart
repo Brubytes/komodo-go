@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
 import 'package:komodo_go/composition/stacks/stack_config_editor.dart';
 import 'package:komodo_go/composition/stacks/stack_updates_tab.dart';
 import 'package:komodo_go/core/providers/core_info_provider.dart';
@@ -25,6 +26,8 @@ import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider
 import 'package:komodo_go/features/stacks/presentation/views/stack_detail/stack_detail_sections.dart';
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/models/resource_metadata.dart';
 
 /// View displaying detailed stack information.
 class StackDetailView extends ConsumerStatefulWidget {
@@ -186,6 +189,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     final registryAccountsAsync = ref.watch(dockerRegistryAccountsProvider);
     final tagsAsync = ref.watch(tagsProvider);
     final actionsState = ref.watch(stackActionsProvider);
+    final stack = stackAsync.asData?.value;
 
     final scheme = Theme.of(context).colorScheme;
 
@@ -290,6 +294,22 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
               ),
             ],
           ),
+          if (stack != null)
+            ResourceAdvancedMenuButton(
+              metadata: ResourceMetadata(
+                kind: ResourceKind.stacks,
+                id: stack.id,
+                name: stack.name,
+                description: stack.description,
+                template: stack.template,
+                tags: stack.tags,
+              ),
+              onMutated: () {
+                ref
+                  ..invalidate(stacksProvider)
+                  ..invalidate(stackDetailProvider(widget.stackId));
+              },
+            ),
         ],
       ),
       body: Stack(

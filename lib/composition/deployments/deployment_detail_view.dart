@@ -5,6 +5,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/builds/build_detail_sections.dart';
 import 'package:komodo_go/composition/deployments/deployment_detail_sections.dart';
+import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
@@ -20,6 +21,8 @@ import 'package:komodo_go/features/deployments/presentation/providers/deployment
 import 'package:komodo_go/features/deployments/presentation/widgets/deployment_card.dart';
 import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/models/resource_metadata.dart';
 
 /// View displaying detailed deployment information.
 class DeploymentDetailView extends ConsumerStatefulWidget {
@@ -128,6 +131,7 @@ class _DeploymentDetailViewState
     final serversListAsync = ref.watch(serversProvider);
     final registryAccountsAsync = ref.watch(dockerRegistryAccountsProvider);
     final scheme = Theme.of(context).colorScheme;
+    final deployment = deploymentAsync.asData?.value;
 
     String? serverNameForId(String serverId) {
       final servers = serversListAsync.asData?.value;
@@ -157,6 +161,22 @@ class _DeploymentDetailViewState
               return _buildMenuItems(scheme, state, hasImage: hasImage);
             },
           ),
+          if (deployment != null)
+            ResourceAdvancedMenuButton(
+              metadata: ResourceMetadata(
+                kind: ResourceKind.deployments,
+                id: deployment.id,
+                name: deployment.name,
+                description: deployment.description ?? '',
+                template: deployment.template,
+                tags: deployment.tags,
+              ),
+              onMutated: () {
+                ref
+                  ..invalidate(deploymentsProvider)
+                  ..invalidate(deploymentDetailProvider(deploymentId));
+              },
+            ),
         ],
       ),
       body: Stack(

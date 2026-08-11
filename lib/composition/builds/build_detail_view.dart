@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/builds/build_detail_sections.dart';
+import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
@@ -14,6 +15,8 @@ import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
 import 'package:komodo_go/features/builds/presentation/widgets/build_card.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/models/resource_metadata.dart';
 
 /// View displaying detailed build information.
 class BuildDetailView extends ConsumerStatefulWidget {
@@ -62,6 +65,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
     final buildersAsync = ref.watch(buildersProvider);
     final reposAsync = ref.watch(reposProvider);
     final scheme = Theme.of(context).colorScheme;
+    final build = buildAsync.asData?.value;
 
     return Scaffold(
       appBar: MainAppBar(
@@ -92,6 +96,22 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
               ];
             },
           ),
+          if (build != null)
+            ResourceAdvancedMenuButton(
+              metadata: ResourceMetadata(
+                kind: ResourceKind.builds,
+                id: build.id,
+                name: build.name,
+                description: build.description,
+                template: build.template,
+                tags: build.tags,
+              ),
+              onMutated: () {
+                ref
+                  ..invalidate(buildsProvider)
+                  ..invalidate(buildDetailProvider(buildId));
+              },
+            ),
         ],
       ),
       body: Stack(

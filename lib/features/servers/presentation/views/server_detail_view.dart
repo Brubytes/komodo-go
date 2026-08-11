@@ -19,11 +19,13 @@ class ServerDetailView extends ConsumerStatefulWidget {
   const ServerDetailView({
     required this.serverId,
     required this.serverName,
+    this.appBarActions = const <Widget>[],
     super.key,
   });
 
   final String serverId;
   final String serverName;
+  final List<Widget> appBarActions;
 
   @override
   ConsumerState<ServerDetailView> createState() => _ServerDetailViewState();
@@ -207,6 +209,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
         markColor: AppTokens.resourceServers,
         markUseGradient: true,
         centerTitle: true,
+        actions: widget.appBarActions,
       ),
       body: NestedScrollView(
         key: _nestedScrollKey,
@@ -273,8 +276,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                     ..invalidate(serverStatsProvider(widget.serverId));
                 },
                 child: DetailTabScrollView.box(
-                  scrollKey:
-                      PageStorageKey('server_${widget.serverId}_config'),
+                  scrollKey: PageStorageKey('server_${widget.serverId}_config'),
                   child: serverAsync.when(
                     data: (server) => server?.config != null
                         ? ServerConfigEditorContent(
@@ -310,8 +312,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                     ..invalidate(serverStatsProvider(widget.serverId));
                 },
                 child: DetailTabScrollView.box(
-                  scrollKey:
-                      PageStorageKey('server_${widget.serverId}_stats'),
+                  scrollKey: PageStorageKey('server_${widget.serverId}_stats'),
                   child: statsAsync.when(
                     data: (stats) => DetailSurface(
                       child: StatsHistoryContent(
@@ -338,8 +339,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                     ..invalidate(serverStatsProvider(widget.serverId));
                 },
                 child: DetailTabScrollView.box(
-                  scrollKey:
-                      PageStorageKey('server_${widget.serverId}_system'),
+                  scrollKey: PageStorageKey('server_${widget.serverId}_system'),
                   child: systemInfoAsync.when(
                     data: (info) => info != null
                         ? DetailSurface(

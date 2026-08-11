@@ -10,6 +10,7 @@ import 'package:komodo_go/composition/deployments/deployment_detail_view.dart';
 import 'package:komodo_go/composition/deployments/deployments_list_view.dart';
 import 'package:komodo_go/composition/home/home_view.dart';
 import 'package:komodo_go/composition/repos/repo_detail_view.dart';
+import 'package:komodo_go/composition/resources/advanced_resource_detail_views.dart';
 import 'package:komodo_go/composition/resources/resource_name_resolver_provider.dart';
 import 'package:komodo_go/composition/resources/resources_view.dart';
 import 'package:komodo_go/composition/servers/servers_list_view.dart';
@@ -22,7 +23,6 @@ import 'package:komodo_go/core/router/route_observer.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/adaptive_bottom_navigation_bar.dart';
-import 'package:komodo_go/features/actions/presentation/views/action_detail_view.dart';
 import 'package:komodo_go/features/actions/presentation/views/actions_list_view.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerters_view.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
@@ -33,11 +33,9 @@ import 'package:komodo_go/features/builders/presentation/views/builders_view.dar
 import 'package:komodo_go/features/builds/presentation/views/builds_list_view.dart';
 import 'package:komodo_go/features/containers/presentation/views/container_detail_view.dart';
 import 'package:komodo_go/features/notifications/presentation/views/notifications_view.dart';
-import 'package:komodo_go/features/procedures/presentation/views/procedure_detail_view.dart';
 import 'package:komodo_go/features/procedures/presentation/views/procedures_list_view.dart';
 import 'package:komodo_go/features/providers/presentation/views/providers_view.dart';
 import 'package:komodo_go/features/repos/presentation/views/repos_list_view.dart';
-import 'package:komodo_go/features/servers/presentation/views/server_detail_view.dart';
 import 'package:komodo_go/features/settings/presentation/views/credits_view.dart';
 import 'package:komodo_go/features/syncs/presentation/views/syncs_list_view.dart';
 import 'package:komodo_go/features/tags/presentation/views/tags_view.dart';
@@ -305,7 +303,10 @@ GoRouter appRouter(Ref ref) {
                               state.uri.queryParameters['name'] ?? 'Server';
                           return _appStackPage(
                             state,
-                            ServerDetailView(serverId: id, serverName: name),
+                            AdvancedServerDetailView(
+                              serverId: id,
+                              serverName: name,
+                            ),
                           );
                         },
                       ),
@@ -422,7 +423,7 @@ GoRouter appRouter(Ref ref) {
                               state.uri.queryParameters['name'] ?? 'Procedure';
                           return _appStackPage(
                             state,
-                            ProcedureDetailView(
+                            AdvancedProcedureDetailView(
                               procedureId: id,
                               procedureName: name,
                             ),
@@ -444,7 +445,10 @@ GoRouter appRouter(Ref ref) {
                               state.uri.queryParameters['name'] ?? 'Action';
                           return _appStackPage(
                             state,
-                            ActionDetailView(actionId: id, actionName: name),
+                            AdvancedActionDetailView(
+                              actionId: id,
+                              actionName: name,
+                            ),
                           );
                         },
                       ),

@@ -9,6 +9,8 @@ const _compositionAllowList = {
   'lib/composition/resources/resource_catalog_provider.dart',
   'lib/composition/resources/resource_name_resolver_provider.dart',
   'lib/composition/resources/resource_tag_options_provider.dart',
+  'lib/composition/resources/resource_advanced_menu.dart',
+  'lib/composition/resources/advanced_resource_detail_views.dart',
   'lib/composition/home/home_view.dart',
   'lib/composition/home/widgets/home_dashboard_tiles.dart',
   'lib/composition/resources/resources_view.dart',

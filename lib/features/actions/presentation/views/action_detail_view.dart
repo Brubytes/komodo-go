@@ -18,11 +18,13 @@ class ActionDetailView extends ConsumerStatefulWidget {
   const ActionDetailView({
     required this.actionId,
     required this.actionName,
+    this.appBarActions = const <Widget>[],
     super.key,
   });
 
   final String actionId;
   final String actionName;
+  final List<Widget> appBarActions;
 
   @override
   ConsumerState<ActionDetailView> createState() => _ActionDetailViewState();
@@ -100,6 +102,7 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
         markUseGradient: true,
         centerTitle: true,
         actions: [
+          ...widget.appBarActions,
           IconButton(
             icon: const Icon(AppIcons.play),
             tooltip: 'Run',
@@ -176,8 +179,9 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                       ref.invalidate(actionDetailProvider(actionId));
                     },
                     child: DetailTabScrollView.box(
-                      scrollKey:
-                          PageStorageKey('action_${widget.actionId}_config'),
+                      scrollKey: PageStorageKey(
+                        'action_${widget.actionId}_config',
+                      ),
                       child: actionAsync.when(
                         data: (action) {
                           if (action == null) {
@@ -186,10 +190,9 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                             );
                           }
 
-                          final fileController =
-                              _ensureFileContentsController(
-                                action.config.fileContents,
-                              );
+                          final fileController = _ensureFileContentsController(
+                            action.config.fileContents,
+                          );
                           return ActionConfigEditorContent(
                             key: _configEditorKey,
                             initialConfig: action.config,
@@ -228,10 +231,9 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                             );
                           }
 
-                          final fileController =
-                              _ensureFileContentsController(
-                                action.config.fileContents,
-                              );
+                          final fileController = _ensureFileContentsController(
+                            action.config.fileContents,
+                          );
                           return DetailCodeEditor(
                             controller: fileController,
                             maxHeight: 420,

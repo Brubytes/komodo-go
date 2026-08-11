@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
 import 'package:komodo_go/composition/syncs/sync_detail_sections.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -15,6 +16,8 @@ import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/models/resource_metadata.dart';
 
 /// View displaying detailed sync information.
 class SyncDetailView extends ConsumerStatefulWidget {
@@ -43,6 +46,7 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
     final reposAsync = ref.watch(reposProvider);
     final gitProvidersAsync = ref.watch(gitProvidersProvider);
     final scheme = Theme.of(context).colorScheme;
+    final sync = syncAsync.asData?.value;
 
     final repos = reposAsync.asData?.value ?? const <RepoListItem>[];
     final gitProviders =
@@ -56,6 +60,22 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
         markUseGradient: true,
         centerTitle: true,
         actions: [
+          if (sync != null)
+            ResourceAdvancedMenuButton(
+              metadata: ResourceMetadata(
+                kind: ResourceKind.syncs,
+                id: sync.id,
+                name: sync.name,
+                description: sync.description,
+                template: sync.template,
+                tags: sync.tags,
+              ),
+              onMutated: () {
+                ref
+                  ..invalidate(syncsProvider)
+                  ..invalidate(syncDetailProvider(widget.syncId));
+              },
+            ),
           IconButton(
             icon: const Icon(AppIcons.play),
             tooltip: 'Run',

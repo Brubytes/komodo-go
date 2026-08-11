@@ -70,6 +70,13 @@ final class KomodoApiCapabilities {
   bool get supportsDeploymentCustomName => !isLegacyV22;
   bool get supportsActionCancellation => !isLegacyV22;
 
+  /// Komodo declares ResourceTarget with Serde's adjacent tagging:
+  /// `#[serde(tag = "type", content = "id")]` in every supported generation.
+  Map<String, dynamic> encodeResourceTarget({
+    required String type,
+    required String id,
+  }) => <String, dynamic>{'type': type, 'id': id};
+
   String get listContainersRpc =>
       isLegacyV22 ? 'ListDockerContainers' : 'ListContainers';
   String get listNetworksRpc =>
