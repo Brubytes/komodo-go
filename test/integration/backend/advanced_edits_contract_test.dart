@@ -1,13 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
+import 'package:komodo_go/features/deployments/data/repositories/deployment_repository.dart';
 import 'package:komodo_go/features/notifications/data/models/update_detail.dart';
 import 'package:komodo_go/features/notifications/data/repositories/notifications_repository.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/data/repositories/stack_repository.dart';
+import 'package:komodo_go/features/syncs/data/models/sync.dart';
+import 'package:komodo_go/features/syncs/data/repositories/sync_repository.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
 import 'package:komodo_go/features/tags/data/repositories/tag_repository.dart';
+import 'package:komodo_go/shared/resources/data/resource_batch_repository.dart';
 import 'package:komodo_go/shared/resources/data/resource_management_repository.dart';
+import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_metadata.dart';
 
@@ -25,15 +30,21 @@ void registerAdvancedEditsContractTests() {
     'Advanced resource edits (real backend)',
     () {
       late StackRepository stacks;
+      late DeploymentRepository deployments;
       late TagRepository tags;
+      late KomodoApiClient client;
       late ResourceManagementRepository management;
+      late ResourceBatchRepository batches;
       late NotificationsRepository notifications;
+      late SyncRepository syncs;
 
       setUp(() async {
         await resetBackendIfConfigured(requireConfig(config));
-        final client = buildTestClient(requireConfig(config), RpcRecorder());
+        client = buildTestClient(requireConfig(config), RpcRecorder());
         stacks = StackRepository(client);
+        deployments = DeploymentRepository(client);
         tags = TagRepository(client);
+        batches = ResourceBatchRepository(client);
         // ResourceTarget uses the same tagged Serde representation across API
         // generations. Force the newer capability set here so this live 2.2
         // contract catches accidental version-dependent target encoding.
@@ -46,7 +57,240 @@ void registerAdvancedEditsContractTests() {
           ),
         );
         notifications = NotificationsRepository(client);
+        syncs = SyncRepository(client);
       });
+
+      test('create, copy, export, and batch results work end to end', () async {
+        final suffix = DateTime.now().microsecondsSinceEpoch.toString();
+        final createdName = 'p1-created-$suffix';
+        final copiedName = 'p1-copied-$suffix';
+        final templateCopyName = 'p1-template-copy-$suffix';
+        final syncName = 'p1-sync-$suffix';
+        final proposedName = 'p1-proposed-$suffix';
+        String? createdId;
+        String? copiedId;
+        String? templateCopyId;
+        String? syncId;
+
+        try {
+          final created = expectRight(
+            await management.create(
+              kind: ResourceKind.stacks,
+              name: createdName,
+              config: const <String, dynamic>{},
+            ),
+          );
+          createdId = created.id;
+          expect((await stacks.getStack(created.id)).isRight(), isTrue);
+
+          final copied = expectRight(
+            await management.copyAndReturn(
+              kind: ResourceKind.stacks,
+              id: created.id,
+              name: copiedName,
+            ),
+          );
+          copiedId = copied.id;
+          expect((await stacks.getStack(copied.id)).isRight(), isTrue);
+
+          final scratchStack = expectRight(await stacks.getStack(created.id));
+          expectRight(
+            await management.updateMetadata(
+              metadata: _metadataFor(scratchStack),
+              draft: ResourceMetadataDraft(
+                description: scratchStack.description,
+                template: true,
+                tags: scratchStack.tags,
+              ),
+            ),
+          );
+          await _waitForStack(
+            stacks,
+            created.id,
+            (stack) => stack.template,
+          );
+          final templateCopy = expectRight(
+            await management.copyAndReturn(
+              kind: ResourceKind.stacks,
+              id: created.id,
+              name: templateCopyName,
+            ),
+          );
+          templateCopyId = templateCopy.id;
+          expect(
+            expectRight(await stacks.getStack(templateCopy.id)).name,
+            templateCopyName,
+          );
+
+          final toml = expectRight(
+            await syncs.exportResourcesToToml([
+              SyncResourceTarget(type: 'Stack', id: created.id),
+              SyncResourceTarget(type: 'Stack', id: copied.id),
+              SyncResourceTarget(type: 'Stack', id: templateCopy.id),
+            ]),
+          );
+          expect(toml, contains(createdName));
+          expect(toml, contains(copiedName));
+          expect(toml, contains(templateCopyName));
+
+          final syncJson = await client.write(
+            RpcRequest(
+              type: 'CreateResourceSync',
+              params: <String, dynamic>{
+                'name': syncName,
+                'config': <String, dynamic>{
+                  'file_contents':
+                      '$toml\n\n[[stack]]\nname = "$proposedName"\n',
+                },
+              },
+            ),
+          );
+          final createdSync = KomodoResourceSync.fromJson(
+            syncJson as Map<String, dynamic>,
+          );
+          syncId = createdSync.id;
+          final plan = expectRight(await syncs.refreshPending(createdSync.id));
+          expect(
+            plan.info.resourceUpdates.any(
+              (diff) =>
+                  diff.data.operation == SyncDiffOperation.create &&
+                  diff.name == proposedName,
+            ),
+            isTrue,
+          );
+
+          final results = expectRight(
+            await batches.execute(
+              kind: ResourceKind.stacks,
+              action: ResourceBatchAction.destroy,
+              items: [
+                ResourceBatchItem(id: created.id, name: createdName),
+                ResourceBatchItem(id: copied.id, name: copiedName),
+                ResourceBatchItem(
+                  id: templateCopy.id,
+                  name: templateCopyName,
+                ),
+              ],
+            ),
+          );
+          expect(results, hasLength(3));
+          expect(
+            results.map((result) => result.item.id).toSet(),
+            {created.id, copied.id, templateCopy.id},
+          );
+          expect(
+            results.where((result) => !result.success),
+            isEmpty,
+            reason: results
+                .where((result) => !result.success)
+                .map((result) => '${result.item.name}: ${result.error}')
+                .join('\n'),
+          );
+        } finally {
+          if (syncId != null) {
+            await client.write(
+              RpcRequest(
+                type: 'DeleteResourceSync',
+                params: <String, dynamic>{'id': syncId},
+              ),
+            );
+          }
+          if (copiedId != null) {
+            await management.delete(
+              kind: ResourceKind.stacks,
+              id: copiedId,
+            );
+          }
+          if (templateCopyId != null) {
+            await management.delete(
+              kind: ResourceKind.stacks,
+              id: templateCopyId,
+            );
+          }
+          if (createdId != null) {
+            await management.delete(
+              kind: ResourceKind.stacks,
+              id: createdId,
+            );
+          }
+        }
+      });
+
+      test(
+        'deployment scratch creation, copy, and batch work end to end',
+        () async {
+          final suffix = DateTime.now().microsecondsSinceEpoch.toString();
+          final createdName = 'p1-deployment-$suffix';
+          final copiedName = 'p1-deployment-copy-$suffix';
+          String? createdId;
+          String? copiedId;
+
+          try {
+            final created = expectRight(
+              await management.create(
+                kind: ResourceKind.deployments,
+                name: createdName,
+                config: const <String, dynamic>{},
+              ),
+            );
+            createdId = created.id;
+            expect(
+              expectRight(await deployments.getDeployment(created.id)).name,
+              createdName,
+            );
+
+            final copied = expectRight(
+              await management.copyAndReturn(
+                kind: ResourceKind.deployments,
+                id: created.id,
+                name: copiedName,
+              ),
+            );
+            copiedId = copied.id;
+            expect(
+              expectRight(await deployments.getDeployment(copied.id)).name,
+              copiedName,
+            );
+
+            final results = expectRight(
+              await batches.execute(
+                kind: ResourceKind.deployments,
+                action: ResourceBatchAction.destroy,
+                items: [
+                  ResourceBatchItem(id: created.id, name: createdName),
+                  ResourceBatchItem(id: copied.id, name: copiedName),
+                ],
+              ),
+            );
+            expect(results, hasLength(2));
+          expect(
+            results.map((result) => result.item.id).toSet(),
+            {created.id, copied.id},
+          );
+          expect(
+            results.where((result) => !result.success),
+            isEmpty,
+            reason: results
+                .where((result) => !result.success)
+                .map((result) => '${result.item.name}: ${result.error}')
+                .join('\n'),
+          );
+          } finally {
+            if (copiedId != null) {
+              await management.delete(
+                kind: ResourceKind.deployments,
+                id: copiedId,
+              );
+            }
+            if (createdId != null) {
+              await management.delete(
+                kind: ResourceKind.deployments,
+                id: createdId,
+              );
+            }
+          }
+        },
+      );
 
       test('metadata, lifecycle, and update details round-trip', () async {
         KomodoStack? original;
