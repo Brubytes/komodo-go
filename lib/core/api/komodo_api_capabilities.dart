@@ -79,6 +79,8 @@ final class KomodoApiCapabilities {
 
   String get listContainersRpc =>
       isLegacyV22 ? 'ListDockerContainers' : 'ListContainers';
+  String get inspectContainerRpc =>
+      isLegacyV22 ? 'InspectDockerContainer' : 'InspectContainer';
   String get listNetworksRpc =>
       isLegacyV22 ? 'ListDockerNetworks' : 'ListNetworks';
   String get listRegistryAccountsRpc =>

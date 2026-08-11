@@ -73,6 +73,81 @@ class ContainerRepository {
     });
   }
 
+  Future<Either<Failure, ContainerInspection>> inspectContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) async {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: _client.capabilities.inspectContainerRpc,
+          params: {
+            'server': serverIdOrName,
+            'container': containerIdOrName,
+          },
+        ),
+      );
+      return ContainerInspection.fromJson(response as Map<String, dynamic>);
+    });
+  }
+
+  Future<Either<Failure, ContainerAssociatedResource?>>
+  getResourceMatchingContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) async {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'GetResourceMatchingContainer',
+          params: {
+            'server': serverIdOrName,
+            'container': containerIdOrName,
+          },
+        ),
+      );
+      final resource = (response as Map<String, dynamic>)['resource'];
+      if (resource is! Map<String, dynamic>) return null;
+      final type = resource['type'] as String? ?? '';
+      if (type != 'Stack' && type != 'Deployment') return null;
+      return ContainerAssociatedResource.fromJson(resource);
+    });
+  }
+
+  Future<Either<Failure, void>> startContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) => _executeAction('StartContainer', {
+    'server': serverIdOrName,
+    'container': containerIdOrName,
+  });
+
+  Future<Either<Failure, void>> pauseContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) => _executeAction('PauseContainer', {
+    'server': serverIdOrName,
+    'container': containerIdOrName,
+  });
+
+  Future<Either<Failure, void>> unpauseContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) => _executeAction('UnpauseContainer', {
+    'server': serverIdOrName,
+    'container': containerIdOrName,
+  });
+
+  Future<Either<Failure, void>> removeContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) => _executeAction('DestroyContainer', {
+    'server': serverIdOrName,
+    'container': containerIdOrName,
+    'signal': null,
+    'time': null,
+  });
+
   /// Stops a docker container on the target server.
   Future<Either<Failure, void>> stopContainer({
     required String serverIdOrName,

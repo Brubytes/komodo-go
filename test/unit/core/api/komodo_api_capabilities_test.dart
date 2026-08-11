@@ -41,6 +41,7 @@ void main() {
         <String, dynamic>{'type': 'Stack', 'id': 'stack-1'},
       );
       expect(capabilities.listContainersRpc, 'ListDockerContainers');
+      expect(capabilities.inspectContainerRpc, 'InspectDockerContainer');
       expect(capabilities.listNetworksRpc, 'ListDockerNetworks');
       expect(
         capabilities.listRegistryAccountsRpc,
@@ -75,6 +76,7 @@ void main() {
         <String, dynamic>{'type': 'Stack', 'id': 'stack-1'},
       );
       expect(capabilities.listContainersRpc, 'ListContainers');
+      expect(capabilities.inspectContainerRpc, 'InspectContainer');
       expect(capabilities.listNetworksRpc, 'ListNetworks');
       expect(
         capabilities.listRegistryAccountsRpc,

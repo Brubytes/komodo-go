@@ -62,8 +62,7 @@ sealed class ContainerStats with _$ContainerStats {
 
   double? get cpuPercentValue => _parsePercent(cpuPerc);
 
-  double? get memPercentValue =>
-      _parsePercent(memPerc) ?? _memUsagePercent;
+  double? get memPercentValue => _parsePercent(memPerc) ?? _memUsagePercent;
 
   double? get memUsageBytes {
     final parsed = _parseBytePair(memUsage);
@@ -88,6 +87,77 @@ sealed class ContainerStats with _$ContainerStats {
     if (used == null || total == null || total <= 0) return null;
     return (used / total) * 100.0;
   }
+}
+
+/// Selected inspection fields plus the full raw Docker inspect response.
+class ContainerInspection {
+  const ContainerInspection({
+    required this.id,
+    required this.name,
+    required this.created,
+    required this.path,
+    required this.args,
+    required this.image,
+    required this.driver,
+    required this.platform,
+    required this.restartCount,
+    required this.logPath,
+    required this.mounts,
+    required this.raw,
+  });
+
+  factory ContainerInspection.fromJson(Map<String, dynamic> json) {
+    return ContainerInspection(
+      id: json['id'] as String?,
+      name: json['name'] as String?,
+      created: json['created'] as String?,
+      path: json['path'] as String?,
+      args: (json['args'] as List<dynamic>? ?? const [])
+          .whereType<String>()
+          .toList(growable: false),
+      image: json['image'] as String?,
+      driver: json['driver'] as String?,
+      platform: json['platform'] as String?,
+      restartCount: (json['restart_count'] as num?)?.toInt(),
+      logPath: json['log_path'] as String?,
+      mounts: (json['mounts'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .toList(growable: false),
+      raw: Map<String, dynamic>.unmodifiable(json),
+    );
+  }
+
+  final String? id;
+  final String? name;
+  final String? created;
+  final String? path;
+  final List<String> args;
+  final String? image;
+  final String? driver;
+  final String? platform;
+  final int? restartCount;
+  final String? logPath;
+  final List<Map<String, dynamic>> mounts;
+  final Map<String, dynamic> raw;
+}
+
+enum ContainerResourceType { stack, deployment }
+
+class ContainerAssociatedResource {
+  const ContainerAssociatedResource({required this.type, required this.id});
+
+  factory ContainerAssociatedResource.fromJson(Map<String, dynamic> json) {
+    final type = (json['type'] as String? ?? '').toLowerCase();
+    return ContainerAssociatedResource(
+      type: type == 'stack'
+          ? ContainerResourceType.stack
+          : ContainerResourceType.deployment,
+      id: json['id'] as String? ?? '',
+    );
+  }
+
+  final ContainerResourceType type;
+  final String id;
 }
 
 enum ContainerState {
@@ -159,8 +229,9 @@ double? _parsePercent(String raw) {
 double? _parseByte(String raw) {
   final trimmed = raw.trim();
   if (trimmed.isEmpty) return null;
-  final match = RegExp(r'^([0-9]*\.?[0-9]+)\s*([a-zA-Z]+)?$')
-      .firstMatch(trimmed);
+  final match = RegExp(
+    r'^([0-9]*\.?[0-9]+)\s*([a-zA-Z]+)?$',
+  ).firstMatch(trimmed);
   if (match == null) return null;
   final value = double.tryParse(match.group(1) ?? '');
   if (value == null) return null;
