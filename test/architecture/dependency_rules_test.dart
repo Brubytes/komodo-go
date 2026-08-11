@@ -36,6 +36,7 @@ const _compositionAllowList = {
   'lib/composition/stacks/stacks_list_view.dart',
   'lib/composition/syncs/sync_detail_view.dart',
   'lib/composition/syncs/sync_detail_sections.dart',
+  'lib/composition/syncs/advanced_sync_section.dart',
   'lib/composition/servers/servers_list_view.dart',
 };
 

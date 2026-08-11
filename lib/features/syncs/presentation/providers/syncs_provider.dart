@@ -64,10 +64,40 @@ class SyncActions extends _$SyncActions
   Future<bool> run(String syncIdOrName) =>
       executeAction((repo) => repo.runSync(syncIdOrName));
 
+  Future<bool> runSelected(
+    String syncIdOrName,
+    List<ResourceSyncDiff> diffs,
+  ) => executeAction((repo) => repo.runSelected(syncIdOrName, diffs));
+
+  Future<KomodoResourceSync?> refreshPending(String syncIdOrName) =>
+      executeRequest((repo) => repo.refreshPending(syncIdOrName));
+
+  Future<bool> commit(String syncIdOrName) =>
+      executeAction((repo) => repo.commitSync(syncIdOrName));
+
+  Future<bool> writeFileContents({
+    required String syncIdOrName,
+    required String resourcePath,
+    required String filePath,
+    required String contents,
+  }) => executeAction(
+    (repo) => repo.writeFileContents(
+      syncIdOrName: syncIdOrName,
+      resourcePath: resourcePath,
+      filePath: filePath,
+      contents: contents,
+    ),
+  );
+
+  Future<String?> exportResourcesToToml(
+    List<SyncResourceTarget> targets,
+  ) => executeRequest((repo) => repo.exportResourcesToToml(targets));
+
   Future<KomodoResourceSync?> updateSyncConfig({
     required String syncId,
     required Map<String, dynamic> partialConfig,
   }) => executeRequest(
-    (repo) => repo.updateSyncConfig(syncId: syncId, partialConfig: partialConfig),
+    (repo) =>
+        repo.updateSyncConfig(syncId: syncId, partialConfig: partialConfig),
   );
 }

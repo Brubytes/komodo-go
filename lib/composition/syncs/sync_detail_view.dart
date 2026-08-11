@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/composition/syncs/advanced_sync_section.dart';
 import 'package:komodo_go/composition/syncs/sync_detail_sections.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -77,11 +78,11 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
               },
             ),
           IconButton(
-            icon: const Icon(AppIcons.play),
-            tooltip: 'Run',
+            icon: const Icon(Icons.account_tree_outlined),
+            tooltip: 'Refresh proposed sync plan',
             onPressed: actionsState.isLoading
                 ? null
-                : () => _runSync(context, widget.syncId),
+                : () => _previewSync(widget.syncId),
           ),
         ],
       ),
@@ -112,6 +113,15 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
                                   onDiscard: () => _discardConfig(sync),
                                   onSave: () => _saveConfig(sync: sync),
                                 );
+                              },
+                            ),
+                            const Gap(16),
+                            AdvancedSyncSection(
+                              syncResource: sync,
+                              onUpdated: (_) {
+                                ref
+                                  ..invalidate(syncDetailProvider(sync.id))
+                                  ..invalidate(syncsProvider);
                               },
                             ),
                             const Gap(16),
@@ -212,25 +222,25 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
     }
   }
 
-  Future<void> _runSync(BuildContext context, String syncId) async {
+  Future<void> _previewSync(String syncId) async {
     final actions = ref.read(syncActionsProvider.notifier);
-    final success = await actions.run(syncId);
+    final updated = await actions.refreshPending(syncId);
 
     if (!mounted) return;
 
-    if (success) {
+    if (updated != null) {
       ref
         ..invalidate(syncDetailProvider(syncId))
         ..invalidate(syncsProvider);
     }
 
-    if (context.mounted) {
-      AppSnackBar.show(
-        context,
-        success ? 'Sync started' : 'Action failed. Please try again.',
-        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
-      );
-    }
+    AppSnackBar.show(
+      context,
+      updated != null
+          ? 'Proposed sync plan refreshed below.'
+          : 'Failed to refresh sync plan.',
+      tone: updated != null ? AppSnackBarTone.success : AppSnackBarTone.error,
+    );
   }
 }
 
