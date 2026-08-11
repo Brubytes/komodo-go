@@ -55,6 +55,8 @@ void main() {
   });
 
   testWidgets('Deployments list view shows deployment cards', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final deployments = [
       Deployment.fromJson(<String, dynamic>{
         'id': 'd1',
@@ -87,6 +89,26 @@ void main() {
 
     expect(find.byKey(const ValueKey('deployment_card_d1')), findsOneWidget);
     expect(find.text('Deployment One'), findsOneWidget);
+
+    expect(find.byTooltip('Search'), findsOneWidget);
+    expect(find.byTooltip('More actions'), findsOneWidget);
+    expect(find.byTooltip('Filters'), findsNothing);
+    expect(find.byTooltip('Create Deployment'), findsNothing);
+
+    await tester.tap(find.byTooltip('Search'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('resource_filter_disclosure')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byTooltip('More actions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Refresh'), findsOneWidget);
+    expect(find.text('Create Deployment'), findsOneWidget);
+    expect(find.text('Batch operations'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Deployment detail view shows config section', (tester) async {

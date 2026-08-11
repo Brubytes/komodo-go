@@ -11,6 +11,8 @@ import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
@@ -19,6 +21,8 @@ import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_tag_filter_sheet.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
+import 'package:komodo_go/shared/resources/models/resource_batch.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 /// View displaying the list of all stacks.
@@ -34,7 +38,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
   late final FocusNode _searchFocusNode;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
-  bool _isFiltersVisible = false;
+  bool _areFiltersExpanded = false;
 
   @override
   void initState() {
@@ -125,14 +129,18 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
               }
             },
           ),
-          IconButton(
-            tooltip: _isFiltersVisible ? 'Hide filters' : 'Filters',
-            icon: Icon(
-              _isFiltersVisible ? Icons.tune : Icons.tune_outlined,
+          ResourceListActionsMenu(
+            kind: ResourceKind.stacks,
+            items: stacksAsync.maybeWhen(
+              data: (items) => [
+                for (final item in items)
+                  ResourceBatchItem(id: item.id, name: item.name),
+              ],
+              orElse: () => const [],
             ),
-            onPressed: () => setState(() {
-              _isFiltersVisible = !_isFiltersVisible;
-            }),
+            onCreate: () => context.push('${AppRoutes.stacks}/new'),
+            onRefresh: () => ref.read(stacksProvider.notifier).refresh(),
+            onBatchCompleted: () => ref.invalidate(stacksProvider),
           ),
         ],
       ),
@@ -147,68 +155,78 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                   duration: AppMotion.base,
                   switchInCurve: AppMotion.enterCurve,
                   switchOutCurve: AppMotion.exitCurve,
-                  child: _isFiltersVisible
-                      ? _FiltersPanel(
-                          pendingUpdate: pendingUpdate,
-                          templateFilter: templateFilter,
-                          selectedTags: selectedTags,
-                          availableTags: availableTags,
-                          tagNameById: tagNameById,
-                          onPendingUpdateChanged: (value) =>
-                              ref
-                                      .read(
-                                        stacksPendingUpdateFilterProvider
-                                            .notifier,
-                                      )
-                                      .enabled =
-                                  value,
-                          onTemplateFilterChanged: (value) =>
-                              ref
-                                      .read(
-                                        stacksTemplateFilterStateProvider
-                                            .notifier,
-                                      )
-                                      .value =
-                                  value,
-                          onSelectTags: (value) =>
-                              ref
-                                      .read(stacksTagFilterProvider.notifier)
-                                      .selected =
-                                  value,
-                          onClearTags: () => ref
-                              .read(stacksTagFilterProvider.notifier)
-                              .clear(),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                if (_isFiltersVisible) const Gap(12),
-                AnimatedSwitcher(
-                  duration: AppMotion.base,
-                  switchInCurve: AppMotion.enterCurve,
-                  switchOutCurve: AppMotion.exitCurve,
                   child: _isSearchVisible
-                      ? Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: _SearchField(
-                            focusNode: _searchFocusNode,
-                            controller: _searchController,
-                            onChanged: (value) =>
+                      ? Column(
+                          key: const ValueKey('resource_search_and_filters'),
+                          children: [
+                            _SearchField(
+                              focusNode: _searchFocusNode,
+                              controller: _searchController,
+                              onChanged: (value) =>
+                                  ref
+                                          .read(
+                                            stacksSearchQueryProvider.notifier,
+                                          )
+                                          .query =
+                                      value,
+                              onClear: () {
+                                _searchController.clear();
                                 ref
                                         .read(
                                           stacksSearchQueryProvider.notifier,
                                         )
                                         .query =
-                                    value,
-                            onClear: () {
-                              _searchController.clear();
-                              ref
-                                      .read(
-                                        stacksSearchQueryProvider.notifier,
-                                      )
-                                      .query =
-                                  '';
-                            },
-                          ),
+                                    '';
+                              },
+                            ),
+                            const Gap(10),
+                            ResourceFilterDisclosure(
+                              expanded: _areFiltersExpanded,
+                              activeFilterCount:
+                                  selectedTags.length +
+                                  (pendingUpdate ? 1 : 0) +
+                                  (templateFilter ==
+                                          StacksTemplateFilter.exclude
+                                      ? 0
+                                      : 1),
+                              onExpansionChanged: (value) => setState(
+                                () => _areFiltersExpanded = value,
+                              ),
+                              child: _FiltersPanel(
+                                pendingUpdate: pendingUpdate,
+                                templateFilter: templateFilter,
+                                selectedTags: selectedTags,
+                                availableTags: availableTags,
+                                tagNameById: tagNameById,
+                                onPendingUpdateChanged: (value) =>
+                                    ref
+                                            .read(
+                                              stacksPendingUpdateFilterProvider
+                                                  .notifier,
+                                            )
+                                            .enabled =
+                                        value,
+                                onTemplateFilterChanged: (value) =>
+                                    ref
+                                            .read(
+                                              stacksTemplateFilterStateProvider
+                                                  .notifier,
+                                            )
+                                            .value =
+                                        value,
+                                onSelectTags: (value) =>
+                                    ref
+                                            .read(
+                                              stacksTagFilterProvider.notifier,
+                                            )
+                                            .selected =
+                                        value,
+                                onClearTags: () => ref
+                                    .read(stacksTagFilterProvider.notifier)
+                                    .clear(),
+                              ),
+                            ),
+                          ],
                         )
                       : const SizedBox.shrink(),
                 ),

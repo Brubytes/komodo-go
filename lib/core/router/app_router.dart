@@ -11,6 +11,7 @@ import 'package:komodo_go/composition/deployments/deployments_list_view.dart';
 import 'package:komodo_go/composition/home/home_view.dart';
 import 'package:komodo_go/composition/repos/repo_detail_view.dart';
 import 'package:komodo_go/composition/resources/advanced_resource_detail_views.dart';
+import 'package:komodo_go/composition/resources/resource_creation_view.dart';
 import 'package:komodo_go/composition/resources/resource_name_resolver_provider.dart';
 import 'package:komodo_go/composition/resources/resources_view.dart';
 import 'package:komodo_go/composition/servers/servers_list_view.dart';
@@ -41,6 +42,7 @@ import 'package:komodo_go/features/settings/presentation/views/credits_view.dart
 import 'package:komodo_go/features/syncs/presentation/views/syncs_list_view.dart';
 import 'package:komodo_go/features/tags/presentation/views/tags_view.dart';
 import 'package:komodo_go/features/variables/presentation/views/variables_view.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/providers/resource_name_resolver_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -298,6 +300,15 @@ GoRouter appRouter(Ref ref) {
                         _appStackPage(state, const ServersListView()),
                     routes: [
                       GoRoute(
+                        path: 'new',
+                        pageBuilder: (context, state) => _appStackPage(
+                          state,
+                          const ResourceCreationView(
+                            kind: ResourceKind.servers,
+                          ),
+                        ),
+                      ),
+                      GoRoute(
                         path: ':id',
                         pageBuilder: (context, state) {
                           final id = state.pathParameters['id']!;
@@ -320,6 +331,15 @@ GoRouter appRouter(Ref ref) {
                         _appStackPage(state, const DeploymentsListView()),
                     routes: [
                       GoRoute(
+                        path: 'new',
+                        pageBuilder: (context, state) => _appStackPage(
+                          state,
+                          const ResourceCreationView(
+                            kind: ResourceKind.deployments,
+                          ),
+                        ),
+                      ),
+                      GoRoute(
                         path: ':id',
                         pageBuilder: (context, state) {
                           final id = state.pathParameters['id']!;
@@ -341,6 +361,13 @@ GoRouter appRouter(Ref ref) {
                     pageBuilder: (context, state) =>
                         _appStackPage(state, const StacksListView()),
                     routes: [
+                      GoRoute(
+                        path: 'new',
+                        pageBuilder: (context, state) => _appStackPage(
+                          state,
+                          const ResourceCreationView(kind: ResourceKind.stacks),
+                        ),
+                      ),
                       GoRoute(
                         path: ':id',
                         pageBuilder: (context, state) {
@@ -418,6 +445,15 @@ GoRouter appRouter(Ref ref) {
                         _appStackPage(state, const ProceduresListView()),
                     routes: [
                       GoRoute(
+                        path: 'new',
+                        pageBuilder: (context, state) => _appStackPage(
+                          state,
+                          const ResourceCreationView(
+                            kind: ResourceKind.procedures,
+                          ),
+                        ),
+                      ),
+                      GoRoute(
                         path: ':id',
                         pageBuilder: (context, state) {
                           final id = state.pathParameters['id']!;
@@ -439,6 +475,15 @@ GoRouter appRouter(Ref ref) {
                     pageBuilder: (context, state) =>
                         _appStackPage(state, const ActionsListView()),
                     routes: [
+                      GoRoute(
+                        path: 'new',
+                        pageBuilder: (context, state) => _appStackPage(
+                          state,
+                          const ResourceCreationView(
+                            kind: ResourceKind.actions,
+                          ),
+                        ),
+                      ),
                       GoRoute(
                         path: ':id',
                         pageBuilder: (context, state) {

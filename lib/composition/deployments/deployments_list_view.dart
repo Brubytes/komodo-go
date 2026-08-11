@@ -13,6 +13,8 @@ import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/filters/template_filter.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_filters_provider.dart';
@@ -20,6 +22,8 @@ import 'package:komodo_go/features/deployments/presentation/providers/deployment
 import 'package:komodo_go/features/deployments/presentation/widgets/deployment_card.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
+import 'package:komodo_go/shared/resources/models/resource_batch.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 /// View displaying the list of all deployments.
@@ -36,7 +40,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
   late final FocusNode _searchFocusNode;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
-  bool _isFiltersVisible = false;
+  bool _areFiltersExpanded = false;
 
   @override
   void initState() {
@@ -123,12 +127,18 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
               }
             },
           ),
-          IconButton(
-            tooltip: _isFiltersVisible ? 'Hide filters' : 'Filters',
-            icon: Icon(_isFiltersVisible ? Icons.tune : Icons.tune_outlined),
-            onPressed: () => setState(() {
-              _isFiltersVisible = !_isFiltersVisible;
-            }),
+          ResourceListActionsMenu(
+            kind: ResourceKind.deployments,
+            items: deploymentsAsync.maybeWhen(
+              data: (items) => [
+                for (final item in items)
+                  ResourceBatchItem(id: item.id, name: item.name),
+              ],
+              orElse: () => const [],
+            ),
+            onCreate: () => context.push('${AppRoutes.deployments}/new'),
+            onRefresh: () => ref.read(deploymentsProvider.notifier).refresh(),
+            onBatchCompleted: () => ref.invalidate(deploymentsProvider),
           ),
         ],
       ),
@@ -148,75 +158,86 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                           duration: AppMotion.base,
                           switchInCurve: AppMotion.enterCurve,
                           switchOutCurve: AppMotion.exitCurve,
-                          child: _isFiltersVisible
-                              ? _FiltersPanel(
-                                  pendingUpdate: pendingUpdate,
-                                  templateFilter: templateFilter,
-                                  selectedTags: selectedTags,
-                                  availableTags: availableTags,
-                                  tagNameById: tagNameById,
-                                  onPendingUpdateChanged: (value) =>
-                                      ref
-                                              .read(
-                                                deploymentsPendingUpdateFilterProvider
-                                                    .notifier,
-                                              )
-                                              .enabled =
-                                          value,
-                                  onTemplateFilterChanged: (value) =>
-                                      ref
-                                              .read(
-                                                deploymentsTemplateFilterStateProvider
-                                                    .notifier,
-                                              )
-                                              .value =
-                                          value,
-                                  onSelectTags: (value) =>
-                                      ref
-                                              .read(
-                                                deploymentsTagFilterProvider
-                                                    .notifier,
-                                              )
-                                              .selected =
-                                          value,
-                                  onClearTags: () => ref
-                                      .read(
-                                        deploymentsTagFilterProvider.notifier,
-                                      )
-                                      .clear(),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                        if (_isFiltersVisible) const Gap(12),
-                        AnimatedSwitcher(
-                          duration: AppMotion.base,
-                          switchInCurve: AppMotion.enterCurve,
-                          switchOutCurve: AppMotion.exitCurve,
                           child: _isSearchVisible
-                              ? Padding(
-                                  padding: const EdgeInsets.only(top: 12),
-                                  child: _SearchField(
-                                    focusNode: _searchFocusNode,
-                                    controller: _searchController,
-                                    onChanged: (value) =>
+                              ? Column(
+                                  key: const ValueKey(
+                                    'resource_search_and_filters',
+                                  ),
+                                  children: [
+                                    _SearchField(
+                                      focusNode: _searchFocusNode,
+                                      controller: _searchController,
+                                      onChanged: (value) =>
+                                          ref
+                                                  .read(
+                                                    deploymentsSearchQueryProvider
+                                                        .notifier,
+                                                  )
+                                                  .query =
+                                              value,
+                                      onClear: () {
+                                        _searchController.clear();
                                         ref
                                                 .read(
                                                   deploymentsSearchQueryProvider
                                                       .notifier,
                                                 )
                                                 .query =
-                                            value,
-                                    onClear: () {
-                                      _searchController.clear();
-                                      ref
-                                              .read(
-                                                deploymentsSearchQueryProvider
-                                                    .notifier,
-                                              )
-                                              .query =
-                                          '';
-                                    },
-                                  ),
+                                            '';
+                                      },
+                                    ),
+                                    const Gap(10),
+                                    ResourceFilterDisclosure(
+                                      expanded: _areFiltersExpanded,
+                                      activeFilterCount:
+                                          selectedTags.length +
+                                          (pendingUpdate ? 1 : 0) +
+                                          (templateFilter ==
+                                                  TemplateFilter.exclude
+                                              ? 0
+                                              : 1),
+                                      onExpansionChanged: (value) => setState(
+                                        () => _areFiltersExpanded = value,
+                                      ),
+                                      child: _FiltersPanel(
+                                        pendingUpdate: pendingUpdate,
+                                        templateFilter: templateFilter,
+                                        selectedTags: selectedTags,
+                                        availableTags: availableTags,
+                                        tagNameById: tagNameById,
+                                        onPendingUpdateChanged: (value) =>
+                                            ref
+                                                    .read(
+                                                      deploymentsPendingUpdateFilterProvider
+                                                          .notifier,
+                                                    )
+                                                    .enabled =
+                                                value,
+                                        onTemplateFilterChanged: (value) =>
+                                            ref
+                                                    .read(
+                                                      deploymentsTemplateFilterStateProvider
+                                                          .notifier,
+                                                    )
+                                                    .value =
+                                                value,
+                                        onSelectTags: (value) =>
+                                            ref
+                                                    .read(
+                                                      deploymentsTagFilterProvider
+                                                          .notifier,
+                                                    )
+                                                    .selected =
+                                                value,
+                                        onClearTags: () => ref
+                                            .read(
+                                              deploymentsTagFilterProvider
+                                                  .notifier,
+                                            )
+                                            .clear(),
+                                      ),
+                                    ),
+                                  ],
                                 )
                               : const SizedBox.shrink(),
                         ),

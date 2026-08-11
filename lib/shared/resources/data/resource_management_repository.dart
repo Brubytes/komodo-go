@@ -14,6 +14,38 @@ class ResourceManagementRepository {
 
   final KomodoApiClient _client;
 
+  Future<Either<Failure, CreatedResource>> create({
+    required ResourceKind kind,
+    required String name,
+    required Map<String, dynamic> config,
+  }) {
+    return apiCall(() async {
+      final response = await _client.write(
+        RpcRequest(
+          type: 'Create${kind.variant}',
+          params: <String, dynamic>{'name': name, 'config': config},
+        ),
+      );
+      return CreatedResource.fromResponse(response, fallbackName: name);
+    });
+  }
+
+  Future<Either<Failure, CreatedResource>> copyAndReturn({
+    required ResourceKind kind,
+    required String id,
+    required String name,
+  }) {
+    return apiCall(() async {
+      final response = await _client.write(
+        RpcRequest(
+          type: 'Copy${kind.variant}',
+          params: <String, dynamic>{'id': id, 'name': name},
+        ),
+      );
+      return CreatedResource.fromResponse(response, fallbackName: name);
+    });
+  }
+
   Future<Either<Failure, void>> updateMetadata({
     required ResourceMetadata metadata,
     required ResourceMetadataDraft draft,
@@ -84,6 +116,34 @@ class ResourceManagementRepository {
       );
     });
   }
+}
+
+class CreatedResource {
+  const CreatedResource({required this.id, required this.name});
+
+  factory CreatedResource.fromResponse(
+    Object? response, {
+    required String fallbackName,
+  }) {
+    if (response is! Map) {
+      throw const FormatException('Resource response is not an object.');
+    }
+    final rawId = response['id'] ?? response['_id'];
+    final id = rawId is Map ? rawId[r'$oid'] : rawId;
+    if (id is! String || id.trim().isEmpty) {
+      throw const FormatException('Resource response is missing its id.');
+    }
+    final rawName = response['name'];
+    return CreatedResource(
+      id: id,
+      name: rawName is String && rawName.trim().isNotEmpty
+          ? rawName
+          : fallbackName,
+    );
+  }
+
+  final String id;
+  final String name;
 }
 
 @riverpod

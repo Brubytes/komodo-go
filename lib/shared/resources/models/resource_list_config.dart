@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
+import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 
 /// Per-resource configuration consumed by `ResourceListView<T>`.
@@ -29,6 +30,8 @@ class ResourceListConfig<T> {
     required this.tagsOf,
     required this.searchFieldsOf,
     required this.cardBuilder,
+    this.batchItemOf,
+    this.onCreate,
   });
 
   /// Keys the shared filter providers.
@@ -93,4 +96,8 @@ class ResourceListConfig<T> {
     List<String> displayTags,
   )
   cardBuilder;
+
+  final ResourceBatchItem Function(T item)? batchItemOf;
+
+  final void Function(BuildContext context)? onCreate;
 }

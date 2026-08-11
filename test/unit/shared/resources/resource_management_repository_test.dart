@@ -93,6 +93,62 @@ void main() {
       });
     });
 
+    test('creates a resource with the exact partial config payload', () async {
+      when(() => client.write(any())).thenAnswer(
+        (_) async => <String, dynamic>{
+          '_id': <String, dynamic>{r'$oid': 'stack-new'},
+          'name': 'web',
+        },
+      );
+
+      final result = await repository.create(
+        kind: ResourceKind.stacks,
+        name: 'web',
+        config: <String, dynamic>{
+          'server_id': 'server-1',
+          'file_contents': 'services: {}',
+        },
+      );
+
+      final created = result.getOrElse(
+        (_) => fail('Expected created resource'),
+      );
+      expect(created.id, 'stack-new');
+      expect(created.name, 'web');
+      final request = capturedWrite();
+      expect(request.type, 'CreateStack');
+      expect(request.params, <String, dynamic>{
+        'name': 'web',
+        'config': <String, dynamic>{
+          'server_id': 'server-1',
+          'file_contents': 'services: {}',
+        },
+      });
+    });
+
+    test('copyAndReturn returns the copied identity', () async {
+      when(() => client.write(any())).thenAnswer(
+        (_) async => <String, dynamic>{'id': 'copy-1', 'name': 'Copy'},
+      );
+
+      final result = await repository.copyAndReturn(
+        kind: ResourceKind.deployments,
+        id: 'deployment-1',
+        name: 'Copy',
+      );
+
+      final created = result.getOrElse(
+        (_) => fail('Expected copied resource'),
+      );
+      expect(created.id, 'copy-1');
+      final request = capturedWrite();
+      expect(request.type, 'CopyDeployment');
+      expect(request.params, <String, dynamic>{
+        'id': 'deployment-1',
+        'name': 'Copy',
+      });
+    });
+
     const kinds = <ResourceKind, String>{
       ResourceKind.servers: 'Server',
       ResourceKind.stacks: 'Stack',
