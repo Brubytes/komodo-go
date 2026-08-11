@@ -12,7 +12,9 @@ String? routeForAlert(Alert alert) {
 }
 
 String? routeForUpdate(UpdateListItem update) {
-  return routeForTarget(update.target);
+  final id = update.id.trim();
+  if (id.isEmpty) return null;
+  return '${AppRoutes.updateDetails}/${Uri.encodeComponent(id)}';
 }
 
 String? routeForTarget(ResourceTarget? target) {

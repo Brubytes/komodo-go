@@ -33,6 +33,7 @@ import 'package:komodo_go/features/builders/presentation/views/builders_view.dar
 import 'package:komodo_go/features/builds/presentation/views/builds_list_view.dart';
 import 'package:komodo_go/features/containers/presentation/views/container_detail_view.dart';
 import 'package:komodo_go/features/notifications/presentation/views/notifications_view.dart';
+import 'package:komodo_go/features/notifications/presentation/views/update_detail_view.dart';
 import 'package:komodo_go/features/procedures/presentation/views/procedures_list_view.dart';
 import 'package:komodo_go/features/providers/presentation/views/providers_view.dart';
 import 'package:komodo_go/features/repos/presentation/views/repos_list_view.dart';
@@ -60,6 +61,7 @@ abstract class AppRoutes {
   static const containers = '/containers';
   static const containerDetail = '/containers/:serverId/:container';
   static const notifications = '/notifications';
+  static const updateDetails = '$notifications/updates';
   static const settings = '/settings';
 
   static const servers = '$resources/servers';
@@ -503,6 +505,26 @@ GoRouter appRouter(Ref ref) {
                     child: const NotificationsView(),
                   ),
                 ),
+                routes: [
+                  GoRoute(
+                    path: 'updates/:id',
+                    pageBuilder: (context, state) => _appStackPage(
+                      state,
+                      ProviderScope(
+                        overrides: [
+                          resourceNameResolverProvider.overrideWith(
+                            (ref) => ref.watch(
+                              composedResourceNameResolverProvider,
+                            ),
+                          ),
+                        ],
+                        child: UpdateDetailView(
+                          updateId: state.pathParameters['id']!,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

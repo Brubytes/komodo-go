@@ -1,4 +1,5 @@
 import 'package:komodo_go/core/error/provider_error.dart';
+import 'package:komodo_go/features/notifications/data/models/update_detail.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 import 'package:komodo_go/features/notifications/data/repositories/notifications_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -80,4 +81,12 @@ class Updates extends _$Updates {
       },
     );
   }
+}
+
+@riverpod
+Future<UpdateDetail?> updateDetail(Ref ref, String id) async {
+  final repository = ref.watch(notificationsRepositoryProvider);
+  if (repository == null || id.trim().isEmpty) return null;
+  final result = await repository.getUpdate(id);
+  return unwrapOrThrow(result);
 }
