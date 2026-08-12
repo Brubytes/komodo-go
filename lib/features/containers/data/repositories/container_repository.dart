@@ -7,6 +7,7 @@ import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/data/models/container_log.dart';
+import 'package:komodo_go/shared/logs/server_log.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'container_repository.g.dart';
@@ -70,6 +71,54 @@ class ContainerRepository {
       );
 
       return ContainerLog.fromJson(response as Map<String, dynamic>);
+    });
+  }
+
+  Future<Either<Failure, ServerLogSnapshot>> loadServerLog({
+    required String serverIdOrName,
+    required String containerIdOrName,
+    int tail = 200,
+    bool timestamps = true,
+  }) {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'GetContainerLog',
+          params: <String, dynamic>{
+            'server': serverIdOrName,
+            'container': containerIdOrName,
+            'tail': tail,
+            'timestamps': timestamps,
+          },
+        ),
+      );
+      return ServerLogSnapshot.fromJson(response as Map<String, dynamic>);
+    });
+  }
+
+  Future<Either<Failure, ServerLogSnapshot>> searchServerLog({
+    required String serverIdOrName,
+    required String containerIdOrName,
+    required List<String> terms,
+    required LogSearchCombinator combinator,
+    bool invert = false,
+    bool timestamps = true,
+  }) {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'SearchContainerLog',
+          params: <String, dynamic>{
+            'server': serverIdOrName,
+            'container': containerIdOrName,
+            'terms': terms,
+            'combinator': combinator.apiValue,
+            'invert': invert,
+            'timestamps': timestamps,
+          },
+        ),
+      );
+      return ServerLogSnapshot.fromJson(response as Map<String, dynamic>);
     });
   }
 

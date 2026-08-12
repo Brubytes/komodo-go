@@ -363,7 +363,32 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
       if (!context.mounted) return;
     }
 
+    if (action == StackAction.checkUpdates) {
+      final services = await actions.checkForUpdates(stackId);
+      if (!context.mounted) return;
+      ref.invalidate(stacksProvider);
+      final count = services
+          ?.where((service) => service.updateAvailable)
+          .length;
+      AppSnackBar.show(
+        context,
+        count == null
+            ? 'Image check failed. Please try again.'
+            : count == 0
+            ? 'All service images are up to date.'
+            : '$count service image${count == 1 ? '' : 's'} can be updated.',
+        tone: count == null
+            ? AppSnackBarTone.error
+            : count == 0
+            ? AppSnackBarTone.success
+            : AppSnackBarTone.warning,
+      );
+      return;
+    }
+
     final success = await switch (action) {
+      StackAction.checkUpdates => Future<bool>.value(false),
+      StackAction.deployIfChanged => actions.deployIfChanged(stackId),
       StackAction.redeploy => actions.deploy(stackId),
       StackAction.pullImages => actions.pullImages(stackId),
       StackAction.restart => actions.restart(stackId),

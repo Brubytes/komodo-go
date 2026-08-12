@@ -10,6 +10,8 @@ class ResourceBatchItem {
 }
 
 enum ResourceBatchAction {
+  checkUpdates('Check for updates', Icons.refresh_outlined),
+  deployIfChanged('Deploy if changed', Icons.difference_outlined),
   deploy('Deploy', AppIcons.deployments),
   pull('Pull', Icons.download_outlined),
   start('Start', AppIcons.play),
@@ -30,12 +32,14 @@ class ResourceBatchResult {
     required this.item,
     required this.success,
     this.updateId,
+    this.updateAvailable,
     this.error,
   });
 
   final ResourceBatchItem item;
   final bool success;
   final String? updateId;
+  final bool? updateAvailable;
   final String? error;
 }
 
@@ -43,6 +47,8 @@ extension ResourceBatchActionsForKind on ResourceKind {
   List<ResourceBatchAction> get batchActions => switch (this) {
     ResourceKind.stacks => const [
       ResourceBatchAction.deploy,
+      ResourceBatchAction.deployIfChanged,
+      ResourceBatchAction.checkUpdates,
       ResourceBatchAction.pull,
       ResourceBatchAction.start,
       ResourceBatchAction.stop,
@@ -51,6 +57,7 @@ extension ResourceBatchActionsForKind on ResourceKind {
     ],
     ResourceKind.deployments => const [
       ResourceBatchAction.deploy,
+      ResourceBatchAction.checkUpdates,
       ResourceBatchAction.pull,
       ResourceBatchAction.start,
       ResourceBatchAction.stop,

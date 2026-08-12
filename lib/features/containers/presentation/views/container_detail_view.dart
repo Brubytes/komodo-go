@@ -6,6 +6,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/containers/containers_provider.dart';
+import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
@@ -14,10 +15,10 @@ import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
-import 'package:komodo_go/features/containers/data/models/container_log.dart';
+import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
 import 'package:komodo_go/features/containers/presentation/providers/container_inspection_provider.dart';
-import 'package:komodo_go/features/containers/presentation/providers/container_log_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
+import 'package:komodo_go/shared/logs/server_log_explorer.dart';
 import 'package:riverpod/misc.dart' show FutureProviderFamily;
 
 class ContainerDetailView extends ConsumerWidget {
@@ -43,12 +44,6 @@ class ContainerDetailView extends ConsumerWidget {
       ),
     );
     final decodedContainerIdOrName = Uri.decodeComponent(containerIdOrName);
-    final logAsync = ref.watch(
-      containerLogProvider(
-        serverIdOrName: serverId,
-        containerIdOrName: decodedContainerIdOrName,
-      ),
-    );
     final inspectionAsync = ref.watch(
       containerInspectionProvider(
         serverIdOrName: serverId,
@@ -97,14 +92,33 @@ class ContainerDetailView extends ConsumerWidget {
         onRetry: () => ref.invalidate(containersProvider),
       ),
     );
-    final logContent = _ContainerLogPanel(
-      logAsync: logAsync,
-      onRetry: () => ref.invalidate(
-        containerLogProvider(
-          serverIdOrName: serverId,
-          containerIdOrName: decodedContainerIdOrName,
-        ),
-      ),
+    final logContent = ServerLogExplorer(
+      key: ValueKey('container_log_explorer_$decodedContainerIdOrName'),
+      loader: (request) async {
+        final repository = ref.read(containerRepositoryProvider);
+        if (repository == null) {
+          throw StateError('No active Komodo connection.');
+        }
+        final result = request.isSearch
+            ? await repository.searchServerLog(
+                serverIdOrName: serverId,
+                containerIdOrName: decodedContainerIdOrName,
+                terms: request.terms,
+                combinator: request.combinator,
+                invert: request.invert,
+                timestamps: request.timestamps,
+              )
+            : await repository.loadServerLog(
+                serverIdOrName: serverId,
+                containerIdOrName: decodedContainerIdOrName,
+                tail: request.tail,
+                timestamps: request.timestamps,
+              );
+        return result.fold(
+          (failure) => throw StateError(failure.displayMessage),
+          (log) => log,
+        );
+      },
     );
     final inspectionContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,12 +151,6 @@ class ContainerDetailView extends ConsumerWidget {
         onRefresh: () async {
           ref
             ..invalidate(containersProvider)
-            ..invalidate(
-              containerLogProvider(
-                serverIdOrName: serverId,
-                containerIdOrName: decodedContainerIdOrName,
-              ),
-            )
             ..invalidate(
               containerInspectionProvider(
                 serverIdOrName: serverId,
@@ -416,53 +424,6 @@ class _ContainerInspectionPanel extends StatelessWidget {
   }
 }
 
-class _ContainerLogPanel extends StatelessWidget {
-  const _ContainerLogPanel({required this.logAsync, required this.onRetry});
-
-  final AsyncValue<ContainerLog?> logAsync;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Log (tail)',
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const Gap(8),
-        logAsync.when(
-          data: (log) {
-            if (log == null) {
-              return const _LogEmpty();
-            }
-
-            final lines = <String>[
-              if (log.stdout.trim().isNotEmpty) log.stdout.trim(),
-              if (log.stderr.trim().isNotEmpty) log.stderr.trim(),
-            ];
-
-            if (lines.isEmpty) {
-              return const _LogEmpty();
-            }
-
-            return _LogBox(content: lines.join('\n\n'));
-          },
-          loading: () => const _LogBox(content: 'Loading...', isLoading: true),
-          error: (error, stack) => _ErrorState(
-            title: 'Failed to load log',
-            message: error.toString(),
-            onRetry: onRetry,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 final FutureProviderFamily<ContainerOverviewItem?, _ContainerItemArgs>
 _containerItemProviderFamily = FutureProvider.autoDispose
     .family<ContainerOverviewItem?, _ContainerItemArgs>((ref, args) async {
@@ -507,43 +468,6 @@ class _NotFound extends StatelessWidget {
   Widget build(BuildContext context) {
     return const AppCardSurface(
       child: Text('Container not found.'),
-    );
-  }
-}
-
-class _LogEmpty extends StatelessWidget {
-  const _LogEmpty();
-
-  @override
-  Widget build(BuildContext context) {
-    return const _LogBox(content: 'No log output.');
-  }
-}
-
-class _LogBox extends StatelessWidget {
-  const _LogBox({required this.content, this.isLoading = false});
-
-  final String content;
-  final bool isLoading;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    if (!isLoading) {
-      return DetailCodeBlock(code: content, tabletMaxHeight: 560);
-    }
-
-    return AppCardSurface(
-      padding: const EdgeInsets.all(12),
-      radius: 12,
-      child: Row(
-        children: [
-          const AppInlineSkeleton(),
-          const Gap(10),
-          Text(content, style: textTheme.bodySmall),
-        ],
-      ),
     );
   }
 }

@@ -403,7 +403,27 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
     }
 
     final actions = ref.read(deploymentActionsProvider.notifier);
+    if (action == DeploymentAction.checkUpdates) {
+      final available = await actions.checkForUpdate(deploymentId);
+      if (!context.mounted) return;
+      ref.invalidate(deploymentsProvider);
+      AppSnackBar.show(
+        context,
+        available == null
+            ? 'Image check failed. Please try again.'
+            : available
+            ? 'A newer image is available.'
+            : 'The deployed image is up to date.',
+        tone: available == null
+            ? AppSnackBarTone.error
+            : available
+            ? AppSnackBarTone.warning
+            : AppSnackBarTone.success,
+      );
+      return;
+    }
     final success = await switch (action) {
+      DeploymentAction.checkUpdates => Future<bool>.value(false),
       DeploymentAction.deploy => actions.deploy(deploymentId),
       DeploymentAction.pullImages => actions.pullImages(deploymentId),
       DeploymentAction.start => actions.start(deploymentId),

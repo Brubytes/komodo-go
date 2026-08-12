@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
 import 'package:komodo_go/composition/stacks/stack_config_editor.dart';
 import 'package:komodo_go/composition/stacks/stack_updates_tab.dart';
+import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/core_info_provider.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
@@ -22,10 +23,12 @@ import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
+import 'package:komodo_go/features/stacks/data/repositories/stack_repository.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
 import 'package:komodo_go/features/stacks/presentation/views/stack_detail/stack_detail_sections.dart';
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
+import 'package:komodo_go/shared/logs/server_log_explorer.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_metadata.dart';
 
@@ -182,7 +185,6 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     final stackAsync = ref.watch(stackDetailProvider(widget.stackId));
     final coreInfoAsync = ref.watch(coreInfoProvider);
     final servicesAsync = ref.watch(stackServicesProvider(widget.stackId));
-    final logAsync = ref.watch(stackLogProvider(widget.stackId));
     final stacksListAsync = ref.watch(stacksProvider);
     final serversListAsync = ref.watch(serversProvider);
     final reposListAsync = ref.watch(reposProvider);
@@ -249,6 +251,18 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
             onSelected: (action) =>
                 _handleAction(context, widget.stackId, action),
             itemBuilder: (context) => [
+              komodoPopupMenuItem(
+                value: StackAction.checkUpdates,
+                icon: Icons.refresh_outlined,
+                label: 'Check images now',
+                iconColor: scheme.primary,
+              ),
+              komodoPopupMenuItem(
+                value: StackAction.deployIfChanged,
+                icon: Icons.difference_outlined,
+                label: 'Deploy if changed',
+                iconColor: scheme.primary,
+              ),
               komodoPopupMenuItem(
                 value: StackAction.redeploy,
                 icon: AppIcons.deployments,
@@ -553,12 +567,36 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                           },
                         ),
                         const Gap(12),
-                        logAsync.when(
-                          data: (log) => StackLogContent(log: log),
-                          loading: () => const StackLoadingSurface(),
-                          error: (error, _) => StackMessageSurface(
-                            message: 'Logs unavailable: $error',
-                          ),
+                        ServerLogExplorer(
+                          key: ValueKey('stack_log_explorer_${widget.stackId}'),
+                          autoRefresh: _autoRefreshLogs,
+                          loader: (request) async {
+                            final repository = ref.read(
+                              stackRepositoryProvider,
+                            );
+                            if (repository == null) {
+                              throw StateError('No active Komodo connection.');
+                            }
+                            final result = request.isSearch
+                                ? await repository.searchServerLog(
+                                    stackIdOrName: widget.stackId,
+                                    terms: request.terms,
+                                    combinator: request.combinator,
+                                    invert: request.invert,
+                                    timestamps: request.timestamps,
+                                  )
+                                : await repository.loadServerLog(
+                                    stackIdOrName: widget.stackId,
+                                    tail: request.tail,
+                                    timestamps: request.timestamps,
+                                  );
+                            return result.fold(
+                              (failure) => throw StateError(
+                                failure.displayMessage,
+                              ),
+                              (log) => log,
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -660,6 +698,31 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     StackAction action,
   ) async {
     final actions = ref.read(stackActionsProvider.notifier);
+    if (action == StackAction.checkUpdates) {
+      final services = await actions.checkForUpdates(stackId);
+      if (!mounted || !context.mounted) return;
+      ref
+        ..invalidate(stackDetailProvider(stackId))
+        ..invalidate(stackServicesProvider(stackId))
+        ..invalidate(stacksProvider);
+      final count = services
+          ?.where((service) => service.updateAvailable)
+          .length;
+      AppSnackBar.show(
+        context,
+        count == null
+            ? 'Image check failed. Please try again.'
+            : count == 0
+            ? 'All service images are up to date.'
+            : '$count service image${count == 1 ? '' : 's'} can be updated.',
+        tone: count == null
+            ? AppSnackBarTone.error
+            : count == 0
+            ? AppSnackBarTone.success
+            : AppSnackBarTone.warning,
+      );
+      return;
+    }
     if (action == StackAction.destroy) {
       final confirmed = await showDialog<bool>(
         context: context,
@@ -685,6 +748,8 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     }
 
     final success = await switch (action) {
+      StackAction.checkUpdates => Future<bool>.value(false),
+      StackAction.deployIfChanged => actions.deployIfChanged(stackId),
       StackAction.redeploy => actions.deploy(stackId),
       StackAction.pullImages => actions.pullImages(stackId),
       StackAction.restart => actions.restart(stackId),

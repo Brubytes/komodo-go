@@ -280,7 +280,11 @@ class _ResourceBatchSheetState extends ConsumerState<_ResourceBatchSheet> {
                       title: Text(result.item.name),
                       subtitle: Text(
                         result.success
-                            ? result.updateId == null
+                            ? result.updateAvailable != null
+                                  ? result.updateAvailable!
+                                        ? 'Update available'
+                                        : 'Up to date'
+                                  : result.updateId == null
                                   ? 'Started successfully'
                                   : 'Update ${result.updateId}'
                             : result.error ?? 'Unknown error',

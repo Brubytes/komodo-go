@@ -72,6 +72,9 @@ class DeploymentActions extends _$DeploymentActions {
   Future<bool> pullImages(String deploymentId) =>
       _executeAction((repo) => repo.pullDeployment(deploymentId));
 
+  Future<bool?> checkForUpdate(String deploymentId) =>
+      _executeRequest((repo) => repo.checkForUpdate(deploymentId));
+
   Future<bool> pause(String deploymentId) =>
       _executeAction((repo) => repo.pauseDeployment(deploymentId));
 

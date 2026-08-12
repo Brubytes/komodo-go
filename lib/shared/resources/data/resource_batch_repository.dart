@@ -21,6 +21,9 @@ class ResourceBatchRepository {
   }) {
     return apiCall(() async {
       if (items.isEmpty) return const <ResourceBatchResult>[];
+      if (action == ResourceBatchAction.checkUpdates) {
+        return _checkForUpdates(kind, items);
+      }
       final batchRpc = _nativeBatchRpc(kind, action);
       if (batchRpc != null) {
         final response = await _client.execute(
@@ -38,6 +41,54 @@ class ResourceBatchRepository {
         items.map((item) => _executeOne(kind, action, item)),
       );
     });
+  }
+
+  Future<List<ResourceBatchResult>> _checkForUpdates(
+    ResourceKind kind,
+    List<ResourceBatchItem> items,
+  ) async {
+    final type = switch (kind) {
+      ResourceKind.stacks => 'BatchCheckStackForUpdate',
+      ResourceKind.deployments => 'BatchCheckDeploymentForUpdate',
+      _ => throw ArgumentError('Update checks are not supported for $kind.'),
+    };
+    final response = await _client.write(
+      RpcRequest(
+        type: type,
+        params: <String, dynamic>{
+          'pattern': items.map((item) => item.name).join(', '),
+          'tags': <String>[],
+          'skip_auto_update': true,
+          'wait_for_auto_update': false,
+          if (kind == ResourceKind.stacks) 'skip_cache_refresh': false,
+        },
+      ),
+    );
+    if (response is! List) {
+      throw const FormatException('Update check response is not a list.');
+    }
+    final byId = {for (final item in items) item.id: item};
+    final remaining = [...items];
+    return [
+      for (final raw in response)
+        if (raw is Map)
+          () {
+            final id = raw[kind == ResourceKind.stacks ? 'stack' : 'deployment']
+                ?.toString();
+            final item = _takeMatching(remaining, byId[id]);
+            final available = kind == ResourceKind.stacks
+                ? ((raw['services'] as List? ?? const <Object>[]).any(
+                    (service) =>
+                        service is Map && service['update_available'] == true,
+                  ))
+                : raw['update_available'] == true;
+            return ResourceBatchResult(
+              item: item,
+              success: true,
+              updateAvailable: available,
+            );
+          }(),
+    ];
   }
 
   Future<ResourceBatchResult> _executeOne(
@@ -67,6 +118,8 @@ class ResourceBatchRepository {
     ResourceBatchAction action,
   ) => switch ((kind, action)) {
     (ResourceKind.stacks, ResourceBatchAction.deploy) => 'BatchDeployStack',
+    (ResourceKind.stacks, ResourceBatchAction.deployIfChanged) =>
+      'BatchDeployStackIfChanged',
     (ResourceKind.stacks, ResourceBatchAction.pull) => 'BatchPullStack',
     (ResourceKind.stacks, ResourceBatchAction.destroy) => 'BatchDestroyStack',
     (ResourceKind.deployments, ResourceBatchAction.deploy) => 'BatchDeploy',

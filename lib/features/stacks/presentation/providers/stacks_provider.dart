@@ -81,6 +81,13 @@ class StackActions extends _$StackActions {
   Future<bool> deploy(String stackIdOrName) =>
       _executeAction((repo) => repo.deployStack(stackIdOrName));
 
+  Future<bool> deployIfChanged(String stackIdOrName) =>
+      _executeAction((repo) => repo.deployStackIfChanged(stackIdOrName));
+
+  Future<List<StackServiceWithUpdate>?> checkForUpdates(
+    String stackIdOrName,
+  ) => _executeRequest((repo) => repo.checkForUpdates(stackIdOrName));
+
   Future<bool> pullImages(String stackIdOrName) =>
       _executeAction((repo) => repo.pullStackImages(stackIdOrName));
 

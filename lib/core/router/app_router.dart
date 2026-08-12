@@ -15,6 +15,7 @@ import 'package:komodo_go/composition/resources/resource_creation_view.dart';
 import 'package:komodo_go/composition/resources/resource_name_resolver_provider.dart';
 import 'package:komodo_go/composition/resources/resources_view.dart';
 import 'package:komodo_go/composition/servers/servers_list_view.dart';
+import 'package:komodo_go/composition/settings/auto_update_review_view.dart';
 import 'package:komodo_go/composition/settings/connections_view.dart';
 import 'package:komodo_go/composition/settings/settings_view.dart';
 import 'package:komodo_go/composition/stacks/stack_detail_view.dart';
@@ -82,6 +83,7 @@ abstract class AppRoutes {
   static const komodoProviders = '$settings/komodo/providers';
   static const komodoBuilders = '$settings/komodo/builders';
   static const komodoAlerters = '$settings/komodo/alerters';
+  static const autoUpdateReview = '$settings/komodo/auto-updates';
   static const komodoAlerterDetail = '$komodoAlerters/:id';
   static const credits = '$settings/credits';
 
@@ -585,6 +587,11 @@ GoRouter appRouter(Ref ref) {
                     path: 'connections',
                     pageBuilder: (context, state) =>
                         _appStackPage(state, const ConnectionsView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/auto-updates',
+                    pageBuilder: (context, state) =>
+                        _appStackPage(state, const AutoUpdateReviewView()),
                   ),
                   GoRoute(
                     path: 'komodo/variables',
