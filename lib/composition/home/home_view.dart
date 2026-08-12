@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/home/home_ops_pulse.dart';
 import 'package:komodo_go/composition/home/widgets/home_dashboard_tiles.dart';
 import 'package:komodo_go/composition/home/widgets/home_sections.dart';
 import 'package:komodo_go/core/router/app_router.dart';
@@ -366,11 +367,7 @@ class HomeView extends ConsumerWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  HomeSectionHeader(
-                    title: 'Ops pulse',
-                    onSeeAll: () =>
-                        _goToResources(context, ResourceType.deployments),
-                  ),
+                  const HomeSectionHeader(title: 'Ops pulse'),
                   const Gap(8),
                   _buildOpsPulseCard(
                     context: context,
@@ -474,92 +471,49 @@ Widget _buildOpsPulseCard({
   final procedures = proceduresAsync.asData?.value ?? <ProcedureListItem>[];
   final actions = actionsAsync.asData?.value ?? <ActionListItem>[];
 
-  final rows = <_OpsRowData>[
-    _OpsRowData(
-      title: 'Deployments',
-      active: deployments
-          .where(
-            (item) =>
-                item.info?.state == DeploymentState.deploying ||
-                item.info?.state == DeploymentState.restarting ||
-                item.info?.state == DeploymentState.removing,
-          )
-          .length,
-      failed: deployments
-          .where(
-            (item) =>
-                item.info?.state == DeploymentState.dead ||
-                item.info?.state == DeploymentState.exited,
-          )
-          .length,
-      type: ResourceType.deployments,
+  final snapshot = buildHomeOpsSnapshot(
+    deployments: deployments,
+    stacks: stacks,
+    builds: builds,
+    repos: repos,
+    procedures: procedures,
+    actions: actions,
+    syncs: syncs,
+  );
+  if (snapshot.totalResources == 0) {
+    return const HomeEmptyListTile(
+      icon: AppIcons.activity,
+      message: 'No operational resources yet',
+    );
+  }
+
+  final summary = <HomeOpsStatusCount>[
+    HomeOpsStatusCount(
+      label: 'healthy',
+      count: snapshot.count(HomeOpsTone.healthy),
+      tone: HomeOpsTone.healthy,
     ),
-    _OpsRowData(
-      title: 'Stacks',
-      active: stacks
-          .where(
-            (item) =>
-                item.info.state == StackState.deploying ||
-                item.info.state == StackState.restarting,
-          )
-          .length,
-      failed: stacks
-          .where(
-            (item) =>
-                item.info.state == StackState.unhealthy ||
-                item.info.state == StackState.dead,
-          )
-          .length,
-      type: ResourceType.stacks,
+    HomeOpsStatusCount(
+      label: 'in progress',
+      count: snapshot.count(HomeOpsTone.active),
+      tone: HomeOpsTone.active,
     ),
-    _OpsRowData(
-      title: 'Builds',
-      active: builds
-          .where((item) => item.info.state == BuildState.building)
-          .length,
-      failed: builds
-          .where((item) => item.info.state == BuildState.failed)
-          .length,
-      type: ResourceType.builds,
+    HomeOpsStatusCount(
+      label: 'attention',
+      count: snapshot.count(HomeOpsTone.attention),
+      tone: HomeOpsTone.attention,
     ),
-    _OpsRowData(
-      title: 'Procedures',
-      active: procedures
-          .where((item) => item.info.state == ProcedureState.running)
-          .length,
-      failed: procedures
-          .where((item) => item.info.state == ProcedureState.failed)
-          .length,
-      type: ResourceType.procedures,
+    HomeOpsStatusCount(
+      label: 'failed',
+      count: snapshot.count(HomeOpsTone.failed),
+      tone: HomeOpsTone.failed,
     ),
-    _OpsRowData(
-      title: 'Actions',
-      active: actions
-          .where((item) => item.info.state == ActionState.running)
-          .length,
-      failed: actions
-          .where((item) => item.info.state == ActionState.failed)
-          .length,
-      type: ResourceType.actions,
-    ),
-    _OpsRowData(
-      title: 'Syncs',
-      active: syncs.where((item) => item.info.state.isRunning).length,
-      failed: syncs
-          .where((item) => item.info.state == ResourceSyncState.failed)
-          .length,
-      type: ResourceType.syncs,
-    ),
-    _OpsRowData(
-      title: 'Repos',
-      active: repos.where((item) => item.info.state.isBusy).length,
-      failed: repos.where((item) => item.info.state == RepoState.failed).length,
-      type: ResourceType.repos,
+    HomeOpsStatusCount(
+      label: 'unknown',
+      count: snapshot.count(HomeOpsTone.unknown),
+      tone: HomeOpsTone.unknown,
     ),
   ];
-
-  final totalActive = rows.fold<int>(0, (sum, row) => sum + row.active);
-  final totalFailed = rows.fold<int>(0, (sum, row) => sum + row.failed);
 
   return AppCardSurface(
     padding: EdgeInsets.zero,
@@ -568,27 +522,25 @@ Widget _buildOpsPulseCard({
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
             children: [
-              _OpsSummaryChip(
-                label: '$totalActive active',
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const Gap(8),
-              _OpsSummaryChip(
-                label: '$totalFailed failed',
-                color: Theme.of(context).colorScheme.error,
-              ),
+              for (final status in summary)
+                if (status.count > 0)
+                  _OpsSummaryChip(
+                    label: '${status.count} ${status.label}',
+                    color: _opsToneColor(context, status.tone),
+                  ),
             ],
           ),
           const Gap(12),
-          ...rows.map(
+          ...snapshot.rows.map(
             (row) => Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: HomeOpsStatusRow(
                 title: row.title,
-                active: row.active,
-                failed: row.failed,
+                statuses: row.statuses,
                 onTap: () => onNavigate(row.type),
               ),
             ),
@@ -597,6 +549,17 @@ Widget _buildOpsPulseCard({
       ),
     ),
   );
+}
+
+Color _opsToneColor(BuildContext context, HomeOpsTone tone) {
+  final scheme = Theme.of(context).colorScheme;
+  return switch (tone) {
+    HomeOpsTone.healthy => AppTokens.statusGreen,
+    HomeOpsTone.active => scheme.primary,
+    HomeOpsTone.attention => AppTokens.statusOrange,
+    HomeOpsTone.failed => scheme.error,
+    HomeOpsTone.unknown => scheme.tertiary,
+  };
 }
 
 class _OpsSummaryChip extends StatelessWidget {
@@ -622,20 +585,6 @@ class _OpsSummaryChip extends StatelessWidget {
       ),
     );
   }
-}
-
-class _OpsRowData {
-  const _OpsRowData({
-    required this.title,
-    required this.active,
-    required this.failed,
-    required this.type,
-  });
-
-  final String title;
-  final int active;
-  final int failed;
-  final ResourceType type;
 }
 
 class _ServerStatsEntry {
