@@ -5,6 +5,7 @@ import 'package:komodo_go/core/api/api_exception.dart';
 import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
+import 'package:komodo_go/shared/logs/server_log.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockApiClient extends Mock implements KomodoApiClient {
@@ -95,6 +96,31 @@ void main() {
         });
       },
     );
+
+    test('searchServerLog sends SearchContainerLog to the server', () async {
+      when(() => client.read(any())).thenAnswer(
+        (_) async => <String, dynamic>{'stdout': 'error line'},
+      );
+
+      final result = await repository.searchServerLog(
+        serverIdOrName: 'server-1',
+        containerIdOrName: 'web',
+        terms: const ['error'],
+        combinator: LogSearchCombinator.and,
+      );
+
+      expect(_rightOrFail(result).stdout, 'error line');
+      final request = capturedRead();
+      expect(request.type, 'SearchContainerLog');
+      expect(request.params, <String, dynamic>{
+        'server': 'server-1',
+        'container': 'web',
+        'terms': ['error'],
+        'combinator': 'And',
+        'invert': false,
+        'timestamps': true,
+      });
+    });
 
     test(
       'inspectContainer uses the 2.2 RPC and retains raw inspection',

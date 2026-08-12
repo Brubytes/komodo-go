@@ -31,6 +31,7 @@ const _compositionAllowList = {
   'lib/composition/settings/add_connection_sheet.dart',
   'lib/composition/settings/connections_view.dart',
   'lib/composition/settings/settings_view.dart',
+  'lib/composition/settings/auto_update_review_view.dart',
   'lib/composition/stacks/stack_config_editor.dart',
   'lib/composition/stacks/stack_detail_view.dart',
   'lib/composition/stacks/stacks_list_view.dart',

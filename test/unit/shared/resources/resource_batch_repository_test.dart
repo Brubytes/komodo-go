@@ -134,5 +134,56 @@ void main() {
       expect(request.type, 'BatchRunAction');
       expect(request.params, <String, dynamic>{'pattern': 'action'});
     });
+
+    test('batch update checks use write and expose availability', () async {
+      when(() => client.write(any())).thenAnswer(
+        (_) async => <Object?>[
+          <String, dynamic>{
+            'stack': 's1',
+            'services': [
+              {'service': 'web', 'update_available': true},
+            ],
+          },
+          <String, dynamic>{'stack': 's2', 'services': <Object?>[]},
+        ],
+      );
+
+      final values = _rightOrFail(
+        await repository.execute(
+          kind: ResourceKind.stacks,
+          action: ResourceBatchAction.checkUpdates,
+          items: items,
+        ),
+      );
+
+      expect(values.map((value) => value.updateAvailable), [true, false]);
+      final request =
+          verify(() => client.write(captureAny())).captured.single
+              as RpcRequest<dynamic>;
+      expect(request.type, 'BatchCheckStackForUpdate');
+      expect(request.params, <String, dynamic>{
+        'pattern': 'one, two',
+        'tags': <String>[],
+        'skip_auto_update': true,
+        'wait_for_auto_update': false,
+        'skip_cache_refresh': false,
+      });
+      verifyNever(() => client.execute(any()));
+    });
+
+    test('stack deploy-if-changed maps to native batch execution', () async {
+      when(() => client.execute(any())).thenAnswer((_) async => <Object?>[]);
+
+      await repository.execute(
+        kind: ResourceKind.stacks,
+        action: ResourceBatchAction.deployIfChanged,
+        items: items,
+      );
+
+      final request =
+          verify(() => client.execute(captureAny())).captured.single
+              as RpcRequest<dynamic>;
+      expect(request.type, 'BatchDeployStackIfChanged');
+    });
   });
 }

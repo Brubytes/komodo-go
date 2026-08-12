@@ -5,12 +5,12 @@ import 'package:komodo_go/core/api/api_exception.dart';
 import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/deployments/data/repositories/deployment_repository.dart';
+import 'package:komodo_go/shared/logs/server_log.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockApiClient extends Mock implements KomodoApiClient {
   @override
-  KomodoApiCapabilities get capabilities =>
-      KomodoApiCapabilities.v23AndNewer;
+  KomodoApiCapabilities get capabilities => KomodoApiCapabilities.v23AndNewer;
 }
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
@@ -47,42 +47,43 @@ void main() {
             as RpcRequest<dynamic>;
 
     group('reads', () {
-      test('listDeployments sends ListDeployments with exact query payload',
-          () async {
-        when(() => client.read(any())).thenAnswer(
-          (_) async => [
-            {'id': 'dep-1', 'name': 'api'},
-          ],
-        );
+      test(
+        'listDeployments sends ListDeployments with exact query payload',
+        () async {
+          when(() => client.read(any())).thenAnswer(
+            (_) async => [
+              {'id': 'dep-1', 'name': 'api'},
+            ],
+          );
 
-        final result = await repository.listDeployments();
+          final result = await repository.listDeployments();
 
-        expect(_rightOrFail(result).single.id, 'dep-1');
+          expect(_rightOrFail(result).single.id, 'dep-1');
 
-        final request = capturedRead();
-        expect(request.type, 'ListDeployments');
-        expect(request.params, <String, dynamic>{
-          'query': <String, dynamic>{
-            'terms': '',
-            'names': <String>[],
-            'templates': 'Include',
-            'tags': <String>[],
-            'tag_behavior': 'All',
-            'specific': <String, dynamic>{
-              'server_ids': <String>[],
-              'build_ids': <String>[],
-              'update_available': false,
+          final request = capturedRead();
+          expect(request.type, 'ListDeployments');
+          expect(request.params, <String, dynamic>{
+            'query': <String, dynamic>{
+              'terms': '',
+              'names': <String>[],
+              'templates': 'Include',
+              'tags': <String>[],
+              'tag_behavior': 'All',
+              'specific': <String, dynamic>{
+                'server_ids': <String>[],
+                'build_ids': <String>[],
+                'update_available': false,
+              },
             },
-          },
-          'sort_by': 'Name',
-          'sort_desc': false,
-          'page': 0,
-          'limit': 50,
-        });
-      });
+            'sort_by': 'Name',
+            'sort_desc': false,
+            'page': 0,
+            'limit': 50,
+          });
+        },
+      );
 
-      test('getDeployment sends GetDeployment with deployment param',
-          () async {
+      test('getDeployment sends GetDeployment with deployment param', () async {
         when(() => client.read(any())).thenAnswer(
           (_) async => <String, dynamic>{'id': 'dep-1', 'name': 'api'},
         );
@@ -98,26 +99,71 @@ void main() {
     });
 
     group('write payloads', () {
-      test('updateDeploymentConfig sends UpdateDeployment with id and config',
-          () async {
+      test('checkForUpdate suppresses configured auto-update', () async {
         when(() => client.write(any())).thenAnswer(
-          (_) async => <String, dynamic>{'id': 'dep-1', 'name': 'api'},
+          (_) async => <String, dynamic>{
+            'deployment': 'dep-1',
+            'update_available': true,
+          },
         );
 
-        final result = await repository.updateDeploymentConfig(
-          deploymentId: 'dep-1',
-          partialConfig: {'network': 'host'},
-        );
-
-        expect(_rightOrFail(result).id, 'dep-1');
+        expect(_rightOrFail(await repository.checkForUpdate('dep-1')), isTrue);
 
         final request = capturedWrite();
-        expect(request.type, 'UpdateDeployment');
+        expect(request.type, 'CheckDeploymentForUpdate');
         expect(request.params, <String, dynamic>{
-          'id': 'dep-1',
-          'config': {'network': 'host'},
+          'deployment': 'dep-1',
+          'skip_auto_update': true,
+          'wait_for_auto_update': false,
         });
-        verifyNever(() => client.execute(any()));
+      });
+
+      test(
+        'updateDeploymentConfig sends UpdateDeployment with id and config',
+        () async {
+          when(() => client.write(any())).thenAnswer(
+            (_) async => <String, dynamic>{'id': 'dep-1', 'name': 'api'},
+          );
+
+          final result = await repository.updateDeploymentConfig(
+            deploymentId: 'dep-1',
+            partialConfig: {'network': 'host'},
+          );
+
+          expect(_rightOrFail(result).id, 'dep-1');
+
+          final request = capturedWrite();
+          expect(request.type, 'UpdateDeployment');
+          expect(request.params, <String, dynamic>{
+            'id': 'dep-1',
+            'config': {'network': 'host'},
+          });
+          verifyNever(() => client.execute(any()));
+        },
+      );
+    });
+
+    test('searchServerLog uses server-side search parameters', () async {
+      when(() => client.read(any())).thenAnswer(
+        (_) async => <String, dynamic>{'stdout': 'timeout'},
+      );
+
+      final result = await repository.searchServerLog(
+        deploymentIdOrName: 'dep-1',
+        terms: const ['error', 'timeout'],
+        combinator: LogSearchCombinator.or,
+        invert: true,
+      );
+
+      expect(_rightOrFail(result).stdout, 'timeout');
+      final request = capturedRead();
+      expect(request.type, 'SearchDeploymentLog');
+      expect(request.params, <String, dynamic>{
+        'deployment': 'dep-1',
+        'terms': ['error', 'timeout'],
+        'combinator': 'Or',
+        'invert': true,
+        'timestamps': true,
       });
     });
 
@@ -169,22 +215,24 @@ void main() {
         );
       });
 
-      test('destroyDeployment maps generic ApiException to server failure',
-          () async {
-        when(() => client.execute(any())).thenThrow(
-          const ApiException(message: 'boom', statusCode: 500),
-        );
+      test(
+        'destroyDeployment maps generic ApiException to server failure',
+        () async {
+          when(() => client.execute(any())).thenThrow(
+            const ApiException(message: 'boom', statusCode: 500),
+          );
 
-        final result = await repository.destroyDeployment('dep-1');
+          final result = await repository.destroyDeployment('dep-1');
 
-        result.fold(
-          (failure) => expect(
-            failure,
-            const Failure.server(message: 'boom', statusCode: 500),
-          ),
-          (_) => fail('Expected server failure'),
-        );
-      });
+          result.fold(
+            (failure) => expect(
+              failure,
+              const Failure.server(message: 'boom', statusCode: 500),
+            ),
+            (_) => fail('Expected server failure'),
+          );
+        },
+      );
     });
   });
 }
