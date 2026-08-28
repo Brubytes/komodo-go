@@ -20,7 +20,7 @@ What this script does:
 - Optionally create rc/v tags from that version
 - Optionally push commit/tags
 - Optionally create GitHub PR to main for version-bump branches (using gh)
-- Optionally create GitHub Release for v-tags (using gh)
+- Optionally create GitHub Release for v-tags (using curated release notes when available)
 
 Recommended flow (with protected main):
 1) On dev/release branch:
@@ -507,11 +507,20 @@ if [[ "${#RELEASE_TAGS[@]}" -gt 0 ]] && confirm "Create GitHub Release for v-tag
       if gh release view "$tag" --repo "$REPO_SLUG" >/dev/null 2>&1; then
         abort "GitHub Release for tag '$tag' already exists."
       fi
-      gh release create "$tag" \
-        --repo "$REPO_SLUG" \
-        --verify-tag \
-        --generate-notes \
-        --title "$tag"
+      release_notes_path="release-notes/${tag#v}.md"
+      if [[ -f "$release_notes_path" ]]; then
+        gh release create "$tag" \
+          --repo "$REPO_SLUG" \
+          --verify-tag \
+          --notes-file "$release_notes_path" \
+          --title "$tag"
+      else
+        gh release create "$tag" \
+          --repo "$REPO_SLUG" \
+          --verify-tag \
+          --generate-notes \
+          --title "$tag"
+      fi
       echo "Created GitHub Release: $tag"
     done
   fi

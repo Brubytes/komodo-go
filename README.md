@@ -65,7 +65,7 @@ Use the interactive helper from the repository root:
 ./scripts/release_tag.sh
 ```
 
-The helper can also optionally create a GitHub Release for `v*` tags when `gh` is installed and authenticated.
+The helper can also optionally create a GitHub Release for `v*` tags when `gh` is installed and authenticated. If `release-notes/<version>.md` exists, the helper uses those curated notes; otherwise it generates notes from merged changes.
 On non-`main` branches, it can also open a PR to `main` for version-bump commits.
 
 ## Demo mode
