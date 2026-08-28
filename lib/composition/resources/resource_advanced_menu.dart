@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:fpdart/fpdart.dart' show Either;
 import 'package:gap/gap.dart';
@@ -151,7 +149,7 @@ class _ResourceAdvancedMenuButtonState
       'Renamed to $name',
       tone: AppSnackBarTone.success,
     );
-    unawaited(Navigator.of(context).maybePop());
+    Navigator.of(context).maybePop();
   }
 
   Future<void> _delete() async {
@@ -190,7 +188,7 @@ class _ResourceAdvancedMenuButtonState
     );
     if (!success || !mounted) return;
     widget.onMutated();
-    unawaited(Navigator.of(context).maybePop());
+    Navigator.of(context).maybePop();
   }
 
   Future<bool> _runMutation(
