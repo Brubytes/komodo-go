@@ -56,6 +56,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('web'), findsWidgets);
     expect(find.text('nginx:1'), findsOneWidget);
 
     // The backend now reports a different image; pull-to-refresh must show it.

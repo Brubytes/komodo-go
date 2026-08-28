@@ -4,6 +4,7 @@ import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
 import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
 import 'package:komodo_go/shared/logs/server_log.dart';
 import 'package:mocktail/mocktail.dart';
@@ -123,17 +124,19 @@ void main() {
     });
 
     test(
-      'inspectContainer uses the 2.2 RPC and retains raw inspection',
+      'inspectContainer parses Docker casing and retains raw inspection',
       () async {
         client.capabilitiesValue = KomodoApiCapabilities.v22;
         when(() => client.read(any())).thenAnswer(
           (_) async => <String, dynamic>{
-            'id': 'container-1',
-            'name': '/web',
-            'driver': 'overlay2',
-            'restart_count': 2,
-            'mounts': [
-              {'source': '/data', 'destination': '/app/data'},
+            'Id': 'container-1',
+            'Name': '/web',
+            'Created': '2026-08-27T12:00:00Z',
+            'Driver': 'overlay2',
+            'Platform': 'linux',
+            'RestartCount': 2,
+            'Mounts': [
+              {'Source': '/data', 'Destination': '/app/data'},
             ],
           },
         );
@@ -144,8 +147,13 @@ void main() {
             containerIdOrName: 'web',
           ),
         );
+        expect(inspection.id, 'container-1');
+        expect(inspection.created, '2026-08-27T12:00:00Z');
         expect(inspection.driver, 'overlay2');
-        expect(inspection.raw['restart_count'], 2);
+        expect(inspection.platform, 'linux');
+        expect(inspection.restartCount, 2);
+        expect(inspection.mounts.single['destination'], '/app/data');
+        expect(inspection.raw['RestartCount'], 2);
         final request = capturedRead();
         expect(request.type, 'InspectDockerContainer');
         expect(request.params, <String, dynamic>{
@@ -171,6 +179,41 @@ void main() {
       expect(resource?.id, 'stack-1');
       final request = capturedRead();
       expect(request.type, 'GetResourceMatchingContainer');
+    });
+
+    test('infers a managed stack from Komodo compose paths', () async {
+      when(() => client.read(any())).thenAnswer((invocation) async {
+        final request =
+            invocation.positionalArguments.single as RpcRequest<dynamic>;
+        if (request.type == 'GetResourceMatchingContainer') {
+          return <String, dynamic>{'resource': null};
+        }
+        return <String, dynamic>{
+          'Config': <String, dynamic>{
+            'Labels': <String, dynamic>{
+              'com.docker.compose.project.working_dir':
+                  '/opt/komodo/periphery_root/stacks/my-stack',
+            },
+          },
+        };
+      });
+
+      final resource = _rightOrFail(
+        await repository.getResourceMatchingContainer(
+          serverIdOrName: 'server-1',
+          containerIdOrName: 'web',
+        ),
+      );
+
+      expect(resource?.type, ContainerResourceType.stack);
+      expect(resource?.id, 'my-stack');
+      final requests = verify(
+        () => client.read(captureAny()),
+      ).captured.cast<RpcRequest<dynamic>>();
+      expect(requests.map((request) => request.type), [
+        'GetResourceMatchingContainer',
+        'InspectContainer',
+      ]);
     });
 
     test(

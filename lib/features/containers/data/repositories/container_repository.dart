@@ -156,10 +156,31 @@ class ContainerRepository {
         ),
       );
       final resource = (response as Map<String, dynamic>)['resource'];
-      if (resource is! Map<String, dynamic>) return null;
-      final type = resource['type'] as String? ?? '';
-      if (type != 'Stack' && type != 'Deployment') return null;
-      return ContainerAssociatedResource.fromJson(resource);
+      if (resource is Map<String, dynamic>) {
+        final type = resource['type'] as String? ?? '';
+        if (type == 'Stack' || type == 'Deployment') {
+          return ContainerAssociatedResource.fromJson(resource);
+        }
+      }
+
+      final inspectionResponse = await _client.read(
+        RpcRequest(
+          type: _client.capabilities.inspectContainerRpc,
+          params: {
+            'server': serverIdOrName,
+            'container': containerIdOrName,
+          },
+        ),
+      );
+      final inspection = ContainerInspection.fromJson(
+        inspectionResponse as Map<String, dynamic>,
+      );
+      final stackName = inspection.managedStackName;
+      if (stackName == null) return null;
+      return ContainerAssociatedResource(
+        type: ContainerResourceType.stack,
+        id: stackName,
+      );
     });
   }
 

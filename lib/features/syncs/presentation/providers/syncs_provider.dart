@@ -2,6 +2,7 @@ import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/data/repositories/sync_repository.dart';
 import 'package:komodo_go/shared/resources/providers/resource_action_executor.dart';
+import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'syncs_provider.g.dart';
@@ -11,6 +12,7 @@ part 'syncs_provider.g.dart';
 class Syncs extends _$Syncs {
   @override
   Future<List<ResourceSyncListItem>> build() async {
+    ref.watch(resourceActivityProvider);
     final repository = ref.watch(syncRepositoryProvider);
     if (repository == null) {
       return [];
@@ -35,6 +37,7 @@ class Syncs extends _$Syncs {
 /// Provides details for a specific sync.
 @riverpod
 Future<KomodoResourceSync?> syncDetail(Ref ref, String syncIdOrName) async {
+  ref.watch(resourceActivityProvider);
   final repository = ref.watch(syncRepositoryProvider);
   if (repository == null) {
     return null;
@@ -57,6 +60,9 @@ class SyncActions extends _$SyncActions
 
   @override
   void invalidateList() => ref.invalidate(syncsProvider);
+
+  @override
+  void markResourceActivity() => ref.markResourceActivity();
 
   @override
   bool get isMounted => ref.mounted;

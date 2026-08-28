@@ -107,21 +107,30 @@ class ContainerInspection {
   });
 
   factory ContainerInspection.fromJson(Map<String, dynamic> json) {
+    final mounts = _readList(json, 'mounts', 'Mounts');
     return ContainerInspection(
-      id: json['id'] as String?,
-      name: json['name'] as String?,
-      created: json['created'] as String?,
-      path: json['path'] as String?,
-      args: (json['args'] as List<dynamic>? ?? const [])
-          .whereType<String>()
-          .toList(growable: false),
-      image: json['image'] as String?,
-      driver: json['driver'] as String?,
-      platform: json['platform'] as String?,
-      restartCount: (json['restart_count'] as num?)?.toInt(),
-      logPath: json['log_path'] as String?,
-      mounts: (json['mounts'] as List<dynamic>? ?? const [])
-          .whereType<Map<String, dynamic>>()
+      id: _readString(json, 'id', 'Id'),
+      name: _readString(json, 'name', 'Name'),
+      created: _readString(json, 'created', 'Created'),
+      path: _readString(json, 'path', 'Path'),
+      args: _readList(
+        json,
+        'args',
+        'Args',
+      ).whereType<String>().toList(growable: false),
+      image: _readString(json, 'image', 'Image'),
+      driver: _readString(json, 'driver', 'Driver'),
+      platform: _readString(json, 'platform', 'Platform'),
+      restartCount: _readNum(json, 'restart_count', 'RestartCount')?.toInt(),
+      logPath: _readString(json, 'log_path', 'LogPath'),
+      mounts: mounts
+          .whereType<Map<Object?, Object?>>()
+          .map(
+            (mount) => <String, dynamic>{
+              for (final entry in mount.entries)
+                entry.key.toString().toLowerCase(): entry.value,
+            },
+          )
           .toList(growable: false),
       raw: Map<String, dynamic>.unmodifiable(json),
     );
@@ -139,7 +148,51 @@ class ContainerInspection {
   final String? logPath;
   final List<Map<String, dynamic>> mounts;
   final Map<String, dynamic> raw;
+
+  /// Stack name encoded by Komodo's compose working directory, when present.
+  ///
+  /// Komodo 2.3 can return no result from `GetResourceMatchingContainer` for
+  /// stack containers. Its generated compose path still has the stable
+  /// `.../stacks/<stack-name>/...` shape, which is safe to use as a fallback.
+  String? get managedStackName {
+    final config = raw['Config'];
+    if (config is! Map<Object?, Object?>) return null;
+    final labels = config['Labels'];
+    if (labels is! Map<Object?, Object?>) return null;
+
+    for (final key in const <String>[
+      'com.docker.compose.project.working_dir',
+      'com.docker.compose.project.config_files',
+    ]) {
+      final path = labels[key]?.toString();
+      if (path == null || path.trim().isEmpty) continue;
+      final match = RegExp(
+        r'(?:^|[/\\])stacks[/\\]([^/\\,]+)',
+      ).firstMatch(path);
+      final name = match?.group(1)?.trim();
+      if (name != null && name.isNotEmpty) return name;
+    }
+    return null;
+  }
 }
+
+String? _readString(
+  Map<String, dynamic> json,
+  String canonicalKey,
+  String dockerKey,
+) => (json[canonicalKey] ?? json[dockerKey]) as String?;
+
+num? _readNum(
+  Map<String, dynamic> json,
+  String canonicalKey,
+  String dockerKey,
+) => (json[canonicalKey] ?? json[dockerKey]) as num?;
+
+List<dynamic> _readList(
+  Map<String, dynamic> json,
+  String canonicalKey,
+  String dockerKey,
+) => (json[canonicalKey] ?? json[dockerKey]) as List<dynamic>? ?? const [];
 
 enum ContainerResourceType { stack, deployment }
 

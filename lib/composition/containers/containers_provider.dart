@@ -4,6 +4,7 @@ import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'containers_provider.g.dart';
@@ -46,6 +47,7 @@ class Containers extends _$Containers {
 
   @override
   Future<ContainersResult> build() async {
+    ref.watch(resourceActivityProvider);
     final repository = ref.watch(containerRepositoryProvider);
     if (repository == null) {
       return const ContainersResult(items: [], errors: []);
@@ -243,6 +245,7 @@ class ContainerActions extends _$ContainerActions {
       (_) {
         state = const AsyncValue.data(null);
         ref.invalidate(containersProvider);
+        ref.read(resourceActivityProvider.notifier).markChanged();
         return true;
       },
     );

@@ -70,6 +70,16 @@ void main() {
         AppRoutes.komodoBuilders,
       );
     });
+
+    test('includes a resolved display name for detail route titles', () {
+      expect(
+        routeForTarget(
+          const ResourceTarget(type: ResourceTargetType.stack, id: 'st/1'),
+          displayName: 'My Stack',
+        ),
+        '${AppRoutes.stacks}/st%2F1?name=My+Stack',
+      );
+    });
   });
 
   group('routeForAlert', () {

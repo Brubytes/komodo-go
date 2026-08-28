@@ -146,7 +146,10 @@ class ContainerDetailView extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: const MainAppBar(title: 'Container', icon: AppIcons.containers),
+      appBar: MainAppBar(
+        title: currentItem?.container.name ?? decodedContainerIdOrName,
+        icon: AppIcons.containers,
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref

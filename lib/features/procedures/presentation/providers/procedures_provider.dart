@@ -2,6 +2,7 @@ import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 import 'package:komodo_go/features/procedures/data/repositories/procedure_repository.dart';
 import 'package:komodo_go/shared/resources/providers/resource_action_executor.dart';
+import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'procedures_provider.g.dart';
@@ -11,6 +12,7 @@ part 'procedures_provider.g.dart';
 class Procedures extends _$Procedures {
   @override
   Future<List<ProcedureListItem>> build() async {
+    ref.watch(resourceActivityProvider);
     final repository = ref.watch(procedureRepositoryProvider);
     if (repository == null) {
       return [];
@@ -38,6 +40,7 @@ Future<KomodoProcedure?> procedureDetail(
   Ref ref,
   String procedureIdOrName,
 ) async {
+  ref.watch(resourceActivityProvider);
   final repository = ref.watch(procedureRepositoryProvider);
   if (repository == null) {
     return null;
@@ -61,6 +64,9 @@ class ProcedureActions extends _$ProcedureActions
 
   @override
   void invalidateList() => ref.invalidate(proceduresProvider);
+
+  @override
+  void markResourceActivity() => ref.markResourceActivity();
 
   @override
   bool get isMounted => ref.mounted;

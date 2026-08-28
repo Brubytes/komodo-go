@@ -79,15 +79,17 @@ class _UpdateDetailContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final target = update.target;
-    final targetRoute = routeForTarget(target);
+    final targetNameAsync = target == null
+        ? null
+        : ref.watch(targetDisplayNameProvider(target));
+    final resolvedTargetName = targetNameAsync?.asData?.value;
     final targetName = target == null
         ? 'System'
-        : ref
-              .watch(targetDisplayNameProvider(target))
-              .maybeWhen(
-                data: (value) => value,
-                orElse: () => target.displayName,
-              );
+        : resolvedTargetName ?? target.displayName;
+    final targetRoute = routeForTarget(
+      target,
+      displayName: resolvedTargetName,
+    );
 
     return ListView(
       key: const ValueKey('update_detail_content'),

@@ -5,6 +5,7 @@ import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/data/repositories/stack_repository.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
+import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../../support/provider_test_templates.dart';
@@ -45,6 +46,39 @@ void main() {
 
       expect(stacks, hasLength(2));
       expect(stacks.first.name, 'Stack A');
+    });
+
+    test('reloads active stack data after a resource activity pulse', () async {
+      final repository = _MockStackRepository();
+      var calls = 0;
+      when(repository.listStacks).thenAnswer((_) async {
+        calls++;
+        return Right([
+          StackListItem.fromJson(<String, dynamic>{
+            'id': 's1',
+            'name': calls == 1 ? 'Before' : 'After',
+            'info': <String, dynamic>{},
+          }),
+        ]);
+      });
+
+      final container = createProviderContainer(
+        overrides: [stackRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      final subscription = listenProvider(container, stacksProvider);
+      addTearDown(subscription.close);
+
+      expect(
+        (await container.read(stacksProvider.future)).single.name,
+        'Before',
+      );
+      container.read(resourceActivityProvider.notifier).markChanged();
+      expect(
+        (await container.read(stacksProvider.future)).single.name,
+        'After',
+      );
+      expect(calls, 2);
     });
 
     test('returns empty list when unauthenticated', () async {
@@ -190,7 +224,8 @@ void main() {
       when(
         () => repository.getStackLog(stackIdOrName: 's1'),
       ).thenAnswer(
-        (_) async => Right(StackLog.fromJson(<String, dynamic>{'stdout': 'ok'})),
+        (_) async =>
+            Right(StackLog.fromJson(<String, dynamic>{'stdout': 'ok'})),
       );
 
       final container = createProviderContainer(
@@ -255,8 +290,9 @@ void main() {
 
     test('deploy returns true on success', () async {
       final repository = _MockStackRepository();
-      when(() => repository.deployStack('s1'))
-          .thenAnswer((_) async => const Right(null));
+      when(
+        () => repository.deployStack('s1'),
+      ).thenAnswer((_) async => const Right(null));
 
       final container = createProviderContainer(
         overrides: [stackRepositoryProvider.overrideWithValue(repository)],

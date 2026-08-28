@@ -17,12 +17,12 @@ String? routeForUpdate(UpdateListItem update) {
   return '${AppRoutes.updateDetails}/${Uri.encodeComponent(id)}';
 }
 
-String? routeForTarget(ResourceTarget? target) {
+String? routeForTarget(ResourceTarget? target, {String? displayName}) {
   if (target == null) return null;
 
   final id = Uri.encodeComponent(target.id);
 
-  return switch (target.type) {
+  final route = switch (target.type) {
     ResourceTargetType.server => '${AppRoutes.servers}/$id',
     ResourceTargetType.stack => '${AppRoutes.stacks}/$id',
     ResourceTargetType.deployment => '${AppRoutes.deployments}/$id',
@@ -36,7 +36,23 @@ String? routeForTarget(ResourceTarget? target) {
     ResourceTargetType.system => AppRoutes.settings,
     ResourceTargetType.unknown => null,
   };
+  final name = displayName?.trim();
+  if (route == null || name == null || name.isEmpty) return route;
+  if (!_routeUsesDisplayName(target.type)) return route;
+  return '$route?name=${Uri.encodeQueryComponent(name)}';
 }
+
+bool _routeUsesDisplayName(ResourceTargetType type) => switch (type) {
+  ResourceTargetType.server ||
+  ResourceTargetType.stack ||
+  ResourceTargetType.deployment ||
+  ResourceTargetType.build ||
+  ResourceTargetType.repo ||
+  ResourceTargetType.procedure ||
+  ResourceTargetType.action ||
+  ResourceTargetType.resourceSync => true,
+  _ => false,
+};
 
 ResourceTarget? _inferTargetFromPayload(AlertPayload payload) {
   final data = payload.data;

@@ -1,6 +1,7 @@
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
+import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'container_inspection_provider.g.dart';
@@ -11,6 +12,7 @@ Future<ContainerInspection?> containerInspection(
   required String serverIdOrName,
   required String containerIdOrName,
 }) async {
+  ref.watch(resourceActivityProvider);
   final repository = ref.watch(containerRepositoryProvider);
   if (repository == null) return null;
   return unwrapOrThrow(
@@ -27,6 +29,7 @@ Future<ContainerAssociatedResource?> containerAssociatedResource(
   required String serverIdOrName,
   required String containerIdOrName,
 }) async {
+  ref.watch(resourceActivityProvider);
   final repository = ref.watch(containerRepositoryProvider);
   if (repository == null) return null;
   return unwrapOrThrow(

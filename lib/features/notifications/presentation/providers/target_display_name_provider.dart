@@ -26,6 +26,7 @@ Future<String> targetDisplayName(Ref ref, ResourceTarget target) async {
     connectionId: connectionId,
     target: target,
     fetch: () => _fetchName(ref, target),
+    shouldCache: (name) => name != target.displayName,
   );
 }
 
