@@ -2,6 +2,7 @@ import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/features/builds/data/repositories/build_repository.dart';
 import 'package:komodo_go/shared/resources/providers/resource_action_executor.dart';
+import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'builds_provider.g.dart';
@@ -11,6 +12,7 @@ part 'builds_provider.g.dart';
 class Builds extends _$Builds {
   @override
   Future<List<BuildListItem>> build() async {
+    ref.watch(resourceActivityProvider);
     final repository = ref.watch(buildRepositoryProvider);
     if (repository == null) {
       return [];
@@ -35,6 +37,7 @@ class Builds extends _$Builds {
 /// Provides details for a specific build.
 @riverpod
 Future<KomodoBuild?> buildDetail(Ref ref, String buildIdOrName) async {
+  ref.watch(resourceActivityProvider);
   final repository = ref.watch(buildRepositoryProvider);
   if (repository == null) {
     return null;
@@ -59,6 +62,9 @@ class BuildActions extends _$BuildActions
   void invalidateList() => ref.invalidate(buildsProvider);
 
   @override
+  void markResourceActivity() => ref.markResourceActivity();
+
+  @override
   bool get isMounted => ref.mounted;
 
   Future<bool> run(String buildIdOrName) =>
@@ -71,7 +77,8 @@ class BuildActions extends _$BuildActions
     required String buildId,
     required Map<String, dynamic> partialConfig,
   }) => executeRequest(
-    (repo) => repo.updateBuildConfig(buildId: buildId, partialConfig: partialConfig),
+    (repo) =>
+        repo.updateBuildConfig(buildId: buildId, partialConfig: partialConfig),
   );
 }
 

@@ -19,11 +19,13 @@ class ServerDetailView extends ConsumerStatefulWidget {
   const ServerDetailView({
     required this.serverId,
     required this.serverName,
+    this.appBarActions = const <Widget>[],
     super.key,
   });
 
   final String serverId;
   final String serverName;
+  final List<Widget> appBarActions;
 
   @override
   ConsumerState<ServerDetailView> createState() => _ServerDetailViewState();
@@ -42,14 +44,14 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
   ProviderSubscription<AsyncValue<SystemStats?>>? _statsSubscription;
   final _configEditorKey = GlobalKey<ServerConfigEditorContentState>();
   var _configSaveInFlight = false;
+  ServerStatsGranularity _historyGranularity = ServerStatsGranularity.oneMinute;
+  bool _useFixedPercentScale = true;
 
   DateTime? _previousSampleTs;
   double? _previousIngressBytes;
   double? _previousEgressBytes;
   double? _ingressBytesPerSecond;
   double? _egressBytesPerSecond;
-  final List<StatsSample> _history = <StatsSample>[];
-  static const int _maxHistorySamples = 120; // ~5 minutes @ 2.5s
 
   @override
   void initState() {
@@ -151,20 +153,6 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
     setState(() {
       _ingressBytesPerSecond = ingressBps;
       _egressBytesPerSecond = egressBps;
-
-      _history.add(
-        StatsSample(
-          ts: DateTime.now(),
-          cpuPercent: stats.cpuPercent,
-          memPercent: stats.memPercent,
-          diskPercent: stats.diskPercent,
-          ingressBytesPerSecond: ingressBps,
-          egressBytesPerSecond: egressBps,
-        ),
-      );
-      if (_history.length > _maxHistorySamples) {
-        _history.removeRange(0, _history.length - _maxHistorySamples);
-      }
     });
   }
 
@@ -179,6 +167,10 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
 
     final serverAsync = ref.watch(serverDetailProvider(widget.serverId));
     final statsAsync = ref.watch(serverStatsProvider(widget.serverId));
+    final historyAsync = ref.watch(
+      serverStatsHistoryProvider(widget.serverId, _historyGranularity),
+    );
+    final processesAsync = ref.watch(serverProcessesProvider(widget.serverId));
     final systemInfoAsync = ref.watch(
       serverSystemInformationProvider(widget.serverId),
     );
@@ -207,6 +199,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
         markColor: AppTokens.resourceServers,
         markUseGradient: true,
         centerTitle: true,
+        actions: widget.appBarActions,
       ),
       body: NestedScrollView(
         key: _nestedScrollKey,
@@ -273,8 +266,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                     ..invalidate(serverStatsProvider(widget.serverId));
                 },
                 child: DetailTabScrollView.box(
-                  scrollKey:
-                      PageStorageKey('server_${widget.serverId}_config'),
+                  scrollKey: PageStorageKey('server_${widget.serverId}_config'),
                   child: serverAsync.when(
                     data: (server) => server?.config != null
                         ? ServerConfigEditorContent(
@@ -307,21 +299,34 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                     ..invalidate(
                       serverSystemInformationProvider(widget.serverId),
                     )
-                    ..invalidate(serverStatsProvider(widget.serverId));
+                    ..invalidate(serverStatsProvider(widget.serverId))
+                    ..invalidate(
+                      serverStatsHistoryProvider(
+                        widget.serverId,
+                        _historyGranularity,
+                      ),
+                    );
                 },
                 child: DetailTabScrollView.box(
-                  scrollKey:
-                      PageStorageKey('server_${widget.serverId}_stats'),
-                  child: statsAsync.when(
-                    data: (stats) => DetailSurface(
+                  scrollKey: PageStorageKey('server_${widget.serverId}_stats'),
+                  child: historyAsync.when(
+                    data: (history) => DetailSurface(
                       child: StatsHistoryContent(
-                        history: _history,
+                        history: history?.stats ?? const [],
                         latestStats: stats,
+                        granularity: _historyGranularity,
+                        useFixedPercentScale: _useFixedPercentScale,
+                        onGranularityChanged: (value) {
+                          setState(() => _historyGranularity = value);
+                        },
+                        onScaleChanged: (value) {
+                          setState(() => _useFixedPercentScale = value);
+                        },
                       ),
                     ),
                     loading: () => const ServerLoadingCard(),
                     error: (error, _) => ServerMessageCard(
-                      message: 'Stats unavailable: $error',
+                      message: 'Historical stats unavailable: $error',
                     ),
                   ),
                 ),
@@ -335,15 +340,29 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                     ..invalidate(
                       serverSystemInformationProvider(widget.serverId),
                     )
-                    ..invalidate(serverStatsProvider(widget.serverId));
+                    ..invalidate(serverStatsProvider(widget.serverId))
+                    ..invalidate(serverProcessesProvider(widget.serverId));
                 },
                 child: DetailTabScrollView.box(
-                  scrollKey:
-                      PageStorageKey('server_${widget.serverId}_system'),
+                  scrollKey: PageStorageKey('server_${widget.serverId}_system'),
                   child: systemInfoAsync.when(
                     data: (info) => info != null
                         ? DetailSurface(
-                            child: ServerSystemInfoContent(info: info),
+                            child: Column(
+                              children: [
+                                ServerSystemInfoContent(info: info),
+                                const SizedBox(height: 12),
+                                processesAsync.when(
+                                  data: (processes) => SystemProcessesContent(
+                                    processes: processes,
+                                  ),
+                                  loading: () => const ServerLoadingCard(),
+                                  error: (error, _) => ServerMessageCard(
+                                    message: 'Processes unavailable: $error',
+                                  ),
+                                ),
+                              ],
+                            ),
                           )
                         : const ServerMessageCard(
                             message: 'System info unavailable',

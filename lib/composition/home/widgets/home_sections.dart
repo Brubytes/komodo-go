@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/composition/home/home_ops_pulse.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -279,47 +280,74 @@ class HomeMetricCard extends StatelessWidget {
 class HomeOpsStatusRow extends StatelessWidget {
   const HomeOpsStatusRow({
     required this.title,
-    required this.active,
-    required this.failed,
+    required this.statuses,
     this.onTap,
     super.key,
   });
 
   final String title;
-  final int active;
-  final int failed;
+  final List<HomeOpsStatusCount> statuses;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    final row = Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+    final visibleStatuses = statuses
+        .where((status) => status.count > 0)
+        .toList();
+    final total = statuses.fold(0, (sum, status) => sum + status.count);
+    final row = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                '$total',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (onTap != null) ...[
+                const Gap(4),
+                Icon(
+                  AppIcons.chevron,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ],
+            ],
           ),
-        ),
-        _HomeOpsChip(
-          label: '$active active',
-          color: scheme.primary,
-          background: scheme.primary.withValues(alpha: 0.12),
-        ),
-        const Gap(6),
-        _HomeOpsChip(
-          label: '$failed failed',
-          color: scheme.error,
-          background: scheme.error.withValues(alpha: 0.12),
-        ),
-        if (onTap != null) ...[
           const Gap(6),
-          Icon(AppIcons.chevron, size: 18, color: scheme.onSurfaceVariant),
+          if (visibleStatuses.isEmpty)
+            Text(
+              'No resources',
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
+            )
+          else
+            Wrap(
+              spacing: 12,
+              runSpacing: 5,
+              children: [
+                for (final status in visibleStatuses)
+                  _HomeOpsStatusLabel(status: status),
+              ],
+            ),
         ],
-      ],
+      ),
     );
 
     if (onTap == null) {
@@ -328,38 +356,44 @@ class HomeOpsStatusRow extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(padding: const EdgeInsets.all(4), child: row),
+      borderRadius: BorderRadius.circular(10),
+      child: row,
     );
   }
 }
 
-class _HomeOpsChip extends StatelessWidget {
-  const _HomeOpsChip({
-    required this.label,
-    required this.color,
-    required this.background,
-  });
+class _HomeOpsStatusLabel extends StatelessWidget {
+  const _HomeOpsStatusLabel({required this.status});
 
-  final String label;
-  final Color color;
-  final Color background;
+  final HomeOpsStatusCount status;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
+    final scheme = Theme.of(context).colorScheme;
+    final color = switch (status.tone) {
+      HomeOpsTone.healthy => AppTokens.statusGreen,
+      HomeOpsTone.active => scheme.primary,
+      HomeOpsTone.attention => AppTokens.statusOrange,
+      HomeOpsTone.failed => scheme.error,
+      HomeOpsTone.unknown => scheme.tertiary,
+    };
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-      ),
+        const Gap(5),
+        Text(
+          '${status.count} ${status.label.toLowerCase()}',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

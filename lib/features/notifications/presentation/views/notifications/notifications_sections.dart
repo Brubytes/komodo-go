@@ -336,7 +336,7 @@ class UpdateTile extends ConsumerWidget {
               ),
             ],
           ),
-          onTap: route == null ? null : () => context.go(route),
+          onTap: route == null ? null : () => context.push(route),
         ),
       ),
     );
@@ -376,41 +376,47 @@ class NotificationsEmptyState extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.description,
+    this.scrollable = true,
     super.key,
   });
 
   final IconData icon;
   final String title;
   final String description;
+  final bool scrollable;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Gap(64),
-        Icon(
-          icon,
-          size: 64,
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-        ),
-        const Gap(16),
-        Center(
-          child: Text(title, style: Theme.of(context).textTheme.titleMedium),
-        ),
-        const Gap(8),
-        Center(
-          child: Text(
-            description,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-            textAlign: TextAlign.center,
+    final children = <Widget>[
+      const Gap(64),
+      Icon(
+        icon,
+        size: 64,
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+      ),
+      const Gap(16),
+      Center(
+        child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+      ),
+      const Gap(8),
+      Center(
+        child: Text(
+          description,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
+          textAlign: TextAlign.center,
         ),
-      ],
+      ),
+    ];
+    if (scrollable) {
+      return ListView(padding: const EdgeInsets.all(24), children: children);
+    }
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(mainAxisSize: MainAxisSize.min, children: children),
     );
   }
 }
@@ -511,6 +517,7 @@ class NotificationsErrorState extends StatelessWidget {
     this.retryLabel = 'Retry',
     this.secondaryActionLabel,
     this.onSecondaryAction,
+    this.scrollable = true,
     super.key,
   });
 
@@ -520,52 +527,57 @@ class NotificationsErrorState extends StatelessWidget {
   final String retryLabel;
   final String? secondaryActionLabel;
   final VoidCallback? onSecondaryAction;
+  final bool scrollable;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Gap(64),
-        Icon(
-          AppIcons.formError,
-          size: 64,
-          color: Theme.of(context).colorScheme.error,
-        ),
-        const Gap(16),
-        Center(
-          child: Text(title, style: Theme.of(context).textTheme.titleMedium),
-        ),
-        const Gap(8),
-        Center(
-          child: Text(
-            message,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-            textAlign: TextAlign.center,
+    final children = <Widget>[
+      const Gap(64),
+      Icon(
+        AppIcons.formError,
+        size: 64,
+        color: Theme.of(context).colorScheme.error,
+      ),
+      const Gap(16),
+      Center(
+        child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+      ),
+      const Gap(8),
+      Center(
+        child: Text(
+          message,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
+          textAlign: TextAlign.center,
         ),
-        const Gap(24),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            FilledButton.tonal(
-              onPressed: onRetry,
-              child: Text(retryLabel),
+      ),
+      const Gap(24),
+      Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          FilledButton.tonal(
+            onPressed: onRetry,
+            child: Text(retryLabel),
+          ),
+          if (secondaryActionLabel != null && onSecondaryAction != null)
+            FilledButton(
+              onPressed: onSecondaryAction,
+              child: Text(secondaryActionLabel!),
             ),
-            if (secondaryActionLabel != null && onSecondaryAction != null)
-              FilledButton(
-                onPressed: onSecondaryAction,
-                child: Text(secondaryActionLabel!),
-              ),
-          ],
-        ),
-      ],
+        ],
+      ),
+    ];
+    if (scrollable) {
+      return ListView(padding: const EdgeInsets.all(24), children: children);
+    }
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(mainAxisSize: MainAxisSize.min, children: children),
     );
   }
 }

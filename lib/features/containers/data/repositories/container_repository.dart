@@ -7,6 +7,7 @@ import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/data/models/container_log.dart';
+import 'package:komodo_go/shared/logs/server_log.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'container_repository.g.dart';
@@ -72,6 +73,150 @@ class ContainerRepository {
       return ContainerLog.fromJson(response as Map<String, dynamic>);
     });
   }
+
+  Future<Either<Failure, ServerLogSnapshot>> loadServerLog({
+    required String serverIdOrName,
+    required String containerIdOrName,
+    int tail = 200,
+    bool timestamps = true,
+  }) {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'GetContainerLog',
+          params: <String, dynamic>{
+            'server': serverIdOrName,
+            'container': containerIdOrName,
+            'tail': tail,
+            'timestamps': timestamps,
+          },
+        ),
+      );
+      return ServerLogSnapshot.fromJson(response as Map<String, dynamic>);
+    });
+  }
+
+  Future<Either<Failure, ServerLogSnapshot>> searchServerLog({
+    required String serverIdOrName,
+    required String containerIdOrName,
+    required List<String> terms,
+    required LogSearchCombinator combinator,
+    bool invert = false,
+    bool timestamps = true,
+  }) {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'SearchContainerLog',
+          params: <String, dynamic>{
+            'server': serverIdOrName,
+            'container': containerIdOrName,
+            'terms': terms,
+            'combinator': combinator.apiValue,
+            'invert': invert,
+            'timestamps': timestamps,
+          },
+        ),
+      );
+      return ServerLogSnapshot.fromJson(response as Map<String, dynamic>);
+    });
+  }
+
+  Future<Either<Failure, ContainerInspection>> inspectContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) async {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: _client.capabilities.inspectContainerRpc,
+          params: {
+            'server': serverIdOrName,
+            'container': containerIdOrName,
+          },
+        ),
+      );
+      return ContainerInspection.fromJson(response as Map<String, dynamic>);
+    });
+  }
+
+  Future<Either<Failure, ContainerAssociatedResource?>>
+  getResourceMatchingContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) async {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'GetResourceMatchingContainer',
+          params: {
+            'server': serverIdOrName,
+            'container': containerIdOrName,
+          },
+        ),
+      );
+      final resource = (response as Map<String, dynamic>)['resource'];
+      if (resource is Map<String, dynamic>) {
+        final type = resource['type'] as String? ?? '';
+        if (type == 'Stack' || type == 'Deployment') {
+          return ContainerAssociatedResource.fromJson(resource);
+        }
+      }
+
+      final inspectionResponse = await _client.read(
+        RpcRequest(
+          type: _client.capabilities.inspectContainerRpc,
+          params: {
+            'server': serverIdOrName,
+            'container': containerIdOrName,
+          },
+        ),
+      );
+      final inspection = ContainerInspection.fromJson(
+        inspectionResponse as Map<String, dynamic>,
+      );
+      final stackName = inspection.managedStackName;
+      if (stackName == null) return null;
+      return ContainerAssociatedResource(
+        type: ContainerResourceType.stack,
+        id: stackName,
+      );
+    });
+  }
+
+  Future<Either<Failure, void>> startContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) => _executeAction('StartContainer', {
+    'server': serverIdOrName,
+    'container': containerIdOrName,
+  });
+
+  Future<Either<Failure, void>> pauseContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) => _executeAction('PauseContainer', {
+    'server': serverIdOrName,
+    'container': containerIdOrName,
+  });
+
+  Future<Either<Failure, void>> unpauseContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) => _executeAction('UnpauseContainer', {
+    'server': serverIdOrName,
+    'container': containerIdOrName,
+  });
+
+  Future<Either<Failure, void>> removeContainer({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) => _executeAction('DestroyContainer', {
+    'server': serverIdOrName,
+    'container': containerIdOrName,
+    'signal': null,
+    'time': null,
+  });
 
   /// Stops a docker container on the target server.
   Future<Either<Failure, void>> stopContainer({

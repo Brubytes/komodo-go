@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/repos/repo_detail_sections.dart';
+import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
@@ -18,6 +19,8 @@ import 'package:komodo_go/features/repos/presentation/providers/repos_provider.d
 import 'package:komodo_go/features/repos/presentation/widgets/repo_card.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/models/resource_metadata.dart';
 
 /// View displaying detailed repo information.
 class RepoDetailView extends ConsumerStatefulWidget {
@@ -67,6 +70,7 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
     final gitProvidersAsync = ref.watch(gitProvidersProvider);
 
     final scheme = Theme.of(context).colorScheme;
+    final repo = repoAsync.asData?.value;
 
     String? serverNameForId(String serverId) {
       final servers = serversListAsync.asData?.value;
@@ -116,6 +120,22 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
               ),
             ],
           ),
+          if (repo != null)
+            ResourceAdvancedMenuButton(
+              metadata: ResourceMetadata(
+                kind: ResourceKind.repos,
+                id: repo.id,
+                name: repo.name,
+                description: repo.description,
+                template: repo.template,
+                tags: repo.tags,
+              ),
+              onMutated: () {
+                ref
+                  ..invalidate(reposProvider)
+                  ..invalidate(repoDetailProvider(widget.repoId));
+              },
+            ),
         ],
       ),
       body: Stack(

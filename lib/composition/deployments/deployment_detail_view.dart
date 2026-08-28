@@ -5,6 +5,8 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/builds/build_detail_sections.dart';
 import 'package:komodo_go/composition/deployments/deployment_detail_sections.dart';
+import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
@@ -16,10 +18,14 @@ import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
+import 'package:komodo_go/features/deployments/data/repositories/deployment_repository.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
 import 'package:komodo_go/features/deployments/presentation/widgets/deployment_card.dart';
 import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/shared/logs/server_log_explorer.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/models/resource_metadata.dart';
 
 /// View displaying detailed deployment information.
 class DeploymentDetailView extends ConsumerStatefulWidget {
@@ -128,6 +134,7 @@ class _DeploymentDetailViewState
     final serversListAsync = ref.watch(serversProvider);
     final registryAccountsAsync = ref.watch(dockerRegistryAccountsProvider);
     final scheme = Theme.of(context).colorScheme;
+    final deployment = deploymentAsync.asData?.value;
 
     String? serverNameForId(String serverId) {
       final servers = serversListAsync.asData?.value;
@@ -157,6 +164,22 @@ class _DeploymentDetailViewState
               return _buildMenuItems(scheme, state, hasImage: hasImage);
             },
           ),
+          if (deployment != null)
+            ResourceAdvancedMenuButton(
+              metadata: ResourceMetadata(
+                kind: ResourceKind.deployments,
+                id: deployment.id,
+                name: deployment.name,
+                description: deployment.description ?? '',
+                template: deployment.template,
+                tags: deployment.tags,
+              ),
+              onMutated: () {
+                ref
+                  ..invalidate(deploymentsProvider)
+                  ..invalidate(deploymentDetailProvider(deploymentId));
+              },
+            ),
         ],
       ),
       body: Stack(
@@ -307,6 +330,40 @@ class _DeploymentDetailViewState
                           },
                         ),
                         const Gap(12),
+                        ServerLogExplorer(
+                          key: ValueKey(
+                            'deployment_log_explorer_${widget.deploymentId}',
+                          ),
+                          autoRefresh: _autoRefreshLogs,
+                          loader: (request) async {
+                            final repository = ref.read(
+                              deploymentRepositoryProvider,
+                            );
+                            if (repository == null) {
+                              throw StateError('No active Komodo connection.');
+                            }
+                            final result = request.isSearch
+                                ? await repository.searchServerLog(
+                                    deploymentIdOrName: widget.deploymentId,
+                                    terms: request.terms,
+                                    combinator: request.combinator,
+                                    invert: request.invert,
+                                    timestamps: request.timestamps,
+                                  )
+                                : await repository.loadServerLog(
+                                    deploymentIdOrName: widget.deploymentId,
+                                    tail: request.tail,
+                                    timestamps: request.timestamps,
+                                  );
+                            return result.fold(
+                              (failure) => throw StateError(
+                                failure.displayMessage,
+                              ),
+                              (log) => log,
+                            );
+                          },
+                        ),
+                        const Gap(12),
                         deploymentAsync.when(
                           data: (deployment) {
                             final buildId =
@@ -314,7 +371,7 @@ class _DeploymentDetailViewState
                             if (buildId.isEmpty) {
                               return const DeploymentMessageSurface(
                                 message:
-                                    'No build logs available for this deployment',
+                                    'No build output available for this deployment',
                               );
                             }
 
@@ -466,6 +523,17 @@ class _DeploymentDetailViewState
   }) {
     final items = <PopupMenuEntry<DeploymentAction>>[];
 
+    if (hasImage) {
+      items.add(
+        komodoPopupMenuItem(
+          value: DeploymentAction.checkUpdates,
+          icon: Icons.refresh_outlined,
+          label: 'Check image now',
+          iconColor: scheme.primary,
+        ),
+      );
+    }
+
     final deployLabel =
         (state == DeploymentState.notDeployed ||
             state == DeploymentState.unknown)
@@ -579,6 +647,28 @@ class _DeploymentDetailViewState
   ) async {
     final actions = ref.read(deploymentActionsProvider.notifier);
 
+    if (action == DeploymentAction.checkUpdates) {
+      final available = await actions.checkForUpdate(deploymentId);
+      if (!mounted || !context.mounted) return;
+      ref
+        ..invalidate(deploymentDetailProvider(deploymentId))
+        ..invalidate(deploymentsProvider);
+      AppSnackBar.show(
+        context,
+        available == null
+            ? 'Image check failed. Please try again.'
+            : available
+            ? 'A newer image is available.'
+            : 'The deployed image is up to date.',
+        tone: available == null
+            ? AppSnackBarTone.error
+            : available
+            ? AppSnackBarTone.warning
+            : AppSnackBarTone.success,
+      );
+      return;
+    }
+
     if (action == DeploymentAction.destroy) {
       final confirmed = await showDialog<bool>(
         context: context,
@@ -615,6 +705,7 @@ class _DeploymentDetailViewState
       DeploymentAction.destroy => actions.destroy(deploymentId),
       DeploymentAction.deploy => actions.deploy(deploymentId),
       DeploymentAction.pullImages => actions.pullImages(deploymentId),
+      DeploymentAction.checkUpdates => Future<bool>.value(false),
     };
 
     if (!mounted) return;

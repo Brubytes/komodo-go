@@ -835,18 +835,22 @@ class DemoBackend {
         return _systemInformation();
 
       case 'ListDeployments':
-        return List<Map<String, dynamic>>.from(_deployments);
+        return _filterUpdateAvailable(_deployments, params);
       case 'GetDeployment':
         return _deploymentDetail(id: params['deployment']?.toString());
 
       case 'ListStacks':
-        return List<Map<String, dynamic>>.from(_stacks);
+        return _filterUpdateAvailable(_stacks, params);
       case 'GetStack':
         return _stackDetail(id: params['stack']?.toString());
       case 'ListStackServices':
         return _stackServices();
       case 'GetStackLog':
+      case 'SearchStackLog':
         return _stackLog();
+      case 'GetDeploymentLog':
+      case 'SearchDeploymentLog':
+        return _containerLog();
 
       case 'ListRepos':
         return List<Map<String, dynamic>>.from(_repos);
@@ -879,6 +883,7 @@ class DemoBackend {
       case 'ListDockerContainers':
         return List<Map<String, dynamic>>.from(_containers);
       case 'GetContainerLog':
+      case 'SearchContainerLog':
         return _containerLog();
 
       case 'ListTags':
@@ -911,6 +916,33 @@ class DemoBackend {
 
   Object _handleWrite(String type, Map<String, dynamic> params) {
     switch (type) {
+      case 'CheckDeploymentForUpdate':
+        return <String, dynamic>{
+          'deployment': params['deployment'],
+          'update_available': true,
+        };
+      case 'BatchCheckDeploymentForUpdate':
+        return [
+          for (final deployment in _deployments)
+            <String, dynamic>{
+              'deployment': deployment['id'],
+              'update_available':
+                  deployment['info']?['update_available'] == true,
+            },
+        ];
+      case 'CheckStackForUpdate':
+        return <String, dynamic>{
+          'stack': params['stack'],
+          'services': _stackServices(),
+        };
+      case 'BatchCheckStackForUpdate':
+        return [
+          for (final stack in _stacks)
+            <String, dynamic>{
+              'stack': stack['id'],
+              'services': stack['info']?['services'] ?? _stackServices(),
+            },
+        ];
       case 'CreateTag':
         final name = (params['name'] as String?)?.trim() ?? '';
         if (name.isEmpty) return <String, dynamic>{};
@@ -1109,11 +1141,36 @@ class DemoBackend {
       case 'RestartContainer':
         return <String, dynamic>{};
       case 'TestAlerter':
+      case 'DeployStackIfChanged':
+      case 'BatchDeployStackIfChanged':
+      case 'GlobalAutoUpdate':
         return <String, dynamic>{};
       default:
         return <String, dynamic>{};
     }
   }
+}
+
+List<Map<String, dynamic>> _filterUpdateAvailable(
+  List<Map<String, dynamic>> items,
+  Map<String, dynamic> params,
+) {
+  final query = params['query'];
+  if (query is! Map) return List<Map<String, dynamic>>.from(items);
+  final specific = query['specific'];
+  if (specific is! Map || specific['update_available'] != true) {
+    return List<Map<String, dynamic>>.from(items);
+  }
+  return items.where((item) {
+    final info = item['info'];
+    if (info is! Map) return false;
+    if (info['update_available'] == true) return true;
+    final services = info['services'];
+    return services is List &&
+        services.any(
+          (service) => service is Map && service['update_available'] == true,
+        );
+  }).toList();
 }
 
 Map<String, dynamic> _serverItem({
@@ -1610,25 +1667,25 @@ Map<String, dynamic> _builderDetail({required String? id}) {
       ? storedConfig.map((k, v) => MapEntry(k.toString(), v))
       : switch (builderType) {
           'Server' => <String, dynamic>{
-              'Server': <String, dynamic>{'server_id': 'server-2'},
-            },
+            'Server': <String, dynamic>{'server_id': 'server-2'},
+          },
           'Aws' => <String, dynamic>{
-              'Aws': <String, dynamic>{
-                'region': 'us-east-1',
-                'instance_type': 't3.medium',
-                'volume_gb': 50,
-                'port': 2376,
-                'use_https': true,
-                'assign_public_ip': true,
-                'use_public_ip': false,
-              },
+            'Aws': <String, dynamic>{
+              'region': 'us-east-1',
+              'instance_type': 't3.medium',
+              'volume_gb': 50,
+              'port': 2376,
+              'use_https': true,
+              'assign_public_ip': true,
+              'use_public_ip': false,
             },
+          },
           _ => <String, dynamic>{
-              'Url': <String, dynamic>{
-                'address': 'https://builders.example.com',
-                'passkey': 'demo-passkey',
-              },
+            'Url': <String, dynamic>{
+              'address': 'https://builders.example.com',
+              'passkey': 'demo-passkey',
             },
+          },
         };
 
   return <String, dynamic>{
@@ -1720,8 +1777,8 @@ Map<String, dynamic> _alerterDetail({required String? id}) {
   final match = id == null ? null : _alerterById(id) ?? _alerterByName(id);
   final alerter = match ?? _alerters.first;
   final now = DateTime.now().toUtc().toIso8601String();
-  final endpointType =
-      (alerter['info']?['endpoint_type'] ?? 'Slack').toString();
+  final endpointType = (alerter['info']?['endpoint_type'] ?? 'Slack')
+      .toString();
 
   final storedConfig = alerter['config'];
   if (storedConfig is Map) {
@@ -1739,22 +1796,22 @@ Map<String, dynamic> _alerterDetail({required String? id}) {
 
   final endpoint = switch (endpointType) {
     'Email' => <String, dynamic>{
-        'type': 'Email',
-        'params': <String, dynamic>{'email': 'ops@example.com'},
-      },
+      'type': 'Email',
+      'params': <String, dynamic>{'email': 'ops@example.com'},
+    },
     'Ntfy' => <String, dynamic>{
-        'type': 'Ntfy',
-        'params': <String, dynamic>{
-          'url': 'https://ntfy.sh/example',
-          'email': 'demo@example.com',
-        },
+      'type': 'Ntfy',
+      'params': <String, dynamic>{
+        'url': 'https://ntfy.sh/example',
+        'email': 'demo@example.com',
       },
+    },
     _ => <String, dynamic>{
-        'type': 'Slack',
-        'params': <String, dynamic>{
-          'url': 'https://hooks.slack.com/services/demo/demo/demo',
-        },
+      'type': 'Slack',
+      'params': <String, dynamic>{
+        'url': 'https://hooks.slack.com/services/demo/demo/demo',
       },
+    },
   };
 
   return <String, dynamic>{
@@ -2002,8 +2059,7 @@ List<Map<String, dynamic>> _procedureStagesFor({
           name: 'Notify',
           executions: [
             _execution(
-              command:
-                  'notify --channel=security --message="Secrets rotated"',
+              command: 'notify --channel=security --message="Secrets rotated"',
             ),
           ],
         ),

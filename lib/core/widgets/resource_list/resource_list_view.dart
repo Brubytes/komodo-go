@@ -9,6 +9,8 @@ import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/filters/template_filter.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
 import 'package:komodo_go/shared/resources/providers/resource_filters_provider.dart';
@@ -31,7 +33,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
   late final FocusNode _searchFocusNode;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
-  bool _isFiltersVisible = false;
+  bool _areFiltersExpanded = false;
 
   @override
   void initState() {
@@ -113,14 +115,21 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
               }
             },
           ),
-          IconButton(
-            tooltip: _isFiltersVisible ? 'Hide filters' : 'Filters',
-            icon: Icon(
-              _isFiltersVisible ? Icons.tune : Icons.tune_outlined,
-            ),
-            onPressed: () => setState(() {
-              _isFiltersVisible = !_isFiltersVisible;
-            }),
+          ResourceListActionsMenu(
+            kind: config.kind,
+            items: config.batchItemOf == null
+                ? const []
+                : itemsAsync.maybeWhen(
+                    data: (items) => items.map(config.batchItemOf!).toList(),
+                    orElse: () => const [],
+                  ),
+            onCreate: config.onCreate == null
+                ? null
+                : () => config.onCreate!(context),
+            onRefresh: () => config.refreshList(ref),
+            onBatchCompleted: config.batchItemOf == null
+                ? null
+                : () => config.invalidateList(ref),
           ),
         ],
       ),
@@ -135,51 +144,25 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                   duration: AppMotion.base,
                   switchInCurve: AppMotion.enterCurve,
                   switchOutCurve: AppMotion.exitCurve,
-                  child: _isFiltersVisible
-                      ? _FiltersPanel(
-                          resourceName: config.resourceName,
-                          templateFilter: templateFilter,
-                          selectedTags: selectedTags,
-                          availableTags: availableTags,
-                          onTemplateFilterChanged: (value) =>
-                              ref
-                                      .read(
-                                        resourceTemplateFilterStateProvider(
-                                          config.kind,
-                                        ).notifier,
-                                      )
-                                      .value =
-                                  value,
-                          onSelectTags: (value) =>
-                              ref
-                                      .read(
-                                        resourceTagFilterProvider(
-                                          config.kind,
-                                        ).notifier,
-                                      )
-                                      .selected =
-                                  value,
-                          onClearTags: () => ref
-                              .read(
-                                resourceTagFilterProvider(config.kind).notifier,
-                              )
-                              .clear(),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                if (_isFiltersVisible) const Gap(12),
-                AnimatedSwitcher(
-                  duration: AppMotion.base,
-                  switchInCurve: AppMotion.enterCurve,
-                  switchOutCurve: AppMotion.exitCurve,
                   child: _isSearchVisible
-                      ? Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: _SearchField(
-                            fieldKey: config.searchFieldKey,
-                            focusNode: _searchFocusNode,
-                            controller: _searchController,
-                            onChanged: (value) =>
+                      ? Column(
+                          key: const ValueKey('resource_search_and_filters'),
+                          children: [
+                            _SearchField(
+                              fieldKey: config.searchFieldKey,
+                              focusNode: _searchFocusNode,
+                              controller: _searchController,
+                              onChanged: (value) =>
+                                  ref
+                                          .read(
+                                            resourceSearchQueryProvider(
+                                              config.kind,
+                                            ).notifier,
+                                          )
+                                          .query =
+                                      value,
+                              onClear: () {
+                                _searchController.clear();
                                 ref
                                         .read(
                                           resourceSearchQueryProvider(
@@ -187,19 +170,53 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                                           ).notifier,
                                         )
                                         .query =
-                                    value,
-                            onClear: () {
-                              _searchController.clear();
-                              ref
-                                      .read(
-                                        resourceSearchQueryProvider(
-                                          config.kind,
-                                        ).notifier,
-                                      )
-                                      .query =
-                                  '';
-                            },
-                          ),
+                                    '';
+                              },
+                            ),
+                            const Gap(10),
+                            ResourceFilterDisclosure(
+                              expanded: _areFiltersExpanded,
+                              activeFilterCount:
+                                  selectedTags.length +
+                                  (templateFilter == TemplateFilter.exclude
+                                      ? 0
+                                      : 1),
+                              onExpansionChanged: (value) => setState(
+                                () => _areFiltersExpanded = value,
+                              ),
+                              child: _FiltersPanel(
+                                resourceName: config.resourceName,
+                                templateFilter: templateFilter,
+                                selectedTags: selectedTags,
+                                availableTags: availableTags,
+                                onTemplateFilterChanged: (value) =>
+                                    ref
+                                            .read(
+                                              resourceTemplateFilterStateProvider(
+                                                config.kind,
+                                              ).notifier,
+                                            )
+                                            .value =
+                                        value,
+                                onSelectTags: (value) =>
+                                    ref
+                                            .read(
+                                              resourceTagFilterProvider(
+                                                config.kind,
+                                              ).notifier,
+                                            )
+                                            .selected =
+                                        value,
+                                onClearTags: () => ref
+                                    .read(
+                                      resourceTagFilterProvider(
+                                        config.kind,
+                                      ).notifier,
+                                    )
+                                    .clear(),
+                              ),
+                            ),
+                          ],
                         )
                       : const SizedBox.shrink(),
                 ),

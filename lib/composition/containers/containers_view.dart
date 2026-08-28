@@ -287,12 +287,51 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
     }
 
     final actions = ref.read(containerActionsProvider.notifier);
+    if (action == ContainerAction.remove) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Remove container?'),
+          content: Text(
+            'This permanently removes ${item.container.name}. '
+            'A managed Stack or Deployment may recreate it.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Remove'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+    }
     final success = await switch (action) {
+      ContainerAction.start => actions.start(
+        serverIdOrName: item.serverId,
+        containerIdOrName: containerIdOrName,
+      ),
       ContainerAction.restart => actions.restart(
         serverIdOrName: item.serverId,
         containerIdOrName: containerIdOrName,
       ),
       ContainerAction.stop => actions.stop(
+        serverIdOrName: item.serverId,
+        containerIdOrName: containerIdOrName,
+      ),
+      ContainerAction.pause => actions.pause(
+        serverIdOrName: item.serverId,
+        containerIdOrName: containerIdOrName,
+      ),
+      ContainerAction.unpause => actions.unpause(
+        serverIdOrName: item.serverId,
+        containerIdOrName: containerIdOrName,
+      ),
+      ContainerAction.remove => actions.remove(
         serverIdOrName: item.serverId,
         containerIdOrName: containerIdOrName,
       ),

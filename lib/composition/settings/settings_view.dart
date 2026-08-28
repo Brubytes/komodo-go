@@ -89,6 +89,15 @@ class SettingsView extends ConsumerWidget {
           const _SettingsSectionHeader(title: 'Komodo'),
           const Gap(8),
           _SettingsCardTile(
+            icon: Icons.system_update_alt,
+            accentColor: scheme.primary,
+            title: 'Auto-update review',
+            subtitle: 'Check images and review updates before deployment',
+            trailing: const _CardTrailing(showChevron: true),
+            onTap: () => context.push(AppRoutes.autoUpdateReview),
+          ),
+          const Gap(10),
+          _SettingsCardTile(
             icon: AppIcons.key,
             accentColor: scheme.primary,
             title: 'Variables',

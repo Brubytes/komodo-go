@@ -4,6 +4,7 @@ import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'containers_provider.g.dart';
@@ -46,6 +47,7 @@ class Containers extends _$Containers {
 
   @override
   Future<ContainersResult> build() async {
+    ref.watch(resourceActivityProvider);
     final repository = ref.watch(containerRepositoryProvider);
     if (repository == null) {
       return const ContainersResult(items: [], errors: []);
@@ -180,6 +182,46 @@ class ContainerActions extends _$ContainerActions {
     );
   }
 
+  Future<bool> start({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) => _executeAction(
+    (repo) => repo.startContainer(
+      serverIdOrName: serverIdOrName,
+      containerIdOrName: containerIdOrName,
+    ),
+  );
+
+  Future<bool> pause({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) => _executeAction(
+    (repo) => repo.pauseContainer(
+      serverIdOrName: serverIdOrName,
+      containerIdOrName: containerIdOrName,
+    ),
+  );
+
+  Future<bool> unpause({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) => _executeAction(
+    (repo) => repo.unpauseContainer(
+      serverIdOrName: serverIdOrName,
+      containerIdOrName: containerIdOrName,
+    ),
+  );
+
+  Future<bool> remove({
+    required String serverIdOrName,
+    required String containerIdOrName,
+  }) => _executeAction(
+    (repo) => repo.removeContainer(
+      serverIdOrName: serverIdOrName,
+      containerIdOrName: containerIdOrName,
+    ),
+  );
+
   Future<bool> _executeAction(
     Future<Either<Failure, void>> Function(ContainerRepository repo) action,
   ) async {
@@ -203,6 +245,7 @@ class ContainerActions extends _$ContainerActions {
       (_) {
         state = const AsyncValue.data(null);
         ref.invalidate(containersProvider);
+        ref.read(resourceActivityProvider.notifier).markChanged();
         return true;
       },
     );

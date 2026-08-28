@@ -1,6 +1,8 @@
 import 'package:komodo_go/core/error/provider_error.dart';
+import 'package:komodo_go/features/notifications/data/models/update_detail.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 import 'package:komodo_go/features/notifications/data/repositories/notifications_repository.dart';
+import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'updates_provider.g.dart';
@@ -33,6 +35,7 @@ class UpdatesState {
 class Updates extends _$Updates {
   @override
   Future<UpdatesState> build() async {
+    ref.watch(resourceActivityProvider);
     final repository = ref.watch(notificationsRepositoryProvider);
     if (repository == null) {
       return const UpdatesState(items: <UpdateListItem>[], nextPage: null);
@@ -80,4 +83,12 @@ class Updates extends _$Updates {
       },
     );
   }
+}
+
+@riverpod
+Future<UpdateDetail?> updateDetail(Ref ref, String id) async {
+  final repository = ref.watch(notificationsRepositoryProvider);
+  if (repository == null || id.trim().isEmpty) return null;
+  final result = await repository.getUpdate(id);
+  return unwrapOrThrow(result);
 }
