@@ -2,7 +2,7 @@
 
 Audit date: 2026-09-12. Candidate branch: `codex/release-0.6.0`.
 
-Recommendation: ready for a signed release candidate. Public release remains gated on Codemagic verification, device upgrade/smoke checks, and store staging/validation.
+Recommendation: simulator findings are fixed in PR [#45](https://github.com/Brubytes/komodo-go/pull/45); see the [interactive QA report](qa/0.6.0-simulator.md). Ready for a signed release candidate after final CI verification. Public release remains gated on Codemagic verification, device upgrade/smoke checks, and store staging/validation.
 
 ## Where we left off
 
@@ -69,4 +69,4 @@ The live backend was confirmed through Docker Compose labels to belong to the de
 
 Google Play's live console state, Codemagic signing credentials, App Privacy publication, and final 0.6.0 store metadata/screenshots have not been verified. Existing native plugins still use CocoaPods, and Flutter warns that the selected Android toolchain will need a future major upgrade; neither warning blocked the successful checks recorded above.
 
-No remote branch, tag, store metadata, build upload, or release was published during this audit.
+PR #45 now contains the combined release preparation and simulator QA fixes. The branch has been pushed; no merge, tag, store metadata, build upload, or release has been published.
