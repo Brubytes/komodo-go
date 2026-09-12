@@ -35,6 +35,44 @@ void main() {
     ];
 
     test(
+      'distinguishes failed completed updates from pending batch items',
+      () async {
+        when(() => client.execute(any())).thenAnswer(
+          (_) async => [
+            {
+              'status': 'Ok',
+              'data': {
+                'id': 'failed-update',
+                'target': {'id': 's1'},
+                'status': 'Complete',
+                'success': false,
+              },
+            },
+            {
+              'status': 'Ok',
+              'data': {
+                'id': 'pending-update',
+                'target': {'id': 's2'},
+                'status': 'InProgress',
+                'success': false,
+              },
+            },
+          ],
+        );
+        final results = _rightOrFail(
+          await repository.execute(
+            kind: ResourceKind.stacks,
+            action: ResourceBatchAction.deploy,
+            items: items,
+          ),
+        );
+        expect(results.map((result) => result.success), [false, true]);
+        expect(results.first.updateId, 'failed-update');
+        expect(results.first.error, contains('Operation failed'));
+      },
+    );
+
+    test(
       'uses native batch endpoint and preserves every item result',
       () async {
         when(() => client.execute(any())).thenAnswer(

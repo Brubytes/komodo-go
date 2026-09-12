@@ -206,10 +206,17 @@ class ResourceBatchRepository {
         final name = data is Map ? _readResourceName(data) : null;
         final id = data is Map ? _readResourceId(data) : null;
         final item = _takeMatching(remaining, byId[id] ?? byName[name]);
+        final failed =
+            data is Map &&
+            data['status'] == 'Complete' &&
+            data['success'] == false;
         results.add(
           ResourceBatchResult(
             item: item,
-            success: true,
+            success: !failed,
+            error: failed
+                ? 'Operation failed. Open its update details for execution logs.'
+                : null,
             updateId: _readUpdateId(data),
           ),
         );

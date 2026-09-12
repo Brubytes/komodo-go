@@ -777,7 +777,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       AppSnackBar.show(
         context,
         success
-            ? 'Action completed successfully'
+            ? 'Action submitted. Check updates for the result.'
             : hasActionError
             ? 'Action failed: $actionErrorMessage'
             : 'Action failed. Please try again.',

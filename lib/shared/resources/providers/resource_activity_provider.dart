@@ -29,6 +29,10 @@ class ResourceActivityNotifier extends Notifier<int> {
     state++;
     _schedulePulse(const Duration(seconds: 1));
     _schedulePulse(const Duration(seconds: 3));
+    // Docker stop/restart can spend ten seconds waiting for graceful shutdown.
+    // Refresh again after that window and after the backend's cache settles.
+    _schedulePulse(const Duration(seconds: 10));
+    _schedulePulse(const Duration(seconds: 30));
   }
 
   void _schedulePulse(Duration delay) {

@@ -71,11 +71,11 @@ class _AppFadeSlideState extends State<AppFadeSlide>
       return;
     }
     if (widget.delay == Duration.zero) {
-      unawaited(_controller.forward());
+      _controller.forward();
       return;
     }
     _delayTimer = Timer(widget.delay, () {
-      if (mounted) unawaited(_controller.forward());
+      if (mounted) _controller.forward();
     });
   }
 

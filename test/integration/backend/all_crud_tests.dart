@@ -5,7 +5,7 @@ import 'auth_contract_test.dart';
 import 'build_contract_test.dart';
 import 'builder_contract_test.dart';
 import 'deployment_contract_test.dart';
-import 'negative_contract_tests.dart';
+import 'negative_contract_test.dart';
 import 'procedure_contract_test.dart';
 import 'providers_contract_test.dart';
 import 'repo_contract_test.dart';

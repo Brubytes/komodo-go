@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
@@ -21,7 +23,29 @@ class Stacks extends _$Stacks {
 
     final result = await repository.listStacks();
 
-    return unwrapOrThrow(result);
+    final stacks = unwrapOrThrow(result);
+    final transitioning = stacks
+        .where(
+          (stack) => switch (stack.info.state) {
+            StackState.deploying ||
+            StackState.restarting ||
+            StackState.removing => true,
+            _ => false,
+          },
+        )
+        .toList();
+    if (transitioning.isNotEmpty) {
+      final timer = Timer(const Duration(seconds: 5), () {
+        for (final stack in transitioning) {
+          ref
+            ..invalidate(stackDetailProvider(stack.id))
+            ..invalidate(stackServicesProvider(stack.id));
+        }
+        ref.invalidateSelf();
+      });
+      ref.onDispose(timer.cancel);
+    }
+    return stacks;
   }
 
   /// Refreshes the stacks list.

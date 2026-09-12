@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:fpdart/fpdart.dart' show Either;
 import 'package:gap/gap.dart';
@@ -151,7 +149,7 @@ class _ResourceAdvancedMenuButtonState
       'Renamed to $name',
       tone: AppSnackBarTone.success,
     );
-    unawaited(Navigator.of(context).maybePop());
+    Navigator.of(context).maybePop();
   }
 
   Future<void> _delete() async {
@@ -190,7 +188,7 @@ class _ResourceAdvancedMenuButtonState
     );
     if (!success || !mounted) return;
     widget.onMutated();
-    unawaited(Navigator.of(context).maybePop());
+    Navigator.of(context).maybePop();
   }
 
   Future<bool> _runMutation(
@@ -522,6 +520,10 @@ class _NamePromptDialogState extends State<_NamePromptDialog> {
       title: Text(widget.title),
       content: TextField(
         key: const ValueKey('resource_name_field'),
+        autocorrect: false,
+        enableSuggestions: false,
+        smartQuotesType: SmartQuotesType.disabled,
+        smartDashesType: SmartDashesType.disabled,
         controller: _controller,
         autofocus: true,
         textInputAction: TextInputAction.done,

@@ -42,8 +42,20 @@ class KomodoApiClient {
       _post('/write', request);
 
   /// Sends a request to the execute module.
-  Future<dynamic> execute(RpcRequest<dynamic> request) =>
-      _post('/execute', request);
+  Future<dynamic> execute(RpcRequest<dynamic> request) async {
+    final result = await _post('/execute', request);
+    // Execute RPCs can return HTTP 200 with a failed, completed Update.
+    // In-progress updates also have success=false until they finish.
+    if (result is Map &&
+        result['status'] == 'Complete' &&
+        result['success'] == false) {
+      throw const ApiException(
+        message:
+            'Operation failed. Open its update details for execution logs.',
+      );
+    }
+    return result;
+  }
 
   Future<dynamic> _post(String path, RpcRequest<dynamic> request) async {
     try {

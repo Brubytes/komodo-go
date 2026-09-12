@@ -14,6 +14,42 @@ class _MockStackRepository extends Mock implements StackRepository {}
 
 void main() {
   group('Stacks provider', () {
+    testWidgets('refreshes a long deployment until its state settles', (
+      tester,
+    ) async {
+      final repository = _MockStackRepository();
+      var calls = 0;
+      when(repository.listStacks).thenAnswer((_) async {
+        calls++;
+        return Right([
+          StackListItem.fromJson({
+            'id': 's1',
+            'name': 'QA',
+            'info': {'state': calls < 3 ? 'Deploying' : 'Running'},
+          }),
+        ]);
+      });
+      final container = createProviderContainer(
+        overrides: [stackRepositoryProvider.overrideWithValue(repository)],
+      );
+      final subscription = listenProvider(container, stacksProvider);
+      await tester.pump();
+      expect(calls, 1);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump();
+      expect(calls, 2);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump();
+      expect(
+        container.read(stacksProvider).requireValue.single.info.state,
+        StackState.running,
+      );
+      await tester.pump(const Duration(seconds: 10));
+      expect(calls, 3);
+      subscription.close();
+      container.dispose();
+    });
+
     test('returns stacks when repository succeeds', () async {
       final repository = _MockStackRepository();
       when(repository.listStacks).thenAnswer(
