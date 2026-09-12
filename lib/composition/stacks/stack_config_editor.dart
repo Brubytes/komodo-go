@@ -643,9 +643,11 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
     final serverIdInList = sortedServers.any((s) => s.id == _serverId.text);
     final linkedRepoInList = sortedRepos.any((r) => r.id == _linkedRepo.text);
-    final registryInList = sortedRegistries.any(
-      (r) => r.id == _registryAccount.text,
-    );
+    final registryInList =
+        _registryAccount.text.isEmpty ||
+        sortedRegistries.any(
+          (r) => r.id == _registryAccount.text,
+        );
 
     // Only show git source settings if this stack is actually defined via git.
     // (UI-defined stacks and files-on-host stacks shouldn't show the entire block.)
@@ -698,7 +700,9 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                     helperText: 'Select the server to deploy on.',
                   ),
                 ),
-              if (sortedServers.isNotEmpty && !serverIdInList) ...[
+              if (sortedServers.isNotEmpty &&
+                  _serverId.text.isNotEmpty &&
+                  !serverIdInList) ...[
                 const Gap(8),
                 TextFormField(
                   controller: _serverId,
@@ -774,7 +778,9 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                       prefixIcon: Icon(AppIcons.repos),
                     ),
                   ),
-                if (sortedRepos.isNotEmpty && !linkedRepoInList) ...[
+                if (sortedRepos.isNotEmpty &&
+                    _linkedRepo.text.isNotEmpty &&
+                    !linkedRepoInList) ...[
                   const Gap(8),
                   TextFormField(
                     controller: _linkedRepo,

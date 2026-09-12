@@ -116,6 +116,10 @@ class _ResourceCreationViewState extends ConsumerState<ResourceCreationView> {
             const Gap(16),
             TextField(
               key: const ValueKey('resource_name'),
+              autocorrect: false,
+              enableSuggestions: false,
+              smartQuotesType: SmartQuotesType.disabled,
+              smartDashesType: SmartDashesType.disabled,
               controller: _nameController,
               enabled: !_saving,
               textInputAction: TextInputAction.next,

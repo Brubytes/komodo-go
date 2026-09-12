@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/detail/literal_code_editor.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
 
@@ -34,7 +35,7 @@ class DetailCodeEditor extends StatelessWidget {
           SizedBox(
             height: maxHeight,
             width: double.infinity,
-            child: CodeEditor(
+            child: LiteralCodeEditor(
               controller: controller,
               readOnly: readOnly,
               textStyle:
@@ -64,19 +65,20 @@ class DetailCodeEditor extends StatelessWidget {
                       width: 24,
                       height: 24,
                     ),
-                    onPressed: () => Navigator.of(
-                      context,
-                      rootNavigator: true,
-                    ).push(
-                      MaterialPageRoute<void>(
-                        fullscreenDialog: true,
-                        builder: (context) => _DetailCodeEditorFullscreen(
-                          controller: controller,
-                          readOnly: readOnly,
-                          title: fullscreenTitle,
+                    onPressed: () =>
+                        Navigator.of(
+                          context,
+                          rootNavigator: true,
+                        ).push(
+                          MaterialPageRoute<void>(
+                            fullscreenDialog: true,
+                            builder: (context) => _DetailCodeEditorFullscreen(
+                              controller: controller,
+                              readOnly: readOnly,
+                              title: fullscreenTitle,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
                   ),
                 ),
               ),
@@ -118,7 +120,7 @@ class _DetailCodeEditorFullscreen extends StatelessWidget {
             radius: 16,
             padding: const EdgeInsets.all(12),
             child: SizedBox.expand(
-              child: CodeEditor(
+              child: LiteralCodeEditor(
                 controller: controller,
                 readOnly: readOnly,
                 textStyle:

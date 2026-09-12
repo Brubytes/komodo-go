@@ -128,9 +128,9 @@ void main() {
 
     expect(repository.action, ResourceBatchAction.deploy);
     expect(repository.selected.map((item) => item.id), ['s1', 's2']);
-    expect(find.text('1 succeeded, 1 failed'), findsOneWidget);
+    expect(find.text('1 accepted, 1 failed'), findsOneWidget);
     expect(find.text('one'), findsOneWidget);
-    expect(find.text('Update update-1'), findsOneWidget);
+    expect(find.text('Submitted · Update update-1'), findsOneWidget);
     expect(find.text('two'), findsOneWidget);
     expect(find.text('permission denied'), findsOneWidget);
     expect(tester.takeException(), isNull);

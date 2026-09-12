@@ -332,7 +332,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
     AppSnackBar.show(
       context,
       success
-          ? 'Action completed successfully'
+          ? 'Action submitted. Check updates for the result.'
           : 'Action failed. Please try again.',
       tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
     );

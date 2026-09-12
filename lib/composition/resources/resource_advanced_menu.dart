@@ -520,6 +520,10 @@ class _NamePromptDialogState extends State<_NamePromptDialog> {
       title: Text(widget.title),
       content: TextField(
         key: const ValueKey('resource_name_field'),
+        autocorrect: false,
+        enableSuggestions: false,
+        smartQuotesType: SmartQuotesType.disabled,
+        smartDashesType: SmartDashesType.disabled,
         controller: _controller,
         autofocus: true,
         textInputAction: TextInputAction.done,

@@ -258,7 +258,7 @@ class _ResourceBatchSheetState extends ConsumerState<_ResourceBatchSheet> {
               ),
             ] else ...[
               Text(
-                '${results.where((item) => item.success).length} succeeded, '
+                '${results.where((item) => item.success).length} accepted, '
                 '${results.where((item) => !item.success).length} failed',
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
@@ -285,8 +285,8 @@ class _ResourceBatchSheetState extends ConsumerState<_ResourceBatchSheet> {
                                         ? 'Update available'
                                         : 'Up to date'
                                   : result.updateId == null
-                                  ? 'Started successfully'
-                                  : 'Update ${result.updateId}'
+                                  ? 'Request accepted'
+                                  : 'Submitted · Update ${result.updateId}'
                             : result.error ?? 'Unknown error',
                       ),
                     );
