@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/komodo-go-logo_circle.png" alt="Komodo Go logo" width="140">
+  <img src="web/splash/img/light-4x.png" alt="Komodo Go logo" width="140">
 </p>
 
 # Komodo Go

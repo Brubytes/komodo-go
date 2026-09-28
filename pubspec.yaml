@@ -63,6 +63,8 @@ flutter:
     - assets/komodo-go-logo.png
     - assets/komodo-go-logo_rounded.png
     - assets/komodo-go-logo_circle.png
+    - assets/komodo-go-logo_rounded_dark.png
+    - assets/komodo-go-logo_circle_dark.png
     - assets/demo_mode/ui_defined_stack/compose.yml
 
 flutter_launcher_icons:
@@ -70,8 +72,10 @@ flutter_launcher_icons:
   ios: true
   image_path: assets/komodo-go-logo.png
   remove_alpha_ios: true
+  image_path_ios_dark_transparent: assets/komodo-go-logo_dark_transparent.png
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: assets/komodo-go-logo.png
+  adaptive_icon_foreground_inset: 21
   web:
     generate: true
     image_path: assets/komodo-go-logo.png
@@ -88,8 +92,12 @@ flutter_launcher_icons:
 flutter_native_splash:
   color: "#014226"
   image: assets/komodo-go-logo_rounded.png
+  color_dark: "#141C18"
+  image_dark: assets/komodo-go-logo_rounded_dark.png
   android_gravity: center
   ios_content_mode: center
   android_12:
     color: "#014226"
     image: assets/komodo-go-logo_rounded_android12.png
+    color_dark: "#141C18"
+    image_dark: assets/komodo-go-logo_rounded_android12_dark.png
