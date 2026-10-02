@@ -4,6 +4,7 @@ import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
+import 'package:komodo_go/features/notifications/data/models/update_detail.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -83,6 +84,20 @@ class NotificationsRepository {
       ];
       final nextPage = _readNullableInt(map['next_page']);
       return UpdatesPage(updates: updates, nextPage: nextPage);
+    });
+  }
+
+  Future<Either<Failure, UpdateDetail>> getUpdate(String id) async {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'GetUpdate',
+          params: <String, dynamic>{'id': id},
+        ),
+      );
+      return UpdateDetail.fromJson(
+        (response as Map<dynamic, dynamic>).cast<String, dynamic>(),
+      );
     });
   }
 }

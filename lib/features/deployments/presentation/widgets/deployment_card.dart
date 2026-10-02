@@ -30,11 +30,12 @@ class DeploymentCard extends StatelessWidget {
     final image = _stripHashes(deployment.imageLabel);
     final status = _statusLabel(deployment.info?.status ?? '');
     final description = _stripHashes(deployment.description?.trim() ?? '');
-    final serverLabel = (serverName ??
-            deployment.info?.serverId ??
-            deployment.config?.serverId ??
-            '')
-        .trim();
+    final serverLabel =
+        (serverName ??
+                deployment.info?.serverId ??
+                deployment.config?.serverId ??
+                '')
+            .trim();
     final hasPendingUpdate = deployment.info?.updateAvailable ?? false;
     final tagPills = _buildTagPills(displayTags);
 
@@ -55,116 +56,116 @@ class DeploymentCard extends StatelessWidget {
             child: SizedBox(
               width: double.infinity,
               child: Stack(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        deployment.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      if (image.isNotEmpty) ...[
-                        const Gap(4),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          image,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.7),
+                          deployment.name,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w600,
                               ),
                         ),
-                      ],
-                      if (serverLabel.isNotEmpty) ...[
-                        const Gap(10),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 8,
-                          children: [
-                            _IconLabel(
-                              icon: AppIcons.server,
-                              label: serverLabel,
-                            ),
-                          ],
-                        ),
-                      ],
-                      if (deployment.template ||
-                          hasPendingUpdate ||
-                          tagPills.isNotEmpty) ...[
-                        const Gap(10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            if (deployment.template)
-                              const TextPill(label: 'Template'),
-                            if (hasPendingUpdate)
-                              const TextPill(
-                                label: 'Update available',
-                                icon: AppIcons.updateAvailable,
-                                tone: PillTone.warning,
+                        if (image.isNotEmpty) ...[
+                          const Gap(4),
+                          Text(
+                            image,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.7),
+                                ),
+                          ),
+                        ],
+                        if (serverLabel.isNotEmpty) ...[
+                          const Gap(10),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            children: [
+                              _IconLabel(
+                                icon: AppIcons.server,
+                                label: serverLabel,
                               ),
-                            ...tagPills,
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
+                        if (deployment.template ||
+                            hasPendingUpdate ||
+                            tagPills.isNotEmpty) ...[
+                          const Gap(10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              if (deployment.template)
+                                const TextPill(label: 'Template'),
+                              if (hasPendingUpdate)
+                                const TextPill(
+                                  label: 'Update available',
+                                  icon: AppIcons.updateAvailable,
+                                  tone: PillTone.warning,
+                                ),
+                              ...tagPills,
+                            ],
+                          ),
+                        ],
+                        if (status.isNotEmpty) ...[
+                          const Gap(8),
+                          Text(
+                            status,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.5),
+                                ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        if (description.isNotEmpty) ...[
+                          const Gap(6),
+                          Text(
+                            description,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.5),
+                                ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
-                      if (status.isNotEmpty) ...[
-                        const Gap(8),
-                        Text(
-                          status,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.5),
-                              ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                      if (description.isNotEmpty) ...[
-                        const Gap(6),
-                        Text(
-                          description,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.5),
-                              ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 12,
-                  child: _StatusBadge(state: state, compact: true),
-                ),
-                if (onAction != null)
-                  Positioned(
-                    right: 6,
-                    top: 0,
-                    bottom: 0,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: PopupMenuButton<DeploymentAction>(
-                        key: ValueKey('deployment_card_menu_${deployment.id}'),
-                        icon: const Icon(AppIcons.moreVertical),
-                        onSelected: onAction,
-                        itemBuilder: (context) =>
-                            _buildMenuItems(context, state),
-                      ),
                     ),
                   ),
-              ],
+                  Positioned(
+                    top: 8,
+                    right: 12,
+                    child: _StatusBadge(state: state, compact: true),
+                  ),
+                  if (onAction != null)
+                    Positioned(
+                      right: 6,
+                      top: 0,
+                      bottom: 0,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: PopupMenuButton<DeploymentAction>(
+                          key: ValueKey(
+                            'deployment_card_menu_${deployment.id}',
+                          ),
+                          icon: const Icon(AppIcons.moreVertical),
+                          onSelected: onAction,
+                          itemBuilder: (context) =>
+                              _buildMenuItems(context, state),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -186,14 +187,23 @@ class DeploymentCard extends StatelessWidget {
         ? 'Deploy'
         : 'Redeploy';
 
-    items.add(
-      komodoPopupMenuItem(
-        value: DeploymentAction.deploy,
-        icon: AppIcons.deployments,
-        label: deployLabel,
-        iconColor: scheme.primary,
-      ),
-    );
+    items
+      ..add(
+        komodoPopupMenuItem(
+          value: DeploymentAction.deploy,
+          icon: AppIcons.deployments,
+          label: deployLabel,
+          iconColor: scheme.primary,
+        ),
+      )
+      ..add(
+        komodoPopupMenuItem(
+          value: DeploymentAction.checkUpdates,
+          icon: Icons.refresh_outlined,
+          label: 'Check image now',
+          iconColor: scheme.primary,
+        ),
+      );
 
     final hasImage = deployment.info?.image.isNotEmpty ?? false;
     if (hasImage) {
@@ -314,10 +324,9 @@ class _StatusBadge extends StatelessWidget {
       DeploymentState.unknown => (scheme.tertiary, AppIcons.unknown),
     };
 
-    final padding =
-        compact
-            ? const EdgeInsets.symmetric(horizontal: 5, vertical: 1)
-            : const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
+    final padding = compact
+        ? const EdgeInsets.symmetric(horizontal: 5, vertical: 1)
+        : const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
     final iconSize = compact ? 11.0 : 14.0;
     final fontSize = compact ? 10.0 : 12.0;
 
@@ -383,8 +392,10 @@ String _statusLabel(String status) {
   return normalized;
 }
 
-final _hashPattern =
-    RegExp(r'\b(?:sha256:)?[a-f0-9]{7,64}\b', caseSensitive: false);
+final _hashPattern = RegExp(
+  r'\b(?:sha256:)?[a-f0-9]{7,64}\b',
+  caseSensitive: false,
+);
 
 String _stripHashes(String value) {
   final cleaned = value.replaceAll(_hashPattern, '').replaceAll('  ', ' ');
@@ -407,6 +418,7 @@ final _containerCountPattern = RegExp(
 
 /// Actions available for a deployment.
 enum DeploymentAction {
+  checkUpdates,
   deploy,
   pullImages,
   restart,

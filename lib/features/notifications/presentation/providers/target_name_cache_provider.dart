@@ -40,6 +40,7 @@ class TargetNameCache extends _$TargetNameCache {
     required String connectionId,
     required ResourceTarget target,
     required Future<String> Function() fetch,
+    bool Function(String name)? shouldCache,
   }) async {
     final key = _key(connectionId: connectionId, target: target);
     final cached = state[key];
@@ -55,7 +56,9 @@ class TargetNameCache extends _$TargetNameCache {
 
     try {
       final name = await fetch();
-      if (ref.mounted && name.trim().isNotEmpty) {
+      if (ref.mounted &&
+          name.trim().isNotEmpty &&
+          (shouldCache?.call(name) ?? true)) {
         state = {...state, key: name.trim()};
       }
       completer.complete(name);

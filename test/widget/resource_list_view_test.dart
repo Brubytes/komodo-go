@@ -93,6 +93,20 @@ void main() {
     await tester.tap(find.byTooltip('Search'));
     await tester.pumpAndSettle();
 
+    expect(
+      find.byKey(const ValueKey('resource_filter_disclosure')),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Filters'), findsNothing);
+    expect(find.byTooltip('More actions'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('resource_filter_disclosure')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Templates'), findsOneWidget);
+    expect(find.text('Tags'), findsOneWidget);
+
     await tester.enterText(find.byKey(const ValueKey('fakes_search')), 'beta');
     await tester.pumpAndSettle();
 

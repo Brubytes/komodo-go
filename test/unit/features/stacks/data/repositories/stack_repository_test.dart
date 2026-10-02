@@ -5,12 +5,12 @@ import 'package:komodo_go/core/api/api_exception.dart';
 import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/features/stacks/data/repositories/stack_repository.dart';
+import 'package:komodo_go/shared/logs/server_log.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockApiClient extends Mock implements KomodoApiClient {
   @override
-  KomodoApiCapabilities get capabilities =>
-      KomodoApiCapabilities.v23AndNewer;
+  KomodoApiCapabilities get capabilities => KomodoApiCapabilities.v23AndNewer;
 }
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
@@ -106,22 +106,24 @@ void main() {
         expect(request.params, <String, dynamic>{'stack': 'stack-1'});
       });
 
-      test('listStackServices sends ListStackServices with stack param',
-          () async {
-        when(() => client.read(any())).thenAnswer(
-          (_) async => [
-            {'service': 'db'},
-          ],
-        );
+      test(
+        'listStackServices sends ListStackServices with stack param',
+        () async {
+          when(() => client.read(any())).thenAnswer(
+            (_) async => [
+              {'service': 'db'},
+            ],
+          );
 
-        final result = await repository.listStackServices('stack-1');
+          final result = await repository.listStackServices('stack-1');
 
-        expect(_rightOrFail(result).single.service, 'db');
+          expect(_rightOrFail(result).single.service, 'db');
 
-        final request = capturedRead();
-        expect(request.type, 'ListStackServices');
-        expect(request.params, <String, dynamic>{'stack': 'stack-1'});
-      });
+          final request = capturedRead();
+          expect(request.type, 'ListStackServices');
+          expect(request.params, <String, dynamic>{'stack': 'stack-1'});
+        },
+      );
 
       test('getStackLog sends GetStackLog with exact params', () async {
         when(() => client.read(any())).thenAnswer(
@@ -150,21 +152,34 @@ void main() {
         ).thenAnswer((_) async => <String, dynamic>{});
       });
 
-      test('deployStack sends DeployStack with exact default payload',
-          () async {
-        final result = await repository.deployStack('stack-1');
+      test(
+        'deployStack sends DeployStack with exact default payload',
+        () async {
+          final result = await repository.deployStack('stack-1');
 
-        _rightOrFail(result);
+          _rightOrFail(result);
+
+          final request = capturedExecute();
+          expect(request.type, 'DeployStack');
+          expect(request.params, <String, dynamic>{
+            'stack': 'stack-1',
+            'services': <String>[],
+            'stop_time': null,
+          });
+          verifyNever(() => client.write(any()));
+          verifyNever(() => client.read(any()));
+        },
+      );
+
+      test('deployStackIfChanged uses the conditional execute RPC', () async {
+        _rightOrFail(await repository.deployStackIfChanged('stack-1'));
 
         final request = capturedExecute();
-        expect(request.type, 'DeployStack');
+        expect(request.type, 'DeployStackIfChanged');
         expect(request.params, <String, dynamic>{
           'stack': 'stack-1',
-          'services': <String>[],
           'stop_time': null,
         });
-        verifyNever(() => client.write(any()));
-        verifyNever(() => client.read(any()));
       });
 
       test('deployStack forwards services and stop_time', () async {
@@ -225,30 +240,86 @@ void main() {
       }
     });
 
-    group('write payloads', () {
-      test('writeStackFileContents sends WriteStackFileContents via write',
-          () async {
-        when(
-          () => client.write(any()),
-        ).thenAnswer((_) async => <String, dynamic>{});
-
-        final result = await repository.writeStackFileContents(
-          stackIdOrName: 'stack-1',
-          filePath: 'compose.yaml',
-          contents: 'services: {}',
+    test(
+      'checkForUpdates returns service status and skips auto deploy',
+      () async {
+        when(() => client.write(any())).thenAnswer(
+          (_) async => <String, dynamic>{
+            'stack': 'stack-1',
+            'services': [
+              {'service': 'web', 'update_available': true},
+            ],
+          },
         );
 
-        _rightOrFail(result);
+        final result = await repository.checkForUpdates('stack-1');
 
+        expect(_rightOrFail(result).single.updateAvailable, isTrue);
         final request = capturedWrite();
-        expect(request.type, 'WriteStackFileContents');
+        expect(request.type, 'CheckStackForUpdate');
         expect(request.params, <String, dynamic>{
           'stack': 'stack-1',
-          'file_path': 'compose.yaml',
-          'contents': 'services: {}',
+          'skip_auto_update': true,
+          'wait_for_auto_update': false,
+          'skip_cache_refresh': false,
         });
-        verifyNever(() => client.execute(any()));
-      });
+      },
+    );
+
+    test(
+      'searchServerLog includes stack services and AND combinator',
+      () async {
+        when(() => client.read(any())).thenAnswer(
+          (_) async => <String, dynamic>{'stdout': 'matched'},
+        );
+
+        final result = await repository.searchServerLog(
+          stackIdOrName: 'stack-1',
+          services: const ['api'],
+          terms: const ['error', 'timeout'],
+          combinator: LogSearchCombinator.and,
+        );
+
+        expect(_rightOrFail(result).stdout, 'matched');
+        final request = capturedRead();
+        expect(request.type, 'SearchStackLog');
+        expect(request.params, <String, dynamic>{
+          'stack': 'stack-1',
+          'services': ['api'],
+          'terms': ['error', 'timeout'],
+          'combinator': 'And',
+          'invert': false,
+          'timestamps': true,
+        });
+      },
+    );
+
+    group('write payloads', () {
+      test(
+        'writeStackFileContents sends WriteStackFileContents via write',
+        () async {
+          when(
+            () => client.write(any()),
+          ).thenAnswer((_) async => <String, dynamic>{});
+
+          final result = await repository.writeStackFileContents(
+            stackIdOrName: 'stack-1',
+            filePath: 'compose.yaml',
+            contents: 'services: {}',
+          );
+
+          _rightOrFail(result);
+
+          final request = capturedWrite();
+          expect(request.type, 'WriteStackFileContents');
+          expect(request.params, <String, dynamic>{
+            'stack': 'stack-1',
+            'file_path': 'compose.yaml',
+            'contents': 'services: {}',
+          });
+          verifyNever(() => client.execute(any()));
+        },
+      );
 
       test('updateStackConfig sends UpdateStack with id and config', () async {
         when(() => client.write(any())).thenAnswer(
@@ -291,22 +362,24 @@ void main() {
         );
       });
 
-      test('destroyStack maps generic ApiException to server failure',
-          () async {
-        when(() => client.execute(any())).thenThrow(
-          const ApiException(message: 'boom', statusCode: 500),
-        );
+      test(
+        'destroyStack maps generic ApiException to server failure',
+        () async {
+          when(() => client.execute(any())).thenThrow(
+            const ApiException(message: 'boom', statusCode: 500),
+          );
 
-        final result = await repository.destroyStack('stack-1');
+          final result = await repository.destroyStack('stack-1');
 
-        result.fold(
-          (failure) => expect(
-            failure,
-            const Failure.server(message: 'boom', statusCode: 500),
-          ),
-          (_) => fail('Expected server failure'),
-        );
-      });
+          result.fold(
+            (failure) => expect(
+              failure,
+              const Failure.server(message: 'boom', statusCode: 500),
+            ),
+            (_) => fail('Expected server failure'),
+          );
+        },
+      );
     });
   });
 }

@@ -10,9 +10,12 @@ import 'package:komodo_go/composition/deployments/deployment_detail_view.dart';
 import 'package:komodo_go/composition/deployments/deployments_list_view.dart';
 import 'package:komodo_go/composition/home/home_view.dart';
 import 'package:komodo_go/composition/repos/repo_detail_view.dart';
+import 'package:komodo_go/composition/resources/advanced_resource_detail_views.dart';
+import 'package:komodo_go/composition/resources/resource_creation_view.dart';
 import 'package:komodo_go/composition/resources/resource_name_resolver_provider.dart';
 import 'package:komodo_go/composition/resources/resources_view.dart';
 import 'package:komodo_go/composition/servers/servers_list_view.dart';
+import 'package:komodo_go/composition/settings/auto_update_review_view.dart';
 import 'package:komodo_go/composition/settings/connections_view.dart';
 import 'package:komodo_go/composition/settings/settings_view.dart';
 import 'package:komodo_go/composition/stacks/stack_detail_view.dart';
@@ -22,7 +25,6 @@ import 'package:komodo_go/core/router/route_observer.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/adaptive_bottom_navigation_bar.dart';
-import 'package:komodo_go/features/actions/presentation/views/action_detail_view.dart';
 import 'package:komodo_go/features/actions/presentation/views/actions_list_view.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerters_view.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
@@ -33,15 +35,15 @@ import 'package:komodo_go/features/builders/presentation/views/builders_view.dar
 import 'package:komodo_go/features/builds/presentation/views/builds_list_view.dart';
 import 'package:komodo_go/features/containers/presentation/views/container_detail_view.dart';
 import 'package:komodo_go/features/notifications/presentation/views/notifications_view.dart';
-import 'package:komodo_go/features/procedures/presentation/views/procedure_detail_view.dart';
+import 'package:komodo_go/features/notifications/presentation/views/update_detail_view.dart';
 import 'package:komodo_go/features/procedures/presentation/views/procedures_list_view.dart';
 import 'package:komodo_go/features/providers/presentation/views/providers_view.dart';
 import 'package:komodo_go/features/repos/presentation/views/repos_list_view.dart';
-import 'package:komodo_go/features/servers/presentation/views/server_detail_view.dart';
 import 'package:komodo_go/features/settings/presentation/views/credits_view.dart';
 import 'package:komodo_go/features/syncs/presentation/views/syncs_list_view.dart';
 import 'package:komodo_go/features/tags/presentation/views/tags_view.dart';
 import 'package:komodo_go/features/variables/presentation/views/variables_view.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/providers/resource_name_resolver_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -62,6 +64,7 @@ abstract class AppRoutes {
   static const containers = '/containers';
   static const containerDetail = '/containers/:serverId/:container';
   static const notifications = '/notifications';
+  static const updateDetails = '$notifications/updates';
   static const settings = '/settings';
 
   static const servers = '$resources/servers';
@@ -80,6 +83,7 @@ abstract class AppRoutes {
   static const komodoProviders = '$settings/komodo/providers';
   static const komodoBuilders = '$settings/komodo/builders';
   static const komodoAlerters = '$settings/komodo/alerters';
+  static const autoUpdateReview = '$settings/komodo/auto-updates';
   static const komodoAlerterDetail = '$komodoAlerters/:id';
   static const credits = '$settings/credits';
 
@@ -298,6 +302,15 @@ GoRouter appRouter(Ref ref) {
                         _appStackPage(state, const ServersListView()),
                     routes: [
                       GoRoute(
+                        path: 'new',
+                        pageBuilder: (context, state) => _appStackPage(
+                          state,
+                          const ResourceCreationView(
+                            kind: ResourceKind.servers,
+                          ),
+                        ),
+                      ),
+                      GoRoute(
                         path: ':id',
                         pageBuilder: (context, state) {
                           final id = state.pathParameters['id']!;
@@ -305,7 +318,10 @@ GoRouter appRouter(Ref ref) {
                               state.uri.queryParameters['name'] ?? 'Server';
                           return _appStackPage(
                             state,
-                            ServerDetailView(serverId: id, serverName: name),
+                            AdvancedServerDetailView(
+                              serverId: id,
+                              serverName: name,
+                            ),
                           );
                         },
                       ),
@@ -316,6 +332,15 @@ GoRouter appRouter(Ref ref) {
                     pageBuilder: (context, state) =>
                         _appStackPage(state, const DeploymentsListView()),
                     routes: [
+                      GoRoute(
+                        path: 'new',
+                        pageBuilder: (context, state) => _appStackPage(
+                          state,
+                          const ResourceCreationView(
+                            kind: ResourceKind.deployments,
+                          ),
+                        ),
+                      ),
                       GoRoute(
                         path: ':id',
                         pageBuilder: (context, state) {
@@ -338,6 +363,13 @@ GoRouter appRouter(Ref ref) {
                     pageBuilder: (context, state) =>
                         _appStackPage(state, const StacksListView()),
                     routes: [
+                      GoRoute(
+                        path: 'new',
+                        pageBuilder: (context, state) => _appStackPage(
+                          state,
+                          const ResourceCreationView(kind: ResourceKind.stacks),
+                        ),
+                      ),
                       GoRoute(
                         path: ':id',
                         pageBuilder: (context, state) {
@@ -415,6 +447,15 @@ GoRouter appRouter(Ref ref) {
                         _appStackPage(state, const ProceduresListView()),
                     routes: [
                       GoRoute(
+                        path: 'new',
+                        pageBuilder: (context, state) => _appStackPage(
+                          state,
+                          const ResourceCreationView(
+                            kind: ResourceKind.procedures,
+                          ),
+                        ),
+                      ),
+                      GoRoute(
                         path: ':id',
                         pageBuilder: (context, state) {
                           final id = state.pathParameters['id']!;
@@ -422,7 +463,7 @@ GoRouter appRouter(Ref ref) {
                               state.uri.queryParameters['name'] ?? 'Procedure';
                           return _appStackPage(
                             state,
-                            ProcedureDetailView(
+                            AdvancedProcedureDetailView(
                               procedureId: id,
                               procedureName: name,
                             ),
@@ -437,6 +478,15 @@ GoRouter appRouter(Ref ref) {
                         _appStackPage(state, const ActionsListView()),
                     routes: [
                       GoRoute(
+                        path: 'new',
+                        pageBuilder: (context, state) => _appStackPage(
+                          state,
+                          const ResourceCreationView(
+                            kind: ResourceKind.actions,
+                          ),
+                        ),
+                      ),
+                      GoRoute(
                         path: ':id',
                         pageBuilder: (context, state) {
                           final id = state.pathParameters['id']!;
@@ -444,7 +494,10 @@ GoRouter appRouter(Ref ref) {
                               state.uri.queryParameters['name'] ?? 'Action';
                           return _appStackPage(
                             state,
-                            ActionDetailView(actionId: id, actionName: name),
+                            AdvancedActionDetailView(
+                              actionId: id,
+                              actionName: name,
+                            ),
                           );
                         },
                       ),
@@ -499,6 +552,26 @@ GoRouter appRouter(Ref ref) {
                     child: const NotificationsView(),
                   ),
                 ),
+                routes: [
+                  GoRoute(
+                    path: 'updates/:id',
+                    pageBuilder: (context, state) => _appStackPage(
+                      state,
+                      ProviderScope(
+                        overrides: [
+                          resourceNameResolverProvider.overrideWith(
+                            (ref) => ref.watch(
+                              composedResourceNameResolverProvider,
+                            ),
+                          ),
+                        ],
+                        child: UpdateDetailView(
+                          updateId: state.pathParameters['id']!,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -514,6 +587,11 @@ GoRouter appRouter(Ref ref) {
                     path: 'connections',
                     pageBuilder: (context, state) =>
                         _appStackPage(state, const ConnectionsView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/auto-updates',
+                    pageBuilder: (context, state) =>
+                        _appStackPage(state, const AutoUpdateReviewView()),
                   ),
                   GoRoute(
                     path: 'komodo/variables',

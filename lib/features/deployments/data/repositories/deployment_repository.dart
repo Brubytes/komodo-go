@@ -6,6 +6,7 @@ import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
+import 'package:komodo_go/shared/logs/server_log.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'deployment_repository.g.dart';
@@ -43,6 +44,26 @@ class DeploymentRepository {
         return Failure.unknown(message: error.toString());
       },
     );
+  }
+
+  /// Lists deployments whose last image check found a newer image.
+  Future<Either<Failure, List<Deployment>>> listUpdateCandidates() async {
+    return apiCall(() async {
+      final deploymentsJson = await readAllPages(
+        _client,
+        type: 'ListDeployments',
+        params: const ResourceListOptions().params(
+          specific: <String, dynamic>{
+            'server_ids': <String>[],
+            'build_ids': <String>[],
+            'update_available': true,
+          },
+        ),
+      );
+      return deploymentsJson
+          .map((json) => Deployment.fromJson(json as Map<String, dynamic>))
+          .toList();
+    });
   }
 
   /// Gets a specific deployment by ID or name.
@@ -155,6 +176,70 @@ class DeploymentRepository {
     String deploymentIdOrName,
   ) async {
     return _executeAction('PullDeployment', deploymentIdOrName);
+  }
+
+  /// Checks the deployed image digest without triggering configured auto-update.
+  Future<Either<Failure, bool>> checkForUpdate(
+    String deploymentIdOrName,
+  ) async {
+    return apiCall(() async {
+      final response = await _client.write(
+        RpcRequest(
+          type: 'CheckDeploymentForUpdate',
+          params: <String, dynamic>{
+            'deployment': deploymentIdOrName,
+            'skip_auto_update': true,
+            'wait_for_auto_update': false,
+          },
+        ),
+      );
+      final json = response as Map<String, dynamic>;
+      return json['update_available'] == true;
+    });
+  }
+
+  Future<Either<Failure, ServerLogSnapshot>> loadServerLog({
+    required String deploymentIdOrName,
+    int tail = 200,
+    bool timestamps = true,
+  }) {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'GetDeploymentLog',
+          params: <String, dynamic>{
+            'deployment': deploymentIdOrName,
+            'tail': tail,
+            'timestamps': timestamps,
+          },
+        ),
+      );
+      return ServerLogSnapshot.fromJson(response as Map<String, dynamic>);
+    });
+  }
+
+  Future<Either<Failure, ServerLogSnapshot>> searchServerLog({
+    required String deploymentIdOrName,
+    required List<String> terms,
+    required LogSearchCombinator combinator,
+    bool invert = false,
+    bool timestamps = true,
+  }) {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'SearchDeploymentLog',
+          params: <String, dynamic>{
+            'deployment': deploymentIdOrName,
+            'terms': terms,
+            'combinator': combinator.apiValue,
+            'invert': invert,
+            'timestamps': timestamps,
+          },
+        ),
+      );
+      return ServerLogSnapshot.fromJson(response as Map<String, dynamic>);
+    });
   }
 
   Future<Either<Failure, void>> _executeAction(

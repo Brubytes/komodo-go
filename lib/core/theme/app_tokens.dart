@@ -9,8 +9,8 @@ abstract final class AppTokens {
 
   static const Color brandPrimary = Color(0xFF014226);
 
-  /// Slightly brighter variant of [brandPrimary] for dark mode accents (labels/icons).
-  static const Color brandPrimaryDark = Color(0xFF1E7A52);
+  /// Brighter green for readable labels and controls on dark surfaces.
+  static const Color brandPrimaryDark = Color(0xFF63CDA2);
   static const Color brandSecondary = Color(0xFF4EB333);
 
   // Resource accent colors (used consistently across resources, lists, detail pages, and dashboard).

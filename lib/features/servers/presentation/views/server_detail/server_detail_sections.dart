@@ -119,7 +119,8 @@ class ServerHeroPanel extends StatelessWidget {
           tone: DetailMetricTone.neutral,
         ),
       ],
-      footer: (server?.tags.isNotEmpty ?? false) ||
+      footer:
+          (server?.tags.isNotEmpty ?? false) ||
               (description?.isNotEmpty ?? false)
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -602,7 +603,9 @@ class ServerConfigEditorContentState extends State<ServerConfigEditorContent> {
     _memWarning = TextEditingController(text: _initial.memWarning.toString());
     _memCritical = TextEditingController(text: _initial.memCritical.toString());
     _diskWarning = TextEditingController(text: _initial.diskWarning.toString());
-    _diskCritical = TextEditingController(text: _initial.diskCritical.toString());
+    _diskCritical = TextEditingController(
+      text: _initial.diskCritical.toString(),
+    );
 
     _enabled = _initial.enabled;
     _statsMonitoring = _initial.statsMonitoring;
@@ -857,8 +860,9 @@ class ServerConfigEditorContentState extends State<ServerConfigEditorContent> {
     setIfChanged('disk_critical', diskCritical, _initial.diskCritical);
 
     if (!_maintenanceEquals(_maintenanceWindows, _initial.maintenanceWindows)) {
-      params['maintenance_windows'] =
-          _maintenanceWindows.map((w) => w.toJson()).toList();
+      params['maintenance_windows'] = _maintenanceWindows
+          .map((w) => w.toJson())
+          .toList();
     }
 
     params.removeWhere((k, v) => v is String && v.trim().isEmpty);
@@ -1016,7 +1020,8 @@ class ServerConfigEditorContentState extends State<ServerConfigEditorContent> {
               else
                 Column(
                   children: [
-                    for (final (index, controller) in _ignoreMounts.indexed) ...[
+                    for (final (index, controller)
+                        in _ignoreMounts.indexed) ...[
                       Row(
                         children: [
                           Expanded(
@@ -1360,55 +1365,35 @@ class ServerLoadingCard extends StatelessWidget {
   }
 }
 
-class StatsSample {
-  const StatsSample({
-    required this.ts,
-    required this.cpuPercent,
-    required this.memPercent,
-    required this.diskPercent,
-    required this.ingressBytesPerSecond,
-    required this.egressBytesPerSecond,
-  });
-
-  final DateTime ts;
-  final double cpuPercent;
-  final double memPercent;
-  final double diskPercent;
-  final double ingressBytesPerSecond;
-  final double egressBytesPerSecond;
-}
-
-class StatsHistoryContent extends StatefulWidget {
+class StatsHistoryContent extends StatelessWidget {
   const StatsHistoryContent({
     required this.history,
     required this.latestStats,
+    required this.granularity,
+    required this.useFixedPercentScale,
+    required this.onGranularityChanged,
+    required this.onScaleChanged,
     super.key,
   });
 
-  final List<StatsSample> history;
+  final List<HistoricalSystemStats> history;
   final SystemStats? latestStats;
-
-  @override
-  State<StatsHistoryContent> createState() => _StatsHistoryContentState();
-}
-
-class _StatsHistoryContentState extends State<StatsHistoryContent> {
-  bool _useFixedPercentScale = true;
+  final ServerStatsGranularity granularity;
+  final bool useFixedPercentScale;
+  final ValueChanged<ServerStatsGranularity> onGranularityChanged;
+  final ValueChanged<bool> onScaleChanged;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final latestStats = widget.latestStats;
+    final latestStats = this.latestStats;
 
-    final uiRefreshSeconds = _estimateUiRefreshSeconds(widget.history);
     final cpu = latestStats?.cpuPercent;
     final mem = latestStats?.memPercent;
     final disk = latestStats?.diskPercent;
 
-    const windowSamples = 60; // ~2.5 min @ 2.5s refresh
-    final visibleHistory = widget.history.length > windowSamples
-        ? widget.history.sublist(widget.history.length - windowSamples)
-        : widget.history;
+    final visibleHistory = [...history]
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     final cpuSeries = visibleHistory
         .map((e) => e.cpuPercent)
@@ -1419,16 +1404,13 @@ class _StatsHistoryContentState extends State<StatsHistoryContent> {
     final diskSeries = visibleHistory
         .map((e) => e.diskPercent)
         .toList(growable: false);
-    final ingressSeries = visibleHistory
-        .map((e) => e.ingressBytesPerSecond)
-        .toList(growable: false);
-    final egressSeries = visibleHistory
-        .map((e) => e.egressBytesPerSecond)
-        .toList(growable: false);
+    final networkSeries = _networkRates(visibleHistory);
+    final ingressSeries = networkSeries.ingress;
+    final egressSeries = networkSeries.egress;
 
     final textTheme = Theme.of(context).textTheme;
-    final percentMin = _useFixedPercentScale ? 0.0 : null;
-    final percentMax = _useFixedPercentScale ? 100.0 : null;
+    final percentMin = useFixedPercentScale ? 0.0 : null;
+    final percentMax = useFixedPercentScale ? 100.0 : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1457,6 +1439,31 @@ class _StatsHistoryContentState extends State<StatsHistoryContent> {
           ],
         ),
         const Gap(8),
+        Text(
+          'Sample interval',
+          style: textTheme.labelMedium?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const Gap(6),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<ServerStatsGranularity>(
+            showSelectedIcon: false,
+            segments: [
+              for (final value in ServerStatsGranularity.values)
+                ButtonSegment(value: value, label: Text(value.label)),
+            ],
+            selected: {granularity},
+            onSelectionChanged: (selection) {
+              if (selection.isNotEmpty) {
+                onGranularityChanged(selection.first);
+              }
+            },
+          ),
+        ),
+        const Gap(8),
         Row(
           children: [
             Text(
@@ -1467,17 +1474,15 @@ class _StatsHistoryContentState extends State<StatsHistoryContent> {
             ),
             const Spacer(),
             Text(
-              _useFixedPercentScale ? '0-100%' : 'Auto',
+              useFixedPercentScale ? '0-100%' : 'Auto',
               style: textTheme.labelMedium?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
             ),
             const Gap(8),
             Switch.adaptive(
-              value: _useFixedPercentScale,
-              onChanged: (value) {
-                setState(() => _useFixedPercentScale = value);
-              },
+              value: useFixedPercentScale,
+              onChanged: onScaleChanged,
             ),
           ],
         ),
@@ -1495,7 +1500,8 @@ class _StatsHistoryContentState extends State<StatsHistoryContent> {
           )
         else
           Text(
-            'Not enough data to chart CPU usage',
+            'No historical samples yet. Enable stats monitoring on this server '
+            'and Komodo will retain database-backed samples here.',
             style: textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,
             ),
@@ -1541,8 +1547,8 @@ class _StatsHistoryContentState extends State<StatsHistoryContent> {
         const Gap(12),
         DetailHistoryRow(
           label: 'In / Out',
-          value: widget.history.isNotEmpty
-              ? '${formatBytesPerSecond(widget.history.last.ingressBytesPerSecond)} / ${formatBytesPerSecond(widget.history.last.egressBytesPerSecond)}'
+          value: history.isNotEmpty
+              ? '${formatBytesPerSecond(ingressSeries.isEmpty ? 0 : ingressSeries.last)} / ${formatBytesPerSecond(egressSeries.isEmpty ? 0 : egressSeries.last)}'
               : '—',
           child: DualSparklineChart(
             aValues: ingressSeries,
@@ -1552,12 +1558,24 @@ class _StatsHistoryContentState extends State<StatsHistoryContent> {
           ),
         ),
         const Gap(12),
-        DetailKeyValueRow(
-          label: 'UI refresh',
-          value: uiRefreshSeconds != null
-              ? '~${uiRefreshSeconds.toStringAsFixed(1)} s'
-              : '—',
-        ),
+        if (latestStats?.disks.isNotEmpty ?? false) ...[
+          const Divider(),
+          const Gap(8),
+          Text(
+            'Disks',
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Gap(10),
+          for (final disk in latestStats!.disks) ...[
+            _DiskUsageCard(
+              disk: disk,
+              history: visibleHistory,
+            ),
+            const Gap(10),
+          ],
+        ],
         if (latestStats?.pollingRate?.isNotEmpty ?? false)
           DetailKeyValueRow(
             label: 'Server polling',
@@ -1568,21 +1586,203 @@ class _StatsHistoryContentState extends State<StatsHistoryContent> {
     );
   }
 
-  double? _estimateUiRefreshSeconds(List<StatsSample> history) {
-    if (history.length < 2) return null;
+  ({List<double> ingress, List<double> egress}) _networkRates(
+    List<HistoricalSystemStats> history,
+  ) {
+    if (history.isEmpty) return (ingress: const [], egress: const []);
+    final ingress = <double>[0];
+    final egress = <double>[0];
+    for (var index = 1; index < history.length; index++) {
+      final previous = history[index - 1];
+      final current = history[index];
+      final seconds =
+          current.timestamp.difference(previous.timestamp).inMilliseconds /
+          1000;
+      if (seconds <= 0) {
+        ingress.add(0);
+        egress.add(0);
+        continue;
+      }
+      final ingressDelta =
+          current.networkIngressBytes - previous.networkIngressBytes;
+      final egressDelta =
+          current.networkEgressBytes - previous.networkEgressBytes;
+      ingress.add(ingressDelta >= 0 ? ingressDelta / seconds : 0);
+      egress.add(egressDelta >= 0 ? egressDelta / seconds : 0);
+    }
+    return (ingress: ingress, egress: egress);
+  }
+}
 
-    final startIndex = (history.length - 6).clamp(0, history.length - 2);
-    var sumSeconds = 0.0;
-    var count = 0;
+class _DiskUsageCard extends StatelessWidget {
+  const _DiskUsageCard({required this.disk, required this.history});
 
-    for (var i = startIndex; i < history.length - 1; i++) {
-      final dtMs = history[i + 1].ts.difference(history[i].ts).inMilliseconds;
-      if (dtMs <= 0) continue;
-      sumSeconds += dtMs / 1000.0;
-      count++;
+  final SingleDiskUsage disk;
+  final List<HistoricalSystemStats> history;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final freeGb = (disk.totalGb - disk.usedGb).clamp(0, double.infinity);
+    final percent = disk.totalGb > 0 ? disk.usedGb / disk.totalGb * 100 : 0.0;
+    final values = <double>[];
+    for (final sample in history) {
+      for (final historicalDisk in sample.disks) {
+        if (historicalDisk.mount == disk.mount && historicalDisk.totalGb > 0) {
+          values.add(historicalDisk.usedGb / historicalDisk.totalGb * 100);
+          break;
+        }
+      }
     }
 
-    if (count == 0) return null;
-    return sumSeconds / count;
+    return DetailSubCard(
+      title: disk.mount.isEmpty ? 'Unknown mount' : disk.mount,
+      icon: AppIcons.hardDrive,
+      child: Column(
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ValuePill(
+                label: 'Filesystem',
+                value: disk.fileSystem.isEmpty ? '—' : disk.fileSystem,
+              ),
+              ValuePill(
+                label: 'Used',
+                value: '${disk.usedGb.toStringAsFixed(1)} GB',
+              ),
+              ValuePill(
+                label: 'Free',
+                value: '${freeGb.toStringAsFixed(1)} GB',
+              ),
+              ValuePill(
+                label: 'Total',
+                value: '${disk.totalGb.toStringAsFixed(1)} GB',
+              ),
+            ],
+          ),
+          const Gap(10),
+          LinearProgressIndicator(
+            value: (percent / 100).clamp(0, 1),
+            minHeight: 7,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          if (values.isNotEmpty) ...[
+            const Gap(10),
+            SizedBox(
+              height: 52,
+              width: double.infinity,
+              child: SparklineChart(
+                values: values,
+                color: scheme.tertiary,
+                capMinY: 0,
+                capMaxY: 100,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
+}
+
+enum _ProcessSort { cpu, memory, read, write }
+
+class SystemProcessesContent extends StatefulWidget {
+  const SystemProcessesContent({required this.processes, super.key});
+
+  final List<SystemProcess> processes;
+
+  @override
+  State<SystemProcessesContent> createState() => _SystemProcessesContentState();
+}
+
+class _SystemProcessesContentState extends State<SystemProcessesContent> {
+  _ProcessSort _sort = _ProcessSort.cpu;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final processes = [...widget.processes]
+      ..sort((a, b) => _sortValue(b).compareTo(_sortValue(a)));
+
+    return DetailSubCard(
+      title: 'Processes (${processes.length})',
+      icon: AppIcons.activity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: SegmentedButton<_ProcessSort>(
+              segments: const [
+                ButtonSegment(value: _ProcessSort.cpu, label: Text('CPU')),
+                ButtonSegment(value: _ProcessSort.memory, label: Text('Mem')),
+                ButtonSegment(value: _ProcessSort.read, label: Text('Read')),
+                ButtonSegment(value: _ProcessSort.write, label: Text('Write')),
+              ],
+              selected: {_sort},
+              showSelectedIcon: false,
+              style: const ButtonStyle(
+                padding: WidgetStatePropertyAll(
+                  EdgeInsets.symmetric(horizontal: 8),
+                ),
+              ),
+              onSelectionChanged: (value) =>
+                  setState(() => _sort = value.first),
+            ),
+          ),
+          const Gap(10),
+          if (processes.isEmpty)
+            Text('No process data available.', style: textTheme.bodyMedium)
+          else
+            for (final process in processes.take(50))
+              ExpansionTile(
+                key: PageStorageKey<String>(
+                  'server_process_${process.pid}',
+                ),
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(bottom: 10),
+                title: Text(
+                  process.name.isEmpty ? 'PID ${process.pid}' : process.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  'PID ${process.pid}  •  ${process.cpuPercent.toStringAsFixed(1)}%  •  ${process.memoryMb.toStringAsFixed(0)} MB',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                children: [
+                  DetailKeyValueRow(
+                    label: 'Executable',
+                    value: process.executable.isEmpty
+                        ? '—'
+                        : process.executable,
+                  ),
+                  DetailKeyValueRow(
+                    label: 'Command',
+                    value: process.command.isEmpty
+                        ? '—'
+                        : process.command.join(' '),
+                  ),
+                  DetailKeyValueRow(
+                    label: 'Disk read / write',
+                    value:
+                        '${process.diskReadKb.toStringAsFixed(0)} / ${process.diskWriteKb.toStringAsFixed(0)} KB',
+                    bottomPadding: 0,
+                  ),
+                ],
+              ),
+        ],
+      ),
+    );
+  }
+
+  double _sortValue(SystemProcess process) => switch (_sort) {
+    _ProcessSort.cpu => process.cpuPercent,
+    _ProcessSort.memory => process.memoryMb,
+    _ProcessSort.read => process.diskReadKb,
+    _ProcessSort.write => process.diskWriteKb,
+  };
 }

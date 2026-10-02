@@ -44,6 +44,11 @@ enum ResourceKind {
 }
 
 extension ResourceKindX on ResourceKind {
+  String get singularLabel => switch (this) {
+    ResourceKind.syncs => 'Sync',
+    _ => variant,
+  };
+
   static ResourceKind fromVariant(String value) {
     final normalized = value.trim().toLowerCase().replaceAll('_', '');
     return switch (normalized) {

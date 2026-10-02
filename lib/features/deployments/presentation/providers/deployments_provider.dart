@@ -3,6 +3,7 @@ import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/data/repositories/deployment_repository.dart';
+import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'deployments_provider.g.dart';
@@ -12,6 +13,7 @@ part 'deployments_provider.g.dart';
 class Deployments extends _$Deployments {
   @override
   Future<List<Deployment>> build() async {
+    ref.watch(resourceActivityProvider);
     final repository = ref.watch(deploymentRepositoryProvider);
 
     // Not authenticated yet - return empty list and wait for auth
@@ -38,6 +40,7 @@ class Deployments extends _$Deployments {
 /// Provides details for a specific deployment.
 @riverpod
 Future<Deployment?> deploymentDetail(Ref ref, String deploymentId) async {
+  ref.watch(resourceActivityProvider);
   final repository = ref.watch(deploymentRepositoryProvider);
   if (repository == null) {
     return null;
@@ -71,6 +74,9 @@ class DeploymentActions extends _$DeploymentActions {
 
   Future<bool> pullImages(String deploymentId) =>
       _executeAction((repo) => repo.pullDeployment(deploymentId));
+
+  Future<bool?> checkForUpdate(String deploymentId) =>
+      _executeRequest((repo) => repo.checkForUpdate(deploymentId));
 
   Future<bool> pause(String deploymentId) =>
       _executeAction((repo) => repo.pauseDeployment(deploymentId));
@@ -111,6 +117,7 @@ class DeploymentActions extends _$DeploymentActions {
       (_) {
         state = const AsyncValue.data(null);
         ref.invalidate(deploymentsProvider);
+        ref.read(resourceActivityProvider.notifier).markChanged();
         return true;
       },
     );
@@ -139,6 +146,7 @@ class DeploymentActions extends _$DeploymentActions {
       (value) {
         state = const AsyncValue.data(null);
         ref.invalidate(deploymentsProvider);
+        ref.read(resourceActivityProvider.notifier).markChanged();
         return value;
       },
     );

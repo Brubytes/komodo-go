@@ -43,6 +43,7 @@ class StackUpdatesTab extends ConsumerWidget {
                   icon: AppIcons.updateAvailable,
                   title: 'No updates',
                   description: 'No recent activity for this stack.',
+                  scrollable: false,
                 ),
               );
             }
@@ -87,11 +88,16 @@ class StackUpdatesTab extends ConsumerWidget {
               ),
             );
           },
-          loading: () => DetailTabScrollView.box(
-            padding: EdgeInsets.zero,
-            child: const AppSkeletonList(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 16),
-            ),
+          loading: () => DetailTabScrollView.list(
+            children: const [
+              AppSkeletonCard(showChips: false),
+              Gap(12),
+              AppSkeletonCard(showChips: false),
+              Gap(12),
+              AppSkeletonCard(showChips: false),
+              Gap(12),
+              AppSkeletonCard(showChips: false),
+            ],
           ),
           error: (error, _) => DetailTabScrollView.box(
             padding: EdgeInsets.zero,
@@ -99,6 +105,7 @@ class StackUpdatesTab extends ConsumerWidget {
               title: 'Failed to load updates',
               message: error.toString(),
               onRetry: () => ref.invalidate(stackUpdatesProvider(stackId)),
+              scrollable: false,
             ),
           ),
         ),

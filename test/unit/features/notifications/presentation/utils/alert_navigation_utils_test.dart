@@ -70,6 +70,16 @@ void main() {
         AppRoutes.komodoBuilders,
       );
     });
+
+    test('includes a resolved display name for detail route titles', () {
+      expect(
+        routeForTarget(
+          const ResourceTarget(type: ResourceTargetType.stack, id: 'st/1'),
+          displayName: 'My Stack',
+        ),
+        '${AppRoutes.stacks}/st%2F1?name=My+Stack',
+      );
+    });
   });
 
   group('routeForAlert', () {
@@ -126,17 +136,20 @@ void main() {
   });
 
   group('routeForUpdate', () {
-    test('routes update by its target', () {
+    test('routes update to its full detail', () {
       final update = _update(
         target: const ResourceTarget(type: ResourceTargetType.action, id: 'a7'),
       );
 
-      expect(routeForUpdate(update), '${AppRoutes.actions}/a7');
+      expect(routeForUpdate(update), '${AppRoutes.updateDetails}/u1');
     });
 
-    test('returns null when update has no target', () {
+    test('routes updates without targets and rejects a missing id', () {
       final update = _update(target: null);
-      expect(routeForUpdate(update), isNull);
+      expect(routeForUpdate(update), '${AppRoutes.updateDetails}/u1');
+
+      final missingId = _update(target: null, id: '');
+      expect(routeForUpdate(missingId), isNull);
     });
   });
 }
@@ -157,9 +170,9 @@ Alert _alert({AlertPayload? payload, ResourceTarget? target}) {
   );
 }
 
-UpdateListItem _update({required ResourceTarget? target}) {
+UpdateListItem _update({required ResourceTarget? target, String id = 'u1'}) {
   return UpdateListItem(
-    id: 'u1',
+    id: id,
     operation: 'RunAction',
     startTs: 1,
     success: true,

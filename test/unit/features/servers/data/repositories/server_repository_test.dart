@@ -4,12 +4,12 @@ import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
 import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 import 'package:komodo_go/features/servers/data/repositories/server_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockApiClient extends Mock implements KomodoApiClient {
-  KomodoApiCapabilities capabilitiesValue =
-      KomodoApiCapabilities.v23AndNewer;
+  KomodoApiCapabilities capabilitiesValue = KomodoApiCapabilities.v23AndNewer;
 
   @override
   KomodoApiCapabilities get capabilities => capabilitiesValue;
@@ -130,23 +130,93 @@ void main() {
       expect(request.params, <String, dynamic>{'server': 'server-1'});
     });
 
-    test('getSystemInformation sends GetSystemInformation with server param',
-        () async {
-      when(
-        () => client.read(any()),
-      ).thenAnswer((_) async => <String, dynamic>{});
+    test('historical stats use API granularity and parse records', () async {
+      when(() => client.read(any())).thenAnswer(
+        (_) async => <String, dynamic>{
+          'stats': [
+            {
+              'ts': 1710000000000,
+              'cpu_perc': 12.5,
+              'mem_used_gb': 4,
+              'mem_total_gb': 8,
+              'disk_used_gb': 50,
+              'disk_total_gb': 100,
+              'network_ingress_bytes': 2000,
+              'network_egress_bytes': 1000,
+              'disks': [
+                {
+                  'mount': '/',
+                  'file_system': 'ext4',
+                  'used_gb': 50,
+                  'total_gb': 100,
+                },
+              ],
+            },
+          ],
+          'next_page': 1,
+        },
+      );
 
-      final result = await repository.getSystemInformation('server-1');
+      final result = await repository.getHistoricalSystemStats(
+        serverIdOrName: 'server-1',
+        granularity: ServerStatsGranularity.fiveMinutes,
+      );
 
-      _rightOrFail(result);
-
+      final page = _rightOrFail(result);
+      expect(page.nextPage, 1);
+      expect(page.stats.single.memPercent, 50);
+      expect(page.stats.single.disks.single.mount, '/');
       final request = capturedRead();
-      expect(request.type, 'GetSystemInformation');
-      expect(request.params, <String, dynamic>{'server': 'server-1'});
+      expect(request.type, 'GetHistoricalServerStats');
+      expect(request.params, <String, dynamic>{
+        'server': 'server-1',
+        'granularity': '5-min',
+        'page': 0,
+      });
     });
 
-    test('listDockerNetworks sends ListNetworks and parses names',
-        () async {
+    test('listSystemProcesses parses process metrics', () async {
+      when(() => client.read(any())).thenAnswer(
+        (_) async => [
+          {
+            'pid': 42,
+            'name': 'worker',
+            'exe': '/usr/bin/worker',
+            'cmd': ['worker', '--serve'],
+            'cpu_perc': 8.5,
+            'mem_mb': 128,
+            'disk_read_kb': 20,
+            'disk_write_kb': 10,
+          },
+        ],
+      );
+
+      final process = _rightOrFail(
+        await repository.listSystemProcesses('server-1'),
+      ).single;
+      expect(process.pid, 42);
+      expect(process.command, ['worker', '--serve']);
+      expect(capturedRead().type, 'ListSystemProcesses');
+    });
+
+    test(
+      'getSystemInformation sends GetSystemInformation with server param',
+      () async {
+        when(
+          () => client.read(any()),
+        ).thenAnswer((_) async => <String, dynamic>{});
+
+        final result = await repository.getSystemInformation('server-1');
+
+        _rightOrFail(result);
+
+        final request = capturedRead();
+        expect(request.type, 'GetSystemInformation');
+        expect(request.params, <String, dynamic>{'server': 'server-1'});
+      },
+    );
+
+    test('listDockerNetworks sends ListNetworks and parses names', () async {
       when(() => client.read(any())).thenAnswer(
         (_) async => [
           {'name': ' bridge '},
@@ -173,26 +243,28 @@ void main() {
       expect(capturedRead().type, 'ListDockerNetworks');
     });
 
-    test('updateServerConfig sends UpdateServer via write with id and config',
-        () async {
-      when(() => client.write(any())).thenAnswer(
-        (_) async => <String, dynamic>{'id': 'server-1', 'name': 'alpha'},
-      );
+    test(
+      'updateServerConfig sends UpdateServer via write with id and config',
+      () async {
+        when(() => client.write(any())).thenAnswer(
+          (_) async => <String, dynamic>{'id': 'server-1', 'name': 'alpha'},
+        );
 
-      final result = await repository.updateServerConfig(
-        serverId: 'server-1',
-        partialConfig: {'address': 'https://periphery:8120'},
-      );
+        final result = await repository.updateServerConfig(
+          serverId: 'server-1',
+          partialConfig: {'address': 'https://periphery:8120'},
+        );
 
-      expect(_rightOrFail(result).id, 'server-1');
+        expect(_rightOrFail(result).id, 'server-1');
 
-      final request = capturedWrite();
-      expect(request.type, 'UpdateServer');
-      expect(request.params, <String, dynamic>{
-        'id': 'server-1',
-        'config': {'address': 'https://periphery:8120'},
-      });
-      verifyNever(() => client.execute(any()));
-    });
+        final request = capturedWrite();
+        expect(request.type, 'UpdateServer');
+        expect(request.params, <String, dynamic>{
+          'id': 'server-1',
+          'config': {'address': 'https://periphery:8120'},
+        });
+        verifyNever(() => client.execute(any()));
+      },
+    );
   });
 }

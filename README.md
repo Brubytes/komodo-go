@@ -56,8 +56,10 @@ Note: Xcode UI tests often run on a temporary cloned simulator instance, which m
 ## Releases
 
 - `rc-*` tags trigger Codemagic signed build verification (`release-verify-android`, `release-verify-ios`) without publishing.
+- RC verification includes static analysis and the unit/widget suite. CI enforces `pubspec.lock` so verification and publishing use the same resolved packages.
 - `v*` tags trigger actual release workflows (`release-android`, `release-ios`).
 - Release version name is taken from the tag (for example `v1.2.3` -> `1.2.3`), while release build number is auto-incremented from Google Play/TestFlight.
+- Version 0.6.0 requires iOS 15 or later.
 
 Use the interactive helper from the repository root:
 
@@ -65,7 +67,7 @@ Use the interactive helper from the repository root:
 ./scripts/release_tag.sh
 ```
 
-The helper can also optionally create a GitHub Release for `v*` tags when `gh` is installed and authenticated.
+The helper can also optionally create a GitHub Release for `v*` tags when `gh` is installed and authenticated. If `release-notes/<version>.md` exists, the helper uses those curated notes; otherwise it generates notes from merged changes.
 On non-`main` branches, it can also open a PR to `main` for version-bump commits.
 
 ## Demo mode

@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/demo/demo_config.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/providers/demo_mode_provider.dart';
 import 'package:komodo_go/core/providers/onboarding_provider.dart';
@@ -44,6 +45,7 @@ class LoginView extends HookConsumerWidget {
     );
 
     final showAddForm = useState(false);
+    final selectedConnection = useState<ConnectionProfile?>(null);
     final obscureSecret = useState(true);
     final obscureProxyAuthPassword = useState(true);
     final showAdvancedConfig = useState(
@@ -292,6 +294,8 @@ class LoginView extends HookConsumerWidget {
                                       onTap: authState.isLoading
                                           ? null
                                           : () async {
+                                              selectedConnection.value =
+                                                  connection;
                                               await ref
                                                   .read(authProvider.notifier)
                                                   .selectConnection(
@@ -303,6 +307,17 @@ class LoginView extends HookConsumerWidget {
                                           : () => showConnectionActions(
                                               connection,
                                             ),
+                                      trailing:
+                                          authState.isLoading &&
+                                              selectedConnection.value?.id ==
+                                                  connection.id
+                                          ? const SizedBox.square(
+                                              dimension: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : null,
                                     ),
                                 ],
                               ),
@@ -330,38 +345,29 @@ class LoginView extends HookConsumerWidget {
                         );
                       },
                       loading: () => const SizedBox.shrink(),
-                      error: (error, stackTrace) => const SizedBox.shrink(),
+                      error: (error, stackTrace) => const _InlineErrorCard(
+                        title: 'Saved connections unavailable',
+                        message:
+                            'The saved connection list could not be loaded. Restart the app and try again.',
+                      ),
                     ),
 
                     // Error message
-                    if (authState.value is AuthStateError) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.error.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              AppIcons.formError,
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                            const Gap(8),
-                            Expanded(
-                              child: Text(
-                                (authState.value! as AuthStateError)
-                                    .failure
-                                    .displayMessage,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
+                    if (_authErrorMessage(authState) case final message?) ...[
+                      _InlineErrorCard(
+                        title: selectedConnection.value == null
+                            ? 'Connection failed'
+                            : 'Could not connect to ${selectedConnection.value!.name}',
+                        message: message,
+                        actionLabel: selectedConnection.value == null
+                            ? null
+                            : 'Edit credentials',
+                        onAction: selectedConnection.value == null
+                            ? null
+                            : () => EditConnectionSheet.show(
+                                context,
+                                connection: selectedConnection.value!,
                               ),
-                            ),
-                          ],
-                        ),
                       ),
                       const Gap(16),
                     ],
@@ -412,7 +418,8 @@ class LoginView extends HookConsumerWidget {
 
                           final uri = Uri.tryParse(trimmed);
                           final hasValidScheme =
-                              uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+                              uri != null &&
+                              (uri.scheme == 'http' || uri.scheme == 'https');
                           final hasHost = uri != null && uri.host.isNotEmpty;
 
                           if (!hasValidScheme || !hasHost) {
@@ -541,6 +548,83 @@ class LoginView extends HookConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+String? _authErrorMessage(AsyncValue<AuthState> authState) {
+  return authState.when(
+    data: (state) => switch (state) {
+      AuthStateError(:final failure) => failure.displayMessage,
+      _ => null,
+    },
+    error: (error, stackTrace) => switch (error) {
+      FailureException(:final failure) => failure.displayMessage,
+      _ =>
+        'The connection could not be opened because its saved data could not be read. '
+            'Edit the connection and save its credentials again, then retry.',
+    },
+    loading: () => null,
+  );
+}
+
+class _InlineErrorCard extends StatelessWidget {
+  const _InlineErrorCard({
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(AppIcons.formError, color: colorScheme.error),
+          const Gap(8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Gap(4),
+                Text(message, style: TextStyle(color: colorScheme.error)),
+                if (actionLabel case final label? when onAction != null) ...[
+                  const Gap(4),
+                  TextButton(
+                    onPressed: onAction,
+                    style: TextButton.styleFrom(
+                      foregroundColor: colorScheme.error,
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: Text(label),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

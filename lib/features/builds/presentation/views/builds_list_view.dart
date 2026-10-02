@@ -10,6 +10,7 @@ import 'package:komodo_go/core/widgets/resource_list/resource_list_view.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
 import 'package:komodo_go/features/builds/presentation/widgets/build_card.dart';
+import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
 
@@ -42,6 +43,7 @@ final _buildsListConfig = ResourceListConfig<BuildListItem>(
   isTemplate: (item) => item.template,
   tagsOf: (item) => item.tags,
   searchFieldsOf: (item) => [item.name],
+  batchItemOf: (item) => ResourceBatchItem(id: item.id, name: item.name),
   cardBuilder: (context, ref, item, displayTags) => BuildCard(
     buildItem: item,
     displayTags: displayTags,
@@ -68,7 +70,7 @@ Future<void> _handleAction(
     AppSnackBar.show(
       context,
       success
-          ? 'Action completed successfully'
+          ? 'Action submitted. Check updates for the result.'
           : 'Action failed. Please try again.',
       tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
     );

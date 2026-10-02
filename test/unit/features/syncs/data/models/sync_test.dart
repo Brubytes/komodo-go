@@ -53,5 +53,60 @@ void main() {
       expect(sync.info.lastSyncTs, 1);
       expect(sync.info.lastSyncHash, 'deadbeef');
     });
+
+    test('parses proposed diffs, deploy plan, and editable remote files', () {
+      final sync = KomodoResourceSync.fromJson({
+        'id': 'sync-1',
+        'name': 'main',
+        'config': <String, dynamic>{},
+        'info': <String, dynamic>{
+          'resource_updates': <Object?>[
+            <String, dynamic>{
+              'target': <String, dynamic>{'type': 'Stack', 'id': 'stack-1'},
+              'data': <String, dynamic>{
+                'type': 'Update',
+                'data': <String, dynamic>{
+                  'current': 'old',
+                  'proposed': 'new',
+                },
+              },
+            },
+            <String, dynamic>{
+              'target': <String, dynamic>{'type': 'Deployment', 'id': ''},
+              'data': <String, dynamic>{
+                'type': 'Create',
+                'data': <String, dynamic>{
+                  'name': 'api',
+                  'proposed': 'create',
+                },
+              },
+            },
+          ],
+          'pending_deploys': <Object?>[
+            <String, dynamic>{
+              'target': <String, dynamic>{'type': 'Stack', 'id': 'stack-1'},
+              'reason': 'config changed',
+              'after': <Object?>[],
+            },
+          ],
+          'remote_contents': <Object?>[
+            <String, dynamic>{
+              'resource_path': 'resources',
+              'path': 'stacks.toml',
+              'contents': '[[stack]]',
+            },
+          ],
+        },
+      });
+
+      expect(sync.info.resourceUpdates, hasLength(2));
+      expect(
+        sync.info.resourceUpdates.first.data.operation,
+        SyncDiffOperation.update,
+      );
+      expect(sync.info.resourceUpdates.last.name, 'api');
+      expect(sync.info.pendingDeploys.single.reason, 'config changed');
+      expect(sync.info.remoteContents.single.path, 'stacks.toml');
+    });
   });
 }

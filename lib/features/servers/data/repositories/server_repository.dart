@@ -74,6 +74,47 @@ class ServerRepository {
     });
   }
 
+  /// Gets database-backed historical system stats for charting.
+  Future<Either<Failure, HistoricalSystemStatsPage>> getHistoricalSystemStats({
+    required String serverIdOrName,
+    required ServerStatsGranularity granularity,
+    int page = 0,
+  }) async {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'GetHistoricalServerStats',
+          params: {
+            'server': serverIdOrName,
+            'granularity': granularity.apiValue,
+            'page': page,
+          },
+        ),
+      );
+      return HistoricalSystemStatsPage.fromJson(
+        response as Map<String, dynamic>,
+      );
+    });
+  }
+
+  /// Lists the processes cached for a server.
+  Future<Either<Failure, List<SystemProcess>>> listSystemProcesses(
+    String serverIdOrName,
+  ) async {
+    return apiCall(() async {
+      final response = await _client.read(
+        RpcRequest(
+          type: 'ListSystemProcesses',
+          params: {'server': serverIdOrName},
+        ),
+      );
+      return (response as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(SystemProcess.fromJson)
+          .toList(growable: false);
+    });
+  }
+
   /// Gets system information for a server.
   Future<Either<Failure, SystemInformation>> getSystemInformation(
     String serverIdOrName,

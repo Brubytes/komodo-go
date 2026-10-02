@@ -36,7 +36,12 @@ void main() {
       expect(capabilities.supportsMultipleServerBuilders, isFalse);
       expect(capabilities.supportsDeploymentCustomName, isFalse);
       expect(capabilities.supportsActionCancellation, isFalse);
+      expect(
+        capabilities.encodeResourceTarget(type: 'Stack', id: 'stack-1'),
+        <String, dynamic>{'type': 'Stack', 'id': 'stack-1'},
+      );
       expect(capabilities.listContainersRpc, 'ListDockerContainers');
+      expect(capabilities.inspectContainerRpc, 'InspectDockerContainer');
       expect(capabilities.listNetworksRpc, 'ListDockerNetworks');
       expect(
         capabilities.listRegistryAccountsRpc,
@@ -66,7 +71,12 @@ void main() {
       expect(capabilities.supportsMultipleServerBuilders, isTrue);
       expect(capabilities.supportsDeploymentCustomName, isTrue);
       expect(capabilities.supportsActionCancellation, isTrue);
+      expect(
+        capabilities.encodeResourceTarget(type: 'Stack', id: 'stack-1'),
+        <String, dynamic>{'type': 'Stack', 'id': 'stack-1'},
+      );
       expect(capabilities.listContainersRpc, 'ListContainers');
+      expect(capabilities.inspectContainerRpc, 'InspectContainer');
       expect(capabilities.listNetworksRpc, 'ListNetworks');
       expect(
         capabilities.listRegistryAccountsRpc,

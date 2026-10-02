@@ -17,9 +17,9 @@ PreferredSizeWidget buildDetailTabBar({
 }) {
   final scheme = Theme.of(context).colorScheme;
   final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-        fontSize: 10,
-        height: 1.1,
-      );
+    fontSize: 10,
+    height: 1.1,
+  );
 
   ValueChanged<int>? resolvedOnTap;
   if (onTap != null ||
@@ -63,22 +63,22 @@ PreferredSizeWidget buildDetailTabBar({
                       curve: Curves.easeOutCubic,
                     )
                     .then((_) {
-                  if (!debugScrollLogging || !kDebugMode) return;
-                  if (nestedState.outerController.hasClients) {
-                    final outerPos = nestedState.outerController.position;
-                    log(
-                      'after outerPixels=${outerPos.pixels.toStringAsFixed(1)} '
-                      'outerMax=${outerPos.maxScrollExtent.toStringAsFixed(1)}',
-                    );
-                  }
-                  if (inner.hasClients) {
-                    final innerPos = inner.position;
-                    log(
-                      'after innerPixels=${innerPos.pixels.toStringAsFixed(1)} '
-                      'innerMax=${innerPos.maxScrollExtent.toStringAsFixed(1)}',
-                    );
-                  }
-                }),
+                      if (!debugScrollLogging || !kDebugMode) return;
+                      if (nestedState.outerController.hasClients) {
+                        final outerPos = nestedState.outerController.position;
+                        log(
+                          'after outerPixels=${outerPos.pixels.toStringAsFixed(1)} '
+                          'outerMax=${outerPos.maxScrollExtent.toStringAsFixed(1)}',
+                        );
+                      }
+                      if (inner.hasClients) {
+                        final innerPos = inner.position;
+                        log(
+                          'after innerPixels=${innerPos.pixels.toStringAsFixed(1)} '
+                          'innerMax=${innerPos.maxScrollExtent.toStringAsFixed(1)}',
+                        );
+                      }
+                    }),
               );
               return;
             }
@@ -102,12 +102,10 @@ PreferredSizeWidget buildDetailTabBar({
           'min=${position.minScrollExtent.toStringAsFixed(1)} '
           'max=${position.maxScrollExtent.toStringAsFixed(1)})',
         );
-        unawaited(
-          scrollController.animateTo(
-            target,
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-          ),
+        scrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
         );
       }
 

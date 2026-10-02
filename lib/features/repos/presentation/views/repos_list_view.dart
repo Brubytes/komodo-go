@@ -10,6 +10,7 @@ import 'package:komodo_go/core/widgets/resource_list/resource_list_view.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
 import 'package:komodo_go/features/repos/presentation/widgets/repo_card.dart';
+import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
 
@@ -49,6 +50,7 @@ final _reposListConfig = ResourceListConfig<RepoListItem>(
     item.info.repoLink,
     item.info.state.displayName,
   ],
+  batchItemOf: (item) => ResourceBatchItem(id: item.id, name: item.name),
   cardBuilder: (context, ref, item, displayTags) => RepoCard(
     repo: item,
     displayTags: displayTags,
@@ -76,7 +78,7 @@ Future<void> _handleAction(
     AppSnackBar.show(
       context,
       success
-          ? 'Action completed successfully'
+          ? 'Action submitted. Check updates for the result.'
           : 'Action failed. Please try again.',
       tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
     );

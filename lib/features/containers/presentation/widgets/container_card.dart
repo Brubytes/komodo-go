@@ -153,17 +153,7 @@ class ContainerCard extends StatelessWidget {
   }
 
   bool _hasActions(ContainerState state) {
-    final canStop =
-        state == ContainerState.running ||
-        state == ContainerState.paused ||
-        state == ContainerState.restarting;
-    final canRestart =
-        state == ContainerState.running ||
-        state == ContainerState.paused ||
-        state == ContainerState.restarting ||
-        state == ContainerState.exited ||
-        state == ContainerState.created;
-    return canStop || canRestart;
+    return state != ContainerState.removing;
   }
 
   List<PopupMenuEntry<ContainerAction>> _buildMenuItems(
@@ -184,6 +174,46 @@ class ContainerCard extends StatelessWidget {
         state == ContainerState.restarting ||
         state == ContainerState.exited ||
         state == ContainerState.created;
+    final canStart =
+        state == ContainerState.exited ||
+        state == ContainerState.created ||
+        state == ContainerState.dead;
+    final canPause = state == ContainerState.running;
+    final canUnpause = state == ContainerState.paused;
+
+    if (canStart) {
+      items.add(
+        komodoPopupMenuItem(
+          key: ValueKey('container_card_start_$keyId'),
+          value: ContainerAction.start,
+          icon: AppIcons.play,
+          label: 'Start',
+          iconColor: scheme.primary,
+        ),
+      );
+    }
+    if (canPause) {
+      items.add(
+        komodoPopupMenuItem(
+          key: ValueKey('container_card_pause_$keyId'),
+          value: ContainerAction.pause,
+          icon: AppIcons.pause,
+          label: 'Pause',
+          iconColor: scheme.tertiary,
+        ),
+      );
+    }
+    if (canUnpause) {
+      items.add(
+        komodoPopupMenuItem(
+          key: ValueKey('container_card_unpause_$keyId'),
+          value: ContainerAction.unpause,
+          icon: AppIcons.play,
+          label: 'Unpause',
+          iconColor: scheme.primary,
+        ),
+      );
+    }
 
     if (canRestart) {
       items.add(
@@ -207,6 +237,15 @@ class ContainerCard extends StatelessWidget {
         ),
       );
     }
+    items.add(
+      komodoPopupMenuItem(
+        key: ValueKey('container_card_remove_$keyId'),
+        value: ContainerAction.remove,
+        icon: AppIcons.delete,
+        label: 'Remove',
+        iconColor: scheme.error,
+      ),
+    );
 
     return items;
   }
@@ -537,4 +576,4 @@ String _formatPorts(List<ContainerPort> ports) {
 }
 
 /// Actions available for a container.
-enum ContainerAction { restart, stop }
+enum ContainerAction { start, restart, pause, unpause, stop, remove }

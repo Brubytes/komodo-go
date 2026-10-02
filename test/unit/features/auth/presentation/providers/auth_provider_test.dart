@@ -33,6 +33,8 @@ void main() {
   });
 
   late Map<String, String> secureValues;
+  late bool throwOnSecureRead;
+  late bool throwOnSecureWrite;
   late _MockAuthRepository authRepository;
   late ProviderContainer container;
 
@@ -44,6 +46,9 @@ void main() {
         value: any(named: 'value'),
       ),
     ).thenAnswer((invocation) async {
+      if (throwOnSecureWrite) {
+        throw Exception('Secure storage write unavailable');
+      }
       final key = invocation.namedArguments[#key] as String;
       final value = invocation.namedArguments[#value] as String?;
       if (value == null) {
@@ -52,10 +57,14 @@ void main() {
         secureValues[key] = value;
       }
     });
-    when(() => storage.read(key: any(named: 'key'))).thenAnswer(
-      (invocation) async =>
-          secureValues[invocation.namedArguments[#key] as String],
-    );
+    when(() => storage.read(key: any(named: 'key'))).thenAnswer((invocation) {
+      if (throwOnSecureRead) {
+        throw Exception('Secure storage unavailable');
+      }
+      return Future<String?>.value(
+        secureValues[invocation.namedArguments[#key] as String],
+      );
+    });
     when(() => storage.delete(key: any(named: 'key'))).thenAnswer(
       (invocation) async {
         secureValues.remove(invocation.namedArguments[#key] as String);
@@ -75,6 +84,8 @@ void main() {
 
   setUp(() {
     secureValues = <String, String>{};
+    throwOnSecureRead = false;
+    throwOnSecureWrite = false;
     authRepository = _MockAuthRepository();
     SharedPreferences.setMockInitialValues({onboardingSeenKey: true});
     container = createContainer();
@@ -106,17 +117,97 @@ void main() {
       expect(container.read(komodoCoreVersionProvider)?.display, 'v2.3.0');
     });
 
-    test('failed validation surfaces an error state, not authenticated',
-        () async {
-      when(
-        () => authRepository.validateCredentials(any()),
-      ).thenAnswer((_) async => const Left(Failure.auth()));
-      await seedConnection();
+    test(
+      'failed validation surfaces an error state, not authenticated',
+      () async {
+        when(
+          () => authRepository.validateCredentials(any()),
+        ).thenAnswer((_) async => const Left(Failure.auth()));
+        await seedConnection();
+
+        final state = await container.read(authProvider.future);
+
+        expect(state.isAuthenticated, isFalse);
+        expect(state, isA<AuthStateError>());
+        expect(
+          (state as AuthStateError).failure.displayMessage,
+          contains('Could not connect to "Homelab"'),
+        );
+      },
+    );
+
+    test('missing saved credentials surface recovery instructions', () async {
+      final connectionId = await seedConnection();
+      final store = await container.read(connectionsStoreProvider.future);
+      await store.deleteCredentials(connectionId);
 
       final state = await container.read(authProvider.future);
 
-      expect(state.isAuthenticated, isFalse);
       expect(state, isA<AuthStateError>());
+      expect(
+        (state as AuthStateError).failure.displayMessage,
+        allOf(
+          contains('saved credentials for "Homelab" are unavailable'),
+          contains('choose Edit'),
+          contains('API key and secret'),
+        ),
+      );
+      verifyNever(() => authRepository.validateCredentials(any()));
+    });
+
+    test(
+      'selecting a connection with missing credentials surfaces feedback',
+      () async {
+        when(
+          () => authRepository.validateCredentials(any()),
+        ).thenAnswer((_) async => Right(_coreVersion));
+        await seedConnection();
+        await container.read(authProvider.future);
+
+        final store = await container.read(connectionsStoreProvider.future);
+        final unavailable = await store.addConnection(
+          name: 'Production VPS',
+          credentials: _credentials,
+        );
+        await store.deleteCredentials(unavailable.id);
+        await container.read(connectionsProvider.notifier).reload();
+        await container.read(authProvider.future);
+        clearInteractions(authRepository);
+
+        await container
+            .read(authProvider.notifier)
+            .selectConnection(unavailable.id);
+        await container.pump();
+
+        final state = container.read(authProvider).value;
+        expect(state, isA<AuthStateError>());
+        expect(
+          (state! as AuthStateError).failure.displayMessage,
+          allOf(
+            contains('saved credentials for "Production VPS" are unavailable'),
+            contains('choose Edit'),
+          ),
+        );
+        verifyNever(() => authRepository.validateCredentials(any()));
+      },
+    );
+
+    test('secure storage errors surface recovery instructions', () async {
+      await seedConnection();
+      throwOnSecureRead = true;
+
+      final state = await container.read(authProvider.future);
+
+      expect(state, isA<AuthStateError>());
+      expect(
+        (state as AuthStateError).failure.displayMessage,
+        allOf(
+          contains('Could not read the saved credentials for "Homelab"'),
+          contains('secure storage'),
+          contains('choose Edit'),
+        ),
+      );
+      verifyNever(() => authRepository.validateCredentials(any()));
     });
 
     test('login persists the connection and credentials', () async {
@@ -145,12 +236,14 @@ void main() {
         isFalse,
       );
 
-      await container.read(authProvider.notifier).login(
-        baseUrl: 'https://komodo.example',
-        apiKey: 'key',
-        apiSecret: 'secret',
-        name: 'Homelab',
-      );
+      await container
+          .read(authProvider.notifier)
+          .login(
+            baseUrl: 'https://komodo.example',
+            apiKey: 'key',
+            apiSecret: 'secret',
+            name: 'Homelab',
+          );
 
       final state = container.read(authProvider).value;
       expect(state?.isAuthenticated, isTrue);
@@ -161,6 +254,50 @@ void main() {
       expect(stored?.apiKey, 'key');
       expect(stored?.apiSecret, 'secret');
     });
+
+    test(
+      'login reports secure storage failures without adding a profile',
+      () async {
+        when(
+          () => authRepository.authenticate(
+            baseUrl: any(named: 'baseUrl'),
+            apiKey: any(named: 'apiKey'),
+            apiSecret: any(named: 'apiSecret'),
+            proxyAuthEnabled: any(named: 'proxyAuthEnabled'),
+            proxyAuthUsername: any(named: 'proxyAuthUsername'),
+            proxyAuthPassword: any(named: 'proxyAuthPassword'),
+            customHeaders: any(named: 'customHeaders'),
+          ),
+        ).thenAnswer((_) async => const Right(_credentials));
+
+        SharedPreferences.setMockInitialValues({onboardingSeenKey: false});
+        container.dispose();
+        container = createContainer();
+        expect(
+          (await container.read(authProvider.future)).isAuthenticated,
+          isFalse,
+        );
+        throwOnSecureWrite = true;
+
+        await container
+            .read(authProvider.notifier)
+            .login(
+              baseUrl: 'https://komodo.example',
+              apiKey: 'key',
+              apiSecret: 'secret',
+              name: 'Homelab',
+            );
+
+        final state = container.read(authProvider).value;
+        expect(state, isA<AuthStateError>());
+        expect(
+          (state! as AuthStateError).failure.displayMessage,
+          contains('could not be saved securely'),
+        );
+        final store = await container.read(connectionsStoreProvider.future);
+        expect(await store.listConnections(), isEmpty);
+      },
+    );
 
     test('logout clears the active connection and authentication', () async {
       when(

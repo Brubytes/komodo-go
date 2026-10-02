@@ -11,12 +11,15 @@ import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/filters/template_filter.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_filters_provider.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/servers/presentation/widgets/server_card.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 /// View displaying the list of all servers.
@@ -32,7 +35,7 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
   late final FocusNode _searchFocusNode;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
-  bool _isFiltersVisible = false;
+  bool _areFiltersExpanded = false;
 
   @override
   void initState() {
@@ -113,14 +116,10 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
               }
             },
           ),
-          IconButton(
-            tooltip: _isFiltersVisible ? 'Hide filters' : 'Filters',
-            icon: Icon(
-              _isFiltersVisible ? Icons.tune : Icons.tune_outlined,
-            ),
-            onPressed: () => setState(() {
-              _isFiltersVisible = !_isFiltersVisible;
-            }),
+          ResourceListActionsMenu(
+            kind: ResourceKind.servers,
+            onCreate: () => context.push('${AppRoutes.servers}/new'),
+            onRefresh: () => ref.read(serversProvider.notifier).refresh(),
           ),
         ],
       ),
@@ -133,49 +132,67 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
               duration: AppMotion.base,
               switchInCurve: AppMotion.enterCurve,
               switchOutCurve: AppMotion.exitCurve,
-              child: _isFiltersVisible
-                  ? _FiltersPanel(
-                      templateFilter: templateFilter,
-                      selectedTags: selectedTags,
-                      availableTags: availableTags,
-                      tagNameById: tagNameById,
-                      onTemplateFilterChanged: (value) =>
-                          ref
-                                  .read(
-                                    serversTemplateFilterStateProvider.notifier,
-                                  )
-                                  .value =
-                              value,
-                      onSelectTags: (value) =>
-                          ref.read(serversTagFilterProvider.notifier).selected =
-                              value,
-                      onClearTags: () =>
-                          ref.read(serversTagFilterProvider.notifier).clear(),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-            if (_isFiltersVisible) const Gap(12),
-            AnimatedSwitcher(
-              duration: AppMotion.base,
-              switchInCurve: AppMotion.enterCurve,
-              switchOutCurve: AppMotion.exitCurve,
               child: _isSearchVisible
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: _SearchField(
-                        focusNode: _searchFocusNode,
-                        controller: _searchController,
-                        onChanged: (value) =>
+                  ? Column(
+                      key: const ValueKey('resource_search_and_filters'),
+                      children: [
+                        _SearchField(
+                          focusNode: _searchFocusNode,
+                          controller: _searchController,
+                          onChanged: (value) =>
+                              ref
+                                      .read(
+                                        serversSearchQueryProvider.notifier,
+                                      )
+                                      .query =
+                                  value,
+                          onClear: () {
+                            _searchController.clear();
                             ref
-                                    .read(serversSearchQueryProvider.notifier)
+                                    .read(
+                                      serversSearchQueryProvider.notifier,
+                                    )
                                     .query =
-                                value,
-                        onClear: () {
-                          _searchController.clear();
-                          ref.read(serversSearchQueryProvider.notifier).query =
-                              '';
-                        },
-                      ),
+                                '';
+                          },
+                        ),
+                        const Gap(10),
+                        ResourceFilterDisclosure(
+                          expanded: _areFiltersExpanded,
+                          activeFilterCount:
+                              selectedTags.length +
+                              (templateFilter == TemplateFilter.exclude
+                                  ? 0
+                                  : 1),
+                          onExpansionChanged: (value) => setState(
+                            () => _areFiltersExpanded = value,
+                          ),
+                          child: _FiltersPanel(
+                            templateFilter: templateFilter,
+                            selectedTags: selectedTags,
+                            availableTags: availableTags,
+                            tagNameById: tagNameById,
+                            onTemplateFilterChanged: (value) =>
+                                ref
+                                        .read(
+                                          serversTemplateFilterStateProvider
+                                              .notifier,
+                                        )
+                                        .value =
+                                    value,
+                            onSelectTags: (value) =>
+                                ref
+                                        .read(
+                                          serversTagFilterProvider.notifier,
+                                        )
+                                        .selected =
+                                    value,
+                            onClearTags: () => ref
+                                .read(serversTagFilterProvider.notifier)
+                                .clear(),
+                          ),
+                        ),
+                      ],
                     )
                   : const SizedBox.shrink(),
             ),

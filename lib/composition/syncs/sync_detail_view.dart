@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/composition/syncs/advanced_sync_section.dart';
 import 'package:komodo_go/composition/syncs/sync_detail_sections.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -15,6 +17,8 @@ import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/models/resource_metadata.dart';
 
 /// View displaying detailed sync information.
 class SyncDetailView extends ConsumerStatefulWidget {
@@ -43,6 +47,7 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
     final reposAsync = ref.watch(reposProvider);
     final gitProvidersAsync = ref.watch(gitProvidersProvider);
     final scheme = Theme.of(context).colorScheme;
+    final sync = syncAsync.asData?.value;
 
     final repos = reposAsync.asData?.value ?? const <RepoListItem>[];
     final gitProviders =
@@ -56,12 +61,28 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
         markUseGradient: true,
         centerTitle: true,
         actions: [
+          if (sync != null)
+            ResourceAdvancedMenuButton(
+              metadata: ResourceMetadata(
+                kind: ResourceKind.syncs,
+                id: sync.id,
+                name: sync.name,
+                description: sync.description,
+                template: sync.template,
+                tags: sync.tags,
+              ),
+              onMutated: () {
+                ref
+                  ..invalidate(syncsProvider)
+                  ..invalidate(syncDetailProvider(widget.syncId));
+              },
+            ),
           IconButton(
-            icon: const Icon(AppIcons.play),
-            tooltip: 'Run',
+            icon: const Icon(Icons.account_tree_outlined),
+            tooltip: 'Refresh proposed sync plan',
             onPressed: actionsState.isLoading
                 ? null
-                : () => _runSync(context, widget.syncId),
+                : () => _previewSync(widget.syncId),
           ),
         ],
       ),
@@ -92,6 +113,15 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
                                   onDiscard: () => _discardConfig(sync),
                                   onSave: () => _saveConfig(sync: sync),
                                 );
+                              },
+                            ),
+                            const Gap(16),
+                            AdvancedSyncSection(
+                              syncResource: sync,
+                              onUpdated: (_) {
+                                ref
+                                  ..invalidate(syncDetailProvider(sync.id))
+                                  ..invalidate(syncsProvider);
                               },
                             ),
                             const Gap(16),
@@ -192,25 +222,25 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
     }
   }
 
-  Future<void> _runSync(BuildContext context, String syncId) async {
+  Future<void> _previewSync(String syncId) async {
     final actions = ref.read(syncActionsProvider.notifier);
-    final success = await actions.run(syncId);
+    final updated = await actions.refreshPending(syncId);
 
     if (!mounted) return;
 
-    if (success) {
+    if (updated != null) {
       ref
         ..invalidate(syncDetailProvider(syncId))
         ..invalidate(syncsProvider);
     }
 
-    if (context.mounted) {
-      AppSnackBar.show(
-        context,
-        success ? 'Sync started' : 'Action failed. Please try again.',
-        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
-      );
-    }
+    AppSnackBar.show(
+      context,
+      updated != null
+          ? 'Proposed sync plan refreshed below.'
+          : 'Failed to refresh sync plan.',
+      tone: updated != null ? AppSnackBarTone.success : AppSnackBarTone.error,
+    );
   }
 }
 

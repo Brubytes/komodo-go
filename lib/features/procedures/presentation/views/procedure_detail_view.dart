@@ -20,11 +20,13 @@ class ProcedureDetailView extends ConsumerStatefulWidget {
   const ProcedureDetailView({
     required this.procedureId,
     required this.procedureName,
+    this.appBarActions = const <Widget>[],
     super.key,
   });
 
   final String procedureId;
   final String procedureName;
+  final List<Widget> appBarActions;
 
   @override
   ConsumerState<ProcedureDetailView> createState() =>
@@ -81,6 +83,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
         markUseGradient: true,
         centerTitle: true,
         actions: [
+          ...widget.appBarActions,
           IconButton(
             icon: const Icon(AppIcons.play),
             tooltip: 'Run',

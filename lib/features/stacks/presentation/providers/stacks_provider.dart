@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/data/repositories/stack_repository.dart';
+import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'stacks_provider.g.dart';
@@ -12,6 +15,7 @@ part 'stacks_provider.g.dart';
 class Stacks extends _$Stacks {
   @override
   Future<List<StackListItem>> build() async {
+    ref.watch(resourceActivityProvider);
     final repository = ref.watch(stackRepositoryProvider);
     if (repository == null) {
       return [];
@@ -19,7 +23,29 @@ class Stacks extends _$Stacks {
 
     final result = await repository.listStacks();
 
-    return unwrapOrThrow(result);
+    final stacks = unwrapOrThrow(result);
+    final transitioning = stacks
+        .where(
+          (stack) => switch (stack.info.state) {
+            StackState.deploying ||
+            StackState.restarting ||
+            StackState.removing => true,
+            _ => false,
+          },
+        )
+        .toList();
+    if (transitioning.isNotEmpty) {
+      final timer = Timer(const Duration(seconds: 5), () {
+        for (final stack in transitioning) {
+          ref
+            ..invalidate(stackDetailProvider(stack.id))
+            ..invalidate(stackServicesProvider(stack.id));
+        }
+        ref.invalidateSelf();
+      });
+      ref.onDispose(timer.cancel);
+    }
+    return stacks;
   }
 
   /// Refreshes the stacks list.
@@ -36,6 +62,7 @@ class Stacks extends _$Stacks {
 /// Provides details for a specific stack.
 @riverpod
 Future<KomodoStack?> stackDetail(Ref ref, String stackIdOrName) async {
+  ref.watch(resourceActivityProvider);
   final repository = ref.watch(stackRepositoryProvider);
   if (repository == null) {
     return null;
@@ -49,6 +76,7 @@ Future<KomodoStack?> stackDetail(Ref ref, String stackIdOrName) async {
 /// Provides services (containers) for a specific stack.
 @riverpod
 Future<List<StackService>> stackServices(Ref ref, String stackIdOrName) async {
+  ref.watch(resourceActivityProvider);
   final repository = ref.watch(stackRepositoryProvider);
   if (repository == null) {
     return [];
@@ -80,6 +108,13 @@ class StackActions extends _$StackActions {
 
   Future<bool> deploy(String stackIdOrName) =>
       _executeAction((repo) => repo.deployStack(stackIdOrName));
+
+  Future<bool> deployIfChanged(String stackIdOrName) =>
+      _executeAction((repo) => repo.deployStackIfChanged(stackIdOrName));
+
+  Future<List<StackServiceWithUpdate>?> checkForUpdates(
+    String stackIdOrName,
+  ) => _executeRequest((repo) => repo.checkForUpdates(stackIdOrName));
 
   Future<bool> pullImages(String stackIdOrName) =>
       _executeAction((repo) => repo.pullStackImages(stackIdOrName));
@@ -144,6 +179,7 @@ class StackActions extends _$StackActions {
       (_) {
         state = const AsyncValue.data(null);
         ref.invalidate(stacksProvider);
+        ref.read(resourceActivityProvider.notifier).markChanged();
         return true;
       },
     );
@@ -172,6 +208,7 @@ class StackActions extends _$StackActions {
       (value) {
         state = const AsyncValue.data(null);
         ref.invalidate(stacksProvider);
+        ref.read(resourceActivityProvider.notifier).markChanged();
         return value;
       },
     );

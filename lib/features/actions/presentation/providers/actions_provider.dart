@@ -2,6 +2,7 @@ import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/data/repositories/action_repository.dart';
 import 'package:komodo_go/shared/resources/providers/resource_action_executor.dart';
+import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'actions_provider.g.dart';
@@ -11,6 +12,7 @@ part 'actions_provider.g.dart';
 class Actions extends _$Actions {
   @override
   Future<List<ActionListItem>> build() async {
+    ref.watch(resourceActivityProvider);
     final repository = ref.watch(actionRepositoryProvider);
     if (repository == null) {
       return [];
@@ -35,6 +37,7 @@ class Actions extends _$Actions {
 /// Provides details for a specific action.
 @riverpod
 Future<KomodoAction?> actionDetail(Ref ref, String actionIdOrName) async {
+  ref.watch(resourceActivityProvider);
   final repository = ref.watch(actionRepositoryProvider);
   if (repository == null) {
     return null;
@@ -57,6 +60,9 @@ class ActionActions extends _$ActionActions
 
   @override
   void invalidateList() => ref.invalidate(actionsProvider);
+
+  @override
+  void markResourceActivity() => ref.markResourceActivity();
 
   @override
   bool get isMounted => ref.mounted;

@@ -10,6 +10,7 @@ import 'package:komodo_go/core/widgets/resource_list/resource_list_view.dart';
 import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
 import 'package:komodo_go/features/procedures/presentation/widgets/procedure_card.dart';
+import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
 
@@ -48,6 +49,8 @@ final _proceduresListConfig = ResourceListConfig<ProcedureListItem>(
     item.info.state.name,
     item.info.stages.toString(),
   ],
+  batchItemOf: (item) => ResourceBatchItem(id: item.id, name: item.name),
+  onCreate: (context) => context.push('${AppRoutes.procedures}/new'),
   cardBuilder: (context, ref, item, displayTags) => ProcedureCard(
     procedure: item,
     displayTags: displayTags,

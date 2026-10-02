@@ -63,6 +63,31 @@ Future<SystemStats?> serverStats(Ref ref, String serverId) async {
   return unwrapOrThrow(result);
 }
 
+/// Provides database-backed history for a server at the selected granularity.
+@riverpod
+Future<HistoricalSystemStatsPage?> serverStatsHistory(
+  Ref ref,
+  String serverId,
+  ServerStatsGranularity granularity,
+) async {
+  final repository = ref.watch(serverRepositoryProvider);
+  if (repository == null) return null;
+  return unwrapOrThrow(
+    await repository.getHistoricalSystemStats(
+      serverIdOrName: serverId,
+      granularity: granularity,
+    ),
+  );
+}
+
+/// Provides the current process list for a server.
+@riverpod
+Future<List<SystemProcess>> serverProcesses(Ref ref, String serverId) async {
+  final repository = ref.watch(serverRepositoryProvider);
+  if (repository == null) return const [];
+  return unwrapOrThrow(await repository.listSystemProcesses(serverId));
+}
+
 /// Provides system information for a specific server.
 @riverpod
 Future<SystemInformation?> serverSystemInformation(

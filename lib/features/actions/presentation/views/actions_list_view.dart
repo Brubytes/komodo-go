@@ -10,6 +10,7 @@ import 'package:komodo_go/core/widgets/resource_list/resource_list_view.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/actions/presentation/widgets/action_card.dart';
+import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
 
@@ -45,6 +46,8 @@ final _actionsListConfig = ResourceListConfig<ActionListItem>(
     item.name,
     item.info.state.name,
   ],
+  batchItemOf: (item) => ResourceBatchItem(id: item.id, name: item.name),
+  onCreate: (context) => context.push('${AppRoutes.actions}/new'),
   cardBuilder: (context, ref, item, displayTags) => ActionCard(
     action: item,
     displayTags: displayTags,

@@ -1,5 +1,6 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 /// Shared `_executeAction`/`_executeRequest` logic for resource action states.
@@ -13,6 +14,8 @@ mixin ResourceActionExecutor<RepoT> {
   RepoT? readRepository();
 
   void invalidateList();
+
+  void markResourceActivity() {}
 
   bool get isMounted;
 
@@ -39,6 +42,7 @@ mixin ResourceActionExecutor<RepoT> {
       (_) {
         state = const AsyncValue.data(null);
         invalidateList();
+        markResourceActivity();
         return true;
       },
     );
@@ -67,8 +71,15 @@ mixin ResourceActionExecutor<RepoT> {
       (value) {
         state = const AsyncValue.data(null);
         invalidateList();
+        markResourceActivity();
         return value;
       },
     );
+  }
+}
+
+extension ResourceActionRef on Ref {
+  void markResourceActivity() {
+    read(resourceActivityProvider.notifier).markChanged();
   }
 }

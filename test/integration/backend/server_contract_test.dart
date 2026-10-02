@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
+import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 import 'package:komodo_go/features/servers/data/repositories/server_repository.dart';
 
 import '../../support/backend_test_config.dart';
@@ -14,158 +16,36 @@ void registerServerContractTests() {
   final config = BackendTestConfig.fromEnvironment();
   final missingConfigReason = config == null
       ? 'Set KOMODO_TEST_BASE_URL, KOMODO_TEST_API_KEY, and '
-          'KOMODO_TEST_API_SECRET to run backend tests.'
+            'KOMODO_TEST_API_SECRET to run backend tests.'
       : null;
 
-  group('Server CRUD (real backend)', () {
-    late ServerRepository repository;
-    late KomodoApiClient client;
+  group(
+    'Server CRUD (real backend)',
+    () {
+      late ServerRepository repository;
+      late KomodoApiClient client;
 
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      client = buildTestClient(requireConfig(config), RpcRecorder());
-      repository = ServerRepository(client);
-    });
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        client = buildTestClient(requireConfig(config), RpcRecorder());
+        repository = ServerRepository(client);
+      });
 
-    test('create/update/delete server', () async {
-      Server? created;
-      String? createdId;
-      var deleted = false;
+      test('create/update/delete server', () async {
+        Server? created;
+        String? createdId;
+        var deleted = false;
 
-      try {
-        final servers = expectRight(await repository.listServers());
-        expect(servers, isNotEmpty);
+        try {
+          final servers = expectRight(await repository.listServers());
+          expect(servers, isNotEmpty);
 
-        final seed = servers.first;
-        final seedDetail = expectRight(await repository.getServer(seed.id));
-        final seedConfig = seedDetail.config;
-        expect(seedConfig, isNotNull);
+          final seed = servers.first;
+          final seedDetail = expectRight(await repository.getServer(seed.id));
+          final seedConfig = seedDetail.config;
+          expect(seedConfig, isNotNull);
 
-        final name = 'contract-server-${_randomToken(Random(9021))}';
-        final createdJson = await client.write(
-          RpcRequest(
-            type: 'CreateServer',
-            params: <String, dynamic>{
-              'name': name,
-              'config': seedConfig!.toJson(),
-            },
-          ),
-        );
-        created = Server.fromJson(createdJson as Map<String, dynamic>);
-
-        createdId = await waitForListItemId(
-          listItems: () async {
-            final listed = expectRight(await repository.listServers());
-            return listed.map((item) => item.toJson()).toList();
-          },
-          name: name,
-        );
-        final createdIdValue = createdId;
-
-        final updated = await retryAsync(() async {
-          return expectRight(
-            await repository.updateServerConfig(
-              serverId: createdIdValue,
-              partialConfig: <String, dynamic>{
-                'enabled': !seedConfig.enabled,
-              },
-            ),
-          );
-        });
-        expect(updated.id, createdId);
-
-        await retryAsync(() async {
-          await client.write(
-            RpcRequest(
-              type: 'DeleteServer',
-              params: <String, dynamic>{'id': createdIdValue},
-            ),
-          );
-        });
-        deleted = true;
-        await expectEventuallyServerFailure(
-          () => repository.getServer(createdIdValue),
-        );
-        final afterDelete = expectRight(await repository.listServers());
-        expect(afterDelete.any((s) => s.id == createdIdValue), isFalse);
-      } finally {
-        final idToDelete = createdId ?? created?.id;
-        if (!deleted && idToDelete != null) {
-          await retryAsync(() async {
-            await client.write(
-              RpcRequest(
-                type: 'DeleteServer',
-                params: <String, dynamic>{'id': idToDelete},
-              ),
-            );
-          });
-        }
-      }
-    });
-
-    test('read system stats and system information', () async {
-      final servers = expectRight(await repository.listServers());
-      expect(servers, isNotEmpty);
-
-      final target = servers.first;
-
-      try {
-        final stats = expectRight(await repository.getSystemStats(target.id));
-        expect(stats.cpuPercent, greaterThanOrEqualTo(0));
-        expect(stats.memTotalGb, greaterThanOrEqualTo(0));
-      } on TestFailure catch (error) {
-        final message = (error.message ?? '').toLowerCase();
-        if (message.contains('server stats not available') ||
-            message.contains('missing system stats')) {
-          return;
-        }
-        rethrow;
-      }
-
-      try {
-        final info = expectRight(
-          await repository.getSystemInformation(target.id),
-        );
-        expect(info.cpuBrand, isA<String>());
-      } on TestFailure catch (error) {
-        final message = (error.message ?? '').toLowerCase();
-        if (message.contains('server info not available') ||
-            message.contains('missing system information')) {
-          return;
-        }
-        rethrow;
-      }
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
-
-  group('Server CRUD property-based (real backend)', () {
-    late ServerRepository repository;
-    late KomodoApiClient client;
-
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      client = buildTestClient(requireConfig(config), RpcRecorder());
-      repository = ServerRepository(client);
-    });
-
-    test('randomized servers survive CRUD roundtrip', () async {
-      final servers = expectRight(await repository.listServers());
-      expect(servers, isNotEmpty);
-
-      final seed = servers.first;
-      final seedDetail = expectRight(await repository.getServer(seed.id));
-      final seedConfig = seedDetail.config;
-      expect(seedConfig, isNotNull);
-
-      final random = Random(9041);
-      final pendingDeletes = <String>{};
-
-      try {
-        for (var i = 0; i < 3; i++) {
-          final name = 'prop-server-$i-${_randomToken(random)}';
+          final name = 'contract-server-${_randomToken(Random(9021))}';
           final createdJson = await client.write(
             RpcRequest(
               type: 'CreateServer',
@@ -175,60 +55,271 @@ void registerServerContractTests() {
               },
             ),
           );
-          Server.fromJson(createdJson as Map<String, dynamic>);
+          created = Server.fromJson(createdJson as Map<String, dynamic>);
 
-          final createdId = await waitForListItemId(
+          createdId = await waitForListItemId(
             listItems: () async {
               final listed = expectRight(await repository.listServers());
               return listed.map((item) => item.toJson()).toList();
             },
             name: name,
           );
-          pendingDeletes.add(createdId);
+          final createdIdValue = createdId;
 
-          final updated = expectRight(
-            await repository.updateServerConfig(
-              serverId: createdId,
-              partialConfig: <String, dynamic>{
-                'enabled': !seedConfig.enabled,
-              },
-            ),
-          );
+          final updated = await retryAsync(() async {
+            return expectRight(
+              await repository.updateServerConfig(
+                serverId: createdIdValue,
+                partialConfig: <String, dynamic>{
+                  'enabled': !seedConfig.enabled,
+                },
+              ),
+            );
+          });
           expect(updated.id, createdId);
 
-          final refreshed = expectRight(await repository.getServer(createdId));
-          expect(refreshed.config?.enabled, updated.config?.enabled);
-
           await retryAsync(() async {
             await client.write(
               RpcRequest(
                 type: 'DeleteServer',
-                params: <String, dynamic>{'id': createdId},
+                params: <String, dynamic>{'id': createdIdValue},
               ),
             );
           });
-          pendingDeletes.remove(createdId);
+          deleted = true;
           await expectEventuallyServerFailure(
-            () => repository.getServer(createdId),
+            () => repository.getServer(createdIdValue),
           );
+          final afterDelete = expectRight(await repository.listServers());
+          expect(afterDelete.any((s) => s.id == createdIdValue), isFalse);
+        } finally {
+          final idToDelete = createdId ?? created?.id;
+          if (!deleted && idToDelete != null) {
+            await retryAsync(() async {
+              await client.write(
+                RpcRequest(
+                  type: 'DeleteServer',
+                  params: <String, dynamic>{'id': idToDelete},
+                ),
+              );
+            });
+          }
         }
-      } finally {
-        for (final id in pendingDeletes) {
-          await retryAsync(() async {
-            await client.write(
-              RpcRequest(
-                type: 'DeleteServer',
-                params: <String, dynamic>{'id': id},
+      });
+
+      test('read system stats and system information', () async {
+        final servers = expectRight(await repository.listServers());
+        expect(servers, isNotEmpty);
+
+        final target = servers.first;
+
+        try {
+          final stats = expectRight(await repository.getSystemStats(target.id));
+          expect(stats.cpuPercent, greaterThanOrEqualTo(0));
+          expect(stats.memTotalGb, greaterThanOrEqualTo(0));
+        } on TestFailure catch (error) {
+          final message = (error.message ?? '').toLowerCase();
+          if (message.contains('server stats not available') ||
+              message.contains('missing system stats')) {
+            return;
+          }
+          rethrow;
+        }
+
+        try {
+          final info = expectRight(
+            await repository.getSystemInformation(target.id),
+          );
+          expect(info.cpuBrand, isA<String>());
+        } on TestFailure catch (error) {
+          final message = (error.message ?? '').toLowerCase();
+          if (message.contains('server info not available') ||
+              message.contains('missing system information')) {
+            return;
+          }
+          rethrow;
+        }
+      });
+
+      test(
+        'read historical stats, processes, and container inspection',
+        () async {
+          final servers = expectRight(await repository.listServers());
+          expect(servers, isNotEmpty);
+          final target = servers.first;
+          final detail = expectRight(await repository.getServer(target.id));
+          final originallyEnabled = detail.config?.enabled ?? false;
+
+          try {
+            if (!originallyEnabled) {
+              expectRight(
+                await repository.updateServerConfig(
+                  serverId: target.id,
+                  partialConfig: const <String, dynamic>{'enabled': true},
+                ),
+              );
+            }
+
+            await retryAsync(
+              () async {
+                final refreshed = expectRight(await repository.listServers());
+                final server = refreshed.firstWhere(
+                  (candidate) => candidate.id == target.id,
+                );
+                expect(server.state, ServerState.ok);
+              },
+              attempts: 20,
+              delay: const Duration(milliseconds: 500),
+            );
+
+            final history = expectRight(
+              await repository.getHistoricalSystemStats(
+                serverIdOrName: target.id,
+                granularity: ServerStatsGranularity.oneMinute,
               ),
             );
-          });
+            expect(history.stats, isA<List<HistoricalSystemStats>>());
+
+            final processes = expectRight(
+              await repository.listSystemProcesses(target.id),
+            );
+            expect(processes, isA<List<SystemProcess>>());
+
+            final containerRepository = ContainerRepository(client);
+            final containers = expectRight(
+              await containerRepository.listDockerContainers(target.id),
+            );
+            if (containers.isEmpty) return;
+
+            final container = containers.first;
+            final containerIdOrName = container.id ?? container.name;
+            final inspection = expectRight(
+              await containerRepository.inspectContainer(
+                serverIdOrName: target.id,
+                containerIdOrName: containerIdOrName,
+              ),
+            );
+            expect(inspection.raw, isNotEmpty);
+
+            expectRight(
+              await containerRepository.getResourceMatchingContainer(
+                serverIdOrName: target.id,
+                containerIdOrName: containerIdOrName,
+              ),
+            );
+          } finally {
+            if (!originallyEnabled) {
+              expectRight(
+                await repository.updateServerConfig(
+                  serverId: target.id,
+                  partialConfig: const <String, dynamic>{'enabled': false},
+                ),
+              );
+            }
+          }
+        },
+      );
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
+
+  group(
+    'Server CRUD property-based (real backend)',
+    () {
+      late ServerRepository repository;
+      late KomodoApiClient client;
+
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        client = buildTestClient(requireConfig(config), RpcRecorder());
+        repository = ServerRepository(client);
+      });
+
+      test('randomized servers survive CRUD roundtrip', () async {
+        final servers = expectRight(await repository.listServers());
+        expect(servers, isNotEmpty);
+
+        final seed = servers.first;
+        final seedDetail = expectRight(await repository.getServer(seed.id));
+        final seedConfig = seedDetail.config;
+        expect(seedConfig, isNotNull);
+
+        final random = Random(9041);
+        final pendingDeletes = <String>{};
+
+        try {
+          for (var i = 0; i < 3; i++) {
+            final name = 'prop-server-$i-${_randomToken(random)}';
+            final createdJson = await client.write(
+              RpcRequest(
+                type: 'CreateServer',
+                params: <String, dynamic>{
+                  'name': name,
+                  'config': seedConfig!.toJson(),
+                },
+              ),
+            );
+            Server.fromJson(createdJson as Map<String, dynamic>);
+
+            final createdId = await waitForListItemId(
+              listItems: () async {
+                final listed = expectRight(await repository.listServers());
+                return listed.map((item) => item.toJson()).toList();
+              },
+              name: name,
+            );
+            pendingDeletes.add(createdId);
+
+            final updated = expectRight(
+              await repository.updateServerConfig(
+                serverId: createdId,
+                partialConfig: <String, dynamic>{
+                  'enabled': !seedConfig.enabled,
+                },
+              ),
+            );
+            expect(updated.id, createdId);
+
+            final refreshed = expectRight(
+              await repository.getServer(createdId),
+            );
+            expect(refreshed.config?.enabled, updated.config?.enabled);
+
+            await retryAsync(() async {
+              await client.write(
+                RpcRequest(
+                  type: 'DeleteServer',
+                  params: <String, dynamic>{'id': createdId},
+                ),
+              );
+            });
+            pendingDeletes.remove(createdId);
+            await expectEventuallyServerFailure(
+              () => repository.getServer(createdId),
+            );
+          }
+        } finally {
+          for (final id in pendingDeletes) {
+            await retryAsync(() async {
+              await client.write(
+                RpcRequest(
+                  type: 'DeleteServer',
+                  params: <String, dynamic>{'id': id},
+                ),
+              );
+            });
+          }
         }
-      }
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
 }
 
 void main() => registerServerContractTests();
