@@ -316,7 +316,10 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
     for (final entry in _entries) {
       if (entry is! LogLineEntry) continue;
       final line = entry.line;
-      final length = line.message.length + (line.time == null ? 0 : 10);
+      final length =
+          line.message.length +
+          (line.time == null ? 0 : 10) +
+          (line.service == null ? 0 : line.service!.length + 2);
       if (length > longest) longest = length;
     }
     return longest * charWidth + 32;

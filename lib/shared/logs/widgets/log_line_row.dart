@@ -19,6 +19,10 @@ class LogRowStyles {
       color: scheme.onSurface,
     );
     time = base.copyWith(color: scheme.onSurfaceVariant.withValues(alpha: 0.7));
+    service = base.copyWith(
+      color: scheme.primary,
+      fontWeight: FontWeight.w600,
+    );
     match = TextStyle(
       backgroundColor: scheme.tertiaryContainer,
       color: scheme.onTertiaryContainer,
@@ -29,6 +33,7 @@ class LogRowStyles {
   late final ColorScheme scheme;
   late final TextStyle base;
   late final TextStyle time;
+  late final TextStyle service;
   late final TextStyle match;
 
   Color? barColor(LogSeverity severity) => switch (severity) {
@@ -56,8 +61,16 @@ class LogLineRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final bar = styles.barColor(line.severity);
     final time = line.time;
+    final service = line.service;
     final message = Text.rich(
-      TextSpan(children: highlightLogTerms(line.message, terms, styles.match)),
+      TextSpan(
+        children: [
+          // Inline so wrapped lines use the full width under the service.
+          if (service != null)
+            TextSpan(text: '$service  ', style: styles.service),
+          ...highlightLogTerms(line.message, terms, styles.match),
+        ],
+      ),
       style: styles.base,
       softWrap: wrap,
       maxLines: wrap ? null : 1,
@@ -175,6 +188,8 @@ class _LogLineSheet extends StatelessWidget {
               children: [
                 if (date != null && time != null)
                   TextPill(label: '$date $time', icon: AppIcons.clock),
+                if (line.service case final service?)
+                  TextPill(label: service, icon: AppIcons.containers),
                 switch (line.severity) {
                   LogSeverity.error => const TextPill(
                     label: 'Error',

@@ -163,7 +163,7 @@ void main() {
     Future<void> pumpViewer(WidgetTester tester) async {
       lines = [
         for (var i = 0; i < 80; i++)
-          '2026-10-10T09:41:${(i % 60).toString().padLeft(2, '0')}Z line $i',
+          '2026-10-10T09:${40 + i ~/ 60}:${_two(i % 60)}Z line $i',
       ];
       controller = ServerLogController(
         autoRefresh: false,
@@ -295,3 +295,5 @@ void main() {
     expect(highlightLogTerms('plain', const [], style), hasLength(1));
   });
 }
+
+String _two(int value) => value.toString().padLeft(2, '0');

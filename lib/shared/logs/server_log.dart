@@ -1,3 +1,5 @@
+import 'package:komodo_go/shared/logs/log_line.dart';
+
 class ServerLogSnapshot {
   const ServerLogSnapshot({
     this.stage = '',
@@ -32,10 +34,8 @@ class ServerLogSnapshot {
   final bool truncated;
 
   String get combined {
-    final output = [
-      if (stdout.trim().isNotEmpty) stdout.trim(),
-      if (stderr.trim().isNotEmpty) stderr.trim(),
-    ].join('\n');
+    // Interleave by timestamp so stderr lines land in their real position.
+    final output = mergeLogStreams(stdout.trim(), stderr.trim());
     if (!truncated) return output;
     return [
       '[Output truncated to the selected tail limit]',

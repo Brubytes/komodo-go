@@ -35,6 +35,66 @@ void main() {
     });
   });
 
+  group('compose output', () {
+    test('splits the service prefix before the timestamp', () {
+      final line = parseLogLine(
+        'redis-1  | 2026-10-10T17:41:46.322188048Z 1:M Ready to accept',
+      );
+      expect(line.service, 'redis-1');
+      expect(line.time, '17:41:46');
+      expect(line.message, '1:M Ready to accept');
+    });
+
+    test('ignores pipes that are not compose prefixes', () {
+      final line = parseLogLine('cat file | grep error');
+      expect(line.service, isNull);
+      expect(line.message, 'cat file | grep error');
+    });
+  });
+
+  group('mergeLogStreams', () {
+    test('interleaves stdout and stderr by timestamp', () {
+      const stdout =
+          '2026-10-10T17:41:47.000000000Z GET / 200\n'
+          '2026-10-10T17:42:04.000000000Z GET / 200';
+      const stderr =
+          '2026-10-10T17:41:46.000000000Z [notice] start\n'
+          '2026-10-10T17:41:48.000000000Z [notice] worker';
+      expect(mergeLogStreams(stdout, stderr).split('\n'), [
+        '2026-10-10T17:41:46.000000000Z [notice] start',
+        '2026-10-10T17:41:47.000000000Z GET / 200',
+        '2026-10-10T17:41:48.000000000Z [notice] worker',
+        '2026-10-10T17:42:04.000000000Z GET / 200',
+      ]);
+    });
+
+    test('keeps continuation lines with their entry', () {
+      const stdout = '2026-10-10T10:00:02Z b';
+      const stderr =
+          '2026-10-10T10:00:01Z a\n  at frame\n2026-10-10T10:00:03Z c';
+      expect(mergeLogStreams(stdout, stderr).split('\n'), [
+        '2026-10-10T10:00:01Z a',
+        '  at frame',
+        '2026-10-10T10:00:02Z b',
+        '2026-10-10T10:00:03Z c',
+      ]);
+    });
+
+    test('orders compose output that is grouped per service', () {
+      const stdout =
+          'web-1  | 2026-10-10T17:47:01Z b\n'
+          'redis-1  | 2026-10-10T17:41:46Z a';
+      expect(
+        mergeLogStreams(stdout, ''),
+        'redis-1  | 2026-10-10T17:41:46Z a\nweb-1  | 2026-10-10T17:47:01Z b',
+      );
+    });
+
+    test('concatenates streams without timestamps', () {
+      expect(mergeLogStreams('out', 'err'), 'out\nerr');
+    });
+  });
+
   test('parseLogEntries inserts a divider per new date', () {
     final entries = parseLogEntries(
       [
