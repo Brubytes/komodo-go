@@ -319,22 +319,18 @@ class _DeploymentDetailViewState
                       ),
                       maxContentWidth: 1100,
                       children: [
-                        DetailLogAutoRefreshControl(
-                          enabled: _autoRefreshLogs,
-                          onChanged: (value) {
+                        ServerLogExplorer(
+                          key: ValueKey(
+                            'deployment_log_explorer_${widget.deploymentId}',
+                          ),
+                          autoRefresh: _autoRefreshLogs,
+                          onAutoRefreshChanged: (value) {
                             setState(() => _autoRefreshLogs = value);
                             _syncLogPolling(
                               isShellTabActive:
                                   ref.read(mainShellIndexProvider) == 1,
                             );
                           },
-                        ),
-                        const Gap(12),
-                        ServerLogExplorer(
-                          key: ValueKey(
-                            'deployment_log_explorer_${widget.deploymentId}',
-                          ),
-                          autoRefresh: _autoRefreshLogs,
                           loader: (request) async {
                             final repository = ref.read(
                               deploymentRepositoryProvider,

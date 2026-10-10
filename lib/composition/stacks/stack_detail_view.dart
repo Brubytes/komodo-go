@@ -556,20 +556,16 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                       scrollKey: PageStorageKey('stack_${widget.stackId}_logs'),
                       maxContentWidth: 1100,
                       children: [
-                        DetailLogAutoRefreshControl(
-                          enabled: _autoRefreshLogs,
-                          onChanged: (value) {
+                        ServerLogExplorer(
+                          key: ValueKey('stack_log_explorer_${widget.stackId}'),
+                          autoRefresh: _autoRefreshLogs,
+                          onAutoRefreshChanged: (value) {
                             setState(() => _autoRefreshLogs = value);
                             _syncLogPolling(
                               isShellTabActive:
                                   ref.read(mainShellIndexProvider) == 1,
                             );
                           },
-                        ),
-                        const Gap(12),
-                        ServerLogExplorer(
-                          key: ValueKey('stack_log_explorer_${widget.stackId}'),
-                          autoRefresh: _autoRefreshLogs,
                           loader: (request) async {
                             final repository = ref.read(
                               stackRepositoryProvider,
