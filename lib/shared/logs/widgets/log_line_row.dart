@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/shared/logs/log_line.dart';
 
 /// Shared text styles for log rows, resolved once per build.
@@ -120,10 +121,31 @@ Future<void> showLogLineSheet(BuildContext context, LogLine line) {
     useRootNavigator: true,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (context) {
-      final textTheme = Theme.of(context).textTheme;
-      return SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+    builder: (context) => _LogLineSheet(line: line),
+  );
+}
+
+class _LogLineSheet extends StatelessWidget {
+  const _LogLineSheet({required this.line});
+
+  final LogLine line;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final media = MediaQuery.of(context);
+    final date = line.date;
+    final time = line.time;
+    return ConstrainedBox(
+      // Tall enough to sit clear of the home indicator even for short lines.
+      constraints: BoxConstraints(minHeight: media.size.height * 0.35),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          0,
+          20,
+          24 + media.viewPadding.bottom,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -146,19 +168,41 @@ Future<void> showLogLineSheet(BuildContext context, LogLine line) {
                 ),
               ],
             ),
+            const Gap(12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (date != null && time != null)
+                  TextPill(label: '$date $time', icon: AppIcons.clock),
+                switch (line.severity) {
+                  LogSeverity.error => const TextPill(
+                    label: 'Error',
+                    icon: AppIcons.error,
+                    tone: PillTone.alert,
+                  ),
+                  LogSeverity.warning => const TextPill(
+                    label: 'Warning',
+                    icon: AppIcons.warning,
+                    tone: PillTone.warning,
+                  ),
+                  LogSeverity.normal => const SizedBox.shrink(),
+                },
+              ],
+            ),
             const Gap(16),
             SelectableText(
-              line.raw,
+              line.message.isEmpty ? line.raw : line.message,
               style: textTheme.bodyMedium?.copyWith(
                 fontFamily: 'monospace',
-                height: 1.45,
+                height: 1.5,
               ),
             ),
           ],
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
 }
 
 /// Splits [text] into spans, styling case-insensitive occurrences of [terms].

@@ -246,7 +246,14 @@ void main() {
       expect(find.text('09:41:19'), findsOneWidget);
       await tester.tap(find.textContaining('line 79', findRichText: true));
       await tester.pumpAndSettle();
-      expect(find.text('2026-10-10T09:41:19Z line 79'), findsOneWidget);
+      expect(find.text('2026-10-10 09:41:19'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('line 79'),
+        ),
+        findsOneWidget,
+      );
       expect(find.byKey(const ValueKey('log_line_copy')), findsOneWidget);
     });
   });
