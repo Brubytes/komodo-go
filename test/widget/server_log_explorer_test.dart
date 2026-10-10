@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:komodo_go/shared/logs/server_log.dart';
+import 'package:komodo_go/shared/logs/server_log_controller.dart';
 import 'package:komodo_go/shared/logs/server_log_explorer.dart';
 import 'package:komodo_go/shared/logs/widgets/server_log_viewer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -153,6 +154,121 @@ void main() {
     await search(tester, 'error');
     await openFilters(tester);
     expect(tester.takeException(), isNull);
+  });
+
+  group('scrolling', () {
+    late List<String> lines;
+    late ServerLogController controller;
+
+    Future<void> pumpViewer(WidgetTester tester) async {
+      lines = [
+        for (var i = 0; i < 80; i++)
+          '2026-10-10T09:41:${(i % 60).toString().padLeft(2, '0')}Z line $i',
+      ];
+      controller = ServerLogController(
+        autoRefresh: false,
+        loader: (_) async => ServerLogSnapshot(stdout: lines.join('\n')),
+      );
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ServerLogViewer(controller: controller, height: 400),
+          ),
+        ),
+      );
+      await controller.load();
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('opens at the newest line and follows new output', (
+      tester,
+    ) async {
+      await pumpViewer(tester);
+      expect(find.textContaining('line 79', findRichText: true), findsOne);
+      expect(find.textContaining('line 0', findRichText: true), findsNothing);
+      expect(
+        find.byKey(const ValueKey('server_log_jump_latest')),
+        findsNothing,
+      );
+
+      lines.add('2026-10-10T09:42:00Z line 80');
+      await controller.load();
+      await tester.pumpAndSettle();
+      expect(find.textContaining('line 80', findRichText: true), findsOne);
+    });
+
+    testWidgets('pauses while scrolled up and offers new lines', (
+      tester,
+    ) async {
+      await pumpViewer(tester);
+      await tester.drag(
+        find.byKey(const ValueKey('server_log_lines')),
+        const Offset(0, 300),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Latest'), findsOneWidget);
+      expect(find.text('Top'), findsOneWidget);
+
+      lines
+        ..add('2026-10-10T09:42:00Z line 80')
+        ..add('2026-10-10T09:42:01Z line 81');
+      await controller.load();
+      await tester.pumpAndSettle();
+      expect(find.text('2 new lines'), findsOneWidget);
+
+      await tester.tap(find.text('2 new lines'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('line 81', findRichText: true), findsOne);
+      expect(
+        find.byKey(const ValueKey('server_log_jump_latest')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('jumps to the first line', (tester) async {
+      await pumpViewer(tester);
+      await tester.drag(
+        find.byKey(const ValueKey('server_log_lines')),
+        const Offset(0, 300),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Top'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('line 0', findRichText: true), findsOne);
+      expect(find.text('Top'), findsNothing);
+    });
+
+    testWidgets('shows a tapped line in full with a short timestamp', (
+      tester,
+    ) async {
+      await pumpViewer(tester);
+      expect(find.text('09:41:19'), findsOneWidget);
+      await tester.tap(find.textContaining('line 79', findRichText: true));
+      await tester.pumpAndSettle();
+      expect(find.text('2026-10-10T09:41:19Z line 79'), findsOneWidget);
+      expect(find.byKey(const ValueKey('log_line_copy')), findsOneWidget);
+    });
+  });
+
+  testWidgets('remembers the wrap setting', (tester) async {
+    await pumpExplorer(tester);
+    await tester.tap(find.byKey(const ValueKey('server_log_filters')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('server_log_wrap')));
+    await tester.pumpAndSettle();
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool(ServerLogController.wrapLinesKey), isFalse);
+
+    final restored = ServerLogController(
+      autoRefresh: false,
+      loader: (_) async => const ServerLogSnapshot(),
+    );
+    addTearDown(restored.dispose);
+    await restored.start();
+    await tester.pump();
+    expect(restored.wrapLines, isFalse);
   });
 
   test('highlightLogTerms marks case-insensitive matches', () {

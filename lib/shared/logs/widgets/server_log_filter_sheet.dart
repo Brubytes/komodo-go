@@ -92,6 +92,15 @@ class ServerLogFilterSheet extends StatelessWidget {
               value: controller.timestamps,
               onChanged: (value) => controller.setTimestamps(value: value),
             ),
+            SwitchListTile(
+              key: const ValueKey('server_log_wrap'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Wrap lines'),
+              subtitle: const Text('Off scrolls sideways, handy in landscape'),
+              value: controller.wrapLines,
+              onChanged: (value) =>
+                  unawaited(controller.setWrapLines(value: value)),
+            ),
             const Gap(8),
             _SavedFilters(controller: controller),
             const Gap(20),
