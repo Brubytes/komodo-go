@@ -122,11 +122,16 @@ class MainAppBarTitle extends StatelessWidget {
         ),
         const Gap(12),
         if (centered)
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.sizeOf(context).width * 0.6,
+          // Flexible lets the title shrink when leading/actions leave less
+          // room than the 60% cap, so long names ellipsize instead of
+          // overflowing the toolbar.
+          Flexible(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.6,
+              ),
+              child: titleBlock,
             ),
-            child: titleBlock,
           )
         else
           Flexible(child: titleBlock),
