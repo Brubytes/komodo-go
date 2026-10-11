@@ -45,10 +45,79 @@ void main() {
       expect(line.message, '1:M Ready to accept');
     });
 
+    test('accepts container_name prefixes followed by a timestamp', () {
+      final line = parseLogLine(
+        'ebc-test  | 2026-10-11T08:00:00.674190271Z started job',
+      );
+      expect(line.service, 'ebc-test');
+      expect(line.time, '08:00:00');
+      expect(line.message, 'started job');
+    });
+
+    test('needs a replica suffix when no timestamp follows', () {
+      expect(parseLogLine('redis-1  | Ready').service, 'redis-1');
+      expect(parseLogLine('ebc-test  | Ready').service, isNull);
+    });
+
     test('ignores pipes that are not compose prefixes', () {
       final line = parseLogLine('cat file | grep error');
       expect(line.service, isNull);
       expect(line.message, 'cat file | grep error');
+    });
+  });
+
+  group('echoed app timestamps', () {
+    String messageOf(String line) => parseLogLine(line).message;
+
+    test('drops a repeated Go timestamp (gatus)', () {
+      expect(
+        messageOf(
+          'gatus-1  | 2026-10-11T08:12:02.123Z '
+          '2026/10/11 08:12:02 [watchdog.execute] ok',
+        ),
+        '[watchdog.execute] ok',
+      );
+    });
+
+    test('drops ISO, bracketed, logrus and Python styles', () {
+      const docker = '2026-10-11T08:12:02.5Z ';
+      expect(messageOf('${docker}2026-10-11T08:12:01Z hello'), 'hello');
+      expect(messageOf('$docker[2026-10-11 08:12:02] hello'), 'hello');
+      expect(
+        messageOf('${docker}time="2026-10-11T08:12:02Z" level=info'),
+        'level=info',
+      );
+      expect(
+        messageOf('${docker}2026-10-11 08:12:02,123 - INFO - hello'),
+        'INFO - hello',
+      );
+    });
+
+    test('matches apps logging in local time', () {
+      expect(
+        messageOf('2026-10-11T08:12:02Z 2026-10-11 10:12:02 hello'),
+        'hello',
+      );
+    });
+
+    test('keeps timestamps that refer to a different time', () {
+      expect(
+        messageOf('2026-10-11T08:12:02Z 2026-10-11 08:20:00 job due'),
+        '2026-10-11 08:20:00 job due',
+      );
+    });
+
+    test('keeps timestamps that are not at the start', () {
+      const line =
+          '2026-10-11T08:12:02Z 192.168.1.1 - - [11/Oct/2026:08:12:02 +0000]';
+      expect(messageOf(line), startsWith('192.168.1.1'));
+    });
+
+    test('keeps the raw line for copying', () {
+      final line = parseLogLine(
+        '2026-10-11T08:12:02Z 2026/10/11 08:12:02 hello',
+      );
+      expect(line.raw, '2026-10-11T08:12:02Z 2026/10/11 08:12:02 hello');
     });
   });
 

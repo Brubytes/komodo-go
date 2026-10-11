@@ -49,14 +49,26 @@ final _ansiPattern = RegExp(
   r'\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1B]*(?:\x07|\x1B\\)|[@-Z\\-_])',
 );
 
-// `docker compose logs` prefixes each line with `service-1  | `. Requiring
-// the replica number keeps ordinary `a | b` output from matching.
-final _servicePattern = RegExp(r'^([A-Za-z0-9][\w.-]*-\d+)\s+\|\s?');
+// `docker compose logs` prefixes each line with `<name>  | `. The name is
+// usually `service-1`, but a `container_name:` replaces it verbatim.
+final _servicePattern = RegExp(r'^([A-Za-z0-9][\w.-]*)\s+\|\s?');
+
+// Without a Docker timestamp after the prefix, only a replica-suffixed name
+// (`redis-1`) counts, so ordinary `a | b` output is not mistaken for one.
+final _replicaName = RegExp(r'-\d+$');
 
 // Docker/Komodo timestamps, e.g. 2026-10-10T09:41:07.123456789Z.
 final _timestampPattern = RegExp(
   r'^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})(?:[.,]\d+)?'
   r'(?:Z|[+-]\d{2}:?\d{2})?\s+',
+);
+
+// An app's own timestamp at the start of its message, e.g. Go's
+// `2026/10/11 08:12:02`, Python's `2026-10-11 08:12:02,123 -`, ISO in
+// brackets, or logrus' `time="2026-10-11T08:12:02Z"`.
+final _echoedTimestampPattern = RegExp(
+  r'^(?:\[|time=")?\d{4}[-/]\d{2}[-/]\d{2}[T ](\d{2}):(\d{2}):(\d{2})'
+  r'(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2}| ?UTC)?(?:\]|")?(?:\s+[-|](?=\s))?\s+',
 );
 
 final _errorPattern = RegExp(
@@ -70,18 +82,65 @@ String stripAnsi(String input) =>
 
 LogLine parseLogLine(String input) {
   final raw = stripAnsi(input).replaceAll('\r', '');
-  final serviceMatch = _servicePattern.firstMatch(raw);
-  final rest = serviceMatch == null ? raw : raw.substring(serviceMatch.end);
-  final match = _timestampPattern.firstMatch(rest);
-  final message = match == null ? rest : rest.substring(match.end);
+  final parts = _splitPrefix(raw);
+  final time = parts.timestamp?.group(2);
+  final message = time == null
+      ? parts.rest
+      : _stripEchoedTimestamp(parts.rest, time);
   return LogLine(
     raw: raw,
     message: message,
-    service: serviceMatch?.group(1),
-    date: match?.group(1),
-    time: match?.group(2),
+    service: parts.service,
+    date: parts.timestamp?.group(1),
+    time: time,
     severity: _severityOf(message),
   );
+}
+
+/// Splits an optional compose prefix and Docker timestamp off [line].
+({String? service, RegExpMatch? timestamp, String rest}) _splitPrefix(
+  String line,
+) {
+  final serviceMatch = _servicePattern.firstMatch(line);
+  if (serviceMatch != null) {
+    final afterPrefix = line.substring(serviceMatch.end);
+    final timestamp = _timestampPattern.firstMatch(afterPrefix);
+    final service = serviceMatch.group(1)!;
+    if (timestamp != null || _replicaName.hasMatch(service)) {
+      return (
+        service: service,
+        timestamp: timestamp,
+        rest: timestamp == null
+            ? afterPrefix
+            : afterPrefix.substring(timestamp.end),
+      );
+    }
+  }
+  final timestamp = _timestampPattern.firstMatch(line);
+  return (
+    service: null,
+    timestamp: timestamp,
+    rest: timestamp == null ? line : line.substring(timestamp.end),
+  );
+}
+
+/// Drops an app timestamp that repeats Docker's [dockerTime] (`HH:mm:ss`).
+///
+/// Only minutes and seconds are compared (within two seconds), so apps that
+/// log in local time still match; anything else is left untouched.
+String _stripEchoedTimestamp(String message, String dockerTime) {
+  final match = _echoedTimestampPattern.firstMatch(message);
+  if (match == null || match.end >= message.length) return message;
+  int secondOfHour(String minutes, String seconds) =>
+      int.parse(minutes) * 60 + int.parse(seconds);
+  final docker = secondOfHour(
+    dockerTime.substring(3, 5),
+    dockerTime.substring(6, 8),
+  );
+  final echoed = secondOfHour(match.group(2)!, match.group(3)!);
+  final diff = (docker - echoed).abs();
+  if (diff > 2 && 3600 - diff > 2) return message;
+  return message.substring(match.end);
 }
 
 LogSeverity _severityOf(String message) {
@@ -112,13 +171,9 @@ List<LogEntry> parseLogEntries(String text) {
 }
 
 /// Sortable timestamp of a raw line (after any compose prefix), or null.
-String? _sortKey(String line) {
-  final serviceMatch = _servicePattern.firstMatch(line);
-  final rest = serviceMatch == null ? line : line.substring(serviceMatch.end);
-  final match = _timestampPattern.firstMatch(stripAnsi(rest));
-  // Drop the trailing separator whitespace so keys compare cleanly.
-  return match?.group(0)?.trimRight();
-}
+String? _sortKey(String line) =>
+    // Drop the trailing separator whitespace so keys compare cleanly.
+    _splitPrefix(stripAnsi(line)).timestamp?.group(0)?.trimRight();
 
 /// Merges log streams (stdout/stderr) into one chronological text.
 ///
