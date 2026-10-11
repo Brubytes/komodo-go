@@ -47,8 +47,22 @@ Future<Deployment?> deploymentDetail(Ref ref, String deploymentId) async {
   }
 
   final result = await repository.getDeployment(deploymentId);
+  final deployment = unwrapOrThrow(result);
+  if (deployment.info != null) {
+    return deployment;
+  }
 
-  return unwrapOrThrow(result);
+  // `GetDeployment` only returns `config`; runtime info (state, image, build,
+  // update availability) is only exposed by `ListDeployments`.
+  try {
+    final deployments = await ref.watch(deploymentsProvider.future);
+    final listItem = deployments
+        .where((d) => d.id == deployment.id || d.id == deploymentId)
+        .firstOrNull;
+    return deployment.copyWith(info: listItem?.info);
+  } on Exception {
+    return deployment;
+  }
 }
 
 /// Action state for deployment operations.
