@@ -280,7 +280,9 @@ class ContainerDetailView extends ConsumerWidget {
     if (!context.mounted) return;
     AppSnackBar.show(
       context,
-      success ? 'Action submitted. Check updates for the result.' : 'Action failed',
+      success
+          ? 'Action submitted. Check updates for the result.'
+          : 'Action failed',
       tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
     );
     if (success) {

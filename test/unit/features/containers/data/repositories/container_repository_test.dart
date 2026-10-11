@@ -217,6 +217,100 @@ void main() {
     });
 
     test(
+      'retries matching by inspected name when looked up by container id',
+      () async {
+        when(() => client.read(any())).thenAnswer((invocation) async {
+          final request =
+              invocation.positionalArguments.single as RpcRequest<dynamic>;
+          if (request.type == 'GetResourceMatchingContainer') {
+            // Core only matches deployments by container name.
+            final container =
+                (request.params as Map<String, dynamic>)['container'];
+            return <String, dynamic>{
+              'resource': container == 'example-web'
+                  ? {'type': 'Deployment', 'id': 'deployment-1'}
+                  : null,
+            };
+          }
+          return <String, dynamic>{
+            'Id': '748206e23a10',
+            'Name': '/example-web',
+          };
+        });
+
+        final resource = _rightOrFail(
+          await repository.getResourceMatchingContainer(
+            serverIdOrName: 'server-1',
+            containerIdOrName: '748206e23a10',
+          ),
+        );
+
+        expect(resource?.type, ContainerResourceType.deployment);
+        expect(resource?.id, 'deployment-1');
+        final requests = verify(
+          () => client.read(captureAny()),
+        ).captured.cast<RpcRequest<dynamic>>();
+        expect(requests.map((request) => request.type), [
+          'GetResourceMatchingContainer',
+          'InspectContainer',
+          'GetResourceMatchingContainer',
+        ]);
+        expect(requests.last.params, <String, dynamic>{
+          'server': 'server-1',
+          'container': 'example-web',
+        });
+      },
+    );
+
+    test('does not retry matching when the name was already used', () async {
+      when(() => client.read(any())).thenAnswer((invocation) async {
+        final request =
+            invocation.positionalArguments.single as RpcRequest<dynamic>;
+        if (request.type == 'GetResourceMatchingContainer') {
+          return <String, dynamic>{'resource': null};
+        }
+        return <String, dynamic>{'Name': '/web'};
+      });
+
+      final resource = _rightOrFail(
+        await repository.getResourceMatchingContainer(
+          serverIdOrName: 'server-1',
+          containerIdOrName: 'web',
+        ),
+      );
+
+      expect(resource, isNull);
+      final requests = verify(
+        () => client.read(captureAny()),
+      ).captured.cast<RpcRequest<dynamic>>();
+      expect(requests.map((request) => request.type), [
+        'GetResourceMatchingContainer',
+        'InspectContainer',
+      ]);
+    });
+
+    test('ContainerInspection.containerName strips the Docker slash', () {
+      expect(
+        ContainerInspection.fromJson(const {
+          'Name': '/example-web',
+        }).containerName,
+        'example-web',
+      );
+      expect(
+        ContainerInspection.fromJson(const {'name': 'web'}).containerName,
+        'web',
+      );
+      expect(
+        ContainerInspection.fromJson(const {'Name': '/'}).containerName,
+        isNull,
+      );
+      expect(
+        ContainerInspection.fromJson(const <String, dynamic>{}).containerName,
+        isNull,
+      );
+    });
+
+    test(
       'start pause unpause and remove use documented execute RPCs',
       () async {
         when(
