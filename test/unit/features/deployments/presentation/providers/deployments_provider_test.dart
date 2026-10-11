@@ -101,6 +101,8 @@ void main() {
         ),
       );
 
+      when(repository.listDeployments).thenAnswer((_) async => const Right([]));
+
       final container = createProviderContainer(
         overrides: [deploymentRepositoryProvider.overrideWithValue(repository)],
       );
@@ -112,6 +114,75 @@ void main() {
       );
 
       expect(deployment?.name, 'Dep A');
+    });
+
+    test('fills missing info with the list item state', () async {
+      final repository = _MockDeploymentRepository();
+      when(() => repository.getDeployment('d1')).thenAnswer(
+        (_) async => Right(
+          Deployment.fromJson(<String, dynamic>{
+            'id': 'd1',
+            'name': 'example-web',
+            'config': <String, dynamic>{'image': 'nginx:stable-alpine'},
+          }),
+        ),
+      );
+      when(repository.listDeployments).thenAnswer(
+        (_) async => Right([
+          Deployment.fromJson(<String, dynamic>{
+            'id': 'd1',
+            'name': 'example-web',
+            'info': <String, dynamic>{
+              'state': 'running',
+              'image': 'nginx:stable-alpine',
+              'server_id': 's1',
+            },
+          }),
+        ]),
+      );
+
+      final container = createProviderContainer(
+        overrides: [deploymentRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+
+      final deployment = await readAsyncProvider(
+        container,
+        deploymentDetailProvider('d1').future,
+      );
+
+      expect(deployment?.info?.state, DeploymentState.running);
+      expect(deployment?.info?.serverId, 's1');
+      expect(deployment?.config, isNotNull);
+    });
+
+    test('returns detail without info when listing fails', () async {
+      final repository = _MockDeploymentRepository();
+      when(() => repository.getDeployment('d1')).thenAnswer(
+        (_) async => Right(
+          Deployment.fromJson(<String, dynamic>{
+            'id': 'd1',
+            'name': 'Dep A',
+            'config': <String, dynamic>{},
+          }),
+        ),
+      );
+      when(repository.listDeployments).thenAnswer(
+        (_) async => const Left(Failure.server(message: 'boom')),
+      );
+
+      final container = createProviderContainer(
+        overrides: [deploymentRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+
+      final deployment = await readAsyncProvider(
+        container,
+        deploymentDetailProvider('d1').future,
+      );
+
+      expect(deployment?.name, 'Dep A');
+      expect(deployment?.info, isNull);
     });
 
     test('returns null when unauthenticated', () async {
