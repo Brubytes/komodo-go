@@ -194,6 +194,9 @@ class ProxyHeaderAuthSection extends StatelessWidget {
               labelText: 'Proxy Password',
               prefixIcon: const Icon(AppIcons.lock),
               suffixIcon: IconButton(
+                tooltip: obscurePassword.value
+                    ? 'Show proxy password'
+                    : 'Hide proxy password',
                 icon: Icon(
                   obscurePassword.value ? AppIcons.eye : AppIcons.eyeOff,
                 ),

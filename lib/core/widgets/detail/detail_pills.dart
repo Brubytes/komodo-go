@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 
 enum PillTone { success, neutral, warning, alert }
 
@@ -22,15 +23,15 @@ class TextPill extends StatelessWidget {
 
     final (Color bg, Color fg) = switch (tone) {
       PillTone.success => (
-        scheme.secondaryContainer.withValues(alpha: isDark ? 0.22 : 0.60),
-        scheme.onSecondaryContainer,
+        scheme.statusSuccessContainer,
+        scheme.statusSuccess,
       ),
       PillTone.warning => (
-        scheme.tertiaryContainer.withValues(alpha: isDark ? 0.22 : 0.60),
-        scheme.onTertiaryContainer,
+        scheme.statusWarningContainer,
+        scheme.statusWarning,
       ),
       PillTone.alert => (
-        scheme.errorContainer.withValues(alpha: isDark ? 0.22 : 0.60),
+        scheme.errorContainer,
         scheme.onErrorContainer,
       ),
       PillTone.neutral => (
@@ -106,22 +107,22 @@ class StatusPill extends StatelessWidget {
 
     final (Color bg, Color fg, Color iconColor) = switch (tone) {
       PillTone.success => (
-        scheme.secondaryContainer.withValues(alpha: isDark ? 0.22 : 0.60),
-        scheme.onSecondaryContainer,
-        scheme.secondary,
+        scheme.statusSuccessContainer,
+        scheme.statusSuccess,
+        scheme.statusSuccess,
       ),
       PillTone.warning => (
-        scheme.tertiaryContainer.withValues(alpha: isDark ? 0.22 : 0.60),
-        scheme.onTertiaryContainer,
-        scheme.tertiary,
+        scheme.statusWarningContainer,
+        scheme.statusWarning,
+        scheme.statusWarning,
       ),
       PillTone.alert => (
-        scheme.errorContainer.withValues(alpha: isDark ? 0.22 : 0.60),
+        scheme.errorContainer,
         scheme.onErrorContainer,
-        scheme.error,
+        scheme.onErrorContainer,
       ),
       PillTone.neutral => (
-        scheme.surfaceContainerHigh,
+        isDark ? scheme.surfaceContainerHighest : scheme.surfaceContainerHigh,
         scheme.onSurface,
         scheme.onSurfaceVariant,
       ),

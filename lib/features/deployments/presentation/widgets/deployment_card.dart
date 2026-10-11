@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
@@ -310,18 +311,18 @@ class _StatusBadge extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final (color, icon) = switch (state) {
       DeploymentState.deploying => (scheme.primary, AppIcons.loading),
-      DeploymentState.running => (scheme.secondary, AppIcons.ok),
+      DeploymentState.running => (scheme.statusSuccess, AppIcons.ok),
       DeploymentState.created => (scheme.onSurfaceVariant, AppIcons.pending),
-      DeploymentState.restarting => (scheme.primary, AppIcons.loading),
-      DeploymentState.removing => (scheme.onSurfaceVariant, AppIcons.waiting),
-      DeploymentState.exited => (scheme.tertiary, AppIcons.stopped),
+      DeploymentState.restarting => (scheme.statusWarning, AppIcons.loading),
+      DeploymentState.removing => (scheme.primary, AppIcons.waiting),
+      DeploymentState.exited => (scheme.onSurfaceVariant, AppIcons.stopped),
       DeploymentState.dead => (scheme.error, AppIcons.canceled),
       DeploymentState.paused => (scheme.onSurfaceVariant, AppIcons.paused),
       DeploymentState.notDeployed => (
         scheme.onSurfaceVariant,
         AppIcons.pending,
       ),
-      DeploymentState.unknown => (scheme.tertiary, AppIcons.unknown),
+      DeploymentState.unknown => (scheme.onSurfaceVariant, AppIcons.unknown),
     };
 
     final padding = compact

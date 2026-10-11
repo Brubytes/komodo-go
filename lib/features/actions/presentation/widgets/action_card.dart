@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
-import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 
 /// Card widget displaying action information.
@@ -132,17 +133,17 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final (color, icon) = switch (state) {
-      ActionState.running => (Colors.blue, AppIcons.loading),
-      ActionState.ok => (Colors.green, AppIcons.ok),
-      ActionState.failed => (Colors.red, AppIcons.error),
-      ActionState.unknown => (Colors.orange, AppIcons.unknown),
+      ActionState.running => (scheme.primary, AppIcons.loading),
+      ActionState.ok => (scheme.statusSuccess, AppIcons.ok),
+      ActionState.failed => (scheme.error, AppIcons.error),
+      ActionState.unknown => (scheme.onSurfaceVariant, AppIcons.unknown),
     };
 
-    final padding =
-        compact
-            ? const EdgeInsets.symmetric(horizontal: 5, vertical: 1)
-            : const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
+    final padding = compact
+        ? const EdgeInsets.symmetric(horizontal: 5, vertical: 1)
+        : const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
     final iconSize = compact ? 11.0 : 14.0;
     final fontSize = compact ? 10.0 : 12.0;
 

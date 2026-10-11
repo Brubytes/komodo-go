@@ -5,6 +5,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
@@ -177,8 +178,8 @@ class AlertTile extends ConsumerWidget {
 
     final severityColor = switch (alert.level) {
       SeverityLevel.critical => scheme.error,
-      SeverityLevel.warning => scheme.tertiary,
-      SeverityLevel.ok => scheme.primary,
+      SeverityLevel.warning => scheme.statusWarning,
+      SeverityLevel.ok => scheme.statusSuccess,
       SeverityLevel.unknown => scheme.onSurfaceVariant,
     };
 
@@ -582,7 +583,7 @@ class NotificationsErrorState extends StatelessWidget {
   }
 }
 
-enum NotificationsStatusChipKind { success, warning, error, neutral }
+enum NotificationsStatusChipKind { success, warning, error, neutral, working }
 
 class NotificationsStatusChip extends StatelessWidget {
   const NotificationsStatusChip({
@@ -600,16 +601,20 @@ class NotificationsStatusChip extends StatelessWidget {
 
     final (bg, fg) = switch (kind) {
       NotificationsStatusChipKind.success => (
-        AppTokens.statusGreen.withValues(alpha: 0.16),
-        AppTokens.statusGreen,
+        scheme.statusSuccessContainer,
+        scheme.statusSuccess,
       ),
       NotificationsStatusChipKind.warning => (
-        AppTokens.statusOrange.withValues(alpha: 0.18),
-        AppTokens.statusOrange,
+        scheme.statusWarningContainer,
+        scheme.statusWarning,
       ),
       NotificationsStatusChipKind.error => (
-        AppTokens.statusRed.withValues(alpha: 0.16),
-        AppTokens.statusRed,
+        scheme.errorContainer,
+        scheme.onErrorContainer,
+      ),
+      NotificationsStatusChipKind.working => (
+        scheme.primaryContainer,
+        scheme.onPrimaryContainer,
       ),
       NotificationsStatusChipKind.neutral => (
         scheme.surfaceContainerHighest,
@@ -721,7 +726,7 @@ NotificationsStatusChipKind _kindForUpdate(UpdateListItem update) {
     UpdateStatus.success => NotificationsStatusChipKind.success,
     UpdateStatus.failed => NotificationsStatusChipKind.error,
     UpdateStatus.running ||
-    UpdateStatus.queued => NotificationsStatusChipKind.warning,
+    UpdateStatus.queued => NotificationsStatusChipKind.working,
     UpdateStatus.canceled => NotificationsStatusChipKind.neutral,
     UpdateStatus.unknown =>
       update.success

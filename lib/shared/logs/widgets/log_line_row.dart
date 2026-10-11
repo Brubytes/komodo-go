@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
-import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/shared/logs/log_line.dart';
@@ -38,7 +38,7 @@ class LogRowStyles {
 
   Color? barColor(LogSeverity severity) => switch (severity) {
     LogSeverity.error => scheme.error,
-    LogSeverity.warning => AppTokens.statusOrange,
+    LogSeverity.warning => scheme.statusWarning,
     LogSeverity.normal => null,
   };
 }

@@ -99,7 +99,7 @@ class ServerHeroPanel extends StatelessWidget {
               ? '${memUsed.toStringAsFixed(1)} / ${memTotal.toStringAsFixed(1)} GB'
               : '—',
           progress: memPercent,
-          tone: DetailMetricTone.secondary,
+          tone: DetailMetricTone.primary,
         ),
         DetailMetricTileData(
           icon: AppIcons.hardDrive,
@@ -108,7 +108,7 @@ class ServerHeroPanel extends StatelessWidget {
               ? _formatDiskUsage(usedGb: diskUsed, totalGb: diskTotal)
               : '—',
           progress: diskPercent,
-          tone: DetailMetricTone.tertiary,
+          tone: DetailMetricTone.primary,
         ),
         DetailMetricTileData(
           icon: AppIcons.wifi,
@@ -1513,7 +1513,7 @@ class StatsHistoryContent extends StatelessWidget {
             value: mem != null ? '${mem.toStringAsFixed(0)}%' : '—',
             child: SparklineChart(
               values: memSeries,
-              color: scheme.secondary,
+              color: scheme.primary,
               capMinY: percentMin,
               capMaxY: percentMax,
             ),
@@ -1532,7 +1532,7 @@ class StatsHistoryContent extends StatelessWidget {
             value: disk != null ? '${disk.toStringAsFixed(0)}%' : '—',
             child: SparklineChart(
               values: diskSeries,
-              color: scheme.tertiary,
+              color: scheme.primary,
               capMinY: percentMin,
               capMaxY: percentMax,
             ),
@@ -1675,7 +1675,7 @@ class _DiskUsageCard extends StatelessWidget {
               width: double.infinity,
               child: SparklineChart(
                 values: values,
-                color: scheme.tertiary,
+                color: scheme.primary,
                 capMinY: 0,
                 capMaxY: 100,
               ),

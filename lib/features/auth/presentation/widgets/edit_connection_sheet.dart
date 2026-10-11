@@ -240,6 +240,9 @@ class EditConnectionSheet extends HookConsumerWidget {
                       labelText: 'API Secret',
                       prefixIcon: const Icon(AppIcons.lock),
                       suffixIcon: IconButton(
+                        tooltip: obscureSecret.value
+                            ? 'Show API secret'
+                            : 'Hide API secret',
                         icon: Icon(
                           obscureSecret.value ? AppIcons.eye : AppIcons.eyeOff,
                         ),

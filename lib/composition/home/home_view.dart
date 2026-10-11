@@ -6,7 +6,7 @@ import 'package:komodo_go/composition/home/home_ops_pulse.dart';
 import 'package:komodo_go/composition/home/widgets/home_dashboard_tiles.dart';
 import 'package:komodo_go/composition/home/widgets/home_sections.dart';
 import 'package:komodo_go/core/router/app_router.dart';
-import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -324,7 +324,7 @@ class HomeView extends ConsumerWidget {
                       final summaryColor = criticalCount > 0
                           ? scheme.error
                           : warningCount > 0
-                          ? AppTokens.statusOrange
+                          ? scheme.statusWarning
                           : scheme.onSurfaceVariant;
 
                       return Column(
@@ -554,11 +554,11 @@ Widget _buildOpsPulseCard({
 Color _opsToneColor(BuildContext context, HomeOpsTone tone) {
   final scheme = Theme.of(context).colorScheme;
   return switch (tone) {
-    HomeOpsTone.healthy => AppTokens.statusGreen,
+    HomeOpsTone.healthy => scheme.statusSuccess,
     HomeOpsTone.active => scheme.primary,
-    HomeOpsTone.attention => AppTokens.statusOrange,
+    HomeOpsTone.attention => scheme.statusWarning,
     HomeOpsTone.failed => scheme.error,
-    HomeOpsTone.unknown => scheme.tertiary,
+    HomeOpsTone.unknown => scheme.onSurfaceVariant,
   };
 }
 

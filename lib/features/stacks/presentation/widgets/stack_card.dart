@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
@@ -310,18 +311,19 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final (color, icon) = switch (state) {
-      StackState.deploying => (Colors.blue, AppIcons.loading),
-      StackState.running => (Colors.green, AppIcons.ok),
-      StackState.paused => (Colors.grey, AppIcons.paused),
-      StackState.stopped => (Colors.red, AppIcons.stopped),
-      StackState.created => (Colors.grey, AppIcons.pending),
-      StackState.restarting => (Colors.blue, AppIcons.loading),
-      StackState.removing => (Colors.grey, AppIcons.waiting),
-      StackState.unhealthy => (Colors.red, AppIcons.error),
-      StackState.down => (Colors.grey, AppIcons.pending),
-      StackState.dead => (Colors.red, AppIcons.canceled),
-      StackState.unknown => (Colors.orange, AppIcons.unknown),
+      StackState.deploying => (scheme.primary, AppIcons.loading),
+      StackState.running => (scheme.statusSuccess, AppIcons.ok),
+      StackState.paused => (scheme.onSurfaceVariant, AppIcons.paused),
+      StackState.stopped => (scheme.onSurfaceVariant, AppIcons.stopped),
+      StackState.created => (scheme.onSurfaceVariant, AppIcons.pending),
+      StackState.restarting => (scheme.statusWarning, AppIcons.loading),
+      StackState.removing => (scheme.primary, AppIcons.waiting),
+      StackState.unhealthy => (scheme.error, AppIcons.error),
+      StackState.down => (scheme.onSurfaceVariant, AppIcons.pending),
+      StackState.dead => (scheme.error, AppIcons.canceled),
+      StackState.unknown => (scheme.onSurfaceVariant, AppIcons.unknown),
     };
 
     final padding = compact

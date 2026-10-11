@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 enum DetailMetricTone { primary, secondary, tertiary, success, neutral, alert }
@@ -37,6 +39,28 @@ class DetailMetricGrid extends StatelessWidget {
       builder: (context, constraints) {
         final crossAxisCount = constraints.maxWidth >= 520 ? 3 : 2;
         final isTablet = constraints.maxWidth >= 520;
+        final textTheme = Theme.of(context).textTheme;
+        final textScaler = MediaQuery.textScalerOf(context);
+        final labelStyle = isTablet
+            ? textTheme.labelLarge!
+            : textTheme.labelMedium!;
+        final valueStyle = isTablet
+            ? textTheme.titleLarge!
+            : textTheme.titleMedium!;
+        final labelHeight =
+            textScaler.scale(labelStyle.fontSize!) * (labelStyle.height ?? 1);
+        final valueHeight =
+            textScaler.scale(valueStyle.fontSize!) * (valueStyle.height ?? 1);
+        final tileWidth =
+            (constraints.maxWidth - 12 * (crossAxisCount - 1)) / crossAxisCount;
+        // Preserve the usual proportions, but leave room for scaled text,
+        // padding, and a progress bar on compact screens.
+        final minimumHeight =
+            (isTablet ? 32 : 24) +
+            math.max(isTablet ? 36 : 30, labelHeight) +
+            12 +
+            valueHeight +
+            (items.any((item) => item.progress != null) ? 16 : 0);
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -45,7 +69,10 @@ class DetailMetricGrid extends StatelessWidget {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: isTablet ? 1.7 : 1.55,
+            mainAxisExtent: math.max(
+              tileWidth / (isTablet ? 1.7 : 1.55),
+              minimumHeight.ceilToDouble(),
+            ),
           ),
           itemBuilder: (context, index) =>
               _DetailMetricTile(item: items[index], isTablet: isTablet),
@@ -74,7 +101,10 @@ class _DetailMetricTile extends StatelessWidget {
         scheme.secondaryContainer,
       ),
       DetailMetricTone.tertiary => (scheme.tertiary, scheme.tertiaryContainer),
-      DetailMetricTone.success => (scheme.secondary, scheme.secondaryContainer),
+      DetailMetricTone.success => (
+        scheme.statusSuccess,
+        scheme.statusSuccessContainer,
+      ),
       DetailMetricTone.neutral => (
         scheme.onSurfaceVariant,
         scheme.surfaceContainerHigh,
@@ -98,19 +128,22 @@ class _DetailMetricTile extends StatelessWidget {
                   color: iconColor.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(item.icon, size: isTablet ? 20 : 18, color: iconColor),
+                child: Icon(
+                  item.icon,
+                  size: isTablet ? 20 : 18,
+                  color: iconColor,
+                ),
               ),
               const Gap(10),
               Expanded(
                 child: Text(
                   item.label,
-                  style: (isTablet
-                          ? textTheme.labelLarge
-                          : textTheme.labelMedium)
-                      ?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style:
+                      (isTablet ? textTheme.labelLarge : textTheme.labelMedium)
+                          ?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -124,7 +157,7 @@ class _DetailMetricTile extends StatelessWidget {
                 ?.copyWith(
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.2,
-            ),
+                ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

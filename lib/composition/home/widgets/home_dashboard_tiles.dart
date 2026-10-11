@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -27,7 +28,7 @@ class HomeServerStatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final statusColor = _serverStatusColor(server.state);
+    final statusColor = _serverStatusColor(server.state, scheme);
     final statusIcon = _serverStatusIcon(server.state);
     final statsValue = stats.asData?.value;
     final isLoading = stats.isLoading && statsValue == null;
@@ -109,7 +110,7 @@ class HomeServerStatTile extends StatelessWidget {
                                 icon: AppIcons.cpu,
                                 label: 'CPU',
                                 primary: _percentLabel(statsValue?.cpuPercent),
-                                color: AppTokens.statusGreen,
+                                color: scheme.primary,
                               ),
                               _CompactStatLine(
                                 icon: AppIcons.memory,
@@ -119,7 +120,7 @@ class HomeServerStatTile extends StatelessWidget {
                                   statsValue?.memUsedGb,
                                   statsValue?.memTotalGb,
                                 ),
-                                color: AppTokens.statusOrange,
+                                color: scheme.primary,
                               ),
                               _CompactStatLine(
                                 icon: AppIcons.hardDrive,
@@ -129,7 +130,7 @@ class HomeServerStatTile extends StatelessWidget {
                                   statsValue?.diskUsedGb,
                                   statsValue?.diskTotalGb,
                                 ),
-                                color: AppTokens.statusRed,
+                                color: scheme.primary,
                               ),
                             ],
                           ),
@@ -141,7 +142,7 @@ class HomeServerStatTile extends StatelessWidget {
                               icon: AppIcons.cpu,
                               label: 'CPU',
                               percent: statsValue?.cpuPercent,
-                              color: AppTokens.statusGreen,
+                              color: scheme.primary,
                             ),
                             const Gap(10),
                             _StatRow(
@@ -152,7 +153,7 @@ class HomeServerStatTile extends StatelessWidget {
                                 statsValue?.memUsedGb,
                                 statsValue?.memTotalGb,
                               ),
-                              color: AppTokens.statusOrange,
+                              color: scheme.primary,
                             ),
                             const Gap(10),
                             _StatRow(
@@ -163,7 +164,7 @@ class HomeServerStatTile extends StatelessWidget {
                                 statsValue?.diskUsedGb,
                                 statsValue?.diskTotalGb,
                               ),
-                              color: AppTokens.statusRed,
+                              color: scheme.primary,
                             ),
                           ],
                         ),
@@ -203,12 +204,12 @@ class HomeServerStatTile extends StatelessWidget {
     return fixed.endsWith('.0') ? fixed.substring(0, fixed.length - 2) : fixed;
   }
 
-  Color _serverStatusColor(ServerState state) {
+  Color _serverStatusColor(ServerState state, ColorScheme scheme) {
     return switch (state) {
-      ServerState.ok => AppTokens.statusGreen,
-      ServerState.notOk => AppTokens.statusRed,
-      ServerState.disabled => Colors.grey,
-      ServerState.unknown => AppTokens.statusOrange,
+      ServerState.ok => scheme.statusSuccess,
+      ServerState.notOk => scheme.error,
+      ServerState.disabled => scheme.onSurfaceVariant,
+      ServerState.unknown => scheme.onSurfaceVariant,
     };
   }
 
@@ -285,8 +286,8 @@ class HomeAlertPreviewTile extends StatelessWidget {
   Color _alertColor(SeverityLevel level, ColorScheme scheme) {
     return switch (level) {
       SeverityLevel.critical => scheme.error,
-      SeverityLevel.warning => AppTokens.statusOrange,
-      SeverityLevel.ok => scheme.primary,
+      SeverityLevel.warning => scheme.statusWarning,
+      SeverityLevel.ok => scheme.statusSuccess,
       SeverityLevel.unknown => scheme.onSurfaceVariant,
     };
   }
@@ -399,7 +400,7 @@ class HomeUpdatePreviewTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final statusColor = _statusColor(update.status, scheme);
+    final statusColor = _statusColor(update, scheme);
     final route = routeForUpdate(update);
     final label = update.operation.isNotEmpty
         ? _humanizeVariant(update.operation)
@@ -448,13 +449,14 @@ class HomeUpdatePreviewTile extends StatelessWidget {
     );
   }
 
-  Color _statusColor(UpdateStatus status, ColorScheme scheme) {
-    return switch (status) {
-      UpdateStatus.success => AppTokens.statusGreen,
+  Color _statusColor(UpdateListItem update, ColorScheme scheme) {
+    return switch (update.status) {
+      UpdateStatus.success => scheme.statusSuccess,
       UpdateStatus.failed => scheme.error,
-      UpdateStatus.running || UpdateStatus.queued => AppTokens.statusOrange,
+      UpdateStatus.running || UpdateStatus.queued => scheme.primary,
       UpdateStatus.canceled => scheme.onSurfaceVariant,
-      UpdateStatus.unknown => scheme.primary,
+      UpdateStatus.unknown =>
+        update.success ? scheme.statusSuccess : scheme.onSurfaceVariant,
     };
   }
 

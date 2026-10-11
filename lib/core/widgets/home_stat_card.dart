@@ -85,7 +85,10 @@ class HomeStatCard<T> extends StatelessWidget {
                       : isSpacious
                       ? textTheme.titleSmall
                       : textTheme.labelLarge)
-                  ?.copyWith(color: color, fontWeight: FontWeight.w700);
+                  ?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  );
 
               return Padding(
                 padding: EdgeInsets.all(padding),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -139,7 +140,7 @@ class ContainerCard extends StatelessWidget {
                     progress: stats.memPercentValue != null
                         ? stats.memPercentValue! / 100.0
                         : null,
-                    accent: scheme.secondary,
+                    accent: scheme.primary,
                   ),
                   const Gap(10),
                   _IoRow(stats: stats),
@@ -260,7 +261,7 @@ class _LeadingIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: ShapeDecoration(
-        color: color.withValues(alpha: 0.18),
+        color: color.withValues(alpha: 0.1),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
         ),
@@ -306,7 +307,7 @@ class _StateChip extends StatelessWidget {
 
     final chip = DecoratedBox(
       decoration: ShapeDecoration(
-        color: color.withValues(alpha: 0.18),
+        color: color.withValues(alpha: 0.1),
         shape: const StadiumBorder(),
       ),
       child: Padding(
@@ -552,12 +553,13 @@ class _IoMetric extends StatelessWidget {
 
 Color _stateColor(ContainerState state, ColorScheme scheme) {
   return switch (state) {
-    ContainerState.running => AppTokens.statusGreen,
-    ContainerState.exited || ContainerState.dead => AppTokens.statusRed,
+    ContainerState.running => scheme.statusSuccess,
+    ContainerState.dead => scheme.error,
+    ContainerState.restarting => scheme.statusWarning,
+    ContainerState.removing => scheme.primary,
+    ContainerState.exited ||
     ContainerState.paused ||
-    ContainerState.restarting ||
     ContainerState.created ||
-    ContainerState.removing => AppTokens.statusOrange,
     ContainerState.unknown => scheme.onSurfaceVariant,
   };
 }

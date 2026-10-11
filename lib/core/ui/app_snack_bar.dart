@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 
 enum AppSnackBarTone { neutral, success, warning, error }
 
@@ -28,11 +29,11 @@ class AppSnackBar {
         backgroundColor = scheme.inverseSurface;
         foregroundColor = scheme.onInverseSurface;
       case AppSnackBarTone.success:
-        backgroundColor = scheme.secondaryContainer;
-        foregroundColor = scheme.onSecondaryContainer;
+        backgroundColor = scheme.statusSuccessContainer;
+        foregroundColor = scheme.statusSuccess;
       case AppSnackBarTone.warning:
-        backgroundColor = scheme.tertiaryContainer;
-        foregroundColor = scheme.onTertiaryContainer;
+        backgroundColor = scheme.statusWarningContainer;
+        foregroundColor = scheme.statusWarning;
       case AppSnackBarTone.error:
         backgroundColor = scheme.errorContainer;
         foregroundColor = scheme.onErrorContainer;

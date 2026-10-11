@@ -28,7 +28,6 @@ class ErrorStateView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Gap(48),
             Icon(
               isNetworkIssue ? AppIcons.disconnect : AppIcons.formError,
               size: 64,
