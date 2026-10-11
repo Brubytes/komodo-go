@@ -149,6 +149,14 @@ class ContainerInspection {
   final List<Map<String, dynamic>> mounts;
   final Map<String, dynamic> raw;
 
+  /// Container name without Docker's leading `/`, or null when unknown.
+  String? get containerName {
+    final trimmed = name?.trim();
+    if (trimmed == null) return null;
+    final stripped = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+    return stripped.isEmpty ? null : stripped;
+  }
+
   /// Stack name encoded by Komodo's compose working directory, when present.
   ///
   /// Komodo 2.3 can return no result from `GetResourceMatchingContainer` for
