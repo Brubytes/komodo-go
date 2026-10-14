@@ -2,12 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/builds/build_detail_sections.dart';
 import 'package:komodo_go/composition/deployments/deployment_detail_sections.dart';
 import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
+import 'package:komodo_go/core/router/resource_routes.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -145,6 +148,15 @@ class _DeploymentDetailViewState
       return null;
     }
 
+    final buildsList = ref.watch(buildsProvider).asData?.value;
+    String? buildNameForId(String buildId) {
+      if (buildsList == null || buildId.isEmpty) return null;
+      for (final b in buildsList) {
+        if (b.id == buildId) return b.name;
+      }
+      return null;
+    }
+
     return Scaffold(
       appBar: MainAppBar(
         title: widget.deploymentName,
@@ -152,6 +164,7 @@ class _DeploymentDetailViewState
         markColor: AppTokens.resourceDeployments,
         markUseGradient: true,
         centerTitle: true,
+        status: deployment == null ? null : deploymentAppBarStatus(deployment),
         actions: [
           PopupMenuButton<DeploymentAction>(
             icon: const Icon(AppIcons.moreVertical),
@@ -200,16 +213,41 @@ class _DeploymentDetailViewState
                           );
                         }
 
+                        final serverId =
+                            deployment.config?.serverId ??
+                            deployment.info?.serverId ??
+                            '';
+                        final buildId = deployment.info?.buildId?.trim() ?? '';
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            DeploymentHeroPanel(
+                            DeploymentHeader(
                               deployment: deployment,
-                              serverName: serverNameForId(
-                                deployment.config?.serverId ??
-                                    deployment.info?.serverId ??
-                                    '',
+                              serverName: serverNameForId(serverId),
+                              buildName: buildNameForId(buildId),
+                              onAction: (action) => _handleAction(
+                                context,
+                                deploymentId,
+                                action,
                               ),
+                              onServerTap: serverId.isEmpty
+                                  ? null
+                                  : () => context.push(
+                                      resourceDetailRoute(
+                                        AppRoutes.servers,
+                                        serverId,
+                                        name: serverNameForId(serverId),
+                                      ),
+                                    ),
+                              onBuildTap: buildId.isEmpty
+                                  ? null
+                                  : () => context.push(
+                                      resourceDetailRoute(
+                                        AppRoutes.builds,
+                                        buildId,
+                                        name: buildNameForId(buildId),
+                                      ),
+                                    ),
                             ),
                             const Gap(12),
                           ],

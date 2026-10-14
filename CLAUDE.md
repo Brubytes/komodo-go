@@ -189,12 +189,18 @@ Detail screens should follow the same layout and components so we can apply a co
 - Components live in: `lib/core/widgets/detail/`
 
 **Layout pattern**
-- Hero/header panel: `DetailHeroPanel` with a compact info header + `DetailMetricGrid`
+- Header: `MainAppBar(status: MainAppBarStatus(...))` for state + recency ("Ok · built 5m ago"), then `DetailResourceHeader` in the body:
+  - `banner`: at most one `DetailAttentionBanner`, only when the user should act (out of date, failed, unreachable), with an action button when a handler exists
+  - `facts`: `DetailFact` rows for identity/relationships (server, repo, branch, path); linked resources get `onTap` via `resourceDetailRoute`
+  - `stats`: optional `DetailStat` strip, only for real numbers (stack counts, server load/memory/disk)
+  - Never repeat config toggles or healthy states ("Up to date") in the header
+  - Reference: `lib/features/stacks/presentation/views/stack_detail/stack_header.dart`
+- Timestamps: use `formatTimeAgo`/`formatTimeUntil` from `lib/core/utils/relative_time.dart` (handles ms vs s)
 - Sections: `DetailSection` for primary blocks (e.g. Stats / Config / System)
 - Inner grouping: `DetailSubCard` to break up long info into digestible chunks
 
 **Surface & color rules**
-- Use `DetailSurface` (via `DetailHeroPanel`/`DetailSection`/`DetailSubCard`) for consistent rounding, borders, and theming.
+- Use `DetailSurface` (via `DetailSection`/`DetailSubCard`) for consistent rounding, borders, and theming.
 - Prefer a single tint color per screen (defaults to `colorScheme.primary`) instead of introducing many different card colors.
 - Keep light mode clean (no gradients); allow subtle depth in dark mode only.
 

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/builds/build_detail_sections.dart';
 import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/router/resource_routes.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
@@ -66,6 +69,16 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
     final reposAsync = ref.watch(reposProvider);
     final scheme = Theme.of(context).colorScheme;
     final build = buildAsync.asData?.value;
+    BuildListItem? listItem;
+    final list = buildsListAsync.asData?.value;
+    if (list != null) {
+      for (final item in list) {
+        if (item.id == buildId) {
+          listItem = item;
+          break;
+        }
+      }
+    }
 
     return Scaffold(
       appBar: MainAppBar(
@@ -74,6 +87,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
         markColor: AppTokens.resourceBuilds,
         markUseGradient: true,
         centerTitle: true,
+        status: buildAppBarStatus(listItem: listItem, build: build),
         actions: [
           PopupMenuButton<BuildAction>(
             icon: const Icon(AppIcons.moreVertical),
@@ -132,17 +146,6 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                           );
                         }
 
-                        BuildListItem? listItem;
-                        final list = buildsListAsync.asData?.value;
-                        if (list != null) {
-                          for (final item in list) {
-                            if (item.id == build.id) {
-                              listItem = item;
-                              break;
-                            }
-                          }
-                        }
-
                         final builderId = build.config.builderId;
                         final builderNameAsync = builderId.isEmpty
                             ? const AsyncValue<String?>.data(null)
@@ -158,10 +161,24 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                               builderId.isNotEmpty ? builderId : null,
                         );
 
-                        return BuildHeroPanel(
+                        final linkedRepo = build.config.linkedRepo.trim();
+                        return BuildHeader(
                           buildResource: build,
                           listItem: listItem,
                           builderLabel: builderLabel,
+                          onBuilderTap: builderId.isEmpty
+                              ? null
+                              : () => context.push(AppRoutes.komodoBuilders),
+                          onRepoTap: linkedRepo.isEmpty
+                              ? null
+                              : () => context.push(
+                                  resourceDetailRoute(
+                                    AppRoutes.repos,
+                                    linkedRepo,
+                                  ),
+                                ),
+                          onRunBuild: () =>
+                              _handleAction(buildId, BuildAction.run),
                         );
                       },
                       loading: () => const BuildLoadingSurface(),

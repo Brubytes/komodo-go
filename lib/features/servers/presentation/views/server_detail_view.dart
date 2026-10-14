@@ -200,6 +200,10 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
         markUseGradient: true,
         centerTitle: true,
         actions: widget.appBarActions,
+        status: serverAppBarStatus(
+          server: server,
+          listServer: listServer,
+        ),
       ),
       body: NestedScrollView(
         key: _nestedScrollKey,
@@ -209,7 +213,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: ServerHeroPanel(
+                child: ServerHeader(
                   server: server ?? listServer,
                   listServer: listServer,
                   stats: stats,

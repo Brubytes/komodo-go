@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -6,12 +7,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/utils/relative_time.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
-
 import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
 
@@ -82,6 +83,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
         markColor: AppTokens.resourceProcedures,
         markUseGradient: true,
         centerTitle: true,
+        status: procedureAppBarStatus(listItem: listItem),
         actions: [
           ...widget.appBarActions,
           IconButton(
@@ -111,9 +113,14 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                           );
                         }
 
-                        return _ProcedureHeroPanel(
+                        return _ProcedureHeader(
                           procedure: procedure,
                           listItem: listItem,
+                          onRun: actionsState.isLoading
+                              ? null
+                              : () => unawaited(
+                                  _runProcedure(context, procedureId),
+                                ),
                         );
                       },
                       loading: () => const _LoadingSurface(),
@@ -665,91 +672,84 @@ class ProcedureConfigEditorContentState
   }
 }
 
-class _ProcedureHeroPanel extends StatelessWidget {
-  const _ProcedureHeroPanel({required this.procedure, required this.listItem});
+/// App bar status line: state plus time since the last run.
+MainAppBarStatus? procedureAppBarStatus({
+  required ProcedureListItem? listItem,
+}) {
+  final info = listItem?.info;
+  final state = info?.state;
+  if (info == null || state == null) return null;
+  final lastRun = info.lastRunAt;
+  final ran = state == ProcedureState.running || lastRun == null
+      ? ''
+      : ' · ran ${formatTimeAgo(lastRun)}';
+  return MainAppBarStatus(
+    label: '${state.displayName}$ran',
+    tone: switch (state) {
+      ProcedureState.ok => PillTone.success,
+      ProcedureState.failed => PillTone.alert,
+      ProcedureState.running => PillTone.warning,
+      ProcedureState.unknown => PillTone.neutral,
+    },
+  );
+}
+
+class _ProcedureHeader extends StatelessWidget {
+  const _ProcedureHeader({
+    required this.procedure,
+    required this.listItem,
+    required this.onRun,
+  });
 
   final KomodoProcedure procedure;
   final ProcedureListItem? listItem;
+  final VoidCallback? onRun;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final status = listItem?.info.state;
-    final stagesCount = procedure.config.stages.length;
-    final description = procedure.description.trim();
+    final schedule = procedure.config.schedule.trim();
+    final nextRun = listItem?.info.nextScheduledRun;
+    final failed = listItem?.info.state == ProcedureState.failed;
 
-    return DetailHeroPanel(
-      metrics: [
-        if (status != null)
-          DetailMetricTileData(
-            label: 'Status',
-            value: status.displayName,
-            icon: switch (status) {
-              ProcedureState.ok => AppIcons.ok,
-              ProcedureState.failed => AppIcons.error,
-              ProcedureState.running => AppIcons.loading,
-              ProcedureState.unknown => AppIcons.unknown,
-            },
-            tone: switch (status) {
-              ProcedureState.ok => DetailMetricTone.success,
-              ProcedureState.failed => DetailMetricTone.alert,
-              ProcedureState.running => DetailMetricTone.neutral,
-              ProcedureState.unknown => DetailMetricTone.neutral,
-            },
-          ),
-        DetailMetricTileData(
-          label: 'Stages',
-          value: stagesCount.toString(),
+    return DetailResourceHeader(
+      banner: failed
+          ? DetailAttentionBanner(
+              icon: AppIcons.error,
+              message: 'Last run failed',
+              tone: PillTone.alert,
+              actionLabel: onRun == null ? null : 'Run',
+              onAction: onRun,
+            )
+          : null,
+      facts: [
+        DetailFact(
           icon: AppIcons.stacks,
-          tone: DetailMetricTone.neutral,
+          label: 'Stages',
+          value: procedure.config.stages.length.toString(),
         ),
-        if (listItem?.info.lastRunAt != null)
-          DetailMetricTileData(
-            label: 'Last Run',
-            value: _formatTimestampSeconds(listItem!.info.lastRunAt!),
+        if (schedule.isNotEmpty)
+          DetailFact(
             icon: AppIcons.clock,
-            tone: DetailMetricTone.neutral,
+            label: 'Schedule',
+            value: schedule,
           ),
-        if (procedure.config.scheduleEnabled)
-          DetailMetricTileData(
-            label: 'Schedule',
-            value: procedure.config.schedule.isNotEmpty
-                ? procedure.config.schedule
-                : 'Enabled',
+        if (nextRun != null)
+          DetailFact(
             icon: AppIcons.clock,
-            tone: DetailMetricTone.tertiary,
-          )
-        else
-          const DetailMetricTileData(
-            label: 'Schedule',
-            value: 'Off',
-            icon: AppIcons.pause,
-            tone: DetailMetricTone.neutral,
+            label: 'Next run',
+            value: formatTimeUntil(nextRun),
+            fullValue: DateTime.fromMillisecondsSinceEpoch(
+              nextRun,
+            ).toLocal().toString(),
           ),
       ],
-      footer: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (procedure.tags.isNotEmpty)
-            DetailPillList(items: procedure.tags, showEmptyLabel: false),
-          if (description.isNotEmpty) ...[
-            if (procedure.tags.isNotEmpty) const Gap(12),
-            Text(
-              'Description',
-              style: textTheme.labelMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Gap(6),
-            Text(description, style: textTheme.bodyMedium),
-          ],
-        ],
-      ),
+      tags: procedure.tags,
+      description: procedure.description,
     );
   }
 }
+
+/// Timestamps from the API are unix milliseconds.
 
 class _ProcedureStagesContent extends StatelessWidget {
   const _ProcedureStagesContent({required this.config});
@@ -867,17 +867,6 @@ String _pretty(Object? value) {
   } on Exception {
     return value.toString();
   }
-}
-
-String _formatTimestampSeconds(int timestamp) {
-  final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
-  final now = DateTime.now();
-  final diff = now.difference(date);
-
-  if (diff.inDays > 0) return '${diff.inDays}d ago';
-  if (diff.inHours > 0) return '${diff.inHours}h ago';
-  if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-  return 'Just now';
 }
 
 class _MessageSurface extends StatelessWidget {

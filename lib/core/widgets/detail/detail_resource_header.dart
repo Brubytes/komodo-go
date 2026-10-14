@@ -92,6 +92,38 @@ class DetailAttentionBanner extends StatelessWidget {
       ),
     };
 
+    final hasAction = actionLabel != null && onAction != null;
+    final messageRow = Row(
+      children: [
+        Icon(icon, size: 18, color: fg),
+        const Gap(10),
+        Expanded(
+          child: Text(
+            message,
+            style: textTheme.bodyMedium?.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+    final button = hasAction
+        ? FilledButton(
+            onPressed: onAction,
+            style: FilledButton.styleFrom(
+              backgroundColor: fg,
+              foregroundColor: bg,
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              textStyle: textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            child: Text(actionLabel!),
+          )
+        : null;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
       constraints: const BoxConstraints(minHeight: 48),
@@ -99,36 +131,26 @@ class DetailAttentionBanner extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: fg),
-          const Gap(10),
-          Expanded(
-            child: Text(
-              message,
-              style: textTheme.bodyMedium?.copyWith(
-                color: fg,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          if (actionLabel != null && onAction != null) ...[
-            const Gap(8),
-            FilledButton(
-              onPressed: onAction,
-              style: FilledButton.styleFrom(
-                backgroundColor: fg,
-                foregroundColor: bg,
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                textStyle: textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              child: Text(actionLabel!),
-            ),
-          ],
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (button == null) return messageRow;
+          // Stack the button under the message when large text leaves too
+          // little room for both on one line.
+          final scale = MediaQuery.textScalerOf(context).scale(1);
+          if (constraints.maxWidth / scale < 220) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [messageRow, const Gap(6), button],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: messageRow),
+              const Gap(8),
+              button,
+            ],
+          );
+        },
       ),
     );
   }
@@ -254,10 +276,14 @@ class _FactRow extends StatelessWidget {
             children: [
               Icon(fact.icon, size: 18, color: scheme.primary),
               const Gap(12),
-              Text(
-                fact.label,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
+              Flexible(
+                child: Text(
+                  fact.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
               const Gap(16),

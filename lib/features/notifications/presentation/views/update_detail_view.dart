@@ -25,12 +25,15 @@ class UpdateDetailView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final updateAsync = ref.watch(updateDetailProvider(updateId));
     return Scaffold(
-      appBar: const MainAppBar(
+      appBar: MainAppBar(
         title: 'Update details',
         icon: AppIcons.history,
         markColor: AppTokens.resourceStacks,
         markUseGradient: true,
         centerTitle: true,
+        status: updateAsync.asData?.value == null
+            ? null
+            : _updateAppBarStatus(updateAsync.asData!.value!),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -96,44 +99,35 @@ class _UpdateDetailContent extends ConsumerWidget {
       key: const ValueKey('update_detail_content'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        DetailHeroPanel(
-          metrics: [
-            DetailMetricTileData(
-              icon: _statusIcon(update.status),
-              label: 'Status',
-              value: _statusLabel(update.status, update.success),
-              tone: _statusTone(update.status, update.success),
-            ),
-            DetailMetricTileData(
+        DetailResourceHeader(
+          banner: update.status == UpdateStatus.failed
+              ? const DetailAttentionBanner(
+                  icon: AppIcons.error,
+                  message: 'This update failed',
+                  tone: PillTone.alert,
+                )
+              : null,
+          facts: [
+            DetailFact(
               icon: _targetIcon(target?.type),
               label: 'Target',
               value: targetName,
-              tone: DetailMetricTone.neutral,
+              onTap: targetRoute == null
+                  ? null
+                  : () => context.push(targetRoute),
             ),
-            DetailMetricTileData(
+            if (update.operatorName.trim().isNotEmpty)
+              DetailFact(
+                icon: AppIcons.user,
+                label: 'Operator',
+                value: update.operatorName,
+              ),
+            DetailFact(
               icon: AppIcons.clock,
               label: 'Started',
               value: _formatDateTime(update.startedAt),
-              tone: DetailMetricTone.neutral,
-            ),
-            DetailMetricTileData(
-              icon: AppIcons.activity,
-              label: 'Duration',
-              value: _formatDuration(update.duration),
-              tone: DetailMetricTone.neutral,
             ),
           ],
-          footer: targetRoute == null
-              ? null
-              : Align(
-                  alignment: Alignment.centerLeft,
-                  child: FilledButton.tonalIcon(
-                    key: const ValueKey('open_update_target'),
-                    onPressed: () => context.push(targetRoute),
-                    icon: const Icon(AppIcons.externalLink),
-                    label: const Text('Open resource'),
-                  ),
-                ),
         ),
         const Gap(16),
         DetailSection(
@@ -303,25 +297,22 @@ String _statusLabel(UpdateStatus status, bool success) {
   };
 }
 
-IconData _statusIcon(UpdateStatus status) {
-  return switch (status) {
-    UpdateStatus.queued => AppIcons.waiting,
-    UpdateStatus.running => AppIcons.loading,
-    UpdateStatus.success => AppIcons.ok,
-    UpdateStatus.failed => AppIcons.error,
-    UpdateStatus.canceled => AppIcons.canceled,
-    UpdateStatus.unknown => AppIcons.unknown,
-  };
+MainAppBarStatus _updateAppBarStatus(UpdateDetail update) {
+  final duration = update.duration;
+  final label = _statusLabel(update.status, update.success);
+  return MainAppBarStatus(
+    label: duration == null ? label : '$label · ${_formatDuration(duration)}',
+    tone: _statusTone(update.status, update.success),
+  );
 }
 
-DetailMetricTone _statusTone(UpdateStatus status, bool success) {
+PillTone _statusTone(UpdateStatus status, bool success) {
   return switch (status) {
-    UpdateStatus.success => DetailMetricTone.success,
-    UpdateStatus.failed => DetailMetricTone.alert,
-    UpdateStatus.queued || UpdateStatus.running => DetailMetricTone.tertiary,
-    UpdateStatus.canceled => DetailMetricTone.neutral,
-    UpdateStatus.unknown =>
-      success ? DetailMetricTone.success : DetailMetricTone.neutral,
+    UpdateStatus.success => PillTone.success,
+    UpdateStatus.failed => PillTone.alert,
+    UpdateStatus.queued || UpdateStatus.running => PillTone.warning,
+    UpdateStatus.canceled => PillTone.neutral,
+    UpdateStatus.unknown => success ? PillTone.success : PillTone.neutral,
   };
 }
 

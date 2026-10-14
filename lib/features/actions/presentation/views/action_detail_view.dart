@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/utils/relative_time.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -101,6 +104,7 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
         markColor: AppTokens.resourceActions,
         markUseGradient: true,
         centerTitle: true,
+        status: actionAppBarStatus(listItem: listItem),
         actions: [
           ...widget.appBarActions,
           IconButton(
@@ -130,9 +134,12 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                           );
                         }
 
-                        return _ActionHeroPanel(
+                        return _ActionHeader(
                           action: action,
                           listItem: listItem,
+                          onRun: actionsState.isLoading
+                              ? null
+                              : () => unawaited(_runAction(context, actionId)),
                         );
                       },
                       loading: () => const _LoadingSurface(),
@@ -840,109 +847,77 @@ class _KeepAliveState extends State<_KeepAlive>
   bool get wantKeepAlive => true;
 }
 
-class _ActionHeroPanel extends StatelessWidget {
-  const _ActionHeroPanel({required this.action, required this.listItem});
+/// App bar status line: state plus time since the last run.
+MainAppBarStatus? actionAppBarStatus({required ActionListItem? listItem}) {
+  final info = listItem?.info;
+  final state = info?.state;
+  if (info == null || state == null) return null;
+  final lastRun = info.lastRunAt;
+  final ran = state == ActionState.running || lastRun == null
+      ? ''
+      : ' · ran ${formatTimeAgo(lastRun)}';
+  return MainAppBarStatus(
+    label: '${state.displayName}$ran',
+    tone: switch (state) {
+      ActionState.ok => PillTone.success,
+      ActionState.failed => PillTone.alert,
+      ActionState.running => PillTone.warning,
+      ActionState.unknown => PillTone.neutral,
+    },
+  );
+}
+
+class _ActionHeader extends StatelessWidget {
+  const _ActionHeader({
+    required this.action,
+    required this.listItem,
+    required this.onRun,
+  });
 
   final KomodoAction action;
   final ActionListItem? listItem;
+  final VoidCallback? onRun;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final status = listItem?.info.state;
-    final description = action.description.trim();
+    final schedule = action.config.schedule.trim();
+    final nextRun = listItem?.info.nextScheduledRun;
+    final failed = listItem?.info.state == ActionState.failed;
 
-    return DetailHeroPanel(
-      metrics: [
-        if (status != null)
-          DetailMetricTileData(
-            label: 'Status',
-            value: status.displayName,
-            icon: switch (status) {
-              ActionState.ok => AppIcons.ok,
-              ActionState.failed => AppIcons.error,
-              ActionState.running => AppIcons.loading,
-              ActionState.unknown => AppIcons.unknown,
-            },
-            tone: switch (status) {
-              ActionState.ok => DetailMetricTone.success,
-              ActionState.failed => DetailMetricTone.alert,
-              ActionState.running => DetailMetricTone.neutral,
-              ActionState.unknown => DetailMetricTone.neutral,
-            },
-          ),
-        DetailMetricTileData(
-          label: 'Startup',
-          value: action.config.runAtStartup ? 'On' : 'Off',
-          icon: action.config.runAtStartup ? AppIcons.ok : AppIcons.pause,
-          tone: action.config.runAtStartup
-              ? DetailMetricTone.success
-              : DetailMetricTone.neutral,
-        ),
-        if (listItem?.info.lastRunAt != null)
-          DetailMetricTileData(
-            label: 'Last Run',
-            value: _formatTimestampSeconds(listItem!.info.lastRunAt!),
+    return DetailResourceHeader(
+      banner: failed
+          ? DetailAttentionBanner(
+              icon: AppIcons.error,
+              message: 'Last run failed',
+              tone: PillTone.alert,
+              actionLabel: onRun == null ? null : 'Run',
+              onAction: onRun,
+            )
+          : null,
+      facts: [
+        if (schedule.isNotEmpty)
+          DetailFact(
             icon: AppIcons.clock,
-            tone: DetailMetricTone.neutral,
+            label: 'Schedule',
+            value: schedule,
           ),
-        if (action.config.scheduleEnabled)
-          DetailMetricTileData(
-            label: 'Schedule',
-            value: action.config.schedule.isNotEmpty
-                ? action.config.schedule
-                : 'Enabled',
+        if (nextRun != null)
+          DetailFact(
             icon: AppIcons.clock,
-            tone: DetailMetricTone.tertiary,
-          )
-        else
-          const DetailMetricTileData(
-            label: 'Schedule',
-            value: 'Off',
-            icon: AppIcons.pause,
-            tone: DetailMetricTone.neutral,
+            label: 'Next run',
+            value: formatTimeUntil(nextRun),
+            fullValue: DateTime.fromMillisecondsSinceEpoch(
+              nextRun,
+            ).toLocal().toString(),
           ),
       ],
-      footer: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (action.tags.isNotEmpty)
-            DetailPillList(
-              items: action.tags,
-              showEmptyLabel: false,
-            ),
-          if (description.isNotEmpty) ...[
-            if (action.tags.isNotEmpty) const Gap(12),
-            Text(
-              'Description',
-              style: textTheme.labelMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Gap(6),
-            Text(
-              description,
-              style: textTheme.bodyMedium,
-            ),
-          ],
-        ],
-      ),
+      tags: action.tags,
+      description: action.description,
     );
   }
 }
 
-String _formatTimestampSeconds(int timestamp) {
-  final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
-  final now = DateTime.now();
-  final diff = now.difference(date);
-
-  if (diff.inDays > 0) return '${diff.inDays}d ago';
-  if (diff.inHours > 0) return '${diff.inHours}h ago';
-  if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-  return 'Just now';
-}
+/// Timestamps from the API are unix milliseconds.
 
 class _MessageSurface extends StatelessWidget {
   const _MessageSurface({required this.message});

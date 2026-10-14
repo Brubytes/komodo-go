@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
 import 'package:komodo_go/composition/syncs/advanced_sync_section.dart';
 import 'package:komodo_go/composition/syncs/sync_detail_sections.dart';
+import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/router/resource_routes.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/utils/relative_time.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -53,6 +57,25 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
     final gitProviders =
         gitProvidersAsync.asData?.value ?? const <GitProviderAccount>[];
 
+    String? repoNameForId(String repoId) {
+      if (repoId.isEmpty) return null;
+      for (final r in repos) {
+        if (r.id == repoId) return r.name;
+      }
+      return null;
+    }
+
+    ResourceSyncState? listState;
+    final syncList = ref.watch(syncsProvider).asData?.value;
+    if (syncList != null) {
+      for (final s in syncList) {
+        if (s.id == widget.syncId) {
+          listState = s.info.state;
+          break;
+        }
+      }
+    }
+
     return Scaffold(
       appBar: MainAppBar(
         title: widget.syncName,
@@ -60,6 +83,7 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
         markColor: AppTokens.resourceSyncs,
         markUseGradient: true,
         centerTitle: true,
+        status: sync == null ? null : _syncAppBarStatus(sync, listState),
         actions: [
           if (sync != null)
             ResourceAdvancedMenuButton(
@@ -100,7 +124,24 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _SyncHeroPanel(syncResource: sync),
+                            _SyncHeader(
+                              syncResource: sync,
+                              repoName: repoNameForId(
+                                sync.config.linkedRepo.trim(),
+                              ),
+                              onRepoTap: sync.config.linkedRepo.trim().isEmpty
+                                  ? null
+                                  : () => context.push(
+                                      resourceDetailRoute(
+                                        AppRoutes.repos,
+                                        sync.config.linkedRepo.trim(),
+                                        name: repoNameForId(
+                                          sync.config.linkedRepo.trim(),
+                                        ),
+                                      ),
+                                    ),
+                              onRetryPreview: () => _previewSync(sync.id),
+                            ),
                             const Gap(16),
                             SyncConfigEditorContent(
                               key: _configEditorKey,
@@ -244,92 +285,111 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
   }
 }
 
-// Hero Panel
-class _SyncHeroPanel extends StatelessWidget {
-  const _SyncHeroPanel({required this.syncResource});
+// Header
+PillTone _syncStateTone(ResourceSyncState state) => switch (state) {
+  ResourceSyncState.ok => PillTone.success,
+  ResourceSyncState.failed => PillTone.alert,
+  ResourceSyncState.pending || ResourceSyncState.syncing => PillTone.warning,
+  ResourceSyncState.unknown => PillTone.neutral,
+};
+
+int _pendingChangeCount(KomodoResourceSync sync) =>
+    sync.info.resourceUpdates.length +
+    sync.info.variableUpdates.length +
+    sync.info.userGroupUpdates.length;
+
+ResourceSyncState _effectiveSyncState(
+  KomodoResourceSync sync,
+  ResourceSyncState? listState,
+) {
+  if (listState != null && listState != ResourceSyncState.unknown) {
+    return listState;
+  }
+  if ((sync.info.pendingError ?? '').trim().isNotEmpty) {
+    return ResourceSyncState.failed;
+  }
+  if (_pendingChangeCount(sync) > 0) return ResourceSyncState.pending;
+  return sync.info.lastSyncTs > 0
+      ? ResourceSyncState.ok
+      : ResourceSyncState.unknown;
+}
+
+MainAppBarStatus? _syncAppBarStatus(
+  KomodoResourceSync sync,
+  ResourceSyncState? listState,
+) {
+  final state = _effectiveSyncState(sync, listState);
+  final synced = sync.info.lastSyncTs > 0
+      ? ' · synced ${formatTimeAgo(sync.info.lastSyncTs)}'
+      : '';
+  return MainAppBarStatus(
+    label: '${state.displayName}$synced',
+    tone: _syncStateTone(state),
+  );
+}
+
+class _SyncHeader extends StatelessWidget {
+  const _SyncHeader({
+    required this.syncResource,
+    required this.repoName,
+    required this.onRepoTap,
+    required this.onRetryPreview,
+  });
 
   final KomodoResourceSync syncResource;
+  final String? repoName;
+  final VoidCallback? onRepoTap;
+  final VoidCallback onRetryPreview;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final description = syncResource.description.trim();
-    final metrics = <DetailMetricTileData>[
-      if (syncResource.config.repo.isNotEmpty)
-        DetailMetricTileData(
-          label: 'Repository',
-          value: syncResource.config.branch.isNotEmpty
-              ? '${syncResource.config.repo} (${syncResource.config.branch})'
-              : syncResource.config.repo,
-          icon: AppIcons.repos,
-          tone: DetailMetricTone.neutral,
-        ),
-      if (syncResource.config.resourcePath.isNotEmpty)
-        DetailMetricTileData(
-          label: 'Path',
-          value: syncResource.config.resourcePath.join('/'),
-          icon: AppIcons.repos,
-          tone: DetailMetricTone.neutral,
-        ),
-      if (syncResource.info.lastSyncTs > 0)
-        DetailMetricTileData(
-          label: 'Last Synced',
-          value: _formatTimestamp(syncResource.info.lastSyncTs),
-          icon: AppIcons.clock,
-          tone: DetailMetricTone.neutral,
-        ),
-    ];
-    final hasTags = syncResource.tags.isNotEmpty;
-    final hasFooter = hasTags || description.isNotEmpty;
-    if (metrics.isEmpty && !hasFooter) {
-      return const SizedBox.shrink();
-    }
+    final config = syncResource.config;
+    final repoLabel = (repoName ?? '').isNotEmpty ? repoName! : config.repo;
+    final branch = config.branch.trim();
+    final path = config.resourcePath.join('/');
 
-    return DetailHeroPanel(
-      metrics: metrics,
-      footer: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (hasTags)
-            DetailPillList(
-              items: syncResource.tags,
-              showEmptyLabel: false,
-            ),
-          if (description.isNotEmpty) ...[
-            if (hasTags) const Gap(12),
-            Text(
-              'Description',
-              style: textTheme.labelMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Gap(6),
-            Text(
-              description,
-              style: textTheme.bodyMedium,
-            ),
-          ],
-        ],
-      ),
+    return DetailResourceHeader(
+      banner: _banner(),
+      facts: [
+        if (repoLabel.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.repos,
+            label: 'Repository',
+            value: branch.isNotEmpty ? '$repoLabel ($branch)' : repoLabel,
+            onTap: onRepoTap,
+          ),
+        if (path.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.package,
+            label: 'Path',
+            value: path,
+            fullValue: path,
+          ),
+      ],
+      tags: syncResource.tags,
+      description: syncResource.description,
     );
   }
 
-  String _formatTimestamp(int timestamp) {
-    final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
-    final now = DateTime.now();
-    final diff = now.difference(date);
-
-    if (diff.inDays > 0) {
-      return '${diff.inDays}d ago';
-    } else if (diff.inHours > 0) {
-      return '${diff.inHours}h ago';
-    } else if (diff.inMinutes > 0) {
-      return '${diff.inMinutes}m ago';
-    } else {
-      return 'Just now';
+  Widget? _banner() {
+    final error = syncResource.info.pendingError?.trim() ?? '';
+    if (error.isNotEmpty) {
+      return DetailAttentionBanner(
+        icon: AppIcons.error,
+        message: 'Sync plan failed',
+        tone: PillTone.alert,
+        actionLabel: 'Retry',
+        onAction: onRetryPreview,
+      );
     }
+    final pending = _pendingChangeCount(syncResource);
+    if (pending > 0) {
+      return DetailAttentionBanner(
+        icon: AppIcons.warning,
+        message: '$pending pending change${pending == 1 ? '' : 's'}',
+      );
+    }
+    return null;
   }
 }
 

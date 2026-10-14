@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/repos/repo_detail_sections.dart';
 import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/router/resource_routes.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/utils/relative_time.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -66,11 +70,19 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
     final repoAsync = ref.watch(repoDetailProvider(widget.repoId));
     final actionsState = ref.watch(repoActionsProvider);
     final serversListAsync = ref.watch(serversProvider);
+    final reposAsync = ref.watch(reposProvider);
     final buildersListAsync = ref.watch(buildersProvider);
     final gitProvidersAsync = ref.watch(gitProvidersProvider);
 
     final scheme = Theme.of(context).colorScheme;
     final repo = repoAsync.asData?.value;
+    RepoListItem? listItem;
+    for (final item in reposAsync.asData?.value ?? const <RepoListItem>[]) {
+      if (item.id == widget.repoId) {
+        listItem = item;
+        break;
+      }
+    }
 
     String? serverNameForId(String serverId) {
       final servers = serversListAsync.asData?.value;
@@ -94,6 +106,7 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
         markColor: AppTokens.resourceRepos,
         markUseGradient: true,
         centerTitle: true,
+        status: repoAppBarStatus(listItem: listItem, repo: repo),
         actions: [
           PopupMenuButton<RepoAction>(
             icon: const Icon(AppIcons.moreVertical),
@@ -150,9 +163,27 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                     child: repoAsync.when(
                       data: (repo) => repo != null
-                          ? _RepoHeroPanel(
+                          ? _RepoHeader(
                               repo: repo,
+                              listItem: listItem,
                               serverName: serverNameForId(repo.config.serverId),
+                              onServerTap: repo.config.serverId.isEmpty
+                                  ? null
+                                  : () => context.push(
+                                      resourceDetailRoute(
+                                        AppRoutes.servers,
+                                        repo.config.serverId,
+                                        name: serverNameForId(
+                                          repo.config.serverId,
+                                        ),
+                                      ),
+                                    ),
+                              onPull: () => _handleAction(
+                                context,
+                                ref,
+                                widget.repoId,
+                                RepoAction.pull,
+                              ),
                             )
                           : const _MessageSurface(message: 'Repo not found'),
                       loading: () => const _LoadingSurface(),
@@ -358,90 +389,109 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
   }
 }
 
-class _RepoHeroPanel extends StatelessWidget {
-  const _RepoHeroPanel({required this.repo, required this.serverName});
+/// App bar status line for a repo: state plus how long ago it was pulled.
+MainAppBarStatus? repoAppBarStatus({
+  required RepoListItem? listItem,
+  required KomodoRepo? repo,
+}) {
+  if (listItem == null) return null;
+  final pulledAt = repo?.info.lastPulledAt ?? listItem.info.lastPulledAt;
+  final ago = pulledAt > 0 ? ' · pulled ${formatTimeAgo(pulledAt)}' : '';
+  return switch (listItem.info.state) {
+    RepoState.ok => MainAppBarStatus(label: 'Ok$ago', tone: PillTone.success),
+    RepoState.failed => MainAppBarStatus(
+      label: 'Failed$ago',
+      tone: PillTone.alert,
+    ),
+    RepoState.cloning => const MainAppBarStatus(
+      label: 'Cloning',
+      tone: PillTone.warning,
+    ),
+    RepoState.pulling => const MainAppBarStatus(
+      label: 'Pulling',
+      tone: PillTone.warning,
+    ),
+    RepoState.building => const MainAppBarStatus(
+      label: 'Building',
+      tone: PillTone.warning,
+    ),
+    RepoState.unknown => const MainAppBarStatus(label: 'Unknown'),
+  };
+}
+
+class _RepoHeader extends StatelessWidget {
+  const _RepoHeader({
+    required this.repo,
+    required this.listItem,
+    required this.serverName,
+    this.onServerTap,
+    this.onPull,
+  });
 
   final KomodoRepo repo;
+  final RepoListItem? listItem;
   final String? serverName;
+  final VoidCallback? onServerTap;
+  final VoidCallback? onPull;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final config = repo.config;
-    final info = repo.info;
+    final latest = repo.info.latestHash;
+    final current = listItem?.info.clonedHash ?? repo.info.builtHash;
+    final state = listItem?.info.state;
+    final outOfDate = latest != null && current != null && latest != current;
+    final busy =
+        state == RepoState.cloning ||
+        state == RepoState.pulling ||
+        state == RepoState.building;
 
-    final latest = info.latestHash;
-    final built = info.builtHash;
-    final upToDate = latest != null && built == latest;
-    final description = repo.description.trim();
-    final serverLabel = serverName ?? config.serverId;
-    final repoLabel = config.repo.isNotEmpty ? config.repo : '—';
-    final branchLabel = config.branch.isNotEmpty ? config.branch : '—';
-    final metrics = <DetailMetricTileData>[
-      DetailMetricTileData(
-        icon: AppIcons.repos,
-        label: 'Repo',
-        value: repoLabel,
-        tone: DetailMetricTone.neutral,
-      ),
-      DetailMetricTileData(
-        icon: AppIcons.repos,
-        label: 'Branch',
-        value: branchLabel,
-        tone: DetailMetricTone.neutral,
-      ),
-      if (config.serverId.isNotEmpty)
-        DetailMetricTileData(
-          icon: AppIcons.server,
-          label: 'Server',
-          value: serverLabel,
-          tone: DetailMetricTone.neutral,
-        ),
-      DetailMetricTileData(
-        icon: config.webhookEnabled ? AppIcons.ok : AppIcons.pause,
-        label: 'Webhook',
-        value: config.webhookEnabled ? 'Enabled' : 'Disabled',
-        tone: config.webhookEnabled
-            ? DetailMetricTone.success
-            : DetailMetricTone.neutral,
-      ),
-      DetailMetricTileData(
-        icon: upToDate ? AppIcons.ok : AppIcons.warning,
-        label: 'Git',
-        value: upToDate ? 'Up to date' : 'Out of date',
-        tone: upToDate ? DetailMetricTone.success : DetailMetricTone.tertiary,
-      ),
-    ];
+    final DetailAttentionBanner? banner;
+    if (state == RepoState.failed) {
+      banner = DetailAttentionBanner(
+        icon: AppIcons.error,
+        tone: PillTone.alert,
+        message: 'Last operation failed',
+        actionLabel: onPull == null ? null : 'Pull',
+        onAction: onPull,
+      );
+    } else if (outOfDate && !busy) {
+      banner = DetailAttentionBanner(
+        icon: AppIcons.warning,
+        message: 'Repo is out of date',
+        actionLabel: onPull == null ? null : 'Pull',
+        onAction: onPull,
+      );
+    } else {
+      banner = null;
+    }
 
-    return DetailHeroPanel(
-      tintColor: scheme.primary,
-      metrics: metrics,
-      footer: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (repo.tags.isNotEmpty)
-            DetailPillList(
-              items: repo.tags,
-              showEmptyLabel: false,
-            ),
-          if (description.isNotEmpty) ...[
-            if (repo.tags.isNotEmpty) const Gap(12),
-            Text(
-              'Description',
-              style: textTheme.labelMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Gap(6),
-            Text(
-              description,
-              style: textTheme.bodyMedium,
-            ),
-          ],
-        ],
-      ),
+    return DetailResourceHeader(
+      banner: banner,
+      facts: [
+        if (config.repo.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.repos,
+            label: 'Repo',
+            value: config.repo,
+            fullValue: config.repo,
+          ),
+        if (config.branch.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.repos,
+            label: 'Branch',
+            value: config.branch,
+          ),
+        if (config.serverId.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.server,
+            label: 'Server',
+            value: serverName ?? config.serverId,
+            onTap: onServerTap,
+          ),
+      ],
+      tags: repo.tags,
+      description: repo.description,
     );
   }
 }
