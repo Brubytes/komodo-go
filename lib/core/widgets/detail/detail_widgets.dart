@@ -6,6 +6,7 @@ export 'detail_history_row.dart';
 export 'detail_metric_grid.dart';
 export 'detail_pill_list.dart';
 export 'detail_pills.dart';
+export 'detail_resource_header.dart';
 export 'detail_rows.dart';
 export 'detail_section.dart';
 export 'detail_sub_card.dart';

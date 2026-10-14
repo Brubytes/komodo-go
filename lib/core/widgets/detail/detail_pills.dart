@@ -4,6 +4,14 @@ import 'package:komodo_go/core/theme/status_colors.dart';
 
 enum PillTone { success, neutral, warning, alert }
 
+/// Text/icon color for [tone] on a plain (non-pill) surface.
+Color pillToneForeground(ColorScheme scheme, PillTone tone) => switch (tone) {
+  PillTone.success => scheme.statusSuccess,
+  PillTone.warning => scheme.statusWarning,
+  PillTone.alert => scheme.error,
+  PillTone.neutral => scheme.onSurfaceVariant,
+};
+
 class TextPill extends StatelessWidget {
   const TextPill({
     required this.label,

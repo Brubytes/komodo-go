@@ -2,11 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+
+/// Status line shown under a detail page title: a colored dot plus label,
+/// e.g. "Running · 2 services" or "Ok · built 5m ago".
+class MainAppBarStatus {
+  const MainAppBarStatus({required this.label, this.tone = PillTone.neutral});
+
+  final String label;
+  final PillTone tone;
+}
 
 class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   const MainAppBar({
     required this.title,
     this.subtitle,
+    this.status,
     this.icon,
     this.markColor,
     this.markUseGradient,
@@ -19,6 +30,9 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   final String title;
   final String? subtitle;
+
+  /// Takes precedence over [subtitle] when set.
+  final MainAppBarStatus? status;
   final IconData? icon;
   final Color? markColor;
   final bool? markUseGradient;
@@ -55,6 +69,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: MainAppBarTitle(
           title: title,
           subtitle: subtitle,
+          status: status,
           icon: icon,
           markColor: markColor,
           markUseGradient: markUseGradient,
@@ -71,6 +86,7 @@ class MainAppBarTitle extends StatelessWidget {
   const MainAppBarTitle({
     required this.title,
     this.subtitle,
+    this.status,
     this.icon,
     this.markColor,
     this.markUseGradient,
@@ -80,6 +96,7 @@ class MainAppBarTitle extends StatelessWidget {
 
   final String title;
   final String? subtitle;
+  final MainAppBarStatus? status;
   final IconData? icon;
   final Color? markColor;
   final bool? markUseGradient;
@@ -102,7 +119,9 @@ class MainAppBarTitle extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: titleStyle, overflow: TextOverflow.ellipsis),
-        if (subtitle != null && subtitle!.trim().isNotEmpty)
+        if (status != null && status!.label.trim().isNotEmpty)
+          _StatusLine(status: status!, style: subtitleStyle)
+        else if (subtitle != null && subtitle!.trim().isNotEmpty)
           Text(
             subtitle!,
             style: subtitleStyle,
@@ -135,6 +154,40 @@ class MainAppBarTitle extends StatelessWidget {
           )
         else
           Flexible(child: titleBlock),
+      ],
+    );
+  }
+}
+
+class _StatusLine extends StatelessWidget {
+  const _StatusLine({required this.status, required this.style});
+
+  final MainAppBarStatus status;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = pillToneForeground(
+      Theme.of(context).colorScheme,
+      status.tone,
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const Gap(6),
+        Flexible(
+          child: Text(
+            status.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: style?.copyWith(color: color, fontWeight: FontWeight.w600),
+          ),
+        ),
       ],
     );
   }

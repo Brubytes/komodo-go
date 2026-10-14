@@ -2,13 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
 import 'package:komodo_go/composition/stacks/stack_config_editor.dart';
 import 'package:komodo_go/composition/stacks/stack_updates_tab.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/core_info_provider.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
+import 'package:komodo_go/core/router/resource_routes.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -245,6 +248,10 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
         markColor: AppTokens.resourceStacks,
         markUseGradient: true,
         centerTitle: true,
+        status: stackAppBarStatus(
+          listItem: listItem,
+          serviceCount: serviceCount,
+        ),
         actions: [
           PopupMenuButton<StackAction>(
             icon: const Icon(AppIcons.moreVertical),
@@ -341,7 +348,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                           ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                StackHeroPanel(
+                                StackHeader(
                                   stack: stack,
                                   listItem: listItem,
                                   serviceCount: serviceCount,
@@ -363,6 +370,31 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                     stack.tags,
                                     tagNameById,
                                   ),
+                                  onAction: (action) => _handleAction(
+                                    context,
+                                    widget.stackId,
+                                    action,
+                                  ),
+                                  onServerTap: stack.config.serverId.isEmpty
+                                      ? null
+                                      : () => context.push(
+                                          resourceDetailRoute(
+                                            AppRoutes.servers,
+                                            stack.config.serverId,
+                                            name: serverNameForId(
+                                              stack.config.serverId,
+                                            ),
+                                          ),
+                                        ),
+                                  onSourceTap:
+                                      stack.config.linkedRepo.trim().isEmpty
+                                      ? null
+                                      : () => context.push(
+                                          resourceDetailRoute(
+                                            AppRoutes.repos,
+                                            stack.config.linkedRepo.trim(),
+                                          ),
+                                        ),
                                 ),
                                 const Gap(12),
                               ],

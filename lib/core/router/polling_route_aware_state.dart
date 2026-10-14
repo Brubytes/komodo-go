@@ -4,7 +4,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/route_observer.dart';
 
 abstract class PollingRouteAwareState<T extends ConsumerStatefulWidget>
-    extends ConsumerState<T> with RouteAware, WidgetsBindingObserver {
+    extends ConsumerState<T>
+    with RouteAware, WidgetsBindingObserver {
   bool isRouteVisible = true;
   AppLifecycleState lifecycleState = AppLifecycleState.resumed;
 

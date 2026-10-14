@@ -17,8 +17,7 @@ class DemoBootstrapImpl {
     final prefs = await SharedPreferences.getInstance();
     final secureStorage = SecureStorageService(appSecureStorage);
     final store = ConnectionsStore(prefs: prefs, secureStorage: secureStorage);
-    final hasCompletedOnboarding =
-      prefs.getBool(onboardingSeenKey) ?? false;
+    final hasCompletedOnboarding = prefs.getBool(onboardingSeenKey) ?? false;
     final demoEnabled = prefs.getBool(demoEnabledKey) ?? true;
 
     if (!demoEnabled) {
@@ -26,8 +25,8 @@ class DemoBootstrapImpl {
       return;
     }
 
-    final backend = _backend ??
-        DemoBackend(apiKey: demoApiKey, apiSecret: demoApiSecret);
+    final backend =
+        _backend ?? DemoBackend(apiKey: demoApiKey, apiSecret: demoApiSecret);
     _backend = backend;
     await backend.start();
 
@@ -71,7 +70,6 @@ class DemoBootstrapImpl {
         await store.setActiveConnectionId(profile.id);
       }
     }
-
   }
 
   /// Finds the existing demo connection, preferring the reserved id and

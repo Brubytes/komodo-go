@@ -95,14 +95,16 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
     _dirtySnackBar = controller;
     _dirtySnackBarMessage = message;
     _dirtySnackBarSaveEnabled = saveEnabled;
-    unawaited(controller.closed.then((_) {
-      if (!mounted) return;
-      if (_dirtySnackBar == controller) {
-        _dirtySnackBar = null;
-        _dirtySnackBarMessage = null;
-        _dirtySnackBarSaveEnabled = null;
-      }
-    }));
+    unawaited(
+      controller.closed.then((_) {
+        if (!mounted) return;
+        if (_dirtySnackBar == controller) {
+          _dirtySnackBar = null;
+          _dirtySnackBarMessage = null;
+          _dirtySnackBarSaveEnabled = null;
+        }
+      }),
+    );
   }
 
   void hideDirtySnackBar() {
