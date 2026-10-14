@@ -47,75 +47,77 @@ class ProcedureCard extends StatelessWidget {
             child: SizedBox(
               width: double.infinity,
               child: Stack(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        procedure.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      const Gap(4),
-                      Text(
-                        '$stages stages',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.7),
-                            ),
-                      ),
-                      if (procedure.template || tagPills.isNotEmpty) ...[
-                        const Gap(10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            if (procedure.template)
-                              const TextPill(label: 'Template'),
-                            ...tagPills,
-                          ],
-                        ),
-                      ],
-                      if (scheduleError.isNotEmpty) ...[
-                        const Gap(8),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          scheduleError,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.error,
+                          procedure.name,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w600,
                               ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
+                        const Gap(4),
+                        Text(
+                          '$stages stages',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                        ),
+                        if (procedure.template || tagPills.isNotEmpty) ...[
+                          const Gap(10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              if (procedure.template)
+                                const TextPill(label: 'Template'),
+                              ...tagPills,
+                            ],
+                          ),
+                        ],
+                        if (scheduleError.isNotEmpty) ...[
+                          const Gap(8),
+                          Text(
+                            scheduleError,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 12,
-                  child: _StatusBadge(state: state, compact: true),
-                ),
-                if (onRun != null)
-                  Positioned(
-                    right: 6,
-                    top: 0,
-                    bottom: 0,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: IconButton(
-                        icon: const Icon(AppIcons.play),
-                        key: ValueKey('procedure_card_run_${procedure.id}'),
-                        onPressed: onRun,
-                        tooltip: 'Run',
-                      ),
                     ),
                   ),
-              ],
+                  Positioned(
+                    top: 8,
+                    right: 12,
+                    child: _StatusBadge(state: state, compact: true),
+                  ),
+                  if (onRun != null)
+                    Positioned(
+                      right: 6,
+                      top: 0,
+                      bottom: 0,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: IconButton(
+                          icon: const Icon(AppIcons.play),
+                          key: ValueKey('procedure_card_run_${procedure.id}'),
+                          onPressed: onRun,
+                          tooltip: 'Run',
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
