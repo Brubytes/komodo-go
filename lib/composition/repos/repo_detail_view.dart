@@ -473,14 +473,12 @@ class _RepoHeader extends StatelessWidget {
           DetailFact(
             icon: AppIcons.repos,
             label: 'Repo',
-            value: config.repo,
-            fullValue: config.repo,
-          ),
-        if (config.branch.isNotEmpty)
-          DetailFact(
-            icon: AppIcons.repos,
-            label: 'Branch',
-            value: config.branch,
+            value: config.branch.isEmpty
+                ? config.repo
+                : '${config.repo} · ${config.branch}',
+            fullValue: config.branch.isEmpty
+                ? config.repo
+                : '${config.repo} (${config.branch})',
           ),
         if (config.serverId.isNotEmpty)
           DetailFact(

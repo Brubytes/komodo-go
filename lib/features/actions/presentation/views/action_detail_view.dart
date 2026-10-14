@@ -903,7 +903,7 @@ class _ActionHeader extends StatelessWidget {
           ),
         if (nextRun != null)
           DetailFact(
-            icon: AppIcons.clock,
+            icon: AppIcons.waiting,
             label: 'Next run',
             value: formatTimeUntil(nextRun),
             fullValue: DateTime.fromMillisecondsSinceEpoch(

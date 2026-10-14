@@ -355,7 +355,7 @@ class _SyncHeader extends StatelessWidget {
           DetailFact(
             icon: AppIcons.repos,
             label: 'Repository',
-            value: branch.isNotEmpty ? '$repoLabel ($branch)' : repoLabel,
+            value: branch.isNotEmpty ? '$repoLabel · $branch' : repoLabel,
             onTap: onRepoTap,
           ),
         if (path.isNotEmpty)

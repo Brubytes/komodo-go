@@ -77,6 +77,12 @@ class DetailAttentionBanner extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final (Color bg, Color fg) = switch (tone) {
+      // Dark errorContainer is a saturated red block; a muted tint matches
+      // the warning banner's weight instead.
+      PillTone.alert when scheme.brightness == Brightness.dark => (
+        Color.alphaBlend(scheme.error.withValues(alpha: 0.18), scheme.surface),
+        scheme.error,
+      ),
       PillTone.alert => (scheme.errorContainer, scheme.onErrorContainer),
       PillTone.success => (
         scheme.statusSuccessContainer,
@@ -272,44 +278,52 @@ class _FactRow extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 44),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            children: [
-              Icon(fact.icon, size: 18, color: scheme.primary),
-              const Gap(12),
-              Flexible(
-                child: Text(
-                  fact.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
+          child: LayoutBuilder(
+            builder: (context, constraints) => Row(
+              children: [
+                Icon(fact.icon, size: 18, color: scheme.primary),
+                const Gap(12),
+                // Cap the label instead of making it Flexible: two flex
+                // children split the row evenly and the value would stop
+                // short of the trailing edge.
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: constraints.maxWidth * 0.45,
+                  ),
+                  child: Text(
+                    fact.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-              ),
-              const Gap(16),
-              Expanded(
-                child: Text(
-                  fact.value,
-                  textAlign: TextAlign.end,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: fact.tone == null
-                        ? scheme.onSurface
-                        : pillToneForeground(scheme, fact.tone!),
+                const Gap(16),
+                Expanded(
+                  child: Text(
+                    fact.value,
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: fact.tone == null
+                          ? scheme.onSurface
+                          : pillToneForeground(scheme, fact.tone!),
+                    ),
                   ),
                 ),
-              ),
-              if (fact.onTap != null) ...[
-                const Gap(4),
-                Icon(
-                  AppIcons.chevron,
-                  size: 16,
-                  color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
-                ),
+                if (fact.onTap != null) ...[
+                  const Gap(4),
+                  Icon(
+                    AppIcons.chevron,
+                    size: 16,
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
