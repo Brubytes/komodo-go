@@ -9,14 +9,12 @@ import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
 /// State-aware action bar for the stack detail screen.
 ///
 /// Primary: Deploy when the stack is not running, Redeploy when it has
-/// pending changes, Resume when paused, otherwise Restart. Secondary jumps to
-/// the logs tab. Only actions valid for [state] appear in the "More" menu.
+/// pending changes, Resume when paused, otherwise Restart. Only actions valid for [state] appear in the "More" menu.
 class StackActionBar extends StatelessWidget {
   const StackActionBar({
     required this.state,
     required this.needsDeploy,
     required this.onAction,
-    required this.onShowLogs,
     this.manageGroup,
     this.busy = false,
     super.key,
@@ -27,7 +25,6 @@ class StackActionBar extends StatelessWidget {
   /// True when the repo has new commits or images can be updated.
   final bool needsDeploy;
   final ValueChanged<StackAction> onAction;
-  final VoidCallback onShowLogs;
 
   /// Metadata/copy/rename/delete group, collapsed into a "Manage…" sheet.
   final DetailActionGroup? manageGroup;
@@ -93,11 +90,6 @@ class StackActionBar extends StatelessWidget {
     return DetailActionBar(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       primary: primary,
-      secondary: DetailActionButton(
-        label: 'Logs',
-        icon: AppIcons.logs,
-        onPressed: onShowLogs,
-      ),
       moreGroups: [
         ...resourceMenuGroups(
           lifecycle: lifecycle,

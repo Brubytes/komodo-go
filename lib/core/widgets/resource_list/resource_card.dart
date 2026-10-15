@@ -30,8 +30,8 @@ class ResourceStatusSpec {
 
   Color accentColor(ColorScheme scheme) => switch (tone) {
     PillTone.alert => scheme.error,
-    PillTone.warning => scheme.tertiary,
-    PillTone.success => scheme.secondary,
+    PillTone.warning => pillToneForeground(scheme, PillTone.warning),
+    PillTone.success => pillToneForeground(scheme, PillTone.success),
     PillTone.neutral => scheme.outline,
   };
 }
@@ -117,7 +117,7 @@ class ResourceCard extends StatelessWidget {
 
     final content = Padding(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg + (showAccent ? _accentWidth : 0),
+        AppSpacing.lg,
         AppSpacing.md,
         _hasMenu ? AppSpacing.xs : AppSpacing.lg,
         AppSpacing.md,
@@ -240,6 +240,7 @@ class ResourceCard extends StatelessWidget {
                     top: 0,
                     bottom: 0,
                     width: _accentWidth,
+                    // Clipped by the card's rounded Material shape.
                     child: ColoredBox(
                       key: const ValueKey('resource_card_accent'),
                       color: status.accentColor(scheme),

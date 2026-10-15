@@ -236,11 +236,6 @@ class _DeploymentDetailViewState
                             DeploymentActionBar(
                               deployment: deployment,
                               onAction: _handleAction,
-                              onShowLogs: () =>
-                                  _tabsKey.currentState?.selectTab(
-                                    _tabLogs,
-                                    collapseHeader: true,
-                                  ),
                               manageGroup: buildResourceManageGroup(
                                 context: context,
                                 ref: ref,

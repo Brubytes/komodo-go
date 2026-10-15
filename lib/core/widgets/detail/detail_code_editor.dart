@@ -10,6 +10,7 @@ class DetailCodeEditor extends StatelessWidget {
   const DetailCodeEditor({
     required this.controller,
     super.key,
+    this.minHeight = 96,
     this.maxHeight = 360,
     this.readOnly = false,
     this.enableFullscreen = true,
@@ -17,6 +18,11 @@ class DetailCodeEditor extends StatelessWidget {
   });
 
   final CodeEditorController controller;
+
+  /// Lower bound (about four lines) used while the content is short or empty.
+  final double minHeight;
+
+  /// Upper bound; longer content scrolls and can be opened full screen.
   final double maxHeight;
   final bool readOnly;
   final bool enableFullscreen;
@@ -32,16 +38,26 @@ class DetailCodeEditor extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       child: Stack(
         children: [
-          SizedBox(
-            height: maxHeight,
-            width: double.infinity,
-            child: LiteralCodeEditor(
-              controller: controller,
-              readOnly: readOnly,
-              textStyle:
-                  textTheme.bodySmall?.copyWith(fontFamily: 'monospace') ??
-                  const TextStyle(fontFamily: 'monospace', fontSize: 12),
-            ),
+          ListenableBuilder(
+            listenable: controller,
+            builder: (context, _) {
+              final lines = '\n'.allMatches(controller.text).length + 1;
+              final height = (lines * 18.0 + 12).clamp(
+                minHeight,
+                maxHeight < minHeight ? minHeight : maxHeight,
+              );
+              return SizedBox(
+                height: height,
+                width: double.infinity,
+                child: LiteralCodeEditor(
+                  controller: controller,
+                  readOnly: readOnly,
+                  textStyle:
+                      textTheme.bodySmall?.copyWith(fontFamily: 'monospace') ??
+                      const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
+              );
+            },
           ),
           if (enableFullscreen)
             Positioned(

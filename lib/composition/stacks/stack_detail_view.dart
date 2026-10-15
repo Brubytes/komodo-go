@@ -234,11 +234,6 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                     updateCount: updateCount,
                                   ),
                                   onAction: _handleAction,
-                                  onShowLogs: () =>
-                                      _tabsKey.currentState?.selectTab(
-                                        _tabLogs,
-                                        collapseHeader: true,
-                                      ),
                                   manageGroup: buildResourceManageGroup(
                                     context: context,
                                     ref: ref,

@@ -178,17 +178,41 @@ class ResourcesView extends ConsumerWidget {
     final maxGridWidth = width >= 1200 ? 1180.0 : double.infinity;
 
     var animIndex = 0;
-    Widget grid(List<Widget> tiles) => GridView.count(
-      crossAxisCount: quickStatsColumns,
-      crossAxisSpacing: gridSpacing,
-      mainAxisSpacing: gridSpacing,
-      childAspectRatio: quickStatsAspectRatio,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      children: [
-        for (final t in tiles)
-          AppFadeSlide(delay: AppMotion.stagger(animIndex++), child: t),
-      ],
+    // Rows of [quickStatsColumns] tiles; a short last row stretches its tiles
+    // to the full width so odd counts leave no empty slot.
+    Widget grid(List<Widget> tiles) => LayoutBuilder(
+      builder: (context, constraints) {
+        final tileWidth =
+            (constraints.maxWidth - gridSpacing * (quickStatsColumns - 1)) /
+            quickStatsColumns;
+        final tileHeight = tileWidth / quickStatsAspectRatio;
+        final children = [
+          for (final t in tiles)
+            AppFadeSlide(delay: AppMotion.stagger(animIndex++), child: t),
+        ];
+        return Column(
+          children: [
+            for (var i = 0; i < children.length; i += quickStatsColumns) ...[
+              if (i > 0) SizedBox(height: gridSpacing),
+              SizedBox(
+                height: tileHeight,
+                child: Row(
+                  children: [
+                    for (
+                      var j = i;
+                      j < i + quickStatsColumns && j < children.length;
+                      j++
+                    ) ...[
+                      if (j > i) SizedBox(width: gridSpacing),
+                      Expanded(child: children[j]),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+      },
     );
 
     final content = Column(

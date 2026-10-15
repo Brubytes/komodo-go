@@ -3,7 +3,6 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
-import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
 
@@ -207,10 +206,24 @@ class StackInfoTabContentState extends State<StackInfoTabContent> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!hasFiles)
-          const EmptyStateView(
-            icon: AppIcons.package,
-            title: 'No file contents',
-            message: 'Stack file contents will appear here once configured.',
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Icon(
+                  AppIcons.package,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const Gap(8),
+                Text(
+                  'No file contents configured',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           )
         else
           Column(

@@ -1620,20 +1620,18 @@ class DeploymentMessageSurface extends StatelessWidget {
 /// State-aware action bar for the deployment detail screen.
 ///
 /// Primary: Deploy / Redeploy / Start / Restart / Resume depending on the
-/// container state. Secondary jumps to the logs tab. The "More" menu only
+/// container state. The "More" menu only
 /// lists actions valid for the current state.
 class DeploymentActionBar extends StatelessWidget {
   const DeploymentActionBar({
     required this.deployment,
     required this.onAction,
-    required this.onShowLogs,
     this.manageGroup,
     super.key,
   });
 
   final Deployment deployment;
   final ValueChanged<DeploymentAction> onAction;
-  final VoidCallback onShowLogs;
 
   /// Metadata/copy/rename/delete group, collapsed into a "Manage…" sheet.
   final DetailActionGroup? manageGroup;
@@ -1703,11 +1701,6 @@ class DeploymentActionBar extends StatelessWidget {
         label: primaryLabel,
         icon: primaryIcon,
         onPressed: () => onAction(primaryAction),
-      ),
-      secondary: DetailActionButton(
-        label: 'Logs',
-        icon: AppIcons.logs,
-        onPressed: onShowLogs,
       ),
       moreGroups: [
         ...resourceMenuGroups(

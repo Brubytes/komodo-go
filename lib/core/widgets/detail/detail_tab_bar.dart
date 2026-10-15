@@ -17,7 +17,8 @@ PreferredSizeWidget buildDetailTabBar({
 }) {
   final scheme = Theme.of(context).colorScheme;
   final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-    fontSize: 10,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
     height: 1.1,
   );
 
@@ -115,9 +116,36 @@ PreferredSizeWidget buildDetailTabBar({
     };
   }
 
+  // Compact tabs: icon and label inline (~44pt) instead of stacked (~72pt).
+  final compactTabs = [
+    for (final tab in tabs)
+      if (tab is Tab &&
+          tab.child == null &&
+          (tab.icon != null || tab.text != null))
+        Tab(
+          key: tab.key,
+          height: 44,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (tab.icon != null)
+                IconTheme.merge(
+                  data: const IconThemeData(size: 18),
+                  child: tab.icon!,
+                ),
+              if (tab.icon != null && tab.text != null)
+                const SizedBox(width: 6),
+              if (tab.text != null) Text(tab.text!),
+            ],
+          ),
+        )
+      else
+        tab,
+  ];
+
   final tabBar = TabBar(
     controller: controller,
-    tabs: tabs,
+    tabs: compactTabs,
     onTap: resolvedOnTap,
     labelStyle: labelStyle,
     unselectedLabelStyle: labelStyle,
