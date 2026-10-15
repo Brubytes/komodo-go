@@ -28,7 +28,7 @@ class StackActionBar extends StatelessWidget {
   final bool needsDeploy;
   final ValueChanged<StackAction> onAction;
   final VoidCallback onShowLogs;
-  
+
   /// Metadata/copy/rename/delete group, collapsed into a "Manage…" sheet.
   final DetailActionGroup? manageGroup;
   final bool busy;

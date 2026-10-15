@@ -1634,7 +1634,7 @@ class DeploymentActionBar extends StatelessWidget {
   final Deployment deployment;
   final ValueChanged<DeploymentAction> onAction;
   final VoidCallback onShowLogs;
-  
+
   /// Metadata/copy/rename/delete group, collapsed into a "Manage…" sheet.
   final DetailActionGroup? manageGroup;
 

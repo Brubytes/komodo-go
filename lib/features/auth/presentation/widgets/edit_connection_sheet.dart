@@ -14,6 +14,7 @@ import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/server_url_warning.dart';
 import 'package:komodo_go/features/auth/presentation/utils/connection_input.dart';
 import 'package:komodo_go/features/auth/presentation/widgets/advanced_connection_settings_card.dart';
+import 'package:komodo_go/features/auth/presentation/widgets/api_key_hint.dart';
 
 class EditConnectionSheet extends HookConsumerWidget {
   const EditConnectionSheet({
@@ -170,7 +171,9 @@ class EditConnectionSheet extends HookConsumerWidget {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const Gap(24),
+                  const Gap(16),
+                  const ApiKeyHint(),
+                  const Gap(16),
                   TextFormField(
                     controller: nameController,
                     decoration: const InputDecoration(

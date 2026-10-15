@@ -264,8 +264,11 @@ class HomeView extends ConsumerWidget {
                           const Gap(16),
                           HomeSectionHeader(
                             title: 'Server stats',
-                            onSeeAll: () =>
-                                _goToResources(context, ref, ResourceType.servers),
+                            onSeeAll: () => _goToResources(
+                              context,
+                              ref,
+                              ResourceType.servers,
+                            ),
                           ),
                           const Gap(8),
                           SizedBox(
