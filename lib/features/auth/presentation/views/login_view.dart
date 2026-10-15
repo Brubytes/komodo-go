@@ -13,6 +13,7 @@ import 'package:komodo_go/core/providers/demo_mode_provider.dart';
 import 'package:komodo_go/core/providers/onboarding_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/server_url_warning.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
@@ -167,30 +168,17 @@ class LoginView extends HookConsumerWidget {
           await EditConnectionSheet.show(context, connection: connection);
         case _ConnectionAction.delete:
           final isDemo = isDemoConnection(connection);
-          final confirmed = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Delete connection'),
-              content: Text(
-                isDemo
-                    ? 'Remove "${connection.name}"? This disables demo mode and the demo instance will disappear. You can re-enable it by long-pressing the Connections header.'
-                    : 'Remove "${connection.name}"?',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Delete'),
-                ),
-              ],
-            ),
+          final confirmed = await confirmDestructive(
+            context,
+            title: 'Delete connection',
+            message: isDemo
+                ? 'Remove "${connection.name}"? This disables demo mode and the demo instance will disappear. You can re-enable it by long-pressing the Connections header.'
+                : 'Remove "${connection.name}"?',
+            confirmLabel: 'Delete',
           );
 
           if (!context.mounted) return;
-          if (confirmed ?? false) {
+          if (confirmed) {
             if (isDemoConnection(connection)) {
               await ref
                   .read(demoModeProvider.notifier)

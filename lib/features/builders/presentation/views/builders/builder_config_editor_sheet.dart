@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
 import 'package:komodo_go/core/api/komodo_api_capabilities.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/sheets/editor_sheet_scaffold.dart';
 import 'package:komodo_go/features/builders/data/builder_config_compatibility.dart';
 
 class BuilderConfigEditorResult {
@@ -33,13 +34,9 @@ class BuilderConfigEditorSheet extends StatefulWidget {
     required Map<String, dynamic> builderJson,
     required KomodoApiCapabilities capabilities,
   }) {
-    return showModalBottomSheet<BuilderConfigEditorResult>(
-      context: context,
-      useSafeArea: true,
-      useRootNavigator: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => BuilderConfigEditorSheet(
+    return showEditorSheet<BuilderConfigEditorResult>(
+      context,
+      (context) => BuilderConfigEditorSheet(
         builderName: builderName,
         builderType: builderType,
         builderJson: builderJson,
@@ -111,10 +108,40 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
     _awsUseHttps = _toBool(inner['use_https']) ?? false;
     _awsAssignPublicIp = _toBool(inner['assign_public_ip']) ?? false;
     _awsUsePublicIp = _toBool(inner['use_public_ip']) ?? false;
+
+    _initialSnapshot = _snapshot();
+    for (final c in _controllers) {
+      c.addListener(_onFieldChanged);
+    }
   }
+
+  late final String _initialSnapshot;
+
+  List<TextEditingController> get _controllers => [
+    _nameController,
+    _addressController,
+    _passkeyController,
+    _serverIdController,
+    _awsRegionController,
+    _awsInstanceTypeController,
+    _awsVolumeGbController,
+    _awsPortController,
+  ];
+
+  String _snapshot() => [
+    for (final c in _controllers) c.text,
+    _awsUseHttps,
+    _awsAssignPublicIp,
+    _awsUsePublicIp,
+  ].join('\u0000');
+
+  void _onFieldChanged() => setState(() {});
 
   @override
   void dispose() {
+    for (final c in _controllers) {
+      c.removeListener(_onFieldChanged);
+    }
     _nameController.dispose();
     _addressController.dispose();
     _passkeyController.dispose();
@@ -136,46 +163,30 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
 
     final scheme = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
-        top: 8,
-      ),
+    final supported = config is Map<String, dynamic>;
+    final nameEmpty = _nameController.text.trim().isEmpty;
+
+    return EditorSheetScaffold(
+      title: 'Edit builder',
+      dirty: _snapshot() != _initialSnapshot,
+      canSave: supported && !nameEmpty,
+      onSave: supported ? _onSave : null,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Text(
-                'Edit builder',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                tooltip: 'Close',
-                icon: const Icon(AppIcons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-          const Gap(6),
           TextField(
             controller: _nameController,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Name',
-              prefixIcon: Icon(AppIcons.tag),
+              prefixIcon: const Icon(AppIcons.tag),
+              errorText: nameEmpty ? 'Enter a builder name.' : null,
             ),
           ),
-          const Gap(12),
+          const SizedBox(height: AppSpacing.md),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: [
               TextPill(label: _shape.variant),
               if (template) const TextPill(label: 'Template'),
@@ -183,8 +194,8 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
                 const TextPill(label: 'Has description'),
             ],
           ),
-          const Gap(14),
-          if (config is! Map<String, dynamic>)
+          const SizedBox(height: AppSpacing.lg),
+          if (!supported)
             Text(
               'Builder config format not supported yet.',
               style: Theme.of(
@@ -193,15 +204,6 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
             )
           else
             _buildConfigForm(context),
-          const Gap(16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: config is Map<String, dynamic> ? _onSave : null,
-              child: const Text('Save'),
-            ),
-          ),
-          const Gap(12),
         ],
       ),
     );
@@ -221,7 +223,7 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
               prefixIcon: Icon(AppIcons.network),
             ),
           ),
-          const Gap(12),
+          const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _passkeyController,
             textInputAction: TextInputAction.done,
@@ -264,7 +266,7 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
               prefixIcon: Icon(Icons.public),
             ),
           ),
-          const Gap(12),
+          const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _awsInstanceTypeController,
             textInputAction: TextInputAction.next,
@@ -273,7 +275,7 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
               prefixIcon: Icon(AppIcons.factory),
             ),
           ),
-          const Gap(12),
+          const SizedBox(height: AppSpacing.md),
           Row(
             children: [
               Expanded(
@@ -287,7 +289,7 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
                   ),
                 ),
               ),
-              const Gap(12),
+              const SizedBox(height: AppSpacing.md),
               Expanded(
                 child: TextField(
                   controller: _awsPortController,
@@ -301,7 +303,7 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
               ),
             ],
           ),
-          const Gap(12),
+          const SizedBox(height: AppSpacing.md),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             title: const Text('Use HTTPS'),
@@ -358,9 +360,9 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
 
   Map<String, dynamic> _awsBuilderConfig(Map<String, dynamic> inner) {
     return serializeAwsRegistryFields(
-      current: inner,
-      capabilities: widget.capabilities,
-    )
+        current: inner,
+        capabilities: widget.capabilities,
+      )
       ..addAll(<String, dynamic>{
         'region': _awsRegionController.text.trim(),
         'instance_type': _awsInstanceTypeController.text.trim(),

@@ -7,10 +7,10 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pill_list.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
-
 import 'package:komodo_go/features/builders/presentation/views/builders/builder_config_editor_sheet.dart';
 
 class BuilderTile extends ConsumerWidget {
@@ -70,9 +70,7 @@ class BuilderTile extends ConsumerWidget {
                             Expanded(
                               child: Text(
                                 item.name,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
+                                style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.w600),
                               ),
                             ),
@@ -194,9 +192,11 @@ class BuilderTile extends ConsumerWidget {
     if (result == null) return;
 
     final nextName = result.name.trim();
-    final renameOk = !(nextName.isNotEmpty && nextName != item.name) || await ref
-              .read(builderActionsProvider.notifier)
-              .rename(id: item.id, name: nextName);
+    final renameOk =
+        !(nextName.isNotEmpty && nextName != item.name) ||
+        await ref
+            .read(builderActionsProvider.notifier)
+            .rename(id: item.id, name: nextName);
 
     if (!context.mounted) return;
 
@@ -213,24 +213,13 @@ class BuilderTile extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete builder'),
-        content: Text('Delete "${item.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await confirmDestructive(
+      context,
+      title: 'Delete builder',
+      message: 'Delete "${item.name}"?',
+      confirmLabel: 'Delete',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     if (!context.mounted) return;
 
     final ok = await ref
