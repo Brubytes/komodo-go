@@ -512,11 +512,14 @@ class UpdateTile extends ConsumerWidget {
                         key: ValueKey('update_open_resource_${update.id}'),
                         tooltip: 'Open resource',
                         visualDensity: VisualDensity.compact,
+                        style: const ButtonStyle(
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
                         iconSize: 18,
-                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        padding: const EdgeInsets.all(AppSpacing.xs),
                         constraints: const BoxConstraints(
-                          minWidth: 36,
-                          minHeight: 36,
+                          minWidth: 32,
+                          minHeight: 32,
                         ),
                         onPressed: () => context.push(resourceRoute),
                         icon: const Icon(AppIcons.externalLink),
