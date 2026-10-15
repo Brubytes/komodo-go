@@ -11,6 +11,7 @@ import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/providers/demo_mode_provider.dart';
 import 'package:komodo_go/core/providers/onboarding_provider.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
@@ -19,6 +20,7 @@ import 'package:komodo_go/core/widgets/server_url_warning.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
 import 'package:komodo_go/features/auth/presentation/providers/connection_draft_provider.dart';
+import 'package:komodo_go/features/auth/presentation/utils/connection_input.dart';
 import 'package:komodo_go/features/auth/presentation/widgets/advanced_connection_settings_card.dart';
 import 'package:komodo_go/features/auth/presentation/widgets/edit_connection_sheet.dart';
 
@@ -119,7 +121,7 @@ class LoginView extends HookConsumerWidget {
             .read(authProvider.notifier)
             .login(
               name: connectionNameController.text,
-              baseUrl: baseUrlController.text,
+              baseUrl: normalizeServerUrl(baseUrlController.text),
               apiKey: apiKeyController.text,
               apiSecret: apiSecretController.text,
               proxyAuthEnabled: draft.proxyAuthEnabled,
@@ -366,13 +368,16 @@ class LoginView extends HookConsumerWidget {
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w600),
                       ),
-                      const Gap(12),
+                      const Gap(8),
+                      const _ApiKeyHint(),
+                      const Gap(16),
 
                       // Connection name (optional)
                       TextFormField(
                         controller: connectionNameController,
                         decoration: const InputDecoration(
                           labelText: 'Name (optional)',
+                          helperText: 'Defaults to the server host',
                           hintText: 'Production',
                           prefixIcon: Icon(AppIcons.tag),
                         ),
@@ -389,8 +394,7 @@ class LoginView extends HookConsumerWidget {
                         controller: baseUrlController,
                         decoration: const InputDecoration(
                           labelText: 'Server URL',
-                          hintText:
-                              'https://komodo.example.com or http://100.64.0.5',
+                          hintText: 'https://komodo.example.com',
                           prefixIcon: Icon(AppIcons.server),
                         ),
                         keyboardType: TextInputType.url,
@@ -399,7 +403,7 @@ class LoginView extends HookConsumerWidget {
                         enableInteractiveSelection: true,
                         contextMenuBuilder: alwaysPasteContextMenu,
                         validator: (value) {
-                          final trimmed = value?.trim() ?? '';
+                          final trimmed = normalizeServerUrl(value ?? '');
                           if (trimmed.isEmpty) {
                             return 'Please enter the server URL';
                           }
@@ -411,7 +415,7 @@ class LoginView extends HookConsumerWidget {
                           final hasHost = uri != null && uri.host.isNotEmpty;
 
                           if (!hasValidScheme || !hasHost) {
-                            return 'Please enter a valid URL starting with http:// or https://';
+                            return 'Please enter a valid server URL';
                           }
 
                           return null;
@@ -427,6 +431,12 @@ class LoginView extends HookConsumerWidget {
                       TextFormField(
                         key: const Key('login_apiKey'),
                         controller: apiKeyController,
+                        onChanged: (value) {
+                          final pair = splitKeySecret(value);
+                          if (pair == null) return;
+                          apiKeyController.text = pair.key;
+                          apiSecretController.text = pair.secret;
+                        },
                         decoration: const InputDecoration(
                           labelText: 'API Key',
                           prefixIcon: Icon(AppIcons.key),
@@ -479,29 +489,25 @@ class LoginView extends HookConsumerWidget {
                       ),
                       const Gap(24),
 
-                      AdvancedConnectionSettingsCard(
+                      ConnectionAdvancedSettings(
                         expanded: showAdvancedConfig.value,
                         onToggle: () {
                           showAdvancedConfig.value = !showAdvancedConfig.value;
                         },
-                        children: [
-                          ProxyHeaderAuthSection(
-                            enabled: draft.proxyAuthEnabled,
-                            onEnabledChanged: (value) {
-                              draftNotifier.update(proxyAuthEnabled: value);
-                            },
-                            usernameController: proxyAuthUsernameController,
-                            passwordController: proxyAuthPasswordController,
-                            obscurePassword: obscureProxyAuthPassword,
-                            onSubmitted: handleLogin,
-                          ),
-                          CustomHeadersSection(
-                            headers: draft.customHeaders,
-                            onChanged: (headers) {
-                              draftNotifier.update(customHeaders: headers);
-                            },
-                          ),
-                        ],
+                        proxyAuthEnabled: draft.proxyAuthEnabled,
+                        onProxyAuthEnabledChanged: (value) {
+                          draftNotifier.update(proxyAuthEnabled: value);
+                        },
+                        proxyAuthUsernameController:
+                            proxyAuthUsernameController,
+                        proxyAuthPasswordController:
+                            proxyAuthPasswordController,
+                        obscureProxyAuthPassword: obscureProxyAuthPassword,
+                        customHeaders: draft.customHeaders,
+                        onCustomHeadersChanged: (headers) {
+                          draftNotifier.update(customHeaders: headers);
+                        },
+                        onSubmitted: handleLogin,
                       ),
                       const Gap(24),
 
@@ -516,21 +522,6 @@ class LoginView extends HookConsumerWidget {
                                 child: AppInlineSkeleton(size: 20),
                               )
                             : const Text('Save connection'),
-                      ),
-                      const Gap(16),
-
-                      // Help text
-                      Text(
-                        'You can generate API keys in the Komodo web interface '
-                        'under your user settings. Advanced header options are '
-                        'available in the collapsed section above when your '
-                        'proxy or deployment requires them.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                        textAlign: TextAlign.center,
                       ),
                     ],
                   ],
@@ -558,6 +549,48 @@ String? _authErrorMessage(AsyncValue<AuthState> authState) {
     },
     loading: () => null,
   );
+}
+
+class _ApiKeyHint extends StatelessWidget {
+  const _ApiKeyHint();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final style = Theme.of(
+      context,
+    ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Get your API key',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: scheme.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '1. Open the Komodo web UI and go to user settings.',
+            style: style,
+          ),
+          Text('2. Generate an API key and secret.', style: style),
+          Text(
+            '3. Paste them below. You can paste "key:secret" into the key '
+            'field to fill both.',
+            style: style,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _InlineErrorCard extends StatelessWidget {

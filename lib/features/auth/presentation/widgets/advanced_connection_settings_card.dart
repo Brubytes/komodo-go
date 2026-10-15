@@ -424,3 +424,54 @@ class _CustomHeadersSectionState extends State<CustomHeadersSection> {
     return true;
   }
 }
+
+/// Advanced connection settings (proxy header auth + custom headers) inside
+/// the collapsible card. Shared by the login form and the edit sheet.
+class ConnectionAdvancedSettings extends StatelessWidget {
+  const ConnectionAdvancedSettings({
+    required this.expanded,
+    required this.onToggle,
+    required this.proxyAuthEnabled,
+    required this.onProxyAuthEnabledChanged,
+    required this.proxyAuthUsernameController,
+    required this.proxyAuthPasswordController,
+    required this.obscureProxyAuthPassword,
+    required this.customHeaders,
+    required this.onCustomHeadersChanged,
+    required this.onSubmitted,
+    super.key,
+  });
+
+  final bool expanded;
+  final VoidCallback onToggle;
+  final bool proxyAuthEnabled;
+  final ValueChanged<bool> onProxyAuthEnabledChanged;
+  final TextEditingController proxyAuthUsernameController;
+  final TextEditingController proxyAuthPasswordController;
+  final ValueNotifier<bool> obscureProxyAuthPassword;
+  final List<CustomHeader> customHeaders;
+  final ValueChanged<List<CustomHeader>> onCustomHeadersChanged;
+  final VoidCallback onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return AdvancedConnectionSettingsCard(
+      expanded: expanded,
+      onToggle: onToggle,
+      children: [
+        ProxyHeaderAuthSection(
+          enabled: proxyAuthEnabled,
+          onEnabledChanged: onProxyAuthEnabledChanged,
+          usernameController: proxyAuthUsernameController,
+          passwordController: proxyAuthPasswordController,
+          obscurePassword: obscureProxyAuthPassword,
+          onSubmitted: onSubmitted,
+        ),
+        CustomHeadersSection(
+          headers: customHeaders,
+          onChanged: onCustomHeadersChanged,
+        ),
+      ],
+    );
+  }
+}
