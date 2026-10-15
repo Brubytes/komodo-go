@@ -397,13 +397,23 @@ class AlertTile extends ConsumerWidget {
 }
 
 class UpdateTile extends ConsumerWidget {
-  const UpdateTile({required this.update, super.key});
+  const UpdateTile({
+    required this.update,
+    super.key,
+    this.currentTargetId,
+  });
 
   final UpdateListItem update;
+
+  /// Id of the resource whose detail screen embeds this tile. When the
+  /// update targets it, the target name and the "Open resource" action are
+  /// omitted (they would only link back to the current page).
+  final String? currentTargetId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final route = routeForUpdate(update);
 
     final title = update.operation.isNotEmpty
@@ -412,6 +422,10 @@ class UpdateTile extends ConsumerWidget {
     final target = update.target;
     final operator = _bestOperatorLabel(update);
     final startTime = _formatDateTime(update.timestamp.toLocal());
+    final isCurrent =
+        currentTargetId != null &&
+        target != null &&
+        target.id == currentTargetId;
     final targetName = target == null
         ? 'Unknown target'
         : ref
@@ -422,12 +436,16 @@ class UpdateTile extends ConsumerWidget {
               );
 
     final resourceRoute =
-        target == null ||
+        isCurrent ||
+            target == null ||
             target.type == ResourceTargetType.system ||
             target.type == ResourceTargetType.unknown
         ? null
         : routeForTarget(target, displayName: targetName);
 
+    final muted = textTheme.bodySmall?.copyWith(
+      color: scheme.onSurfaceVariant,
+    );
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
     return AppCardSurface(
@@ -437,80 +455,57 @@ class UpdateTile extends ConsumerWidget {
         borderRadius: cardRadius,
         clipBehavior: Clip.antiAlias,
         child: ListTile(
+          dense: true,
           leading: Icon(
             _iconForTargetType(target?.type),
             color: scheme.primary,
           ),
           title: Row(
             children: [
-              Expanded(child: Text(title)),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               NotificationsStatusChip(
                 label: _labelForUpdateStatus(update),
                 kind: _kindForUpdate(update),
               ),
             ],
           ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Gap(AppSpacing.xs),
-              Text(
-                targetName,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-              const Gap(AppSpacing.xs),
-              Row(
-                children: [
-                  if (operator != null) ...[
-                    Icon(
-                      AppIcons.user,
-                      size: 16,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const Gap(AppSpacing.xs),
-                    Expanded(
-                      child: Text(
-                        operator,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    const Gap(AppSpacing.md),
-                  ],
-                  Icon(
-                    AppIcons.clock,
-                    size: 16,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  const Gap(AppSpacing.xs),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xxs),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!isCurrent)
                   Text(
-                    startTime,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    targetName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: muted,
                   ),
-                ],
-              ),
-              if (resourceRoute != null)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    key: ValueKey('update_open_resource_${update.id}'),
-                    onPressed: () => context.push(resourceRoute),
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(0, 32),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    icon: const Icon(AppIcons.externalLink, size: 16),
-                    label: const Text('Open resource'),
-                  ),
+                Text(
+                  operator == null ? startTime : '$startTime  ·  $operator',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: muted,
                 ),
-            ],
+              ],
+            ),
           ),
+          trailing: resourceRoute == null
+              ? null
+              : IconButton(
+                  key: ValueKey('update_open_resource_${update.id}'),
+                  tooltip: 'Open resource',
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 18,
+                  onPressed: () => context.push(resourceRoute),
+                  icon: const Icon(AppIcons.externalLink),
+                ),
           onTap: route == null ? null : () => context.push(route),
         ),
       ),

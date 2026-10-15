@@ -55,6 +55,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     with DetailDirtySnackBarMixin<StackDetailView> {
   static const _tabServices = 'services';
   static const _tabConfig = 'config';
+  static const _tabUpdates = 'updates';
   static const _tabLogs = 'logs';
 
   final _tabsKey = GlobalKey<DetailTabScaffoldState>();
@@ -306,7 +307,6 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                               message: 'Services unavailable: $error',
                             ),
                           ),
-                          StackUpdatesSection(stackId: widget.stackId),
                         ],
                       ),
                     ),
@@ -374,6 +374,12 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                       ),
                     ),
                   ),
+                ),
+                DetailTabSpec(
+                  id: _tabUpdates,
+                  label: 'Updates',
+                  icon: AppIcons.history,
+                  body: StackUpdatesTab(stackId: widget.stackId),
                 ),
                 DetailTabSpec(
                   id: _tabLogs,
