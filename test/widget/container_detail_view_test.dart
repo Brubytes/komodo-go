@@ -40,7 +40,7 @@ void main() {
             () => _TestContainers(
               () => ContainersResult(
                 items: [_item(image: image)],
-                errors: [],
+                errors: const [],
               ),
             ),
           ),

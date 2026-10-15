@@ -12,7 +12,7 @@ Future<ContainerInspection?> containerInspection(
   required String serverIdOrName,
   required String containerIdOrName,
 }) async {
-  ref.watch(resourceActivityProvider);
+  ref.watch(resourceScopeActivityProvider(ActivityScope.containers));
   final repository = ref.watch(containerRepositoryProvider);
   if (repository == null) return null;
   return unwrapOrThrow(
@@ -29,7 +29,7 @@ Future<ContainerAssociatedResource?> containerAssociatedResource(
   required String serverIdOrName,
   required String containerIdOrName,
 }) async {
-  ref.watch(resourceActivityProvider);
+  ref.watch(resourceScopeActivityProvider(ActivityScope.containers));
   final repository = ref.watch(containerRepositoryProvider);
   if (repository == null) return null;
   return unwrapOrThrow(

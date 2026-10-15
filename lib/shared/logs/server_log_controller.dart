@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:komodo_go/core/network/network_status.dart';
 import 'package:komodo_go/shared/logs/server_log.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,16 +15,32 @@ class ServerLogController extends ChangeNotifier {
   ServerLogController({
     required this.loader,
     this._autoRefresh = true,
-    this.refreshInterval = const Duration(seconds: 3),
+    this.refreshInterval = const Duration(seconds: 5),
+    this.networkStatus,
+    this.isAppActive = _defaultIsAppActive,
   });
 
   static const savedFiltersKey = 'komodo.saved_log_filters.v1';
   static const wrapLinesKey = 'komodo.log_wrap_lines.v1';
   static const tails = [100, 200, 500, 1000, 5000];
-  static const defaultTail = 200;
+  static const defaultTail = 100;
 
   ServerLogLoader loader;
   final Duration refreshInterval;
+
+  /// Current connection status; polling pauses offline and slows 3x on
+  /// cellular. `null` means unthrottled.
+  final NetworkStatus Function()? networkStatus;
+
+  /// Whether the app is in the foreground. Polling ticks are skipped while it
+  /// returns false so a backgrounded app never keeps hitting the API.
+  final bool Function() isAppActive;
+  final _pollGate = PollGate();
+
+  static bool _defaultIsAppActive() {
+    final state = WidgetsBinding.instance.lifecycleState;
+    return state == null || state == AppLifecycleState.resumed;
+  }
 
   final _savedFilters = <SavedLogFilter>[];
   ServerLogSnapshot? _log;
@@ -205,9 +222,18 @@ class ServerLogController extends ChangeNotifier {
     _timer?.cancel();
     _timer = null;
     if (!_autoRefresh || _disposed) return;
-    _timer = Timer.periodic(refreshInterval, (_) {
-      if (!_loading) unawaited(load());
-    });
+    _timer = Timer.periodic(refreshInterval, (_) => pollTick());
+  }
+
+  /// One timer tick: loads unless a load is running, the app is backgrounded,
+  /// or the connection says to hold off.
+  @visibleForTesting
+  void pollTick() {
+    if (_loading || _disposed || !isAppActive()) return;
+    if (!_pollGate.shouldRun(networkStatus?.call() ?? NetworkStatus.online)) {
+      return;
+    }
+    unawaited(load());
   }
 
   Future<void> restoreFilters() async {

@@ -78,9 +78,8 @@ class _DeploymentDetailViewState
 
   void _startBuildPolling() {
     _buildRefreshTimer?.cancel();
-    _buildRefreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (
-      _,
-    ) {
+    _buildRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!shouldRunPollTick()) return;
       final current = ref
           .read(deploymentDetailProvider(widget.deploymentId))
           .asData

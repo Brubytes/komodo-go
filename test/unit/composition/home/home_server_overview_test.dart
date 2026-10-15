@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/home/home_server_overview_provider.dart';
 import 'package:komodo_go/composition/home/home_view.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
+import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 
 class _FakeServers extends Servers {
@@ -54,7 +55,7 @@ void main() {
       ProviderScope(
         overrides: [
           serversProvider.overrideWith(_FakeServers.new),
-          serverStatsProvider.overrideWith((ref, id) async => null),
+          serverStatsProvider.overrideWith2((_) => _NullServerStats()),
         ],
         child: const MaterialApp(
           home: Scaffold(
@@ -69,4 +70,9 @@ void main() {
     expect(find.text('Servers'), findsOneWidget);
     expect(find.text('1 online'), findsOneWidget);
   });
+}
+
+class _NullServerStats extends ServerStats {
+  @override
+  Future<SystemStats?> build(String serverId) async => null;
 }

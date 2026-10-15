@@ -13,7 +13,7 @@ part 'deployments_provider.g.dart';
 class Deployments extends _$Deployments {
   @override
   Future<List<Deployment>> build() async {
-    ref.watch(resourceActivityProvider);
+    ref.watch(resourceScopeActivityProvider(ActivityScope.deployments));
     final repository = ref.watch(deploymentRepositoryProvider);
 
     // Not authenticated yet - return empty list and wait for auth
@@ -40,7 +40,7 @@ class Deployments extends _$Deployments {
 /// Provides details for a specific deployment.
 @riverpod
 Future<Deployment?> deploymentDetail(Ref ref, String deploymentId) async {
-  ref.watch(resourceActivityProvider);
+  ref.watch(resourceScopeActivityProvider(ActivityScope.deployments));
   final repository = ref.watch(deploymentRepositoryProvider);
   if (repository == null) {
     return null;
@@ -131,7 +131,11 @@ class DeploymentActions extends _$DeploymentActions {
       (_) {
         state = const AsyncValue.data(null);
         ref.invalidate(deploymentsProvider);
-        ref.read(resourceActivityProvider.notifier).markChanged();
+        ref
+            .read(resourceActivityProvider.notifier)
+            .markChanged(
+              scopes: {ActivityScope.deployments, ActivityScope.containers},
+            );
         return true;
       },
     );
@@ -160,7 +164,11 @@ class DeploymentActions extends _$DeploymentActions {
       (value) {
         state = const AsyncValue.data(null);
         ref.invalidate(deploymentsProvider);
-        ref.read(resourceActivityProvider.notifier).markChanged();
+        ref
+            .read(resourceActivityProvider.notifier)
+            .markChanged(
+              scopes: {ActivityScope.deployments, ActivityScope.containers},
+            );
         return value;
       },
     );

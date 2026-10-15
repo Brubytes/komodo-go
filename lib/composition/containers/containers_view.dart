@@ -35,6 +35,7 @@ class ContainersView extends ConsumerStatefulWidget {
 }
 
 class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
+  static const _pollInterval = Duration(seconds: 10);
   Timer? _refreshTimer;
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
@@ -81,10 +82,11 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
 
   void _startRefreshTimer() {
     if (_refreshTimer != null) return;
-    _refreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
-      ref.invalidate(containersProvider);
+    _refreshTimer = Timer.periodic(_pollInterval, (_) {
+      if (!shouldRunPollTick()) return;
+      unawaited(ref.read(containersProvider.notifier).pollRefresh());
     });
-    ref.invalidate(containersProvider);
+    unawaited(ref.read(containersProvider.notifier).pollRefresh());
   }
 
   void _stopRefreshTimer() {

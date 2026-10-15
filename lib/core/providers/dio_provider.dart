@@ -68,6 +68,9 @@ Dio? dio(Ref ref) {
     BaseOptions(
       baseUrl: _normalizeTransportBaseUrl(credentials.baseUrl),
       contentType: 'application/json',
+      // dart:io negotiates gzip by default (autoUncompress); stated
+      // explicitly so compression never silently regresses.
+      headers: const {'Accept-Encoding': 'gzip'},
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       // Never follow redirects: dart:io re-sends all headers (including

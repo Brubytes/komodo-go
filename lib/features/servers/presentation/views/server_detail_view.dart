@@ -93,12 +93,15 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
 
   void _startStatsTimer() {
     if (_statsRefreshTimer != null) return;
-    _statsRefreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (
-      _,
-    ) {
-      ref.invalidate(serverStatsProvider(widget.serverId));
+    _statsRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!shouldRunPollTick()) return;
+      unawaited(
+        ref.read(serverStatsProvider(widget.serverId).notifier).pollRefresh(),
+      );
     });
-    ref.invalidate(serverStatsProvider(widget.serverId));
+    unawaited(
+      ref.read(serverStatsProvider(widget.serverId).notifier).pollRefresh(),
+    );
   }
 
   void _stopStatsTimer() {
