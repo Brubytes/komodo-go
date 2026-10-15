@@ -30,6 +30,11 @@ class ResourceListConfig<T> {
     required this.tagsOf,
     required this.searchFieldsOf,
     required this.cardBuilder,
+    required this.nameOf,
+    required this.severityOf,
+    this.stateLabelOf,
+    this.serverNameOf,
+    this.updatedAtOf,
     this.batchItemOf,
     this.onCreate,
   });
@@ -96,6 +101,24 @@ class ResourceListConfig<T> {
     List<String> displayTags,
   )
   cardBuilder;
+
+  /// Display name, used as the sort tie-breaker.
+  final String Function(T item) nameOf;
+
+  /// Severity bucket, see `ResourceSeverity`: 0 = needs attention
+  /// (failed/unhealthy/dead/unreachable), 1 = warning (update available,
+  /// restarting, building/pending, out of date), 2 = healthy/running,
+  /// 3 = stopped/inactive/unknown.
+  final int Function(T item) severityOf;
+
+  /// State label used by the state filter chips. Null hides state filtering.
+  final String Function(T item)? stateLabelOf;
+
+  /// Server name used by the server filter chips. Null hides the filter.
+  final String? Function(T item)? serverNameOf;
+
+  /// Epoch timestamp for "Recently updated" sorting. Null hides that mode.
+  final int Function(T item)? updatedAtOf;
 
   final ResourceBatchItem Function(T item)? batchItemOf;
 

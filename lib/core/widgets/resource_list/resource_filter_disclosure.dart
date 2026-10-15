@@ -19,7 +19,7 @@ class ResourceFilterDisclosure extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final summary = activeFilterCount == 0
-        ? 'Template and tag options'
+        ? 'Sort, state, template and tag options'
         : '$activeFilterCount active';
     return AppCardSurface(
       padding: EdgeInsets.zero,

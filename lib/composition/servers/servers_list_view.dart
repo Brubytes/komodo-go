@@ -13,6 +13,7 @@ import 'package:komodo_go/core/widgets/filters/template_filter.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_filters_provider.dart';
@@ -20,6 +21,7 @@ import 'package:komodo_go/features/servers/presentation/providers/servers_provid
 import 'package:komodo_go/features/servers/presentation/widgets/server_card.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/resource_sorting.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 /// View displaying the list of all servers.
@@ -94,6 +96,32 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
       for (final tag in availableTags) tag.id: tag.name,
     };
 
+    const listId = 'servers';
+    final prefs = watchResourceViewPrefs(ref, listId);
+    final activeFilterCount = countActiveResourceFilters(
+      query: searchQuery,
+      selectedTags: selectedTags,
+      problemsOnly: prefs.problemsOnly,
+      selectedStates: prefs.states,
+      selectedServers: prefs.servers,
+      extra: (templateFilter == TemplateFilter.exclude ? 0 : 1),
+    );
+    final loadedItems = serversAsync.maybeWhen(
+      data: (items) => items,
+      orElse: () => <Server>[],
+    );
+    final stateOptions = collectDistinct<Server>(loadedItems, _stateLabel);
+    void clearAllFilters() {
+      _searchController.clear();
+      ref.read(serversSearchQueryProvider.notifier).query = '';
+      ref.read(serversTagFilterProvider.notifier).clear();
+      ref.read(serversTemplateFilterStateProvider.notifier).value =
+          TemplateFilter.exclude;
+      clearResourceViewFilters(ref, listId);
+    }
+
+    final panelCollapsed = !_isSearchVisible || !_areFiltersExpanded;
+
     return Scaffold(
       appBar: MainAppBar(
         title: 'Servers',
@@ -102,9 +130,9 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
         markUseGradient: true,
         centerTitle: true,
         actions: [
-          IconButton(
-            tooltip: _isSearchVisible ? 'Hide search' : 'Search',
-            icon: Icon(_isSearchVisible ? Icons.close : Icons.search),
+          ResourceFilterToggleButton(
+            visible: _isSearchVisible,
+            activeCount: activeFilterCount,
             onPressed: () {
               setState(() => _isSearchVisible = !_isSearchVisible);
               if (_isSearchVisible) {
@@ -159,15 +187,16 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
                         const Gap(10),
                         ResourceFilterDisclosure(
                           expanded: _areFiltersExpanded,
-                          activeFilterCount:
-                              selectedTags.length +
-                              (templateFilter == TemplateFilter.exclude
-                                  ? 0
-                                  : 1),
+                          activeFilterCount: activeFilterCount,
                           onExpansionChanged: (value) => setState(
                             () => _areFiltersExpanded = value,
                           ),
                           child: _FiltersPanel(
+                            viewSection: ResourceViewFiltersSection(
+                              listId: listId,
+                              stateOptions: stateOptions,
+                            ),
+
                             templateFilter: templateFilter,
                             selectedTags: selectedTags,
                             availableTags: availableTags,
@@ -196,26 +225,72 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
                     )
                   : const SizedBox.shrink(),
             ),
+            if (activeFilterCount > 0 && panelCollapsed) ...[
+              const Gap(8),
+              ResourceActiveFilterChips(
+                listId: listId,
+                onClearAll: clearAllFilters,
+                extraChips: [
+                  if (searchQuery.trim().isNotEmpty)
+                    ActiveFilterChip(
+                      label: 'Search: ${searchQuery.trim()}',
+                      onRemove: () {
+                        _searchController.clear();
+                        ref.read(serversSearchQueryProvider.notifier).query =
+                            '';
+                      },
+                    ),
+                  for (final tag in selectedTags)
+                    ActiveFilterChip(
+                      label: 'Tag: ${tagNameById[tag] ?? tag}',
+                      onRemove: () => ref
+                          .read(serversTagFilterProvider.notifier)
+                          .toggle(tag),
+                    ),
+                  if (templateFilter != TemplateFilter.exclude)
+                    ActiveFilterChip(
+                      label: templateFilter == TemplateFilter.only
+                          ? 'Only templates'
+                          : 'With templates',
+                      onRemove: () =>
+                          ref
+                              .read(serversTemplateFilterStateProvider.notifier)
+                              .value = TemplateFilter
+                              .exclude,
+                    ),
+                ],
+              ),
+            ],
             const Gap(12),
             serversAsync.when(
               skipLoadingOnRefresh: true,
               skipLoadingOnReload: true,
               data: (servers) {
-                final filtered = _applyFilters(
+                final searched = _applyFilters(
                   servers,
                   query: searchQuery,
                   selectedTags: selectedTags,
                   templateFilter: templateFilter,
                   tagNameById: tagNameById,
                 );
+
+                final filtered = prefs.process<Server>(
+                  searched,
+                  severityOf: _severityOf,
+                  nameOf: (item) => item.name,
+                  stateLabelOf: _stateLabel,
+                );
                 if (filtered.isEmpty) {
                   return _EmptyState(
-                    hasFilters: _hasActiveFilters(
-                      query: searchQuery,
-                      selectedTags: selectedTags,
-                      templateFilter: templateFilter,
-                    ),
+                    hasFilters:
+                        _hasActiveFilters(
+                          query: searchQuery,
+                          selectedTags: selectedTags,
+                          templateFilter: templateFilter,
+                        ) ||
+                        prefs.activeCount > 0,
                     onClearFilters: () {
+                      clearResourceViewFilters(ref, listId);
                       _searchController.clear();
                       ref.read(serversSearchQueryProvider.notifier).query = '';
                       ref.read(serversTagFilterProvider.notifier).clear();
@@ -270,6 +345,7 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
 
 class _FiltersPanel extends StatelessWidget {
   const _FiltersPanel({
+    required this.viewSection,
     required this.templateFilter,
     required this.selectedTags,
     required this.availableTags,
@@ -279,6 +355,7 @@ class _FiltersPanel extends StatelessWidget {
     required this.onClearTags,
   });
 
+  final Widget viewSection;
   final TemplateFilter templateFilter;
   final Set<String> selectedTags;
   final List<TagOption> availableTags;
@@ -304,6 +381,7 @@ class _FiltersPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          viewSection,
           _FilterRow(
             icon: AppIcons.factory,
             label: 'Templates',
@@ -722,3 +800,11 @@ List<String> _displayTags(
     for (final tag in tags) tagNameById[tag] ?? tag,
   ];
 }
+
+int _severityOf(Server server) => switch (server.state) {
+  ServerState.notOk => ResourceSeverity.attention,
+  ServerState.ok => ResourceSeverity.healthy,
+  ServerState.disabled || ServerState.unknown => ResourceSeverity.inactive,
+};
+
+String _stateLabel(Server server) => resourceStateLabel(server.state);

@@ -15,11 +15,14 @@ import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_filters_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/shared/resources/resource_sorting.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class ContainersView extends ConsumerStatefulWidget {
@@ -104,6 +107,25 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
     final searchQuery = ref.watch(containersSearchQueryProvider);
     final sortState = ref.watch(containersSortProvider);
     final isActiveTab = ref.watch(mainShellIndexProvider) == 2;
+    const listId = 'containers';
+    final prefs = watchResourceViewPrefs(ref, listId);
+    final activeFilterCount =
+        (searchQuery.trim().isEmpty ? 0 : 1) +
+        (selectedServerId == null ? 0 : 1) +
+        prefs.activeCount;
+    final stateOptions = collectDistinct<ContainerOverviewItem>(
+      containersAsync.maybeWhen(
+        data: (result) => result.items,
+        orElse: () => const <ContainerOverviewItem>[],
+      ),
+      (item) => resourceStateLabel(item.container.state),
+    );
+    void clearAllFilters() {
+      _searchController.clear();
+      ref.read(containersSearchQueryProvider.notifier).query = '';
+      ref.read(containersServerFilterProvider.notifier).serverId = null;
+      clearResourceViewFilters(ref, listId);
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -115,9 +137,9 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
         title: 'Containers',
         icon: AppIcons.containers,
         actions: [
-          IconButton(
-            tooltip: _isSearchVisible ? 'Hide search' : 'Search',
-            icon: Icon(_isSearchVisible ? Icons.close : Icons.search),
+          ResourceFilterToggleButton(
+            visible: _isSearchVisible,
+            activeCount: activeFilterCount,
             onPressed: () {
               setState(() => _isSearchVisible = !_isSearchVisible);
               if (_isSearchVisible) {
@@ -146,6 +168,12 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                               .read(containersServerFilterProvider.notifier)
                               .serverId =
                           value,
+                ),
+                const Gap(12),
+                ResourceViewFiltersSection(
+                  listId: listId,
+                  stateOptions: stateOptions,
+                  showSort: false,
                 ),
                 const Gap(12),
                 _SortRow(
@@ -187,6 +215,26 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                         )
                       : const SizedBox.shrink(),
                 ),
+                if (!_isSearchVisible && searchQuery.trim().isNotEmpty) ...[
+                  const Gap(8),
+                  ResourceActiveFilterChips(
+                    listId: listId,
+                    includeQuickFilters: false,
+                    onClearAll: clearAllFilters,
+                    extraChips: [
+                      ActiveFilterChip(
+                        label: 'Search: ${searchQuery.trim()}',
+                        onRemove: () {
+                          _searchController.clear();
+                          ref
+                                  .read(containersSearchQueryProvider.notifier)
+                                  .query =
+                              '';
+                        },
+                      ),
+                    ],
+                  ),
+                ],
                 const Gap(12),
                 containersAsync.when(
                   skipLoadingOnRefresh: true,
@@ -197,6 +245,8 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                       serverId: selectedServerId,
                       query: searchQuery,
                       sort: sortState,
+                      problemsOnly: prefs.problemsOnly,
+                      states: prefs.states,
                     );
 
                     if (filtered.isEmpty) {
@@ -456,6 +506,10 @@ class _SortRow extends StatelessWidget {
             ),
             items: const [
               KomodoSelectMenuItem(
+                value: ContainersSortField.problems,
+                label: 'Problems first',
+              ),
+              KomodoSelectMenuItem(
                 value: ContainersSortField.name,
                 label: 'Name',
               ),
@@ -493,7 +547,9 @@ class _SortRow extends StatelessWidget {
           child: IconButton(
             tooltip: directionLabel,
             icon: Icon(directionIcon),
-            onPressed: onToggleDirection,
+            onPressed: sortState.field == ContainersSortField.problems
+                ? null
+                : onToggleDirection,
           ),
         ),
       ],
@@ -506,11 +562,21 @@ List<ContainerOverviewItem> _applyFilters(
   required String? serverId,
   required String query,
   required ContainersSortState sort,
+  bool problemsOnly = false,
+  Set<String> states = const {},
 }) {
   final normalizedQuery = query.trim().toLowerCase();
 
   final filtered = items.where((item) {
     if (serverId != null && item.serverId != serverId) return false;
+    if (problemsOnly &&
+        containerSeverity(item.container) > ResourceSeverity.maxProblem) {
+      return false;
+    }
+    if (states.isNotEmpty &&
+        !states.contains(resourceStateLabel(item.container.state))) {
+      return false;
+    }
     if (normalizedQuery.isEmpty) return true;
 
     final name = item.container.name.toLowerCase();
@@ -569,6 +635,9 @@ int _compareBySort(
   final nameB = b.container.name.toLowerCase();
 
   final result = switch (sort.field) {
+    ContainersSortField.problems => containerSeverity(
+      a.container,
+    ).compareTo(containerSeverity(b.container)),
     ContainersSortField.name =>
       sort.descending ? -nameA.compareTo(nameB) : nameA.compareTo(nameB),
     ContainersSortField.cpu => _compareMetric(
@@ -700,4 +769,28 @@ class _ContainersSkeletonBlock extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Severity bucket of a container, see [ResourceSeverity].
+///
+/// An exited container with a non-zero exit code needs attention.
+int containerSeverity(ContainerListItem container) {
+  return switch (container.state) {
+    ContainerState.dead => ResourceSeverity.attention,
+    ContainerState.exited =>
+      _exitedWithError(container.status)
+          ? ResourceSeverity.attention
+          : ResourceSeverity.inactive,
+    ContainerState.restarting ||
+    ContainerState.removing => ResourceSeverity.warning,
+    ContainerState.running => ResourceSeverity.healthy,
+    ContainerState.created ||
+    ContainerState.paused ||
+    ContainerState.unknown => ResourceSeverity.inactive,
+  };
+}
+
+bool _exitedWithError(String? status) {
+  final match = RegExp(r'Exited \((\d+)\)').firstMatch(status ?? '');
+  return match != null && match.group(1) != '0';
 }

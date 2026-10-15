@@ -43,6 +43,8 @@ ResourceListConfig<_FakeItem> _config({
     isTemplate: (item) => item.template,
     tagsOf: (item) => item.tags,
     searchFieldsOf: (item) => [item.name],
+    nameOf: (item) => item.name,
+    severityOf: (item) => 2,
     cardBuilder: (context, ref, item, displayTags) => Card(
       key: ValueKey('fake_card_${item.id}'),
       child: ListTile(
@@ -85,6 +87,9 @@ void main() {
   testWidgets('search filters cards; Clear filters restores them', (
     tester,
   ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1800);
+    addTearDown(tester.view.resetPhysicalSize);
     await tester.pumpWidget(
       _app(_config(watchList: (ref) => const AsyncValue.data(items))),
     );
@@ -119,6 +124,7 @@ void main() {
     expect(find.text('No fakes found'), findsOneWidget);
     expect(find.text('No fakes match your filters.'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Clear filters'));
     await tester.tap(find.text('Clear filters'));
     await tester.pumpAndSettle();
 

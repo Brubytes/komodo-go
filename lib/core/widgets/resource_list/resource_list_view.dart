@@ -11,10 +11,12 @@ import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
 import 'package:komodo_go/shared/resources/providers/resource_filters_provider.dart';
 import 'package:komodo_go/shared/resources/resource_list_filtering.dart';
+import 'package:komodo_go/shared/resources/resource_sorting.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 /// Generic list screen for Komodo resources.
@@ -77,6 +79,42 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
       resourceTemplateFilterStateProvider(config.kind),
     );
 
+    final listId = config.kind.name;
+    final prefs = watchResourceViewPrefs(ref, listId);
+    final activeFilterCount = countActiveResourceFilters(
+      query: searchQuery,
+      selectedTags: selectedTags,
+      templateFilter: templateFilter,
+      problemsOnly: prefs.problemsOnly,
+      selectedStates: prefs.states,
+      selectedServers: prefs.servers,
+    );
+    final loadedItems = itemsAsync.maybeWhen(
+      data: (items) => items,
+      orElse: () => <T>[],
+    );
+    final stateOf = config.stateLabelOf;
+    final serverOf = config.serverNameOf;
+    final stateOptions = stateOf == null
+        ? <String>[]
+        : collectDistinct(loadedItems, stateOf);
+    final serverOptions = serverOf == null
+        ? <String>[]
+        : collectDistinct(loadedItems, serverOf);
+
+    void clearAllFilters() {
+      _searchController.clear();
+      ref.read(resourceSearchQueryProvider(config.kind).notifier).query = '';
+      ref.read(resourceTagFilterProvider(config.kind).notifier).clear();
+      ref
+              .read(resourceTemplateFilterStateProvider(config.kind).notifier)
+              .value =
+          TemplateFilter.exclude;
+      clearResourceViewFilters(ref, listId);
+    }
+
+    final panelCollapsed = !_isSearchVisible || !_areFiltersExpanded;
+
     final tagOptions = tagsAsync.maybeWhen(
       data: (tags) => tags,
       orElse: () => <TagOption>[],
@@ -101,9 +139,9 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
         markUseGradient: true,
         centerTitle: true,
         actions: [
-          IconButton(
-            tooltip: _isSearchVisible ? 'Hide search' : 'Search',
-            icon: Icon(_isSearchVisible ? Icons.close : Icons.search),
+          ResourceFilterToggleButton(
+            visible: _isSearchVisible,
+            activeCount: activeFilterCount,
             onPressed: () {
               setState(() => _isSearchVisible = !_isSearchVisible);
               if (_isSearchVisible) {
@@ -176,15 +214,16 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                             const Gap(10),
                             ResourceFilterDisclosure(
                               expanded: _areFiltersExpanded,
-                              activeFilterCount:
-                                  selectedTags.length +
-                                  (templateFilter == TemplateFilter.exclude
-                                      ? 0
-                                      : 1),
+                              activeFilterCount: activeFilterCount,
                               onExpansionChanged: (value) => setState(
                                 () => _areFiltersExpanded = value,
                               ),
                               child: _FiltersPanel(
+                                listId: listId,
+                                stateOptions: stateOptions,
+                                serverOptions: serverOptions,
+                                supportsRecentlyUpdated:
+                                    config.updatedAtOf != null,
                                 resourceName: config.resourceName,
                                 templateFilter: templateFilter,
                                 selectedTags: selectedTags,
@@ -220,12 +259,60 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                         )
                       : const SizedBox.shrink(),
                 ),
+                if (activeFilterCount > 0 && panelCollapsed) ...[
+                  const Gap(8),
+                  ResourceActiveFilterChips(
+                    listId: listId,
+                    onClearAll: clearAllFilters,
+                    extraChips: [
+                      if (searchQuery.trim().isNotEmpty)
+                        ActiveFilterChip(
+                          label: 'Search: ${searchQuery.trim()}',
+                          onRemove: () {
+                            _searchController.clear();
+                            ref
+                                    .read(
+                                      resourceSearchQueryProvider(
+                                        config.kind,
+                                      ).notifier,
+                                    )
+                                    .query =
+                                '';
+                          },
+                        ),
+                      for (final tag in selectedTags)
+                        ActiveFilterChip(
+                          label: 'Tag: ${tagNameById[tag] ?? tag}',
+                          onRemove: () => ref
+                              .read(
+                                resourceTagFilterProvider(config.kind).notifier,
+                              )
+                              .toggle(tag),
+                        ),
+                      if (templateFilter != TemplateFilter.exclude)
+                        ActiveFilterChip(
+                          label: templateFilter == TemplateFilter.only
+                              ? 'Only templates'
+                              : 'With templates',
+                          onRemove: () =>
+                              ref
+                                      .read(
+                                        resourceTemplateFilterStateProvider(
+                                          config.kind,
+                                        ).notifier,
+                                      )
+                                      .value =
+                                  TemplateFilter.exclude,
+                        ),
+                    ],
+                  ),
+                ],
                 const Gap(12),
                 itemsAsync.when(
                   skipLoadingOnRefresh: true,
                   skipLoadingOnReload: true,
                   data: (items) {
-                    final filtered = applyResourceFilters(
+                    final searched = applyResourceFilters(
                       items,
                       query: searchQuery,
                       selectedTags: selectedTags,
@@ -235,39 +322,26 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                       tagsOf: config.tagsOf,
                       searchFieldsOf: config.searchFieldsOf,
                     );
+                    final filtered = prefs.process<T>(
+                      searched,
+                      severityOf: config.severityOf,
+                      nameOf: config.nameOf,
+                      updatedAtOf: config.updatedAtOf,
+                      stateLabelOf: config.stateLabelOf,
+                      serverNameOf: config.serverNameOf,
+                    );
                     if (filtered.isEmpty) {
                       return _EmptyState(
                         icon: config.icon,
                         resourceName: config.resourceName,
-                        hasFilters: hasActiveResourceFilters(
-                          query: searchQuery,
-                          selectedTags: selectedTags,
-                          templateFilter: templateFilter,
-                        ),
-                        onClearFilters: () {
-                          _searchController.clear();
-                          ref
-                                  .read(
-                                    resourceSearchQueryProvider(
-                                      config.kind,
-                                    ).notifier,
-                                  )
-                                  .query =
-                              '';
-                          ref
-                              .read(
-                                resourceTagFilterProvider(config.kind).notifier,
-                              )
-                              .clear();
-                          ref
-                                  .read(
-                                    resourceTemplateFilterStateProvider(
-                                      config.kind,
-                                    ).notifier,
-                                  )
-                                  .value =
-                              TemplateFilter.exclude;
-                        },
+                        hasFilters:
+                            hasActiveResourceFilters(
+                              query: searchQuery,
+                              selectedTags: selectedTags,
+                              templateFilter: templateFilter,
+                            ) ||
+                            prefs.activeCount > 0,
+                        onClearFilters: clearAllFilters,
                         tagOptions: availableTags,
                         onSelectTags: (value) =>
                             ref
@@ -331,6 +405,10 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
 
 class _FiltersPanel extends StatelessWidget {
   const _FiltersPanel({
+    required this.listId,
+    required this.stateOptions,
+    required this.serverOptions,
+    required this.supportsRecentlyUpdated,
     required this.resourceName,
     required this.templateFilter,
     required this.selectedTags,
@@ -340,6 +418,10 @@ class _FiltersPanel extends StatelessWidget {
     required this.onClearTags,
   });
 
+  final String listId;
+  final List<String> stateOptions;
+  final List<String> serverOptions;
+  final bool supportsRecentlyUpdated;
   final String resourceName;
   final TemplateFilter templateFilter;
   final Set<String> selectedTags;
@@ -365,6 +447,12 @@ class _FiltersPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          ResourceViewFiltersSection(
+            listId: listId,
+            stateOptions: stateOptions,
+            serverOptions: serverOptions,
+            supportsRecentlyUpdated: supportsRecentlyUpdated,
+          ),
           _FilterRow(
             icon: AppIcons.factory,
             label: 'Templates',

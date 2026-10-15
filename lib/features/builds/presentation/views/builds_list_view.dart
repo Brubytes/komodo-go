@@ -13,6 +13,7 @@ import 'package:komodo_go/features/builds/presentation/widgets/build_card.dart';
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
+import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all builds.
 class BuildsListView extends StatelessWidget {
@@ -43,6 +44,10 @@ final _buildsListConfig = ResourceListConfig<BuildListItem>(
   isTemplate: (item) => item.template,
   tagsOf: (item) => item.tags,
   searchFieldsOf: (item) => [item.name],
+  nameOf: (item) => item.name,
+  severityOf: _severityOf,
+  stateLabelOf: (item) => resourceStateLabel(item.info.state),
+  updatedAtOf: (item) => item.info.lastBuiltAt,
   batchItemOf: (item) => ResourceBatchItem(id: item.id, name: item.name),
   cardBuilder: (context, ref, item, displayTags) => BuildCard(
     buildItem: item,
@@ -76,3 +81,10 @@ Future<void> _handleAction(
     );
   }
 }
+
+int _severityOf(BuildListItem item) => switch (item.info.state) {
+  BuildState.failed => ResourceSeverity.attention,
+  BuildState.building => ResourceSeverity.warning,
+  BuildState.ok => ResourceSeverity.healthy,
+  BuildState.unknown => ResourceSeverity.inactive,
+};

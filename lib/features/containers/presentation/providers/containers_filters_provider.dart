@@ -2,7 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'containers_filters_provider.g.dart';
 
-enum ContainersSortField { name, cpu, memory, network, blockIo, pids }
+enum ContainersSortField { problems, name, cpu, memory, network, blockIo, pids }
 
 class ContainersSortState {
   const ContainersSortState({required this.field, required this.descending});
@@ -28,7 +28,7 @@ class ContainersSearchQuery extends _$ContainersSearchQuery {
   set query(String value) => state = value;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class ContainersServerFilter extends _$ContainersServerFilter {
   @override
   String? build() => null;
@@ -38,12 +38,12 @@ class ContainersServerFilter extends _$ContainersServerFilter {
   set serverId(String? value) => state = value;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class ContainersSort extends _$ContainersSort {
   @override
   ContainersSortState build() {
     return const ContainersSortState(
-      field: ContainersSortField.name,
+      field: ContainersSortField.problems,
       descending: false,
     );
   }
@@ -55,7 +55,7 @@ class ContainersSort extends _$ContainersSort {
     state = state.copyWith(
       field: value,
       descending: switch (value) {
-        ContainersSortField.name => false,
+        ContainersSortField.problems || ContainersSortField.name => false,
         _ => true,
       },
     );
