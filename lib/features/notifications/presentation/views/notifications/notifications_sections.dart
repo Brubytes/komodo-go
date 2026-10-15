@@ -14,6 +14,7 @@ import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/notification_filters_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/target_display_name_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/utils/alert_navigation_utils.dart';
@@ -28,64 +29,161 @@ class AlertsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final alertsAsync = ref.watch(alertsProvider);
+    final filters = ref.watch(alertFiltersProvider);
 
-    return RefreshIndicator(
-      onRefresh: () => ref.read(alertsProvider.notifier).refresh(),
-      child: alertsAsync.when(
-        data: (state) {
-          if (state.items.isEmpty) {
-            return const NotificationsEmptyState(
-              icon: AppIcons.warning,
-              title: 'No alerts',
-              description: 'You’re all caught up.',
-            );
-          }
-
-          return NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification.metrics.pixels >=
-                  notification.metrics.maxScrollExtent - 200) {
-                unawaited(ref.read(alertsProvider.notifier).fetchNextPage());
-              }
-              return false;
-            },
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.items.length + (state.nextPage == null ? 0 : 1),
-              separatorBuilder: (_, _) => const Gap(12),
-              itemBuilder: (context, index) {
-                final isFooter = index >= state.items.length;
-                if (isFooter) {
-                  return PaginationFooter(
-                    isLoading: state.isLoadingMore,
-                    onLoadMore: () => unawaited(
-                      ref.read(alertsProvider.notifier).fetchNextPage(),
-                    ),
+    return Column(
+      children: [
+        _FilterBar(
+          chips: [
+            FilterChip(
+              key: const ValueKey('alerts_filter_unresolved'),
+              label: const Text('Unresolved'),
+              selected: filters.unresolvedOnly,
+              onSelected: (value) =>
+                  ref.read(alertFiltersProvider.notifier).filters = filters
+                      .copyWith(unresolvedOnly: value),
+            ),
+            FilterChip(
+              key: const ValueKey('alerts_filter_critical'),
+              label: const Text('Critical'),
+              selected: filters.criticalOnly,
+              onSelected: (value) =>
+                  ref.read(alertFiltersProvider.notifier).filters = filters
+                      .copyWith(criticalOnly: value),
+            ),
+          ],
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => ref.read(alertsProvider.notifier).refresh(),
+            child: alertsAsync.when(
+              data: (state) {
+                if (state.items.isEmpty) {
+                  return const NotificationsEmptyState(
+                    icon: AppIcons.warning,
+                    title: 'No alerts',
+                    description: 'You’re all caught up.',
                   );
                 }
 
-                final alert = state.items[index];
-                return AppFadeSlide(
-                  delay: AppMotion.stagger(index),
-                  play: index < 10,
-                  child: AlertTile(alert: alert),
+                final items = filters.apply(state.items);
+                final isEmpty = items.isEmpty;
+                final hasMore = state.nextPage != null;
+
+                return NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.metrics.pixels >=
+                        notification.metrics.maxScrollExtent - 200) {
+                      unawaited(
+                        ref.read(alertsProvider.notifier).fetchNextPage(),
+                      );
+                    }
+                    return false;
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    itemCount: (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
+                    separatorBuilder: (_, _) => const Gap(12),
+                    itemBuilder: (context, index) {
+                      if (isEmpty && index == 0) {
+                        return _FilteredEmptyMessage(
+                          message: filters.criticalOnly
+                              ? 'No matching alerts'
+                              : 'No unresolved alerts',
+                          showAllLabel: 'Show all alerts',
+                          onShowAll: () =>
+                              ref
+                                  .read(alertFiltersProvider.notifier)
+                                  .filters = const AlertFilters(
+                                unresolvedOnly: false,
+                              ),
+                        );
+                      }
+                      final isFooter = isEmpty
+                          ? index > 0
+                          : index >= items.length;
+                      if (isFooter) {
+                        return PaginationFooter(
+                          isLoading: state.isLoadingMore,
+                          onLoadMore: () => unawaited(
+                            ref.read(alertsProvider.notifier).fetchNextPage(),
+                          ),
+                        );
+                      }
+
+                      return AppFadeSlide(
+                        delay: AppMotion.stagger(index),
+                        play: index < 10,
+                        child: AlertTile(alert: items[index]),
+                      );
+                    },
+                  ),
+                );
+              },
+              loading: () => const _AlertsSkeletonList(),
+              error: (error, stack) {
+                final title = alertsUnavailableTitle(error);
+                final message = alertsUnavailableMessage(error);
+                return NotificationsErrorState(
+                  title: title,
+                  message: message,
+                  onRetry: () => ref.invalidate(alertsProvider),
+                  secondaryActionLabel: onOpenUpdates == null
+                      ? null
+                      : 'Open updates',
+                  onSecondaryAction: onOpenUpdates,
                 );
               },
             ),
-          );
-        },
-        loading: () => const _AlertsSkeletonList(),
-        error: (error, stack) {
-          final title = alertsUnavailableTitle(error);
-          final message = alertsUnavailableMessage(error);
-          return NotificationsErrorState(
-            title: title,
-            message: message,
-            onRetry: () => ref.invalidate(alertsProvider),
-            secondaryActionLabel: onOpenUpdates == null ? null : 'Open updates',
-            onSecondaryAction: onOpenUpdates,
-          );
-        },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({required this.chips});
+
+  final List<Widget> chips;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+        child: Wrap(spacing: 8, runSpacing: 4, children: chips),
+      ),
+    );
+  }
+}
+
+class _FilteredEmptyMessage extends StatelessWidget {
+  const _FilteredEmptyMessage({
+    required this.message,
+    required this.showAllLabel,
+    required this.onShowAll,
+  });
+
+  final String message;
+  final String showAllLabel;
+  final VoidCallback onShowAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        children: [
+          Text(
+            message,
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          const Gap(8),
+          TextButton(onPressed: onShowAll, child: Text(showAllLabel)),
+        ],
       ),
     );
   }
@@ -97,59 +195,98 @@ class UpdatesTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final updatesAsync = ref.watch(updatesProvider);
+    final failedOnly = ref.watch(updatesFailedOnlyProvider);
 
-    return RefreshIndicator(
-      onRefresh: () => ref.read(updatesProvider.notifier).refresh(),
-      child: updatesAsync.when(
-        data: (state) {
-          if (state.items.isEmpty) {
-            return const NotificationsEmptyState(
-              icon: AppIcons.updateAvailable,
-              title: 'No updates',
-              description: 'No recent activity yet.',
-            );
-          }
-
-          return NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification.metrics.pixels >=
-                  notification.metrics.maxScrollExtent - 200) {
-                unawaited(ref.read(updatesProvider.notifier).fetchNextPage());
-              }
-              return false;
-            },
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.items.length + (state.nextPage == null ? 0 : 1),
-              separatorBuilder: (_, _) => const Gap(12),
-              itemBuilder: (context, index) {
-                final isFooter = index >= state.items.length;
-                if (isFooter) {
-                  return PaginationFooter(
-                    isLoading: state.isLoadingMore,
-                    onLoadMore: () => unawaited(
-                      ref.read(updatesProvider.notifier).fetchNextPage(),
-                    ),
+    return Column(
+      children: [
+        _FilterBar(
+          chips: [
+            FilterChip(
+              key: const ValueKey('updates_filter_failed'),
+              label: const Text('Failed only'),
+              selected: failedOnly,
+              onSelected: (value) =>
+                  ref.read(updatesFailedOnlyProvider.notifier).value = value,
+            ),
+          ],
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => ref.read(updatesProvider.notifier).refresh(),
+            child: updatesAsync.when(
+              data: (state) {
+                if (state.items.isEmpty) {
+                  return const NotificationsEmptyState(
+                    icon: AppIcons.updateAvailable,
+                    title: 'No updates',
+                    description: 'No recent activity yet.',
                   );
                 }
 
-                final update = state.items[index];
-                return AppFadeSlide(
-                  delay: AppMotion.stagger(index),
-                  play: index < 10,
-                  child: UpdateTile(update: update),
+                final items = applyUpdatesFilter(
+                  state.items,
+                  failedOnly: failedOnly,
+                );
+                final isEmpty = items.isEmpty;
+                final hasMore = state.nextPage != null;
+
+                return NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.metrics.pixels >=
+                        notification.metrics.maxScrollExtent - 200) {
+                      unawaited(
+                        ref.read(updatesProvider.notifier).fetchNextPage(),
+                      );
+                    }
+                    return false;
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    itemCount: (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
+                    separatorBuilder: (_, _) => const Gap(12),
+                    itemBuilder: (context, index) {
+                      if (isEmpty && index == 0) {
+                        return _FilteredEmptyMessage(
+                          message: 'No failed updates',
+                          showAllLabel: 'Show all updates',
+                          onShowAll: () =>
+                              ref
+                                      .read(updatesFailedOnlyProvider.notifier)
+                                      .value =
+                                  false,
+                        );
+                      }
+                      final isFooter = isEmpty
+                          ? index > 0
+                          : index >= items.length;
+                      if (isFooter) {
+                        return PaginationFooter(
+                          isLoading: state.isLoadingMore,
+                          onLoadMore: () => unawaited(
+                            ref.read(updatesProvider.notifier).fetchNextPage(),
+                          ),
+                        );
+                      }
+
+                      return AppFadeSlide(
+                        delay: AppMotion.stagger(index),
+                        play: index < 10,
+                        child: UpdateTile(update: items[index]),
+                      );
+                    },
+                  ),
                 );
               },
+              loading: () => const _UpdatesSkeletonList(),
+              error: (error, stack) => NotificationsErrorState(
+                title: 'Failed to load updates',
+                message: error.toString(),
+                onRetry: () => ref.invalidate(updatesProvider),
+              ),
             ),
-          );
-        },
-        loading: () => const _UpdatesSkeletonList(),
-        error: (error, stack) => NotificationsErrorState(
-          title: 'Failed to load updates',
-          message: error.toString(),
-          onRetry: () => ref.invalidate(updatesProvider),
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -269,6 +406,13 @@ class UpdateTile extends ConsumerWidget {
                 orElse: () => target.displayName,
               );
 
+    final resourceRoute =
+        target == null ||
+            target.type == ResourceTargetType.system ||
+            target.type == ResourceTargetType.unknown
+        ? null
+        : routeForTarget(target, displayName: targetName);
+
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
     return AppCardSurface(
@@ -335,6 +479,21 @@ class UpdateTile extends ConsumerWidget {
                   ),
                 ],
               ),
+              if (resourceRoute != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: ValueKey('update_open_resource_${update.id}'),
+                    onPressed: () => context.push(resourceRoute),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 32),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    icon: const Icon(AppIcons.externalLink, size: 16),
+                    label: const Text('Open resource'),
+                  ),
+                ),
             ],
           ),
           onTap: route == null ? null : () => context.push(route),
