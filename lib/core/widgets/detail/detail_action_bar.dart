@@ -211,12 +211,16 @@ class DetailActionMenuButton extends StatelessWidget {
   const DetailActionMenuButton({
     required this.groups,
     super.key,
+    this.groupsBuilder,
     this.child,
     this.tooltip = 'More',
     this.icon = AppIcons.moreVertical,
   });
 
   final List<DetailActionGroup> groups;
+
+  /// When set, evaluated lazily each time the menu opens instead of [groups].
+  final List<DetailActionGroup> Function()? groupsBuilder;
   final Widget? child;
   final String tooltip;
   final IconData icon;
@@ -228,7 +232,10 @@ class DetailActionMenuButton extends StatelessWidget {
       icon: child == null ? Icon(icon) : null,
       child: child,
       onSelected: (item) => item.onSelected?.call(),
-      itemBuilder: (context) => buildDetailActionMenuEntries(context, groups),
+      itemBuilder: (context) => buildDetailActionMenuEntries(
+        context,
+        groupsBuilder?.call() ?? groups,
+      ),
     );
   }
 }

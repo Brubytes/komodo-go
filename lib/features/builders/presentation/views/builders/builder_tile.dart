@@ -43,7 +43,7 @@ class BuilderTile extends ConsumerWidget {
         if (item.template) const TextPill(label: 'Template'),
         ...resourceTagPills(item.tags),
       ],
-      menu: [
+      menuBuilder: () => [
         DetailActionGroup(
           items: [
             DetailActionItem(

@@ -45,9 +45,9 @@ class SyncCard extends StatelessWidget {
         if (sync.template) const TextPill(label: 'Template'),
         ...resourceTagPills(displayTags),
       ],
-      menu: onRun == null
-          ? const []
-          : [
+      menuBuilder: onRun == null
+          ? null
+          : () => [
               DetailActionGroup(
                 items: [
                   DetailActionItem(

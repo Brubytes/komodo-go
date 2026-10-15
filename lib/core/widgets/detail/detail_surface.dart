@@ -46,13 +46,15 @@ class DetailSurface extends StatelessWidget {
       alpha: isDark ? 0.35 : 0.55,
     );
 
-    final shadows = enableShadow
+    // Large blurred shadows are expensive to paint and nearly invisible on
+    // dark surfaces, so they are only drawn in light mode.
+    final shadows = enableShadow && !isDark
         ? [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.10),
-              blurRadius: isDark ? 24 : 18,
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 18,
               offset: const Offset(0, 10),
-              spreadRadius: isDark ? -6 : -8,
+              spreadRadius: -8,
             ),
           ]
         : const <BoxShadow>[];

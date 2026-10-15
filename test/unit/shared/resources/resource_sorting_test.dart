@@ -35,6 +35,30 @@ void main() {
   ];
 
   group('sortResources', () {
+    test('computes sort keys once per item and keeps input untouched', () {
+      var nameCalls = 0;
+      final input = List<_Item>.of(items);
+      final sorted = sortResources<_Item>(
+        input,
+        mode: ResourceSortMode.name,
+        severityOf: (i) => i.severity,
+        nameOf: (i) {
+          nameCalls++;
+          return i.name;
+        },
+      );
+      expect(nameCalls, items.length);
+      expect(input, items);
+      expect(_names(sorted), [
+        'Alpha',
+        'also-broken',
+        'broken',
+        'stopped',
+        'Updating',
+        'zeta',
+      ]);
+    });
+
     test('problems first orders by severity then case-insensitive name', () {
       expect(
         _names(_sort(items, ResourceSortMode.problemsFirst)),

@@ -47,9 +47,9 @@ class BuildCard extends StatelessWidget {
         if (buildItem.template) const TextPill(label: 'Template'),
         ...resourceTagPills(displayTags),
       ],
-      menu: onAction == null
-          ? const []
-          : [
+      menuBuilder: onAction == null
+          ? null
+          : () => [
               DetailActionGroup(
                 items: [
                   DetailActionItem(

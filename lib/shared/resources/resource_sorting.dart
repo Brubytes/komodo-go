@@ -30,7 +30,8 @@ enum ResourceSortMode {
   name('Name'),
 
   /// Most recent timestamp first (only for kinds exposing a timestamp).
-  recentlyUpdated('Recently updated');
+  recentlyUpdated('Recently updated')
+  ;
 
   const ResourceSortMode(this.label);
 
@@ -53,25 +54,42 @@ List<T> sortResources<T>(
       mode == ResourceSortMode.recentlyUpdated && updatedAtOf == null
       ? ResourceSortMode.problemsFirst
       : mode;
-  int byName(T a, T b) =>
-      nameOf(a).toLowerCase().compareTo(nameOf(b).toLowerCase());
 
-  final sorted = List<T>.of(items);
+  // Decorate-sort-undecorate: compute lowercase name / severity / timestamp
+  // once per item instead of once per comparison.
+  final entries = <_SortEntry<T>>[
+    for (final item in items)
+      _SortEntry<T>(
+        item,
+        nameOf(item).toLowerCase(),
+        effective == ResourceSortMode.problemsFirst ? severityOf(item) : 0,
+        effective == ResourceSortMode.recentlyUpdated ? updatedAtOf!(item) : 0,
+      ),
+  ];
   switch (effective) {
     case ResourceSortMode.problemsFirst:
-      sorted.sort((a, b) {
-        final bySeverity = severityOf(a).compareTo(severityOf(b));
-        return bySeverity != 0 ? bySeverity : byName(a, b);
+      entries.sort((a, b) {
+        final bySeverity = a.severity.compareTo(b.severity);
+        return bySeverity != 0 ? bySeverity : a.name.compareTo(b.name);
       });
     case ResourceSortMode.name:
-      sorted.sort(byName);
+      entries.sort((a, b) => a.name.compareTo(b.name));
     case ResourceSortMode.recentlyUpdated:
-      sorted.sort((a, b) {
-        final byTime = updatedAtOf!(b).compareTo(updatedAtOf(a));
-        return byTime != 0 ? byTime : byName(a, b);
+      entries.sort((a, b) {
+        final byTime = b.updatedAt.compareTo(a.updatedAt);
+        return byTime != 0 ? byTime : a.name.compareTo(b.name);
       });
   }
-  return sorted;
+  return [for (final e in entries) e.item];
+}
+
+class _SortEntry<T> {
+  _SortEntry(this.item, this.name, this.severity, this.updatedAt);
+
+  final T item;
+  final String name;
+  final int severity;
+  final int updatedAt;
 }
 
 /// Applies the problems-only, state and server quick filters.
