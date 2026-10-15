@@ -13,11 +13,15 @@ class ServerLogToolbar extends StatefulWidget {
   const ServerLogToolbar({
     required this.controller,
     this.onAutoRefreshChanged,
+    this.trailing = const [],
     super.key,
   });
 
   final ServerLogController controller;
   final ValueChanged<bool>? onAutoRefreshChanged;
+
+  /// Extra buttons appended after the live toggle (e.g. refresh).
+  final List<Widget> trailing;
 
   @override
   State<ServerLogToolbar> createState() => _ServerLogToolbarState();
@@ -82,6 +86,12 @@ class _ServerLogToolbarState extends State<ServerLogToolbar> {
                   );
                 },
               ),
+              _WrapToggle(
+                wrapped: _controller.wrapLines,
+                onPressed: () => unawaited(
+                  _controller.setWrapLines(value: !_controller.wrapLines),
+                ),
+              ),
               _LiveToggle(
                 enabled: _controller.autoRefresh,
                 onPressed: () {
@@ -90,6 +100,7 @@ class _ServerLogToolbarState extends State<ServerLogToolbar> {
                   widget.onAutoRefreshChanged?.call(next);
                 },
               ),
+              ...widget.trailing,
             ],
           ),
           _ActiveFilterChips(controller: _controller),
@@ -148,6 +159,24 @@ class _FilterButton extends StatelessWidget {
         label: Text('$count'),
         child: const Icon(AppIcons.filters, size: 20),
       ),
+    );
+  }
+}
+
+class _WrapToggle extends StatelessWidget {
+  const _WrapToggle({required this.wrapped, required this.onPressed});
+
+  final bool wrapped;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      key: const ValueKey('server_log_wrap_toggle'),
+      tooltip: wrapped ? 'Scroll long lines' : 'Wrap long lines',
+      onPressed: onPressed,
+      isSelected: wrapped,
+      icon: Icon(wrapped ? Icons.wrap_text : Icons.short_text, size: 20),
     );
   }
 }

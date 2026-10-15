@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/shared/logs/server_log_controller.dart';
@@ -20,6 +21,7 @@ class ServerLogExplorer extends StatefulWidget {
     this.title = 'Server logs',
     this.autoRefresh = true,
     this.onAutoRefreshChanged,
+    this.fillHeight = false,
     super.key,
   });
 
@@ -30,6 +32,10 @@ class ServerLogExplorer extends StatefulWidget {
   /// Called when the user toggles live refresh, so parents can keep related
   /// polling (e.g. operation logs) in step.
   final ValueChanged<bool>? onAutoRefreshChanged;
+
+  /// Fill the available height (e.g. a dedicated Logs tab) instead of a
+  /// fixed-height card. Requires bounded height constraints.
+  final bool fillHeight;
 
   @override
   State<ServerLogExplorer> createState() => _ServerLogExplorerState();
@@ -62,8 +68,52 @@ class _ServerLogExplorerState extends State<ServerLogExplorer> {
     super.dispose();
   }
 
+  Widget _refreshButton() => ListenableBuilder(
+    listenable: _controller,
+    builder: (context, _) => IconButton(
+      key: const ValueKey('server_log_refresh'),
+      tooltip: 'Refresh logs',
+      onPressed: _controller.loading ? null : _controller.load,
+      icon: const Icon(AppIcons.refresh, size: 20),
+    ),
+  );
+
+  void _expand() => ServerLogFullscreenPage.open(
+    context,
+    controller: _controller,
+    title: widget.title,
+    onAutoRefreshChanged: widget.onAutoRefreshChanged,
+  );
+
   @override
   Widget build(BuildContext context) {
+    if (widget.fillHeight) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.md,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ServerLogToolbar(
+              controller: _controller,
+              onAutoRefreshChanged: widget.onAutoRefreshChanged,
+              trailing: [_refreshButton()],
+            ),
+            const Gap(AppSpacing.sm),
+            Expanded(
+              child: ServerLogViewer(
+                controller: _controller,
+                onExpand: _expand,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     final size = MediaQuery.sizeOf(context);
     final logHeight = size.width >= 720
         ? 620.0

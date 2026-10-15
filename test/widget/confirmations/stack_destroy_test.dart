@@ -98,6 +98,10 @@ void main() {
     testWidgets('detail view confirms destroy before calling repository', (
       tester,
     ) async {
+      tester.view
+        ..physicalSize = const Size(800, 1600)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
       final repository = _MockStackRepository();
       when(
         () => repository.destroyStack('s1'),
@@ -168,12 +172,12 @@ void main() {
       await tester.tap(find.text('Destroy').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Destroy stack?'), findsOneWidget);
+      expect(find.text('Destroy Stack One?'), findsOneWidget);
 
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Destroy stack?'), findsNothing);
+      expect(find.text('Destroy Stack One?'), findsNothing);
       verifyNever(() => repository.destroyStack('s1'));
 
       await tester.tap(

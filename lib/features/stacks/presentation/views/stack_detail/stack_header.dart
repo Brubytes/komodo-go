@@ -30,6 +30,27 @@ PillTone _stateTone(StackState state) => switch (state) {
   _ => PillTone.neutral,
 };
 
+/// Whether a deploy would change something (new commits, missing project or
+/// updatable images). Drives the primary action in the stack action bar.
+bool stackNeedsDeploy({
+  required KomodoStack stack,
+  required StackListItem? listItem,
+  required int? updateCount,
+}) {
+  final config = stack.config;
+  final info = stack.info;
+  final isRepoDefined =
+      !config.filesOnHost &&
+      (config.linkedRepo.trim().isNotEmpty || config.repo.trim().isNotEmpty);
+  final gitOutOfDate =
+      isRepoDefined &&
+      info.latestHash != null &&
+      info.deployedHash != info.latestHash;
+  return gitOutOfDate ||
+      (listItem?.info.projectMissing ?? false) ||
+      (updateCount ?? 0) > 0;
+}
+
 class StackHeader extends StatelessWidget {
   const StackHeader({
     required this.stack,

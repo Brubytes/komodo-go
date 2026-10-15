@@ -622,6 +622,43 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     };
   }
 
+  String _summaryServer(List<Server> servers) {
+    final id = _serverId.text.trim();
+    if (id.isEmpty) return 'Not set';
+    for (final server in servers) {
+      if (server.id == id) return server.name;
+    }
+    return id;
+  }
+
+  String _summaryCount(List<TextEditingController> controllers, String noun) {
+    final count = controllers.where((c) => c.text.trim().isNotEmpty).length;
+    if (count == 0) return 'None';
+    return '$count $noun${count == 1 ? '' : 's'}';
+  }
+
+  String _summaryAutoUpdate() {
+    final on = [
+      if (_pollForUpdates) 'Polling',
+      if (_autoUpdate) 'Auto update',
+      if (_sendAlerts) 'Alerts',
+    ];
+    return on.isEmpty ? 'All off' : on.join(' · ');
+  }
+
+  String _summaryAdvanced() {
+    final parts = [
+      if (_projectName.text.trim().isNotEmpty) _projectName.text.trim(),
+      if (_autoPull) 'Pre-pull',
+      if (_runBuild) 'Pre-build',
+      if (_destroyBeforeDeploy) 'Destroy before deploy',
+      if (_registryAccount.text.trim().isNotEmpty) 'Registry',
+      if (_extraArgControllers.any((c) => c.text.trim().isNotEmpty))
+        'Extra args',
+    ];
+    return parts.isEmpty ? 'Defaults' : parts.join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -659,12 +696,20 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     // Track if a linked repo is currently selected
     final hasLinkedRepo = _linkedRepo.text.trim().isNotEmpty;
 
+    final changedKeys = buildPartialConfigParams().keys.toSet();
+    bool modified(List<String> keys) => keys.any(changedKeys.contains);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 1. Server
         DetailSubCard(
+          key: const ValueKey('stack_cfg_server'),
           title: 'Server',
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _summaryServer(sortedServers),
+          modified: modified(const ['server_id']),
           icon: AppIcons.server,
           child: Column(
             children: [
@@ -1044,7 +1089,12 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
         // 5. Config Files
         DetailSubCard(
+          key: const ValueKey('stack_cfg_config_files'),
           title: 'Config Files',
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _summaryCount(_configFilePathControllers, 'file'),
+          modified: modified(const ['config_files']),
           icon: AppIcons.package,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1150,7 +1200,16 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
         // 6. Auto Update
         DetailSubCard(
+          key: const ValueKey('stack_cfg_auto_update'),
           title: 'Auto Update',
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _summaryAutoUpdate(),
+          modified: modified(const [
+            'auto_update',
+            'poll_for_updates',
+            'send_alerts',
+          ]),
           icon: AppIcons.refresh,
           child: Column(
             children: [
@@ -1192,7 +1251,12 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
         // 7. Links
         DetailSubCard(
+          key: const ValueKey('stack_cfg_links'),
           title: 'Links',
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _summaryCount(_linkControllers, 'link'),
+          modified: modified(const ['links']),
           icon: AppIcons.network,
           child: Column(
             children: [
@@ -1267,7 +1331,16 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
         // 7. Webhooks
         DetailSubCard(
+          key: const ValueKey('stack_cfg_webhooks'),
           title: 'Webhooks',
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _webhookEnabled ? 'Enabled' : 'Disabled',
+          modified: modified(const [
+            'webhook_enabled',
+            'webhook_force_deploy',
+            'webhook_secret',
+          ]),
           icon: AppIcons.plug,
           child: Column(
             children: [
@@ -1339,7 +1412,20 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
         // 8. Advanced
         DetailSubCard(
+          key: const ValueKey('stack_cfg_advanced'),
           title: 'Advanced',
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _summaryAdvanced(),
+          modified: modified(const [
+            'project_name',
+            'auto_pull',
+            'run_build',
+            'destroy_before_deploy',
+            'registry_account',
+            'extra_args',
+            'ignore_services',
+          ]),
           icon: AppIcons.settings,
           child: Column(
             children: [
