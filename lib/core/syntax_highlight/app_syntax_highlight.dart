@@ -10,13 +10,13 @@ class AppSyntaxHighlight {
   static Future<void> ensureInitialized() async {
     if (_isInitialized) return;
 
-    await Highlighter.initialize([
-      'yaml',
-      'typescript',
+    final results = await Future.wait<Object?>([
+      Highlighter.initialize(['yaml', 'typescript']),
+      HighlighterTheme.loadLightTheme(),
+      HighlighterTheme.loadDarkTheme(),
     ]);
-
-    lightTheme = await HighlighterTheme.loadLightTheme();
-    darkTheme = await HighlighterTheme.loadDarkTheme();
+    lightTheme = results[1]! as HighlighterTheme;
+    darkTheme = results[2]! as HighlighterTheme;
 
     _isInitialized = true;
   }

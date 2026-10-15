@@ -14,6 +14,7 @@ const _compositionAllowList = {
   'lib/composition/resources/resource_creation_view.dart',
   'lib/composition/home/home_ops_pulse.dart',
   'lib/composition/home/home_view.dart',
+  'lib/composition/home/home_server_overview_provider.dart',
   'lib/composition/home/home_attention_provider.dart',
   'lib/composition/home/widgets/home_attention_card.dart',
   'lib/composition/home/widgets/home_dashboard_tiles.dart',
