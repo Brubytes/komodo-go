@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/composition/resources/resource_name_resolver_provider.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/actions/presentation/views/action_detail_view.dart';
 import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
@@ -9,6 +10,7 @@ import 'package:komodo_go/features/servers/presentation/providers/servers_provid
 import 'package:komodo_go/features/servers/presentation/views/server_detail_view.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_metadata.dart';
+import 'package:komodo_go/shared/resources/providers/resource_name_resolver_provider.dart';
 
 class AdvancedActionDetailView extends ConsumerWidget {
   const AdvancedActionDetailView({
@@ -64,27 +66,34 @@ class AdvancedProcedureDetailView extends ConsumerWidget {
         .watch(procedureDetailProvider(procedureId))
         .asData
         ?.value;
-    return ProcedureDetailView(
-      procedureId: procedureId,
-      procedureName: procedureName,
-      appBarActions: [
-        if (procedure != null)
-          ResourceAdvancedMenuButton(
-            metadata: ResourceMetadata(
-              kind: ResourceKind.procedures,
-              id: procedure.id,
-              name: procedure.name,
-              description: procedure.description,
-              template: procedure.template,
-              tags: procedure.tags,
-            ),
-            onMutated: () {
-              ref
-                ..invalidate(proceduresProvider)
-                ..invalidate(procedureDetailProvider(procedureId));
-            },
-          ),
+    return ProviderScope(
+      overrides: [
+        resourceNameResolverProvider.overrideWith(
+          (ref) => ref.watch(composedResourceNameResolverProvider),
+        ),
       ],
+      child: ProcedureDetailView(
+        procedureId: procedureId,
+        procedureName: procedureName,
+        appBarActions: [
+          if (procedure != null)
+            ResourceAdvancedMenuButton(
+              metadata: ResourceMetadata(
+                kind: ResourceKind.procedures,
+                id: procedure.id,
+                name: procedure.name,
+                description: procedure.description,
+                template: procedure.template,
+                tags: procedure.tags,
+              ),
+              onMutated: () {
+                ref
+                  ..invalidate(proceduresProvider)
+                  ..invalidate(procedureDetailProvider(procedureId));
+              },
+            ),
+        ],
+      ),
     );
   }
 }

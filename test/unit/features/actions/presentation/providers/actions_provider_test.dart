@@ -36,7 +36,10 @@ void main() {
       final subscription = listenProvider(container, actionsProvider);
       addTearDown(subscription.close);
 
-      final actions = await readAsyncProvider(container, actionsProvider.future);
+      final actions = await readAsyncProvider(
+        container,
+        actionsProvider.future,
+      );
 
       expect(actions, hasLength(2));
       expect(actions.first.name, 'Action A');
@@ -50,7 +53,10 @@ void main() {
       final subscription = listenProvider(container, actionsProvider);
       addTearDown(subscription.close);
 
-      final actions = await readAsyncProvider(container, actionsProvider.future);
+      final actions = await readAsyncProvider(
+        container,
+        actionsProvider.future,
+      );
 
       expect(actions, isEmpty);
     });
@@ -113,8 +119,9 @@ void main() {
 
     test('run returns true on success', () async {
       final repository = _MockActionRepository();
-      when(() => repository.runAction('a1'))
-          .thenAnswer((_) async => const Right(null));
+      when(
+        () => repository.runAction('a1'),
+      ).thenAnswer((_) async => const Right('u1'));
 
       final container = createProviderContainer(
         overrides: [actionRepositoryProvider.overrideWithValue(repository)],

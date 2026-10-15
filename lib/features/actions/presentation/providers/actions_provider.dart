@@ -67,8 +67,17 @@ class ActionActions extends _$ActionActions
   @override
   bool get isMounted => ref.mounted;
 
-  Future<bool> run(String actionIdOrName, {Map<String, dynamic>? args}) =>
-      executeAction((repo) => repo.runAction(actionIdOrName, args: args));
+  Future<bool> run(String actionIdOrName, {Map<String, dynamic>? args}) async =>
+      await runWithUpdate(actionIdOrName, args: args) != null;
+
+  /// Runs the action and returns the started update id (empty when the API
+  /// did not return one), or null on failure.
+  Future<String?> runWithUpdate(
+    String actionIdOrName, {
+    Map<String, dynamic>? args,
+  }) => executeRequest(
+    (repo) => repo.runAction(actionIdOrName, args: args),
+  );
 
   Future<bool> cancel(String actionIdOrName, {String? updateId}) =>
       executeAction(
