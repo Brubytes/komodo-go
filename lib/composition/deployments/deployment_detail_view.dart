@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/builds/build_detail_sections.dart';
 import 'package:komodo_go/composition/deployments/deployment_detail_sections.dart';
-import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/composition/resources/resource_manage_actions.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
@@ -241,7 +241,7 @@ class _DeploymentDetailViewState
                                     _tabLogs,
                                     collapseHeader: true,
                                   ),
-                              manageItems: ResourceManageActions(
+                              manageItems: buildResourceManageGroup(
                                 context: context,
                                 ref: ref,
                                 metadata: ResourceMetadata(

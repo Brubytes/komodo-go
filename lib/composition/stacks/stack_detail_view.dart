@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/composition/resources/resource_manage_actions.dart';
 import 'package:komodo_go/composition/stacks/stack_config_editor.dart';
 import 'package:komodo_go/composition/stacks/stack_updates_provider.dart';
 import 'package:komodo_go/composition/stacks/stack_updates_tab.dart';
@@ -239,7 +239,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                         _tabLogs,
                                         collapseHeader: true,
                                       ),
-                                  manageItems: ResourceManageActions(
+                                  manageItems: buildResourceManageGroup(
                                     context: context,
                                     ref: ref,
                                     metadata: ResourceMetadata(

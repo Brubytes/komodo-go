@@ -13,12 +13,12 @@ class DetailTabFillBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final handle = NestedScrollView.sliverOverlapAbsorberHandleFor(context);
-    return ListenableBuilder(
-      listenable: handle,
-      builder: (context, _) => Padding(
-        padding: EdgeInsets.only(top: handle.layoutExtent ?? 0),
-        child: child,
-      ),
+    return CustomScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      slivers: [
+        SliverOverlapInjector(handle: handle),
+        SliverFillRemaining(child: child),
+      ],
     );
   }
 }

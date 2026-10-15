@@ -5,7 +5,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
-import 'package:komodo_go/core/widgets/detail/detail_action_bar.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
@@ -84,71 +83,14 @@ class _ResourceAdvancedMenuButtonState
     );
   }
 
-  ResourceManageActions get _actions => ResourceManageActions(
-    context: context,
-    ref: ref,
-    metadata: widget.metadata,
-    onMutated: widget.onMutated,
-    onBusy: (busy) {
-      if (mounted) setState(() => _busy = busy);
-    },
-  );
-
-  Future<void> _handleAction(ResourceAdvancedAction action) =>
-      _actions.handle(action);
-}
-
-/// Metadata / copy / rename / delete operations for a resource, reusable from
-/// popup menus and action bars.
-class ResourceManageActions {
-  ResourceManageActions({
-    required this.context,
-    required this.ref,
-    required this.metadata,
-    required this.onMutated,
-    this.onBusy,
-  });
-
-  final BuildContext context;
-  final WidgetRef ref;
-  final ResourceMetadata metadata;
-  final VoidCallback onMutated;
-  final ValueChanged<bool>? onBusy;
-
-  /// Items for a "Manage" group. Delete is flagged destructive so action
-  /// menus move it to the danger section.
-  List<DetailActionItem> get items => [
-    DetailActionItem(
-      label: 'Edit metadata',
-      icon: AppIcons.tag,
-      onSelected: () => handle(ResourceAdvancedAction.metadata),
-    ),
-    DetailActionItem(
-      label: 'Copy ${metadata.kind.singularLabel.toLowerCase()}',
-      icon: AppIcons.copy,
-      onSelected: () => handle(ResourceAdvancedAction.copy),
-    ),
-    DetailActionItem(
-      label: 'Rename',
-      icon: AppIcons.edit,
-      onSelected: () => handle(ResourceAdvancedAction.rename),
-    ),
-    DetailActionItem(
-      label: 'Delete ${metadata.kind.singularLabel.toLowerCase()}',
-      icon: AppIcons.delete,
-      destructive: true,
-      onSelected: () => handle(ResourceAdvancedAction.delete),
-    ),
-  ];
-
-  Future<void> handle(ResourceAdvancedAction action) async {
+  Future<void> _handleAction(ResourceAdvancedAction action) async {
     switch (action) {
       case ResourceAdvancedAction.metadata:
         final changed = await ResourceMetadataEditorSheet.show(
           context,
-          metadata: metadata,
+          metadata: widget.metadata,
         );
-        if (changed && context.mounted) onMutated();
+        if (changed && mounted) widget.onMutated();
         return;
       case ResourceAdvancedAction.copy:
         return _copy();
@@ -162,21 +104,21 @@ class ResourceManageActions {
   Future<void> _copy() async {
     final name = await promptResourceName(
       context,
-      title: 'Copy ${metadata.kind.singularLabel}',
+      title: 'Copy ${widget.metadata.kind.singularLabel}',
       actionLabel: 'Copy',
-      initialValue: '${metadata.name} copy',
+      initialValue: '${widget.metadata.name} copy',
     );
-    if (name == null || !context.mounted) return;
+    if (name == null || !mounted) return;
 
     final success = await _runMutation(
       (repository) => repository.copy(
-        kind: metadata.kind,
-        id: metadata.id,
+        kind: widget.metadata.kind,
+        id: widget.metadata.id,
         name: name,
       ),
     );
-    if (!success || !context.mounted) return;
-    onMutated();
+    if (!success || !mounted) return;
+    widget.onMutated();
     AppSnackBar.show(
       context,
       'Created $name',
@@ -187,21 +129,21 @@ class ResourceManageActions {
   Future<void> _rename() async {
     final name = await promptResourceName(
       context,
-      title: 'Rename ${metadata.kind.singularLabel}',
+      title: 'Rename ${widget.metadata.kind.singularLabel}',
       actionLabel: 'Rename',
-      initialValue: metadata.name,
+      initialValue: widget.metadata.name,
     );
-    if (name == null || name == metadata.name || !context.mounted) return;
+    if (name == null || name == widget.metadata.name || !mounted) return;
 
     final success = await _runMutation(
       (repository) => repository.rename(
-        kind: metadata.kind,
-        id: metadata.id,
+        kind: widget.metadata.kind,
+        id: widget.metadata.id,
         name: name,
       ),
     );
-    if (!success || !context.mounted) return;
-    onMutated();
+    if (!success || !mounted) return;
+    widget.onMutated();
     AppSnackBar.show(
       context,
       'Renamed to $name',
@@ -214,9 +156,9 @@ class ResourceManageActions {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete ${metadata.name}?'),
+        title: Text('Delete ${widget.metadata.name}?'),
         content: Text(
-          'This permanently deletes the ${metadata.kind.singularLabel.toLowerCase()} '
+          'This permanently deletes the ${widget.metadata.kind.singularLabel.toLowerCase()} '
           'resource from Komodo. This cannot be undone.',
         ),
         actions: [
@@ -236,16 +178,16 @@ class ResourceManageActions {
         ],
       ),
     );
-    if (confirmed != true || !context.mounted) return;
+    if (confirmed != true || !mounted) return;
 
     final success = await _runMutation(
       (repository) => repository.delete(
-        kind: metadata.kind,
-        id: metadata.id,
+        kind: widget.metadata.kind,
+        id: widget.metadata.id,
       ),
     );
-    if (!success || !context.mounted) return;
-    onMutated();
+    if (!success || !mounted) return;
+    widget.onMutated();
     Navigator.of(context).maybePop();
   }
 
@@ -265,10 +207,10 @@ class ResourceManageActions {
       return false;
     }
 
-    onBusy?.call(true);
+    setState(() => _busy = true);
     final result = await request(repository);
-    if (!context.mounted) return false;
-    onBusy?.call(false);
+    if (!mounted) return false;
+    setState(() => _busy = false);
 
     return result.fold(
       (failure) {
