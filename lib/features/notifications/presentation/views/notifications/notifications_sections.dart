@@ -8,6 +8,7 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
+import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
@@ -35,17 +36,17 @@ class AlertsTab extends ConsumerWidget {
       children: [
         _FilterBar(
           chips: [
-            FilterChip(
+            AppFilterChip(
               key: const ValueKey('alerts_filter_unresolved'),
-              label: const Text('Unresolved'),
+              label: 'Unresolved',
               selected: filters.unresolvedOnly,
               onSelected: (value) =>
                   ref.read(alertFiltersProvider.notifier).filters = filters
                       .copyWith(unresolvedOnly: value),
             ),
-            FilterChip(
+            AppFilterChip(
               key: const ValueKey('alerts_filter_critical'),
-              label: const Text('Critical'),
+              label: 'Critical',
               selected: filters.criticalOnly,
               onSelected: (value) =>
                   ref.read(alertFiltersProvider.notifier).filters = filters
@@ -154,18 +155,7 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.sm,
-          AppSpacing.lg,
-          AppSpacing.xxs,
-        ),
-        child: Wrap(spacing: 8, runSpacing: 4, children: chips),
-      ),
-    );
+    return AppFilterChipBar(children: chips);
   }
 }
 
@@ -211,9 +201,9 @@ class UpdatesTab extends ConsumerWidget {
       children: [
         _FilterBar(
           chips: [
-            FilterChip(
+            AppFilterChip(
               key: const ValueKey('updates_filter_failed'),
-              label: const Text('Failed only'),
+              label: 'Failed only',
               selected: failedOnly,
               onSelected: (value) =>
                   ref.read(updatesFailedOnlyProvider.notifier).value = value,

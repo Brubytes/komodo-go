@@ -2,7 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'containers_filters_provider.g.dart';
 
-enum ContainersSortField { problems, name, cpu, memory, network, blockIo, pids }
+enum ContainersSortField { name, cpu, memory, network, blockIo, pids }
 
 class ContainersSortState {
   const ContainersSortState({required this.field, required this.descending});
@@ -43,7 +43,7 @@ class ContainersSort extends _$ContainersSort {
   @override
   ContainersSortState build() {
     return const ContainersSortState(
-      field: ContainersSortField.problems,
+      field: ContainersSortField.name,
       descending: false,
     );
   }
@@ -55,7 +55,7 @@ class ContainersSort extends _$ContainersSort {
     state = state.copyWith(
       field: value,
       descending: switch (value) {
-        ContainersSortField.problems || ContainersSortField.name => false,
+        ContainersSortField.name => false,
         _ => true,
       },
     );

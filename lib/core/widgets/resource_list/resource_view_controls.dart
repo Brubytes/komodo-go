@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
 import 'package:komodo_go/shared/resources/providers/resource_view_prefs_provider.dart';
 import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
@@ -94,7 +96,94 @@ class ResourceFilterToggleButton extends StatelessWidget {
   }
 }
 
-/// Sort selector, "Problems only" chip, and state/server chips.
+/// Compact sort menu chip for the generic list sort modes.
+class ResourceSortMenuChip extends ConsumerWidget {
+  const ResourceSortMenuChip({
+    required this.listId,
+    this.supportsRecentlyUpdated = false,
+    super.key,
+  });
+
+  final String listId;
+  final bool supportsRecentlyUpdated;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sortMode = ref.watch(resourceSortModeStateProvider(listId));
+    final modes = [
+      for (final mode in ResourceSortMode.values)
+        if (mode != ResourceSortMode.recentlyUpdated || supportsRecentlyUpdated)
+          mode,
+    ];
+    final effective = modes.contains(sortMode)
+        ? sortMode
+        : ResourceSortMode.problemsFirst;
+    return AppFilterMenuChip<ResourceSortMode>(
+      key: ValueKey('resource_sort_$listId'),
+      icon: Icons.sort,
+      label: effective.label,
+      value: effective,
+      options: [
+        for (final mode in modes)
+          AppFilterMenuOption(value: mode, label: mode.label),
+      ],
+      onSelected: (mode) =>
+          ref.read(resourceSortModeStateProvider(listId).notifier).mode = mode,
+    );
+  }
+}
+
+/// Thin separator between chip groups inside an [AppFilterChipBar].
+class ResourceChipGroupDivider extends StatelessWidget {
+  const ResourceChipGroupDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 20,
+      child: VerticalDivider(
+        width: 1,
+        thickness: 1,
+        color: Theme.of(context).colorScheme.outlineVariant,
+      ),
+    );
+  }
+}
+
+/// "Problems only" and state chips shared by every resource list.
+///
+/// Intended as children of an [AppFilterChipBar].
+List<Widget> buildResourceQuickFilterChips(
+  WidgetRef ref, {
+  required String listId,
+  required List<String> stateOptions,
+}) {
+  final problemsOnly = ref.watch(resourceProblemsOnlyProvider(listId));
+  final states = ref.watch(resourceStateFilterProvider(listId));
+  // Keep selected values visible even if no item currently carries them.
+  final allStates = {...stateOptions, ...states}.toList();
+  return [
+    AppFilterChip(
+      key: ValueKey('resource_problems_only_$listId'),
+      icon: Icons.warning_amber_rounded,
+      label: 'Problems only',
+      selected: problemsOnly,
+      onSelected: (value) =>
+          ref.read(resourceProblemsOnlyProvider(listId).notifier).enabled =
+              value,
+    ),
+    for (final state in allStates)
+      AppFilterChip(
+        label: state,
+        selected: states.contains(state),
+        onSelected: (_) => ref
+            .read(resourceStateFilterProvider(listId).notifier)
+            .toggle(state),
+      ),
+  ];
+}
+
+/// Single scrollable chip row: sort, "Problems only", state and server chips.
 ///
 /// Meant to be placed at the top of a filters panel.
 class ResourceViewFiltersSection extends ConsumerWidget {
@@ -104,148 +193,47 @@ class ResourceViewFiltersSection extends ConsumerWidget {
     this.serverOptions = const [],
     this.supportsRecentlyUpdated = false,
     this.showSort = true,
+    this.extraChips = const [],
     super.key,
   });
 
   final String listId;
   final bool showSort;
+  final List<Widget> extraChips;
   final List<String> stateOptions;
   final List<String> serverOptions;
   final bool supportsRecentlyUpdated;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final sortMode = ref.watch(resourceSortModeStateProvider(listId));
-    final problemsOnly = ref.watch(resourceProblemsOnlyProvider(listId));
-    final states = ref.watch(resourceStateFilterProvider(listId));
     final servers = ref.watch(resourceServerFilterProvider(listId));
-    final modes = [
-      for (final mode in ResourceSortMode.values)
-        if (mode != ResourceSortMode.recentlyUpdated || supportsRecentlyUpdated)
-          mode,
-    ];
-    final effectiveSort = modes.contains(sortMode)
-        ? sortMode
-        : ResourceSortMode.problemsFirst;
+    final allServers = {...serverOptions, ...servers}.toList();
 
-    Widget label(String text) => Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Text(
-        text,
-        style: textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
-      ),
-    );
-
-    Widget chips(
-      List<String> options,
-      Set<String> selected,
-      void Function(String) onToggle,
-    ) {
-      // Keep selected values visible even if no item currently carries them.
-      final all = {...options, ...selected}.toList();
-      return Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        children: [
-          for (final option in all)
-            FilterChip(
-              label: Text(option),
-              selected: selected.contains(option),
-              visualDensity: VisualDensity.compact,
-              onSelected: (_) => onToggle(option),
-            ),
-        ],
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return AppFilterChipBar(
+      padding: EdgeInsets.zero,
+      verticalPadding: 0,
       children: [
-        if (showSort) ...[
-          Row(
-            children: [
-              Icon(Icons.sort, size: 16, color: scheme.onSurfaceVariant),
-              const Gap(8),
-              Expanded(
-                child: Text(
-                  'Sort by',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              PopupMenuButton<ResourceSortMode>(
-                key: ValueKey('resource_sort_$listId'),
-                initialValue: effectiveSort,
-                onSelected: (mode) =>
-                    ref
-                            .read(
-                              resourceSortModeStateProvider(listId).notifier,
-                            )
-                            .mode =
-                        mode,
-                itemBuilder: (context) => [
-                  for (final mode in modes)
-                    PopupMenuItem(value: mode, child: Text(mode.label)),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        effectiveSort.label,
-                        style: textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const Icon(Icons.expand_more, size: 18),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+        if (showSort)
+          ResourceSortMenuChip(
+            listId: listId,
+            supportsRecentlyUpdated: supportsRecentlyUpdated,
           ),
-          const Gap(8),
-        ],
-        FilterChip(
-          key: ValueKey('resource_problems_only_$listId'),
-          avatar: const Icon(Icons.warning_amber_rounded, size: 16),
-          label: const Text('Problems only'),
-          selected: problemsOnly,
-          visualDensity: VisualDensity.compact,
-          onSelected: (value) =>
-              ref.read(resourceProblemsOnlyProvider(listId).notifier).enabled =
-                  value,
+        ...buildResourceQuickFilterChips(
+          ref,
+          listId: listId,
+          stateOptions: stateOptions,
         ),
-        if (stateOptions.isNotEmpty || states.isNotEmpty) ...[
-          const Gap(12),
-          label('State'),
-          chips(
-            stateOptions,
-            states,
-            ref.read(resourceStateFilterProvider(listId).notifier).toggle,
+        if (allServers.isNotEmpty) const ResourceChipGroupDivider(),
+        for (final server in allServers)
+          AppFilterChip(
+            icon: AppIcons.server,
+            label: server,
+            selected: servers.contains(server),
+            onSelected: (_) => ref
+                .read(resourceServerFilterProvider(listId).notifier)
+                .toggle(server),
           ),
-        ],
-        if (serverOptions.isNotEmpty || servers.isNotEmpty) ...[
-          const Gap(12),
-          label('Server'),
-          chips(
-            serverOptions,
-            servers,
-            ref.read(resourceServerFilterProvider(listId).notifier).toggle,
-          ),
-        ],
-        if (showSort) ...[
-          const Gap(12),
-          Divider(
-            height: 1,
-            color: scheme.outlineVariant.withValues(alpha: .35),
-          ),
-          const Gap(12),
-        ],
+        ...extraChips,
       ],
     );
   }
