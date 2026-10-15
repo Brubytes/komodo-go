@@ -44,6 +44,7 @@ abstract class AppIcons {
 
   // Directional
   static const IconData chevron = LucideIcons.chevronRight;
+  static const IconData chevronDown = LucideIcons.chevronDown;
 
   // Status / states
   static const IconData loading = LucideIcons.loader;

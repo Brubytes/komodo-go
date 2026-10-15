@@ -1,3 +1,4 @@
+export 'detail_action_bar.dart';
 export 'detail_code_block.dart';
 export 'detail_code_editor.dart';
 export 'detail_dirty_snack_bar_mixin.dart';
@@ -10,5 +11,7 @@ export 'detail_section.dart';
 export 'detail_sub_card.dart';
 export 'detail_surface.dart';
 export 'detail_tab_bar.dart';
+export 'detail_tab_scaffold.dart';
 export 'detail_tab_scroll_view.dart';
+export 'detail_unsaved_changes.dart';
 export 'sparkline.dart';

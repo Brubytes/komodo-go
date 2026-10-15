@@ -1,0 +1,249 @@
+import 'package:flutter/material.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
+
+/// A single entry in an action menu.
+class DetailActionItem {
+  const DetailActionItem({
+    required this.label,
+    required this.icon,
+    required this.onSelected,
+    this.destructive = false,
+    this.enabled = true,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onSelected;
+  final bool destructive;
+  final bool enabled;
+}
+
+/// A labelled group of [DetailActionItem]s.
+class DetailActionGroup {
+  const DetailActionGroup({required this.items, this.label});
+
+  final String? label;
+  final List<DetailActionItem> items;
+}
+
+/// A prominent button used in [DetailActionBar].
+class DetailActionButton {
+  const DetailActionButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.loading = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final bool loading;
+}
+
+/// Builds popup menu entries from grouped actions.
+///
+/// Destructive items from every group are moved to a trailing group that is
+/// separated by a divider and rendered in the error color.
+List<PopupMenuEntry<DetailActionItem>> buildDetailActionMenuEntries(
+  BuildContext context,
+  List<DetailActionGroup> groups,
+) {
+  final textTheme = Theme.of(context).textTheme;
+  final scheme = Theme.of(context).colorScheme;
+  final entries = <PopupMenuEntry<DetailActionItem>>[];
+  final destructive = <DetailActionItem>[];
+
+  PopupMenuEntry<DetailActionItem> row(DetailActionItem item) {
+    return PopupMenuItem<DetailActionItem>(
+      value: item,
+      enabled: item.enabled && item.onSelected != null,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: KomodoPopupMenuItemRow(
+        icon: item.icon,
+        label: item.label,
+        isDestructive: item.destructive,
+      ),
+    );
+  }
+
+  for (final group in groups) {
+    final normal = group.items.where((i) => !i.destructive).toList();
+    destructive.addAll(group.items.where((i) => i.destructive));
+    if (normal.isEmpty) continue;
+    if (entries.isNotEmpty) entries.add(komodoPopupMenuDivider());
+    final label = group.label;
+    if (label != null && label.isNotEmpty) {
+      entries.add(
+        PopupMenuItem<DetailActionItem>(
+          enabled: false,
+          height: 28,
+          child: Text(
+            label.toUpperCase(),
+            style: textTheme.labelSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ),
+      );
+    }
+    entries.addAll(normal.map(row));
+  }
+
+  if (destructive.isNotEmpty) {
+    if (entries.isNotEmpty) entries.add(komodoPopupMenuDivider());
+    entries.addAll(destructive.map(row));
+  }
+  return entries;
+}
+
+/// Opens the grouped action menu at [position] (global coordinates) and runs
+/// the selected item's callback.
+Future<void> showDetailActionMenu(
+  BuildContext context, {
+  required List<DetailActionGroup> groups,
+  required Offset position,
+}) async {
+  final entries = buildDetailActionMenuEntries(context, groups);
+  if (entries.isEmpty) return;
+  final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
+  final selected = await showMenu<DetailActionItem>(
+    context: context,
+    position: RelativeRect.fromRect(
+      Rect.fromLTWH(position.dx, position.dy, 0, 0),
+      Offset.zero & overlay.size,
+    ),
+    items: entries,
+  );
+  selected?.onSelected?.call();
+}
+
+/// A "More" / overflow button that opens a grouped action menu.
+class DetailActionMenuButton extends StatelessWidget {
+  const DetailActionMenuButton({
+    required this.groups,
+    super.key,
+    this.child,
+    this.tooltip = 'More',
+    this.icon = AppIcons.moreVertical,
+  });
+
+  final List<DetailActionGroup> groups;
+  final Widget? child;
+  final String tooltip;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<DetailActionItem>(
+      tooltip: tooltip,
+      icon: child == null ? Icon(icon) : null,
+      child: child,
+      onSelected: (item) => item.onSelected?.call(),
+      itemBuilder: (context) => buildDetailActionMenuEntries(context, groups),
+    );
+  }
+}
+
+/// Row placed below the detail header: one primary action, an optional
+/// secondary action and a "More" menu built from grouped entries.
+class DetailActionBar extends StatelessWidget {
+  const DetailActionBar({
+    required this.primary,
+    super.key,
+    this.secondary,
+    this.moreGroups = const [],
+    this.padding = EdgeInsets.zero,
+  });
+
+  final DetailActionButton primary;
+  final DetailActionButton? secondary;
+  final List<DetailActionGroup> moreGroups;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final hasMore = moreGroups.any((g) => g.items.isNotEmpty);
+    final secondary = this.secondary;
+
+    return Padding(
+      padding: padding,
+      child: Row(
+        children: [
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: primary.loading ? null : primary.onPressed,
+              icon: primary.loading
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: scheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                    )
+                  : Icon(primary.icon, size: 18),
+              label: Text(primary.label, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+          if (secondary != null) ...[
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: FilledButton.tonalIcon(
+                onPressed: secondary.loading ? null : secondary.onPressed,
+                icon: secondary.loading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(secondary.icon, size: 18),
+                label: Text(secondary.label, overflow: TextOverflow.ellipsis),
+              ),
+            ),
+          ],
+          if (hasMore) ...[
+            const SizedBox(width: AppSpacing.sm),
+            DetailActionMenuButton(
+              groups: moreGroups,
+              child: Container(
+                key: const ValueKey('detail_action_bar_more'),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm + 2,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      AppIcons.moreVertical,
+                      size: 18,
+                      color: scheme.onSurface,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      'More',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

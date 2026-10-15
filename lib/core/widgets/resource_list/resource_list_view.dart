@@ -309,9 +309,9 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                     chipLeft: config.skeletonChipLeft,
                     chipRight: config.skeletonChipRight,
                   ),
-                  error: (error, stack) => ErrorStateView(
+                  error: (error, stack) => ErrorStateView.fromError(
                     title: 'Failed to load ${config.resourceName}',
-                    message: error.toString(),
+                    error: error,
                     onRetry: () => config.invalidateList(ref),
                   ),
                 ),
