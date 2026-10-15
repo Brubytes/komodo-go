@@ -25,15 +25,18 @@ class ResourceFilterDisclosure extends StatelessWidget {
       padding: EdgeInsets.zero,
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          key: const ValueKey('resource_filter_disclosure'),
-          initiallyExpanded: expanded,
-          onExpansionChanged: onExpansionChanged,
-          leading: const Icon(Icons.tune_outlined),
-          title: const Text('Filters'),
-          subtitle: Text(summary),
-          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          children: [child],
+        child: KeyedSubtree(
+          key: const PageStorageKey<String>('resource_filter_disclosure_state'),
+          child: ExpansionTile(
+            key: const ValueKey('resource_filter_disclosure'),
+            initiallyExpanded: expanded,
+            onExpansionChanged: onExpansionChanged,
+            leading: const Icon(Icons.tune_outlined),
+            title: const Text('Filters'),
+            subtitle: Text(summary),
+            childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            children: [child],
+          ),
         ),
       ),
     );
