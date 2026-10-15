@@ -49,13 +49,13 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
   }
 
   Future<void> _pickColor(BuildContext context) async {
-    final selected =
-        await Navigator.of(context, rootNavigator: true).push<TagColor?>(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => _TagColorPickerPage(initial: _color),
-      ),
-    );
+    final selected = await Navigator.of(context, rootNavigator: true)
+        .push<TagColor?>(
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (_) => _TagColorPickerPage(initial: _color),
+          ),
+        );
 
     if (!mounted) return;
     if (selected != null) {
@@ -146,14 +146,14 @@ class _TagColorPickerPage extends StatelessWidget {
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
         ],
       ),
       body: SafeArea(
         top: false,
         bottom: false,
         child: ListView.separated(
-          padding: const EdgeInsets.only(bottom: 24),
+          padding: const EdgeInsets.only(bottom: AppSpacing.xl),
           itemCount: TagColor.values.length,
           separatorBuilder: (_, _) => Divider(
             height: 1,

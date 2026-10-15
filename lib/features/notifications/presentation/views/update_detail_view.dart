@@ -7,6 +7,7 @@ import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
@@ -45,10 +46,15 @@ class UpdateDetailView extends ConsumerWidget {
               ? _scrollableMessage('Update not found')
               : _UpdateDetailContent(update: update),
           loading: () => const AppSkeletonList(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 24),
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.xl,
+            ),
           ),
           error: (error, _) => ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
               ErrorStateView(
                 title: 'Failed to load update',
@@ -64,12 +70,10 @@ class UpdateDetailView extends ConsumerWidget {
 
   Widget _scrollableMessage(String message) {
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
         const Gap(72),
-        const Icon(AppIcons.history, size: 56),
-        const Gap(16),
-        Center(child: Text(message)),
+        EmptyStateView(icon: AppIcons.history, title: message),
       ],
     );
   }
@@ -97,7 +101,12 @@ class _UpdateDetailContent extends ConsumerWidget {
 
     return ListView(
       key: const ValueKey('update_detail_content'),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.xl,
+      ),
       children: [
         DetailResourceHeader(
           banner: update.status == UpdateStatus.failed
@@ -129,7 +138,7 @@ class _UpdateDetailContent extends ConsumerWidget {
             ),
           ],
         ),
-        const Gap(16),
+        const Gap(AppSpacing.lg),
         DetailSection(
           title: 'Summary',
           icon: AppIcons.info,
@@ -167,7 +176,7 @@ class _UpdateDetailContent extends ConsumerWidget {
             ],
           ),
         ),
-        const Gap(16),
+        const Gap(AppSpacing.lg),
         DetailSection(
           title: 'Execution logs',
           icon: AppIcons.logs,
@@ -181,13 +190,14 @@ class _UpdateDetailContent extends ConsumerWidget {
                       index++
                     ) ...[
                       _UpdateLogCard(log: update.logs[index], index: index),
-                      if (index < update.logs.length - 1) const Gap(12),
+                      if (index < update.logs.length - 1)
+                        const Gap(AppSpacing.md),
                     ],
                   ],
                 ),
         ),
         if (update.otherData.trim().isNotEmpty) ...[
-          const Gap(16),
+          const Gap(AppSpacing.lg),
           DetailSection(
             title: 'Additional data',
             icon: AppIcons.notepadText,
@@ -196,7 +206,7 @@ class _UpdateDetailContent extends ConsumerWidget {
         ],
         if (update.previousToml.trim().isNotEmpty ||
             update.currentToml.trim().isNotEmpty) ...[
-          const Gap(16),
+          const Gap(AppSpacing.lg),
           DetailSection(
             title: 'Configuration change',
             icon: AppIcons.code,
@@ -210,7 +220,7 @@ class _UpdateDetailContent extends ConsumerWidget {
                   ),
                 if (update.previousToml.trim().isNotEmpty &&
                     update.currentToml.trim().isNotEmpty)
-                  const Gap(12),
+                  const Gap(AppSpacing.md),
                 if (update.currentToml.trim().isNotEmpty)
                   DetailSubCard(
                     title: 'Current TOML',
@@ -254,22 +264,22 @@ class _UpdateLogCard extends StatelessWidget {
           ),
           if (log.command.trim().isNotEmpty) ...[
             const Text('Command'),
-            const Gap(6),
+            const Gap(AppSpacing.xs),
             DetailCodeBlock(code: log.command, maxHeight: 160),
           ],
           if (log.stdout.trim().isNotEmpty) ...[
-            const Gap(12),
+            const Gap(AppSpacing.md),
             const Text('Standard output'),
-            const Gap(6),
+            const Gap(AppSpacing.xs),
             DetailCodeBlock(code: log.stdout),
           ],
           if (log.stderr.trim().isNotEmpty) ...[
-            const Gap(12),
+            const Gap(AppSpacing.md),
             Text(
               'Standard error',
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-            const Gap(6),
+            const Gap(AppSpacing.xs),
             DetailCodeBlock(code: log.stderr),
           ],
         ],

@@ -21,11 +21,16 @@ class CreditsView extends StatelessWidget {
         centerTitle: true,
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          28,
+        ),
         children: [
           // Indie Dev Section
           const _CreditsSectionHeader(title: 'Made with love'),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           AppCardSurface(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,7 +57,7 @@ class CreditsView extends StatelessWidget {
                               letterSpacing: -0.2,
                             ),
                           ),
-                          const Gap(2),
+                          const Gap(AppSpacing.xxs),
                           Text(
                             'Built by an indie developer as a companion app for Komodo.',
                             style: textTheme.bodySmall?.copyWith(
@@ -65,7 +70,7 @@ class CreditsView extends StatelessWidget {
                     ),
                   ],
                 ),
-                const Gap(12),
+                const Gap(AppSpacing.md),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -95,75 +100,75 @@ class CreditsView extends StatelessWidget {
 
           // Komodo Project Section
           const _CreditsSectionHeader(title: 'Powered by'),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           const _KomodoCard(),
           const Gap(20),
 
           // Open Source Libraries Section
           const _CreditsSectionHeader(title: 'Open source'),
-          const Gap(8),
-          const AppCardSurface(
+          const Gap(AppSpacing.sm),
+          AppCardSurface(
             child: Column(
               children: [
                 _CompactCreditRow(
                   icon: AppIcons.theme,
-                  iconColor: Colors.amber,
+                  iconColor: scheme.tertiary,
                   title: 'Lucide Icons',
                   subtitle: 'Icon library',
                   url: 'https://lucide.dev',
                 ),
-                _CreditDivider(),
+                const _CreditDivider(),
                 _CompactCreditRow(
                   icon: AppIcons.code,
-                  iconColor: Colors.blue,
+                  iconColor: scheme.primary,
                   title: 'Flutter & Dart',
                   subtitle: 'UI framework',
                   url: 'https://flutter.dev',
                 ),
-                _CreditDivider(),
+                const _CreditDivider(),
                 _CompactCreditRow(
                   icon: AppIcons.refresh,
-                  iconColor: Colors.teal,
+                  iconColor: scheme.secondary,
                   title: 'Riverpod',
                   subtitle: 'State management',
                   url: 'https://riverpod.dev',
                 ),
-                _CreditDivider(),
+                const _CreditDivider(),
                 _CompactCreditRow(
                   icon: AppIcons.procedures,
-                  iconColor: Colors.purple,
+                  iconColor: scheme.tertiary,
                   title: 'go_router',
                   subtitle: 'Navigation',
                   url: 'https://pub.dev/packages/go_router',
                 ),
-                _CreditDivider(),
+                const _CreditDivider(),
                 _CompactCreditRow(
                   icon: AppIcons.actions,
-                  iconColor: Colors.orange,
+                  iconColor: scheme.primary,
                   title: 'fpdart',
                   subtitle: 'Functional programming',
                   url: 'https://pub.dev/packages/fpdart',
                 ),
-                _CreditDivider(),
+                const _CreditDivider(),
                 _CompactCreditRow(
                   icon: AppIcons.package,
-                  iconColor: Colors.indigo,
+                  iconColor: scheme.secondary,
                   title: 'Freezed',
                   subtitle: 'Code generation',
                   url: 'https://pub.dev/packages/freezed',
                 ),
-                _CreditDivider(),
+                const _CreditDivider(),
                 _CompactCreditRow(
                   icon: AppIcons.network,
-                  iconColor: Colors.green,
+                  iconColor: scheme.tertiary,
                   title: 'Dio',
                   subtitle: 'HTTP client',
                   url: 'https://pub.dev/packages/dio',
                 ),
-                _CreditDivider(),
+                const _CreditDivider(),
                 _CompactCreditRow(
                   icon: AppIcons.lock,
-                  iconColor: Colors.red,
+                  iconColor: scheme.primary,
                   title: 'flutter_secure_storage',
                   subtitle: 'Secure storage',
                   url: 'https://pub.dev/packages/flutter_secure_storage',
@@ -188,7 +193,7 @@ class _CreditsSectionHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
       child: Row(
         children: [
           Text(
@@ -245,9 +250,9 @@ class _KomodoCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
-                child: const Text('\u{1F98E}', style: TextStyle(fontSize: 20)),
+                child: Text('\u{1F98E}', style: textTheme.titleLarge),
               ),
-              const Gap(12),
+              const Gap(AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,7 +264,7 @@ class _KomodoCard extends StatelessWidget {
                         letterSpacing: -0.2,
                       ),
                     ),
-                    const Gap(2),
+                    const Gap(AppSpacing.xxs),
                     Text(
                       'Self-hosted deployment & infrastructure platform',
                       style: textTheme.bodySmall?.copyWith(
@@ -271,7 +276,7 @@ class _KomodoCard extends StatelessWidget {
               ),
             ],
           ),
-          const Gap(12),
+          const Gap(AppSpacing.md),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -318,7 +323,7 @@ class _CompactCreditRow extends StatelessWidget {
       onTap: () => _launchUrl(context, url),
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
         child: Row(
           children: [
             Container(
@@ -329,7 +334,7 @@ class _CompactCreditRow extends StatelessWidget {
               ),
               child: Icon(icon, size: 16, color: iconColor),
             ),
-            const Gap(12),
+            const Gap(AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,9 +347,8 @@ class _CompactCreditRow extends StatelessWidget {
                   ),
                   Text(
                     subtitle,
-                    style: textTheme.bodySmall?.copyWith(
+                    style: textTheme.labelSmall?.copyWith(
                       color: scheme.onSurfaceVariant,
-                      fontSize: 11,
                     ),
                   ),
                 ],
@@ -406,7 +410,10 @@ class _LinkChip extends StatelessWidget {
         onTap: () => _launchUrl(context, link.url),
         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: 6,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
