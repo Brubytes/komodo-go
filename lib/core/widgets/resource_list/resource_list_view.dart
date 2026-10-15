@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -14,6 +15,7 @@ import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart'
 import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
 import 'package:komodo_go/shared/resources/providers/resource_filters_provider.dart';
 import 'package:komodo_go/shared/resources/resource_list_filtering.dart';
@@ -36,6 +38,12 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
   bool _areFiltersExpanded = false;
+
+  /// True until the first list frame was shown; only then do the first few
+  /// cards play their entrance animation (not on rebuilds/polls/scrolling).
+  bool _introPending = true;
+
+  _Derived<T>? _derived;
 
   @override
   void initState() {
@@ -67,6 +75,85 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
     super.dispose();
   }
 
+  /// Filters/sorts [items], reusing the previous result while none of the
+  /// inputs changed (so keystrokes elsewhere, polls with equal data and
+  /// unrelated rebuilds don't re-filter and re-sort).
+  _Derived<T> _derive(
+    List<T> items, {
+    required String query,
+    required Set<String> selectedTags,
+    required TemplateFilter templateFilter,
+    required ResourceViewPrefs prefs,
+    required List<TagOption> tagOptions,
+  }) {
+    final config = widget.config;
+    final previous = _derived;
+    if (previous != null &&
+        previous.kind == config.kind &&
+        previous.query == query &&
+        previous.templateFilter == templateFilter &&
+        previous.sortMode == prefs.sortMode &&
+        previous.problemsOnly == prefs.problemsOnly &&
+        setEquals(previous.selectedTags, selectedTags) &&
+        setEquals(previous.states, prefs.states) &&
+        setEquals(previous.servers, prefs.servers) &&
+        listEquals(previous.tagOptions, tagOptions) &&
+        (identical(previous.items, items) ||
+            listEquals(previous.items, items))) {
+      return previous;
+    }
+
+    final stateOf = config.stateLabelOf;
+    final serverOf = config.serverNameOf;
+    final availableTags = tagOptions.isNotEmpty
+        ? tagOptions
+        : [
+            for (final name in collectResourceTags(items, config.tagsOf))
+              TagOption(id: name, name: name),
+          ];
+    final tagNameById = {for (final tag in availableTags) tag.id: tag.name};
+
+    final searched = applyResourceFilters(
+      items,
+      query: query,
+      selectedTags: selectedTags,
+      templateFilter: templateFilter,
+      tagNameById: tagNameById,
+      isTemplate: config.isTemplate,
+      tagsOf: config.tagsOf,
+      searchFieldsOf: config.searchFieldsOf,
+    );
+    final filtered = prefs.process<T>(
+      searched,
+      severityOf: config.severityOf,
+      nameOf: config.nameOf,
+      updatedAtOf: config.updatedAtOf,
+      stateLabelOf: config.stateLabelOf,
+      serverNameOf: config.serverNameOf,
+    );
+    return _derived = _Derived<T>(
+      kind: config.kind,
+      items: items,
+      query: query,
+      selectedTags: selectedTags,
+      templateFilter: templateFilter,
+      sortMode: prefs.sortMode,
+      problemsOnly: prefs.problemsOnly,
+      states: prefs.states,
+      servers: prefs.servers,
+      tagOptions: tagOptions,
+      filtered: filtered,
+      availableTags: availableTags,
+      tagNameById: tagNameById,
+      stateOptions: stateOf == null
+          ? const <String>[]
+          : collectDistinct(items, stateOf),
+      serverOptions: serverOf == null
+          ? const <String>[]
+          : collectDistinct(items, serverOf),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final config = widget.config;
@@ -93,14 +180,22 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
       data: (items) => items,
       orElse: () => <T>[],
     );
-    final stateOf = config.stateLabelOf;
-    final serverOf = config.serverNameOf;
-    final stateOptions = stateOf == null
-        ? <String>[]
-        : collectDistinct(loadedItems, stateOf);
-    final serverOptions = serverOf == null
-        ? <String>[]
-        : collectDistinct(loadedItems, serverOf);
+    final tagOptions = tagsAsync.maybeWhen(
+      data: (tags) => tags,
+      orElse: () => <TagOption>[],
+    );
+    final derived = _derive(
+      loadedItems,
+      query: searchQuery,
+      selectedTags: selectedTags,
+      templateFilter: templateFilter,
+      prefs: prefs,
+      tagOptions: tagOptions,
+    );
+    final stateOptions = derived.stateOptions;
+    final serverOptions = derived.serverOptions;
+    final availableTags = derived.availableTags;
+    final tagNameById = derived.tagNameById;
 
     void clearAllFilters() {
       _searchController.clear();
@@ -114,22 +209,6 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
     }
 
     final panelCollapsed = !_isSearchVisible || !_areFiltersExpanded;
-
-    final tagOptions = tagsAsync.maybeWhen(
-      data: (tags) => tags,
-      orElse: () => <TagOption>[],
-    );
-    final fallbackTags = itemsAsync.maybeWhen(
-      data: (items) => collectResourceTags(
-        items,
-        config.tagsOf,
-      ).map((name) => TagOption(id: name, name: name)).toList(),
-      orElse: () => <TagOption>[],
-    );
-    final availableTags = tagOptions.isNotEmpty ? tagOptions : fallbackTags;
-    final tagNameById = {
-      for (final tag in availableTags) tag.id: tag.name,
-    };
 
     return Scaffold(
       appBar: MainAppBar(
@@ -175,219 +254,254 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
         children: [
           RefreshIndicator(
             onRefresh: () => config.refreshList(ref),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                AnimatedSwitcher(
-                  duration: AppMotion.base,
-                  switchInCurve: AppMotion.enterCurve,
-                  switchOutCurve: AppMotion.exitCurve,
-                  child: _isSearchVisible
-                      ? Column(
-                          key: const ValueKey('resource_search_and_filters'),
-                          children: [
-                            _SearchField(
-                              fieldKey: config.searchFieldKey,
-                              focusNode: _searchFocusNode,
-                              controller: _searchController,
-                              onChanged: (value) =>
-                                  ref
-                                          .read(
-                                            resourceSearchQueryProvider(
-                                              config.kind,
-                                            ).notifier,
-                                          )
-                                          .query =
-                                      value,
-                              onClear: () {
-                                _searchController.clear();
-                                ref
-                                        .read(
-                                          resourceSearchQueryProvider(
-                                            config.kind,
-                                          ).notifier,
-                                        )
-                                        .query =
-                                    '';
-                              },
-                            ),
-                            const Gap(10),
-                            ResourceFilterDisclosure(
-                              expanded: _areFiltersExpanded,
-                              activeFilterCount: activeFilterCount,
-                              onExpansionChanged: (value) => setState(
-                                () => _areFiltersExpanded = value,
-                              ),
-                              child: _FiltersPanel(
-                                listId: listId,
-                                stateOptions: stateOptions,
-                                serverOptions: serverOptions,
-                                supportsRecentlyUpdated:
-                                    config.updatedAtOf != null,
-                                resourceName: config.resourceName,
-                                templateFilter: templateFilter,
-                                selectedTags: selectedTags,
-                                availableTags: availableTags,
-                                onTemplateFilterChanged: (value) =>
-                                    ref
-                                            .read(
-                                              resourceTemplateFilterStateProvider(
-                                                config.kind,
-                                              ).notifier,
-                                            )
-                                            .value =
-                                        value,
-                                onSelectTags: (value) =>
-                                    ref
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        AnimatedSwitcher(
+                          duration: AppMotion.base,
+                          switchInCurve: AppMotion.enterCurve,
+                          switchOutCurve: AppMotion.exitCurve,
+                          child: _isSearchVisible
+                              ? Column(
+                                  key: const ValueKey(
+                                    'resource_search_and_filters',
+                                  ),
+                                  children: [
+                                    _SearchField(
+                                      fieldKey: config.searchFieldKey,
+                                      focusNode: _searchFocusNode,
+                                      controller: _searchController,
+                                      onChanged: (value) =>
+                                          ref
+                                                  .read(
+                                                    resourceSearchQueryProvider(
+                                                      config.kind,
+                                                    ).notifier,
+                                                  )
+                                                  .query =
+                                              value,
+                                      onClear: () {
+                                        _searchController.clear();
+                                        ref
+                                                .read(
+                                                  resourceSearchQueryProvider(
+                                                    config.kind,
+                                                  ).notifier,
+                                                )
+                                                .query =
+                                            '';
+                                      },
+                                    ),
+                                    const Gap(10),
+                                    ResourceFilterDisclosure(
+                                      expanded: _areFiltersExpanded,
+                                      activeFilterCount: activeFilterCount,
+                                      onExpansionChanged: (value) => setState(
+                                        () => _areFiltersExpanded = value,
+                                      ),
+                                      child: _FiltersPanel(
+                                        listId: listId,
+                                        stateOptions: stateOptions,
+                                        serverOptions: serverOptions,
+                                        supportsRecentlyUpdated:
+                                            config.updatedAtOf != null,
+                                        resourceName: config.resourceName,
+                                        templateFilter: templateFilter,
+                                        selectedTags: selectedTags,
+                                        availableTags: availableTags,
+                                        onTemplateFilterChanged: (value) =>
+                                            ref
+                                                    .read(
+                                                      resourceTemplateFilterStateProvider(
+                                                        config.kind,
+                                                      ).notifier,
+                                                    )
+                                                    .value =
+                                                value,
+                                        onSelectTags: (value) =>
+                                            ref
+                                                    .read(
+                                                      resourceTagFilterProvider(
+                                                        config.kind,
+                                                      ).notifier,
+                                                    )
+                                                    .selected =
+                                                value,
+                                        onClearTags: () => ref
                                             .read(
                                               resourceTagFilterProvider(
                                                 config.kind,
                                               ).notifier,
                                             )
-                                            .selected =
-                                        value,
-                                onClearTags: () => ref
-                                    .read(
-                                      resourceTagFilterProvider(
-                                        config.kind,
-                                      ).notifier,
-                                    )
-                                    .clear(),
-                              ),
-                            ),
-                          ],
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                if (activeFilterCount > 0 && panelCollapsed) ...[
-                  const Gap(8),
-                  ResourceActiveFilterChips(
-                    listId: listId,
-                    onClearAll: clearAllFilters,
-                    extraChips: [
-                      if (searchQuery.trim().isNotEmpty)
-                        ActiveFilterChip(
-                          label: 'Search: ${searchQuery.trim()}',
-                          onRemove: () {
-                            _searchController.clear();
-                            ref
-                                    .read(
-                                      resourceSearchQueryProvider(
-                                        config.kind,
-                                      ).notifier,
-                                    )
-                                    .query =
-                                '';
-                          },
+                                            .clear(),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : const SizedBox.shrink(),
                         ),
-                      for (final tag in selectedTags)
-                        ActiveFilterChip(
-                          label: 'Tag: ${tagNameById[tag] ?? tag}',
-                          onRemove: () => ref
-                              .read(
-                                resourceTagFilterProvider(config.kind).notifier,
-                              )
-                              .toggle(tag),
-                        ),
-                      if (templateFilter != TemplateFilter.exclude)
-                        ActiveFilterChip(
-                          label: templateFilter == TemplateFilter.only
-                              ? 'Only templates'
-                              : 'With templates',
-                          onRemove: () =>
-                              ref
+                        if (activeFilterCount > 0 && panelCollapsed) ...[
+                          const Gap(8),
+                          ResourceActiveFilterChips(
+                            listId: listId,
+                            onClearAll: clearAllFilters,
+                            extraChips: [
+                              if (searchQuery.trim().isNotEmpty)
+                                ActiveFilterChip(
+                                  label: 'Search: ${searchQuery.trim()}',
+                                  onRemove: () {
+                                    _searchController.clear();
+                                    ref
+                                            .read(
+                                              resourceSearchQueryProvider(
+                                                config.kind,
+                                              ).notifier,
+                                            )
+                                            .query =
+                                        '';
+                                  },
+                                ),
+                              for (final tag in selectedTags)
+                                ActiveFilterChip(
+                                  label: 'Tag: ${tagNameById[tag] ?? tag}',
+                                  onRemove: () => ref
                                       .read(
-                                        resourceTemplateFilterStateProvider(
+                                        resourceTagFilterProvider(
                                           config.kind,
                                         ).notifier,
                                       )
-                                      .value =
-                                  TemplateFilter.exclude,
-                        ),
-                    ],
+                                      .toggle(tag),
+                                ),
+                              if (templateFilter != TemplateFilter.exclude)
+                                ActiveFilterChip(
+                                  label: templateFilter == TemplateFilter.only
+                                      ? 'Only templates'
+                                      : 'With templates',
+                                  onRemove: () =>
+                                      ref
+                                          .read(
+                                            resourceTemplateFilterStateProvider(
+                                              config.kind,
+                                            ).notifier,
+                                          )
+                                          .value = TemplateFilter
+                                          .exclude,
+                                ),
+                            ],
+                          ),
+                        ],
+                        const Gap(12),
+                      ],
+                    ),
                   ),
-                ],
-                const Gap(12),
-                itemsAsync.when(
+                ),
+                ...itemsAsync.when(
                   skipLoadingOnRefresh: true,
                   skipLoadingOnReload: true,
                   data: (items) {
-                    final searched = applyResourceFilters(
-                      items,
-                      query: searchQuery,
-                      selectedTags: selectedTags,
-                      templateFilter: templateFilter,
-                      tagNameById: tagNameById,
-                      isTemplate: config.isTemplate,
-                      tagsOf: config.tagsOf,
-                      searchFieldsOf: config.searchFieldsOf,
-                    );
-                    final filtered = prefs.process<T>(
-                      searched,
-                      severityOf: config.severityOf,
-                      nameOf: config.nameOf,
-                      updatedAtOf: config.updatedAtOf,
-                      stateLabelOf: config.stateLabelOf,
-                      serverNameOf: config.serverNameOf,
-                    );
+                    final filtered = derived.filtered;
                     if (filtered.isEmpty) {
-                      return _EmptyState(
-                        icon: config.icon,
-                        resourceName: config.resourceName,
-                        hasFilters:
-                            hasActiveResourceFilters(
-                              query: searchQuery,
-                              selectedTags: selectedTags,
-                              templateFilter: templateFilter,
-                            ) ||
-                            prefs.activeCount > 0,
-                        onClearFilters: clearAllFilters,
-                        tagOptions: availableTags,
-                        onSelectTags: (value) =>
-                            ref
-                                    .read(
-                                      resourceTagFilterProvider(
-                                        config.kind,
-                                      ).notifier,
-                                    )
-                                    .selected =
-                                value,
-                      );
-                    }
-
-                    return Column(
-                      children: [
-                        for (var i = 0; i < filtered.length; i++) ...[
-                          AppFadeSlide(
-                            delay: AppMotion.stagger(i),
-                            play: i < 10,
-                            child: config.cardBuilder(
-                              context,
-                              ref,
-                              filtered[i],
-                              resourceDisplayTags(
-                                config.tagsOf(filtered[i]),
-                                tagNameById,
-                              ),
+                      return [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          sliver: SliverToBoxAdapter(
+                            child: _EmptyState(
+                              icon: config.icon,
+                              resourceName: config.resourceName,
+                              hasFilters:
+                                  hasActiveResourceFilters(
+                                    query: searchQuery,
+                                    selectedTags: selectedTags,
+                                    templateFilter: templateFilter,
+                                  ) ||
+                                  prefs.activeCount > 0,
+                              onClearFilters: clearAllFilters,
+                              tagOptions: availableTags,
+                              onSelectTags: (value) =>
+                                  ref
+                                          .read(
+                                            resourceTagFilterProvider(
+                                              config.kind,
+                                            ).notifier,
+                                          )
+                                          .selected =
+                                      value,
                             ),
                           ),
-                          const Gap(12),
-                        ],
-                        const SizedBox(height: 12),
-                      ],
-                    );
+                        ),
+                      ];
+                    }
+
+                    final animateIntro = _introPending;
+                    if (animateIntro) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _introPending = false;
+                      });
+                    }
+                    return [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        sliver: SliverList.builder(
+                          itemCount: filtered.length,
+                          itemBuilder: (context, i) {
+                            final item = filtered[i];
+                            final card = config.cardBuilder(
+                              context,
+                              ref,
+                              item,
+                              resourceDisplayTags(
+                                config.tagsOf(item),
+                                tagNameById,
+                              ),
+                            );
+                            return KeyedSubtree(
+                              key: card.key == null
+                                  ? null
+                                  : ObjectKey(card.key),
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: AppFadeSlide(
+                                  delay: AppMotion.stagger(i),
+                                  play: animateIntro && i < 8,
+                                  child: card,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ];
                   },
-                  loading: () => _ResourceSkeletonList(
-                    title: config.skeletonTitle,
-                    subtitle: config.skeletonSubtitle,
-                    chipLeft: config.skeletonChipLeft,
-                    chipRight: config.skeletonChipRight,
-                  ),
-                  error: (error, stack) => ErrorStateView.fromError(
-                    title: 'Failed to load ${config.resourceName}',
-                    error: error,
-                    onRetry: () => config.invalidateList(ref),
-                  ),
+                  loading: () => [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      sliver: SliverToBoxAdapter(
+                        child: _ResourceSkeletonList(
+                          title: config.skeletonTitle,
+                          subtitle: config.skeletonSubtitle,
+                          chipLeft: config.skeletonChipLeft,
+                          chipRight: config.skeletonChipRight,
+                        ),
+                      ),
+                    ),
+                  ],
+                  error: (error, stack) => [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      sliver: SliverToBoxAdapter(
+                        child: ErrorStateView.fromError(
+                          title: 'Failed to load ${config.resourceName}',
+                          error: error,
+                          onRetry: () => config.invalidateList(ref),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -763,4 +877,43 @@ class _EmptyState extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Memoized result of filtering/sorting a list, plus the inputs it was
+/// derived from.
+class _Derived<T> {
+  _Derived({
+    required this.kind,
+    required this.items,
+    required this.query,
+    required this.selectedTags,
+    required this.templateFilter,
+    required this.sortMode,
+    required this.problemsOnly,
+    required this.states,
+    required this.servers,
+    required this.tagOptions,
+    required this.filtered,
+    required this.availableTags,
+    required this.tagNameById,
+    required this.stateOptions,
+    required this.serverOptions,
+  });
+
+  final ResourceKind kind;
+  final List<T> items;
+  final String query;
+  final Set<String> selectedTags;
+  final TemplateFilter templateFilter;
+  final ResourceSortMode sortMode;
+  final bool problemsOnly;
+  final Set<String> states;
+  final Set<String> servers;
+  final List<TagOption> tagOptions;
+
+  final List<T> filtered;
+  final List<TagOption> availableTags;
+  final Map<String, String> tagNameById;
+  final List<String> stateOptions;
+  final List<String> serverOptions;
 }

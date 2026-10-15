@@ -48,9 +48,9 @@ class StackCard extends StatelessWidget {
         if (stack.template) const TextPill(label: 'Template'),
         ...resourceTagPills(displayTags),
       ],
-      menu: onAction == null
-          ? const []
-          : stackMenuGroups(stack.info.state, onAction),
+      menuBuilder: onAction == null
+          ? null
+          : () => stackMenuGroups(stack.info.state, onAction),
       onTap: onTap,
     );
   }

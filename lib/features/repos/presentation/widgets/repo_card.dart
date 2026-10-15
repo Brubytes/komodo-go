@@ -44,9 +44,9 @@ class RepoCard extends StatelessWidget {
         if (repo.template) const TextPill(label: 'Template'),
         ...resourceTagPills(displayTags),
       ],
-      menu: onAction == null
-          ? const []
-          : [
+      menuBuilder: onAction == null
+          ? null
+          : () => [
               DetailActionGroup(
                 items: [
                   DetailActionItem(

@@ -51,9 +51,9 @@ class DeploymentCard extends StatelessWidget {
         if (deployment.template) const TextPill(label: 'Template'),
         ...resourceTagPills(displayTags),
       ],
-      menu: onAction == null
-          ? const []
-          : deploymentMenuGroups(
+      menuBuilder: onAction == null
+          ? null
+          : () => deploymentMenuGroups(
               state,
               onAction,
               hasImage: deployment.info?.image.isNotEmpty ?? false,

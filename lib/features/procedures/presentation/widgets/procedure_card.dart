@@ -48,9 +48,9 @@ class ProcedureCard extends StatelessWidget {
                 context,
               ).textTheme.bodySmall?.copyWith(color: scheme.error),
             ),
-      menu: onRun == null
-          ? const []
-          : [
+      menuBuilder: onRun == null
+          ? null
+          : () => [
               DetailActionGroup(
                 items: [
                   DetailActionItem(

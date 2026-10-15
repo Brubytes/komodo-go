@@ -83,6 +83,7 @@ class ResourceCard extends StatelessWidget {
     this.pills = const [],
     this.bottom,
     this.menu = const [],
+    this.menuBuilder,
     this.onTap,
     this.menuKey,
   });
@@ -98,12 +99,20 @@ class ResourceCard extends StatelessWidget {
 
   /// Grouped actions for the trailing menu and the long-press menu.
   final List<DetailActionGroup> menu;
+
+  /// Lazy alternative to [menu]: evaluated only when the menu is opened, so
+  /// list rebuilds don't construct menu items for every card. When set, the
+  /// card always shows the menu button.
+  final List<DetailActionGroup> Function()? menuBuilder;
   final VoidCallback? onTap;
   final Key? menuKey;
 
   static const double _accentWidth = 4;
 
-  bool get _hasMenu => menu.any((g) => g.items.isNotEmpty);
+  bool get _hasMenu =>
+      menuBuilder != null || menu.any((g) => g.items.isNotEmpty);
+
+  List<DetailActionGroup> _resolveMenu() => menuBuilder?.call() ?? menu;
 
   @override
   Widget build(BuildContext context) {
@@ -149,6 +158,7 @@ class ResourceCard extends StatelessWidget {
                 DetailActionMenuButton(
                   key: menuKey,
                   groups: menu,
+                  groupsBuilder: menuBuilder,
                   tooltip: 'Actions',
                 )
               else
@@ -209,44 +219,46 @@ class ResourceCard extends StatelessWidget {
       ),
     );
 
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: GestureDetector(
-        onLongPressStart: _hasMenu
-            ? (details) {
-                unawaited(HapticFeedback.selectionClick());
-                unawaited(
-                  showDetailActionMenu(
-                    context,
-                    groups: menu,
-                    position: details.globalPosition,
-                  ),
-                );
-              }
-            : null,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: radius,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: radius,
-            child: Stack(
-              children: [
-                SizedBox(width: double.infinity, child: content),
-                if (showAccent && status != null)
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: _accentWidth,
-                    // Clipped by the card's rounded Material shape.
-                    child: ColoredBox(
-                      key: const ValueKey('resource_card_accent'),
-                      color: status.accentColor(scheme),
+    return RepaintBoundary(
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: GestureDetector(
+          onLongPressStart: _hasMenu
+              ? (details) {
+                  unawaited(HapticFeedback.selectionClick());
+                  unawaited(
+                    showDetailActionMenu(
+                      context,
+                      groups: _resolveMenu(),
+                      position: details.globalPosition,
                     ),
-                  ),
-              ],
+                  );
+                }
+              : null,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: radius,
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: radius,
+              child: Stack(
+                children: [
+                  SizedBox(width: double.infinity, child: content),
+                  if (showAccent && status != null)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: _accentWidth,
+                      // Clipped by the card's rounded Material shape.
+                      child: ColoredBox(
+                        key: const ValueKey('resource_card_accent'),
+                        color: status.accentColor(scheme),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
