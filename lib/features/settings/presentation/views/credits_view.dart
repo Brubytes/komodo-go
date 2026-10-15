@@ -40,9 +40,15 @@ class CreditsView extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.asset(
-                        'assets/komodo-go-logo_rounded.png',
+                        'assets/komodo-go-logo_rounded_small.png',
                         width: 44,
                         height: 44,
+                        cacheWidth:
+                            (44 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
+                        cacheHeight:
+                            (44 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
                       ),
                     ),
                     const Gap(14),
