@@ -373,29 +373,24 @@ class _DiffTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = diff.data;
-    return KeyedSubtree(
-      key: PageStorageKey<String>(
-        'sync_diff_${diff.target.type}_${diff.name}_state',
-      ),
-      child: Card(
-        child: ExpansionTile(
-          key: ValueKey('sync_diff_${diff.target.type}_${diff.name}'),
-          leading: Checkbox(
-            value: selected,
-            onChanged: (value) => onChanged(value ?? false),
-          ),
-          title: Text('${data.label} ${diff.target.type}'),
-          subtitle: Text(diff.name),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          children: [
-            if (data.current.isNotEmpty)
-              _TomlBlock(title: 'Current', contents: data.current),
-            if (data.current.isNotEmpty && data.proposed.isNotEmpty)
-              const Gap(10),
-            if (data.proposed.isNotEmpty)
-              _TomlBlock(title: 'Proposed', contents: data.proposed),
-          ],
+    return Card(
+      child: IsolatedExpansionTile(
+        tileKey: ValueKey('sync_diff_${diff.target.type}_${diff.name}'),
+        leading: Checkbox(
+          value: selected,
+          onChanged: (value) => onChanged(value ?? false),
         ),
+        title: Text('${data.label} ${diff.target.type}'),
+        subtitle: Text(diff.name),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          if (data.current.isNotEmpty)
+            _TomlBlock(title: 'Current', contents: data.current),
+          if (data.current.isNotEmpty && data.proposed.isNotEmpty)
+            const Gap(10),
+          if (data.proposed.isNotEmpty)
+            _TomlBlock(title: 'Proposed', contents: data.proposed),
+        ],
       ),
     );
   }

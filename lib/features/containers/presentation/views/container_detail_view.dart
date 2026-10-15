@@ -559,10 +559,7 @@ class _ContainerInspectionPanel extends StatelessWidget {
                 ),
               ],
               const Gap(12),
-              ExpansionTile(
-                key: const PageStorageKey<String>(
-                  'container_inspect_raw_expanded',
-                ),
+              IsolatedExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 title: const Text('Raw Docker inspection'),
                 children: [
