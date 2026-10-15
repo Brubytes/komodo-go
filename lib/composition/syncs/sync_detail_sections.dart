@@ -31,6 +31,7 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
 
   var _suppressDirtyNotify = false;
   var _lastDirty = false;
+  Set<String> _changedKeys = const {};
 
   late final TextEditingController _linkedRepo;
   late final TextEditingController _gitProvider;
@@ -167,16 +168,42 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
 
     _suppressDirtyNotify = false;
     _lastDirty = false;
+    _changedKeys = const {};
     widget.onDirtyChanged?.call(false);
   }
 
   void _notifyDirtyIfChanged() {
     if (_suppressDirtyNotify) return;
 
-    final dirty = buildPartialConfigParams().isNotEmpty;
+    final keys = buildPartialConfigParams().keys.toSet();
+    if (keys.length != _changedKeys.length || !keys.containsAll(_changedKeys)) {
+      setState(() => _changedKeys = keys);
+    }
+    final dirty = keys.isNotEmpty;
     if (dirty == _lastDirty) return;
     _lastDirty = dirty;
     widget.onDirtyChanged?.call(dirty);
+  }
+
+  bool _modified(List<String> keys) => keys.any(_changedKeys.contains);
+
+  String _flagsSummary() {
+    final on = [
+      if (_managed) 'Managed',
+      if (_delete) 'Delete missing',
+      if (_filesOnHost) 'Files on host',
+      if (_pendingAlert) 'Pending alert',
+    ];
+    return on.isEmpty ? 'All off' : on.join(' · ');
+  }
+
+  String _includesSummary() {
+    final on = [
+      if (_includeResources) 'Resources',
+      if (_includeVariables) 'Variables',
+      if (_includeUserGroups) 'User groups',
+    ];
+    return on.isEmpty ? 'Nothing included' : on.join(' · ');
   }
 
   Map<String, dynamic> buildPartialConfigParams() {
@@ -328,8 +355,18 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DetailSubCard(
+          key: const ValueKey('sync_flags_card'),
           title: 'Flags',
           icon: AppIcons.settings,
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _flagsSummary(),
+          modified: _modified(const [
+            'managed',
+            'delete',
+            'files_on_host',
+            'pending_alert',
+          ]),
           child: Column(
             children: [
               SwitchListTile.adaptive(
@@ -373,8 +410,18 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
         ),
         const Gap(12),
         DetailSubCard(
+          key: const ValueKey('sync_includes_card'),
           title: 'Includes',
           icon: AppIcons.widgets,
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _includesSummary(),
+          modified: _modified(const [
+            'include_resources',
+            'include_variables',
+            'include_user_groups',
+            'match_tags',
+          ]),
           child: Column(
             children: [
               SwitchListTile.adaptive(
@@ -619,8 +666,13 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
         ),
         const Gap(12),
         DetailSubCard(
+          key: const ValueKey('sync_webhook_card'),
           title: 'Webhook',
           icon: AppIcons.notifications,
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _webhookEnabled ? 'Enabled' : 'Disabled',
+          modified: _modified(const ['webhook_enabled', 'webhook_secret']),
           child: Column(
             children: [
               SwitchListTile.adaptive(
@@ -644,8 +696,15 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
         ),
         const Gap(12),
         DetailSubCard(
+          key: const ValueKey('sync_path_card'),
           title: 'Path',
           icon: AppIcons.package,
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _resourcePath.text.trim().isEmpty
+              ? 'Default'
+              : _resourcePath.text.trim(),
+          modified: _modified(const ['resource_path']),
           child: Column(
             children: [
               TextFormField(
@@ -660,8 +719,15 @@ class SyncConfigEditorContentState extends State<SyncConfigEditorContent> {
         ),
         const Gap(12),
         DetailSubCard(
+          key: const ValueKey('sync_file_contents_card'),
           title: 'File Contents',
           icon: AppIcons.hardDrive,
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _fileContents.text.trim().isEmpty
+              ? 'Empty'
+              : '${_fileContents.text.split('\n').length} lines',
+          modified: _modified(const ['file_contents']),
           child: Column(
             children: [
               TextFormField(

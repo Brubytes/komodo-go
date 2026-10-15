@@ -102,7 +102,7 @@ class _ResourceAdvancedMenuButtonState
   }
 
   Future<void> _copy() async {
-    final name = await _promptName(
+    final name = await promptResourceName(
       context,
       title: 'Copy ${widget.metadata.kind.singularLabel}',
       actionLabel: 'Copy',
@@ -127,7 +127,7 @@ class _ResourceAdvancedMenuButtonState
   }
 
   Future<void> _rename() async {
-    final name = await _promptName(
+    final name = await promptResourceName(
       context,
       title: 'Rename ${widget.metadata.kind.singularLabel}',
       actionLabel: 'Rename',
@@ -467,7 +467,7 @@ class _ResourceMetadataEditorSheetState
   }
 }
 
-Future<String?> _promptName(
+Future<String?> promptResourceName(
   BuildContext context, {
   required String title,
   required String actionLabel,
