@@ -79,7 +79,7 @@ mixin ResourceActionExecutor<RepoT> {
 }
 
 extension ResourceActionRef on Ref {
-  void markResourceActivity() {
-    read(resourceActivityProvider.notifier).markChanged();
+  void markResourceActivity([Set<ActivityScope>? scopes]) {
+    read(resourceActivityProvider.notifier).markChanged(scopes: scopes);
   }
 }
