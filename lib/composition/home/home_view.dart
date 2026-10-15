@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/home/home_ops_pulse.dart';
+import 'package:komodo_go/composition/home/widgets/home_attention_card.dart';
 import 'package:komodo_go/composition/home/widgets/home_dashboard_tiles.dart';
 import 'package:komodo_go/composition/home/widgets/home_sections.dart';
 import 'package:komodo_go/core/router/app_router.dart';
@@ -71,7 +72,6 @@ class HomeView extends ConsumerWidget {
     final proceduresAsync = ref.watch(proceduresProvider);
     final actionsAsync = ref.watch(actionsProvider);
     final alertsAsync = ref.watch(alertsProvider);
-    final updatesAsync = ref.watch(updatesProvider);
     var sectionIndex = 0;
 
     Widget staggeredSection(Widget child) {
@@ -99,6 +99,15 @@ class HomeView extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
           children: [
+            staggeredSection(
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  HomeAttentionCard(),
+                  Gap(20),
+                ],
+              ),
+            ),
             staggeredSection(
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,42 +390,6 @@ class HomeView extends ConsumerWidget {
                     onNavigate: (type) => _goToResources(context, type),
                   ),
                   const Gap(20),
-                ],
-              ),
-            ),
-            staggeredSection(
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  HomeSectionHeader(
-                    title: 'Recent updates',
-                    onSeeAll: () => context.go(AppRoutes.notifications),
-                  ),
-                  const Gap(8),
-                  updatesAsync.when(
-                    data: (state) {
-                      if (state.items.isEmpty) {
-                        return const HomeEmptyListTile(
-                          icon: AppIcons.updateAvailable,
-                          message: 'No recent updates',
-                        );
-                      }
-
-                      return Column(
-                        children: state.items
-                            .take(3)
-                            .map(
-                              (update) => Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: HomeUpdatePreviewTile(update: update),
-                              ),
-                            )
-                            .toList(),
-                      );
-                    },
-                    loading: () => const HomeLoadingTile(),
-                    error: (e, _) => HomeErrorTile(message: e.toString()),
-                  ),
                 ],
               ),
             ),

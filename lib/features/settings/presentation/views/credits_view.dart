@@ -16,7 +16,7 @@ class CreditsView extends StatelessWidget {
 
     return Scaffold(
       appBar: const MainAppBar(
-        title: 'Credits',
+        title: 'About',
         icon: AppIcons.heart,
         centerTitle: true,
       ),
@@ -79,6 +79,12 @@ class CreditsView extends StatelessWidget {
                       label: 'GitHub',
                       url: 'https://github.com/Brubytes/komodo-go',
                       icon: AppIcons.github,
+                    ),
+                    _CreditLink(
+                      label: 'Contact & feedback',
+                      url:
+                          'mailto:info@komodogo.eu?subject=Komodo%20Go%20Feedback',
+                      icon: AppIcons.mail,
                     ),
                   ].map((link) => _LinkChip(link: link)).toList(),
                 ),
@@ -357,8 +363,13 @@ class _CompactCreditRow extends StatelessWidget {
 
   Future<void> _launchUrl(BuildContext context, String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    if (uri.scheme == 'mailto' || await canLaunchUrl(uri)) {
+      await launchUrl(
+        uri,
+        mode: uri.scheme == 'mailto'
+            ? LaunchMode.externalApplication
+            : LaunchMode.inAppBrowserView,
+      );
     }
   }
 }
@@ -421,8 +432,13 @@ class _LinkChip extends StatelessWidget {
 
   Future<void> _launchUrl(BuildContext context, String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    if (uri.scheme == 'mailto' || await canLaunchUrl(uri)) {
+      await launchUrl(
+        uri,
+        mode: uri.scheme == 'mailto'
+            ? LaunchMode.externalApplication
+            : LaunchMode.inAppBrowserView,
+      );
     }
   }
 }
