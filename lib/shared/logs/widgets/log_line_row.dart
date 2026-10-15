@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/shared/logs/log_line.dart';
 
@@ -87,11 +89,19 @@ class LogLineRow extends StatelessWidget {
             left: BorderSide(color: bar ?? Colors.transparent, width: 3),
           ),
         ),
-        padding: const EdgeInsets.fromLTRB(9, 2, 12, 2),
+        padding: const EdgeInsets.fromLTRB(
+          9,
+          AppSpacing.xxs,
+          AppSpacing.md,
+          AppSpacing.xxs,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (time != null) ...[Text(time, style: styles.time), const Gap(8)],
+            if (time != null) ...[
+              Text(time, style: styles.time),
+              const Gap(AppSpacing.sm),
+            ],
             // Expanded gives wrapped continuation lines a hanging indent.
             Expanded(child: message),
           ],
@@ -110,7 +120,12 @@ class LogDateDividerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
       child: Row(
         children: [
           Text(
@@ -119,7 +134,7 @@ class LogDateDividerRow extends StatelessWidget {
               color: scheme.onSurfaceVariant,
             ),
           ),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           Expanded(child: Divider(height: 1, color: scheme.outlineVariant)),
         ],
       ),
@@ -157,7 +172,7 @@ class _LogLineSheet extends StatelessWidget {
           20,
           0,
           20,
-          24 + media.viewPadding.bottom,
+          AppSpacing.xl + media.viewPadding.bottom,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -172,16 +187,14 @@ class _LogLineSheet extends StatelessWidget {
                   onPressed: () {
                     unawaited(Clipboard.setData(ClipboardData(text: line.raw)));
                     Navigator.pop(context);
-                    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                      const SnackBar(content: Text('Line copied')),
-                    );
+                    AppSnackBar.show(context, 'Line copied');
                   },
                   icon: const Icon(AppIcons.copy, size: 16),
                   label: const Text('Copy'),
                 ),
               ],
             ),
-            const Gap(12),
+            const Gap(AppSpacing.md),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -205,7 +218,7 @@ class _LogLineSheet extends StatelessWidget {
                 },
               ],
             ),
-            const Gap(16),
+            const Gap(AppSpacing.lg),
             SelectableText(
               line.message.isEmpty ? line.raw : line.message,
               style: textTheme.bodyMedium?.copyWith(

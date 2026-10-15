@@ -70,9 +70,9 @@ class VariablesView extends ConsumerWidget {
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   itemCount: variables.length,
-                  separatorBuilder: (_, _) => const Gap(12),
+                  separatorBuilder: (_, _) => const Gap(AppSpacing.md),
                   itemBuilder: (context, index) => AppFadeSlide(
                     delay: AppMotion.stagger(index),
                     play: index < 10,
@@ -257,7 +257,7 @@ class _VariableTileState extends State<_VariableTile> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (variable.isSecret) const TextPill(label: 'Secret'),
-              const Gap(8),
+              const Gap(AppSpacing.sm),
               PopupMenuButton<_VariableAction>(
                 onSelected: (action) {
                   switch (action) {
@@ -273,7 +273,7 @@ class _VariableTileState extends State<_VariableTile> {
                     child: Row(
                       children: [
                         Icon(AppIcons.edit, color: scheme.primary, size: 18),
-                        const Gap(10),
+                        const Gap(AppSpacing.sm),
                         const Text('Edit'),
                       ],
                     ),
@@ -283,7 +283,7 @@ class _VariableTileState extends State<_VariableTile> {
                     child: Row(
                       children: [
                         Icon(AppIcons.delete, color: scheme.error, size: 18),
-                        const Gap(10),
+                        const Gap(AppSpacing.sm),
                         const Text('Delete'),
                       ],
                     ),
@@ -308,9 +308,9 @@ class _VariablesSkeletonList extends StatelessWidget {
 
     return Skeletonizer(
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
+        separatorBuilder: (_, _) => const Gap(AppSpacing.md),
         itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
@@ -318,18 +318,18 @@ class _VariablesSkeletonList extends StatelessWidget {
             child: Row(
               children: [
                 const CircleAvatar(radius: 16),
-                const Gap(10),
+                const Gap(AppSpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Variable key', style: textTheme.titleSmall),
-                      const Gap(6),
+                      const Gap(AppSpacing.xs),
                       Text('Description or value', style: textTheme.bodySmall),
                     ],
                   ),
                 ),
-                const Gap(8),
+                const Gap(AppSpacing.sm),
                 const Chip(label: Text('Secret')),
               ],
             ),
@@ -349,7 +349,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
         const Gap(48),
         Icon(
@@ -357,13 +357,13 @@ class _EmptyState extends StatelessWidget {
           size: 64,
           color: scheme.primary.withValues(alpha: 0.5),
         ),
-        const Gap(16),
+        const Gap(AppSpacing.lg),
         Text(
           'No variables found',
           style: Theme.of(context).textTheme.titleMedium,
           textAlign: TextAlign.center,
         ),
-        const Gap(8),
+        const Gap(AppSpacing.sm),
         Text(
           'Create global variables for interpolation in deployments/builds.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
@@ -234,9 +236,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     if (value.trim().isEmpty) return;
     await Clipboard.setData(ClipboardData(text: value));
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
+    AppSnackBar.show(context, 'Copied to clipboard');
   }
 
   void _disposeConfigFileControllers() {
@@ -748,7 +748,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
               if (sortedServers.isNotEmpty &&
                   _serverId.text.isNotEmpty &&
                   !serverIdInList) ...[
-                const Gap(8),
+                const Gap(AppSpacing.sm),
                 TextFormField(
                   controller: _serverId,
                   decoration: const InputDecoration(
@@ -761,7 +761,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
             ],
           ),
         ),
-        const Gap(12),
+        const Gap(AppSpacing.md),
 
         // 2. Compose (file contents)
         // Only for UI-defined stacks (not git-defined, not files-on-host).
@@ -779,7 +779,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
               ],
             ),
           ),
-          const Gap(12),
+          const Gap(AppSpacing.md),
         ],
 
         // 3. Source (repo section)
@@ -826,7 +826,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                 if (sortedRepos.isNotEmpty &&
                     _linkedRepo.text.isNotEmpty &&
                     !linkedRepoInList) ...[
-                  const Gap(8),
+                  const Gap(AppSpacing.sm),
                   TextFormField(
                     controller: _linkedRepo,
                     decoration: const InputDecoration(
@@ -839,7 +839,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
 
                 // Only show manual git config fields when NO linked repo is selected
                 if (!hasLinkedRepo) ...[
-                  const Gap(12),
+                  const Gap(AppSpacing.md),
                   TextFormField(
                     controller: _repo,
                     decoration: const InputDecoration(
@@ -848,7 +848,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                       helperText: 'The repo path: {namespace}/{repo_name}',
                     ),
                   ),
-                  const Gap(12),
+                  const Gap(AppSpacing.md),
                   TextFormField(
                     controller: _branch,
                     decoration: const InputDecoration(
@@ -857,7 +857,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                       helperText: "Custom branch, or defaults to 'main'.",
                     ),
                   ),
-                  const Gap(12),
+                  const Gap(AppSpacing.md),
                   TextFormField(
                     controller: _commit,
                     decoration: const InputDecoration(
@@ -867,7 +867,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                           'Optional. Switch to a specific commit after cloning.',
                     ),
                   ),
-                  const Gap(12),
+                  const Gap(AppSpacing.md),
                   TextFormField(
                     controller: _clonePath,
                     decoration: const InputDecoration(
@@ -878,7 +878,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   ),
                 ],
 
-                const Gap(12),
+                const Gap(AppSpacing.md),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   value: _reclone,
@@ -894,7 +894,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
               ],
             ),
           ),
-          const Gap(12),
+          const Gap(AppSpacing.md),
         ],
 
         // 3. Files
@@ -912,7 +912,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                       'Working directory for compose up, relative to repo root.',
                 ),
               ),
-              const Gap(12),
+              const Gap(AppSpacing.md),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -920,7 +920,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
-              const Gap(4),
+              const Gap(AppSpacing.xs),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -930,7 +930,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   ),
                 ),
               ),
-              const Gap(8),
+              const Gap(AppSpacing.sm),
               if (_filePathControllers.isEmpty)
                 SizedBox(
                   width: double.infinity,
@@ -957,7 +957,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                               ),
                             ),
                           ),
-                          const Gap(8),
+                          const Gap(AppSpacing.sm),
                           IconButton(
                             tooltip: 'Remove',
                             icon: const Icon(AppIcons.delete),
@@ -966,7 +966,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                           ),
                         ],
                       ),
-                      const Gap(8),
+                      const Gap(AppSpacing.sm),
                     ],
                     Align(
                       alignment: Alignment.centerLeft,
@@ -981,7 +981,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
             ],
           ),
         ),
-        const Gap(12),
+        const Gap(AppSpacing.md),
 
         // 4. Environment
         DetailSubCard(
@@ -997,12 +997,12 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const Gap(8),
+              const Gap(AppSpacing.sm),
               DetailCodeEditor(
                 controller: _environmentController,
                 maxHeight: 240,
               ),
-              const Gap(12),
+              const Gap(AppSpacing.md),
               TextFormField(
                 controller: _envFilePath,
                 decoration: const InputDecoration(
@@ -1012,7 +1012,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                       'Path to write env file, relative to run directory.',
                 ),
               ),
-              const Gap(12),
+              const Gap(AppSpacing.md),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1020,7 +1020,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
-              const Gap(4),
+              const Gap(AppSpacing.xs),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1030,7 +1030,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   ),
                 ),
               ),
-              const Gap(8),
+              const Gap(AppSpacing.sm),
               if (_additionalEnvFileControllers.isEmpty)
                 SizedBox(
                   width: double.infinity,
@@ -1061,7 +1061,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                               ),
                             ),
                           ),
-                          const Gap(8),
+                          const Gap(AppSpacing.sm),
                           IconButton(
                             tooltip: 'Remove',
                             icon: const Icon(AppIcons.delete),
@@ -1070,7 +1070,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                           ),
                         ],
                       ),
-                      const Gap(8),
+                      const Gap(AppSpacing.sm),
                     ],
                     Align(
                       alignment: Alignment.centerLeft,
@@ -1085,7 +1085,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
             ],
           ),
         ),
-        const Gap(12),
+        const Gap(AppSpacing.md),
 
         // 5. Config Files
         DetailSubCard(
@@ -1108,7 +1108,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   ),
                 ),
               ),
-              const Gap(8),
+              const Gap(AppSpacing.sm),
               if (_configFilePathControllers.isEmpty)
                 SizedBox(
                   width: double.infinity,
@@ -1141,7 +1141,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                               ),
                             ),
                           ),
-                          const Gap(8),
+                          const Gap(AppSpacing.sm),
                           IconButton(
                             tooltip: 'Remove',
                             icon: const Icon(AppIcons.delete),
@@ -1149,7 +1149,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                           ),
                         ],
                       ),
-                      const Gap(8),
+                      const Gap(AppSpacing.sm),
                       DropdownButtonFormField<StackFileRequires>(
                         initialValue: _configFileRequires[i],
                         decoration: const InputDecoration(
@@ -1171,7 +1171,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                           _notifyDirtyIfChanged();
                         },
                       ),
-                      const Gap(8),
+                      const Gap(AppSpacing.sm),
                       TextFormField(
                         controller: _configFileServicesControllers[i],
                         decoration: const InputDecoration(
@@ -1181,7 +1181,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                               'Comma-separated list of services this file applies to.',
                         ),
                       ),
-                      const Gap(12),
+                      const Gap(AppSpacing.md),
                     ],
                     Align(
                       alignment: Alignment.centerLeft,
@@ -1196,7 +1196,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
             ],
           ),
         ),
-        const Gap(12),
+        const Gap(AppSpacing.md),
 
         // 6. Auto Update
         DetailSubCard(
@@ -1247,7 +1247,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
             ],
           ),
         ),
-        const Gap(12),
+        const Gap(AppSpacing.md),
 
         // 7. Links
         DetailSubCard(
@@ -1267,7 +1267,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
-              const Gap(4),
+              const Gap(AppSpacing.xs),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1277,7 +1277,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   ),
                 ),
               ),
-              const Gap(8),
+              const Gap(AppSpacing.sm),
               if (_linkControllers.isEmpty)
                 SizedBox(
                   width: double.infinity,
@@ -1304,7 +1304,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                               ),
                             ),
                           ),
-                          const Gap(8),
+                          const Gap(AppSpacing.sm),
                           IconButton(
                             tooltip: 'Remove',
                             icon: const Icon(AppIcons.delete),
@@ -1312,7 +1312,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                           ),
                         ],
                       ),
-                      const Gap(8),
+                      const Gap(AppSpacing.sm),
                     ],
                     Align(
                       alignment: Alignment.centerLeft,
@@ -1327,7 +1327,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
             ],
           ),
         ),
-        const Gap(12),
+        const Gap(AppSpacing.md),
 
         // 7. Webhooks
         DetailSubCard(
@@ -1361,7 +1361,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                     ),
                   ),
                 ),
-                const Gap(12),
+                const Gap(AppSpacing.md),
               ],
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
@@ -1408,7 +1408,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
             ],
           ),
         ),
-        const Gap(12),
+        const Gap(AppSpacing.md),
 
         // 8. Advanced
         DetailSubCard(
@@ -1438,7 +1438,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                       'Compose project name. Match existing name if importing.',
                 ),
               ),
-              const Gap(12),
+              const Gap(AppSpacing.md),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1446,7 +1446,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
-              const Gap(4),
+              const Gap(AppSpacing.xs),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1456,7 +1456,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   ),
                 ),
               ),
-              const Gap(8),
+              const Gap(AppSpacing.sm),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _autoPull,
@@ -1489,7 +1489,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   _notifyDirtyIfChanged();
                 },
               ),
-              const Gap(12),
+              const Gap(AppSpacing.md),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1497,7 +1497,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
-              const Gap(8),
+              const Gap(AppSpacing.sm),
               if (sortedRegistries.isNotEmpty)
                 KomodoSelectMenuField<String>(
                   key: ValueKey(sortedRegistries.length),
@@ -1534,7 +1534,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                 ),
               if (sortedRegistries.isNotEmpty && !registryInList)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -1545,7 +1545,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                     ),
                   ),
                 ),
-              const Gap(12),
+              const Gap(AppSpacing.md),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1553,7 +1553,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
-              const Gap(4),
+              const Gap(AppSpacing.xs),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1563,7 +1563,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   ),
                 ),
               ),
-              const Gap(8),
+              const Gap(AppSpacing.sm),
               if (_extraArgControllers.isEmpty)
                 SizedBox(
                   width: double.infinity,
@@ -1590,7 +1590,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                               ),
                             ),
                           ),
-                          const Gap(8),
+                          const Gap(AppSpacing.sm),
                           IconButton(
                             tooltip: 'Remove',
                             icon: const Icon(AppIcons.delete),
@@ -1599,7 +1599,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                           ),
                         ],
                       ),
-                      const Gap(8),
+                      const Gap(AppSpacing.sm),
                     ],
                     Align(
                       alignment: Alignment.centerLeft,
@@ -1611,7 +1611,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                     ),
                   ],
                 ),
-              const Gap(12),
+              const Gap(AppSpacing.md),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1619,7 +1619,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
-              const Gap(4),
+              const Gap(AppSpacing.xs),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1629,7 +1629,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                   ),
                 ),
               ),
-              const Gap(8),
+              const Gap(AppSpacing.sm),
               if (_ignoreServiceControllers.isEmpty)
                 SizedBox(
                   width: double.infinity,
@@ -1660,7 +1660,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                               ),
                             ),
                           ),
-                          const Gap(8),
+                          const Gap(AppSpacing.sm),
                           IconButton(
                             tooltip: 'Remove',
                             icon: const Icon(AppIcons.delete),
@@ -1669,7 +1669,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                           ),
                         ],
                       ),
-                      const Gap(8),
+                      const Gap(AppSpacing.sm),
                     ],
                     Align(
                       alignment: Alignment.centerLeft,
@@ -1684,7 +1684,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
             ],
           ),
         ),
-        const Gap(12),
+        const Gap(AppSpacing.md),
       ],
     );
   }

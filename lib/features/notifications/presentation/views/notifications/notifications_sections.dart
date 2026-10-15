@@ -81,9 +81,14 @@ class AlertsTab extends ConsumerWidget {
                     return false;
                   },
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                    ),
                     itemCount: (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
-                    separatorBuilder: (_, _) => const Gap(12),
+                    separatorBuilder: (_, _) => const Gap(AppSpacing.md),
                     itemBuilder: (context, index) {
                       if (isEmpty && index == 0) {
                         return _FilteredEmptyMessage(
@@ -152,7 +157,12 @@ class _FilterBar extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.sm,
+          AppSpacing.lg,
+          AppSpacing.xxs,
+        ),
         child: Wrap(spacing: 8, runSpacing: 4, children: chips),
       ),
     );
@@ -173,7 +183,7 @@ class _FilteredEmptyMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
       child: Column(
         children: [
           Text(
@@ -181,7 +191,7 @@ class _FilteredEmptyMessage extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
             textAlign: TextAlign.center,
           ),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           TextButton(onPressed: onShowAll, child: Text(showAllLabel)),
         ],
       ),
@@ -241,9 +251,14 @@ class UpdatesTab extends ConsumerWidget {
                     return false;
                   },
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                    ),
                     itemCount: (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
-                    separatorBuilder: (_, _) => const Gap(12),
+                    separatorBuilder: (_, _) => const Gap(AppSpacing.md),
                     itemBuilder: (context, index) {
                       if (isEmpty && index == 0) {
                         return _FilteredEmptyMessage(
@@ -336,7 +351,7 @@ class AlertTile extends ConsumerWidget {
             children: [
               if (primary != null && primary.isNotEmpty) Text(primary),
               if (targetName != null && targetName.isNotEmpty) ...[
-                const Gap(4),
+                const Gap(AppSpacing.xs),
                 Text(
                   targetName,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -344,7 +359,7 @@ class AlertTile extends ConsumerWidget {
                   ),
                 ),
               ],
-              const Gap(4),
+              const Gap(AppSpacing.xs),
               Row(
                 children: [
                   Icon(
@@ -352,7 +367,7 @@ class AlertTile extends ConsumerWidget {
                     size: 16,
                     color: scheme.onSurfaceVariant,
                   ),
-                  const Gap(6),
+                  const Gap(AppSpacing.xs),
                   Expanded(
                     child: Text(
                       _formatTimestamp(alert.timestamp.toLocal()),
@@ -438,14 +453,14 @@ class UpdateTile extends ConsumerWidget {
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Gap(4),
+              const Gap(AppSpacing.xs),
               Text(
                 targetName,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
               ),
-              const Gap(4),
+              const Gap(AppSpacing.xs),
               Row(
                 children: [
                   if (operator != null) ...[
@@ -454,7 +469,7 @@ class UpdateTile extends ConsumerWidget {
                       size: 16,
                       color: scheme.onSurfaceVariant,
                     ),
-                    const Gap(6),
+                    const Gap(AppSpacing.xs),
                     Expanded(
                       child: Text(
                         operator,
@@ -463,14 +478,14 @@ class UpdateTile extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    const Gap(12),
+                    const Gap(AppSpacing.md),
                   ],
                   Icon(
                     AppIcons.clock,
                     size: 16,
                     color: scheme.onSurfaceVariant,
                   ),
-                  const Gap(6),
+                  const Gap(AppSpacing.xs),
                   Text(
                     startTime,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -517,7 +532,7 @@ class PaginationFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
         child: Center(child: AppInlineSkeleton(size: 20)),
       );
     }
@@ -554,11 +569,11 @@ class NotificationsEmptyState extends StatelessWidget {
         size: 64,
         color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
       ),
-      const Gap(16),
+      const Gap(AppSpacing.lg),
       Center(
         child: Text(title, style: Theme.of(context).textTheme.titleMedium),
       ),
-      const Gap(8),
+      const Gap(AppSpacing.sm),
       Center(
         child: Text(
           description,
@@ -572,10 +587,13 @@ class NotificationsEmptyState extends StatelessWidget {
       ),
     ];
     if (scrollable) {
-      return ListView(padding: const EdgeInsets.all(24), children: children);
+      return ListView(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        children: children,
+      );
     }
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(mainAxisSize: MainAxisSize.min, children: children),
     );
   }
@@ -590,9 +608,9 @@ class _AlertsSkeletonList extends StatelessWidget {
 
     return Skeletonizer(
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
+        separatorBuilder: (_, _) => const Gap(AppSpacing.md),
         itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
@@ -601,20 +619,20 @@ class _AlertsSkeletonList extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const CircleAvatar(radius: 16),
-                const Gap(12),
+                const Gap(AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Alert title', style: textTheme.titleSmall),
-                      const Gap(6),
+                      const Gap(AppSpacing.xs),
                       Text('Primary detail', style: textTheme.bodySmall),
-                      const Gap(6),
+                      const Gap(AppSpacing.xs),
                       Text('Target • Time', style: textTheme.bodySmall),
                     ],
                   ),
                 ),
-                const Gap(8),
+                const Gap(AppSpacing.sm),
                 const Chip(label: Text('OPEN')),
               ],
             ),
@@ -634,9 +652,9 @@ class _UpdatesSkeletonList extends StatelessWidget {
 
     return Skeletonizer(
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
+        separatorBuilder: (_, _) => const Gap(AppSpacing.md),
         itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
@@ -645,20 +663,20 @@ class _UpdatesSkeletonList extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const CircleAvatar(radius: 16),
-                const Gap(12),
+                const Gap(AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Update title', style: textTheme.titleSmall),
-                      const Gap(6),
+                      const Gap(AppSpacing.xs),
                       Text('Detail line', style: textTheme.bodySmall),
-                      const Gap(6),
+                      const Gap(AppSpacing.xs),
                       Text('Resource • Time', style: textTheme.bodySmall),
                     ],
                   ),
                 ),
-                const Gap(8),
+                const Gap(AppSpacing.sm),
                 const Chip(label: Text('NEW')),
               ],
             ),
@@ -698,11 +716,11 @@ class NotificationsErrorState extends StatelessWidget {
         size: 64,
         color: Theme.of(context).colorScheme.error,
       ),
-      const Gap(16),
+      const Gap(AppSpacing.lg),
       Center(
         child: Text(title, style: Theme.of(context).textTheme.titleMedium),
       ),
-      const Gap(8),
+      const Gap(AppSpacing.sm),
       Center(
         child: Text(
           message,
@@ -714,7 +732,7 @@ class NotificationsErrorState extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
       ),
-      const Gap(24),
+      const Gap(AppSpacing.xl),
       Wrap(
         alignment: WrapAlignment.center,
         spacing: 12,
@@ -733,10 +751,13 @@ class NotificationsErrorState extends StatelessWidget {
       ),
     ];
     if (scrollable) {
-      return ListView(padding: const EdgeInsets.all(24), children: children);
+      return ListView(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        children: children,
+      );
     }
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(mainAxisSize: MainAxisSize.min, children: children),
     );
   }
@@ -782,7 +803,10 @@ class NotificationsStatusChip extends StatelessWidget {
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),

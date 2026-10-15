@@ -4,7 +4,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/shared/logs/log_line.dart';
 import 'package:komodo_go/shared/logs/server_log_controller.dart';
@@ -225,7 +227,7 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
                 key: const ValueKey('server_log_lines'),
                 controller: _scroll,
                 reverse: true,
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 itemCount: _entries.length,
                 itemBuilder: (context, index) {
                   final entry = _entries[_entries.length - 1 - index];
@@ -355,12 +357,15 @@ class _JumpButton extends StatelessWidget {
         customBorder: const StadiumBorder(),
         onTap: onPressed,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: 16, color: foreground),
-              const Gap(4),
+              const Gap(AppSpacing.xs),
               Text(
                 label,
                 style: Theme.of(
@@ -386,12 +391,12 @@ class _Message extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: color),
-            const Gap(8),
+            const Gap(AppSpacing.sm),
             Text(
               text,
               textAlign: TextAlign.center,
@@ -425,10 +430,10 @@ class _Footer extends StatelessWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
       child: Row(
         children: [
-          const Gap(4),
+          const Gap(AppSpacing.xs),
           Expanded(
             child: Text(
               parts.join(' · '),
@@ -459,9 +464,7 @@ class _Footer extends StatelessWidget {
 
   void _copy(BuildContext context, String text) {
     unawaited(Clipboard.setData(ClipboardData(text: text)));
-    ScaffoldMessenger.maybeOf(context)
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Logs copied')));
+    AppSnackBar.show(context, 'Logs copied');
   }
 
   static String _formatTime(DateTime time) {

@@ -3,6 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
@@ -122,7 +123,7 @@ class AddConnectionSheet extends HookConsumerWidget {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const Gap(8),
+                  const Gap(AppSpacing.sm),
                   Text(
                     'Add another Komodo instance by providing its URL and API credentials.',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -132,10 +133,10 @@ class AddConnectionSheet extends HookConsumerWidget {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const Gap(24),
+                  const Gap(AppSpacing.xl),
                   if (authAsync.value is AuthStateError) ...[
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
                         color: Theme.of(
                           context,
@@ -148,7 +149,7 @@ class AddConnectionSheet extends HookConsumerWidget {
                             AppIcons.formError,
                             color: Theme.of(context).colorScheme.error,
                           ),
-                          const Gap(8),
+                          const Gap(AppSpacing.sm),
                           Expanded(
                             child: Text(
                               (authAsync.value! as AuthStateError)
@@ -162,7 +163,7 @@ class AddConnectionSheet extends HookConsumerWidget {
                         ],
                       ),
                     ),
-                    const Gap(16),
+                    const Gap(AppSpacing.lg),
                   ],
                   TextFormField(
                     controller: connectionNameController,
@@ -176,7 +177,7 @@ class AddConnectionSheet extends HookConsumerWidget {
                     enableInteractiveSelection: true,
                     contextMenuBuilder: alwaysPasteContextMenu,
                   ),
-                  const Gap(16),
+                  const Gap(AppSpacing.lg),
                   TextFormField(
                     controller: baseUrlController,
                     decoration: const InputDecoration(
@@ -206,10 +207,10 @@ class AddConnectionSheet extends HookConsumerWidget {
                     },
                   ),
                   if (baseUrlController.text.trim().isNotEmpty) ...[
-                    const Gap(8),
+                    const Gap(AppSpacing.sm),
                     ServerUrlWarning(value: baseUrlController.text),
                   ],
-                  const Gap(16),
+                  const Gap(AppSpacing.lg),
                   TextFormField(
                     controller: apiKeyController,
                     decoration: const InputDecoration(
@@ -227,7 +228,7 @@ class AddConnectionSheet extends HookConsumerWidget {
                       return null;
                     },
                   ),
-                  const Gap(16),
+                  const Gap(AppSpacing.lg),
                   TextFormField(
                     controller: apiSecretController,
                     decoration: InputDecoration(
@@ -258,7 +259,7 @@ class AddConnectionSheet extends HookConsumerWidget {
                       return null;
                     },
                   ),
-                  const Gap(24),
+                  const Gap(AppSpacing.xl),
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
@@ -272,7 +273,7 @@ class AddConnectionSheet extends HookConsumerWidget {
                           : const Text('Save'),
                     ),
                   ),
-                  const Gap(12),
+                  const Gap(AppSpacing.md),
                   Text(
                     'You can generate API keys in the Komodo web interface under your user settings.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(

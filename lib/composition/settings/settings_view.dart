@@ -31,11 +31,16 @@ class SettingsView extends ConsumerWidget {
     return Scaffold(
       appBar: const MainAppBar(title: 'Settings', icon: AppIcons.settings),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          28,
+        ),
         children: [
-          const Gap(4),
+          const Gap(AppSpacing.xs),
           const _SettingsSectionHeader(title: 'Connection'),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           _SettingsCardTile(
             icon: AppIcons.server,
             accentColor: scheme.primary,
@@ -45,7 +50,7 @@ class SettingsView extends ConsumerWidget {
             onTap: () => context.push(AppRoutes.connections),
           ),
           if (coreVersion != null) ...[
-            const Gap(10),
+            const Gap(AppSpacing.sm),
             _SettingsCardTile(
               icon: AppIcons.info,
               accentColor: scheme.primary,
@@ -61,9 +66,12 @@ class SettingsView extends ConsumerWidget {
           ],
           const Gap(20),
           const _SettingsSectionHeader(title: 'Appearance'),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           AppCardSurface(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Row(
               children: [
                 Container(
@@ -74,7 +82,7 @@ class SettingsView extends ConsumerWidget {
                   ),
                   child: Icon(AppIcons.theme, size: 20, color: scheme.primary),
                 ),
-                const Gap(12),
+                const Gap(AppSpacing.md),
                 Expanded(
                   child: SegmentedButton<ThemeMode>(
                     key: const ValueKey('settings_theme_selector'),
@@ -103,7 +111,7 @@ class SettingsView extends ConsumerWidget {
           ),
           const Gap(20),
           const _SettingsSectionHeader(title: 'About'),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           _SettingsCardTile(
             icon: AppIcons.heart,
             accentColor: scheme.primary,
@@ -113,7 +121,7 @@ class SettingsView extends ConsumerWidget {
           ),
           const Gap(20),
           const _SettingsSectionHeader(title: 'Account'),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           _SettingsCardTile(
             icon: AppIcons.logout,
             accentColor: scheme.error,
@@ -167,7 +175,7 @@ class _SettingsSectionHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
       child: Row(
         children: [
           Text(
@@ -226,7 +234,10 @@ class _SettingsCardTile extends StatelessWidget {
           onTap: enabled ? onTap : null,
           borderRadius: cardRadius,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Row(
               children: [
                 Container(
@@ -237,7 +248,7 @@ class _SettingsCardTile extends StatelessWidget {
                   ),
                   child: Icon(icon, size: 20, color: accentColor),
                 ),
-                const Gap(12),
+                const Gap(AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,7 +261,7 @@ class _SettingsCardTile extends StatelessWidget {
                         ),
                       ),
                       if (subtitle != null) ...[
-                        const Gap(2),
+                        const Gap(AppSpacing.xxs),
                         Text(
                           subtitle!,
                           style: textTheme.bodySmall?.copyWith(
@@ -264,7 +275,7 @@ class _SettingsCardTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Gap(12),
+                const Gap(AppSpacing.md),
                 DefaultTextStyle.merge(
                   style: TextStyle(color: scheme.onSurfaceVariant),
                   child:
@@ -298,7 +309,7 @@ class _CardTrailing extends StatelessWidget {
       children: [
         if (label != null && label!.trim().isNotEmpty) ...[
           TextPill(label: label!),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
         ],
         if (showChevron)
           Icon(
