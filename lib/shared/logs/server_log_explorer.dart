@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/network/network_status.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
@@ -15,7 +17,7 @@ export 'package:komodo_go/shared/logs/server_log_controller.dart'
 
 /// Inline log explorer: compact search/filter header, the log output and a
 /// full-screen mode that shares the same state.
-class ServerLogExplorer extends StatefulWidget {
+class ServerLogExplorer extends ConsumerStatefulWidget {
   const ServerLogExplorer({
     required this.loader,
     this.title = 'Server logs',
@@ -38,13 +40,14 @@ class ServerLogExplorer extends StatefulWidget {
   final bool fillHeight;
 
   @override
-  State<ServerLogExplorer> createState() => _ServerLogExplorerState();
+  ConsumerState<ServerLogExplorer> createState() => _ServerLogExplorerState();
 }
 
-class _ServerLogExplorerState extends State<ServerLogExplorer> {
+class _ServerLogExplorerState extends ConsumerState<ServerLogExplorer> {
   late final _controller = ServerLogController(
     loader: widget.loader,
     autoRefresh: widget.autoRefresh,
+    networkStatus: () => ref.read(networkStatusProvider),
   );
 
   @override

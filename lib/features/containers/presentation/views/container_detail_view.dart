@@ -8,7 +8,9 @@ import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/composition/resources/resource_name_resolver_provider.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/resource_routes.dart';
+import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
@@ -45,7 +47,8 @@ class ContainerDetailView extends ConsumerStatefulWidget {
       _ContainerDetailViewState();
 }
 
-class _ContainerDetailViewState extends ConsumerState<ContainerDetailView> {
+class _ContainerDetailViewState
+    extends PollingRouteAwareState<ContainerDetailView> {
   static const _tabLogs = 'logs';
   static const _tabInspect = 'inspect';
 
@@ -80,6 +83,11 @@ class _ContainerDetailViewState extends ConsumerState<ContainerDetailView> {
       ),
     );
     ref.watch(containerActionsProvider);
+    final isShellActive = ref.watch(mainShellIndexProvider) == 2;
+    final logsPolling = shouldPoll(
+      isActiveTab: isShellActive && _activeTabId == _tabLogs,
+      enabled: _autoRefreshLogs,
+    );
 
     // While (re)loading, keep showing the item passed in from the list as
     // a placeholder instead of a skeleton.
@@ -140,7 +148,7 @@ class _ContainerDetailViewState extends ConsumerState<ContainerDetailView> {
               child: ServerLogExplorer(
                 key: ValueKey('container_log_explorer_$container'),
                 fillHeight: true,
-                autoRefresh: _autoRefreshLogs && _activeTabId == _tabLogs,
+                autoRefresh: logsPolling,
                 onAutoRefreshChanged: (value) =>
                     setState(() => _autoRefreshLogs = value),
                 loader: (request) async {

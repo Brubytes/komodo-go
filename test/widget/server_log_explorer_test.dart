@@ -84,7 +84,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(InputChip, '500 lines'));
     await tester.pumpAndSettle();
-    expect(requests.last.tail, 200);
+    expect(requests.last.tail, ServerLogController.defaultTail);
     expect(find.widgetWithText(InputChip, '500 lines'), findsNothing);
   });
 

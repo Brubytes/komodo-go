@@ -1,6 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
+import 'package:komodo_go/core/network/refresh_in_place.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_information.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
@@ -52,15 +53,32 @@ Future<Server?> serverDetail(Ref ref, String serverId) async {
 
 /// Provides system stats for a specific server.
 @riverpod
-Future<SystemStats?> serverStats(Ref ref, String serverId) async {
-  final repository = ref.watch(serverRepositoryProvider);
-  if (repository == null) {
-    return null;
+class ServerStats extends _$ServerStats {
+  @override
+  Future<SystemStats?> build(String serverId) async {
+    final repository = ref.watch(serverRepositoryProvider);
+    if (repository == null) {
+      return null;
+    }
+
+    final result = await repository.getSystemStats(serverId);
+
+    return unwrapOrThrow(result);
   }
 
-  final result = await repository.getSystemStats(serverId);
-
-  return unwrapOrThrow(result);
+  /// Poll tick: updates state only when the stats changed, so watchers do
+  /// not rebuild (or flash a loading state) on identical data.
+  Future<void> pollRefresh() {
+    final repository = ref.read(serverRepositoryProvider);
+    if (repository == null || state.isLoading) return Future.value();
+    return refreshInPlace<SystemStats?>(
+      current: state.value,
+      fetch: () async =>
+          unwrapOrThrow(await repository.getSystemStats(serverId)),
+      apply: (value) => state = AsyncData(value),
+      isMounted: () => ref.mounted,
+    );
+  }
 }
 
 /// Provides database-backed history for a server at the selected granularity.

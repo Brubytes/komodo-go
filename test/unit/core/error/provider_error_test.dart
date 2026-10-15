@@ -46,18 +46,17 @@ void main() {
   });
 
   group('providerRetry', () {
-    test('retries network failures with exponential backoff', () {
+    test('retries a network failure once', () {
       const error = FailureException(Failure.network());
 
-      expect(providerRetry(0, error), const Duration(milliseconds: 200));
-      expect(providerRetry(1, error), const Duration(milliseconds: 400));
-      expect(providerRetry(2, error), const Duration(milliseconds: 800));
+      expect(providerRetry(0, error), const Duration(milliseconds: 400));
     });
 
-    test('stops after 3 retries', () {
+    test('stops after the first retry', () {
       const error = FailureException(Failure.network());
 
-      expect(providerRetry(3, error), isNull);
+      expect(providerRetry(1, error), isNull);
+      expect(providerRetry(2, error), isNull);
     });
 
     test('does not retry non-network failures', () {
