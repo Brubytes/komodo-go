@@ -8,6 +8,8 @@ import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/utils/relative_time.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
@@ -101,8 +103,9 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                     child: procedureAsync.when(
                       data: (procedure) {
                         if (procedure == null) {
-                          return const _MessageSurface(
-                            message: 'Procedure not found',
+                          return const EmptyStateView.inline(
+                            icon: AppIcons.procedures,
+                            title: 'Procedure not found',
                           );
                         }
 
@@ -134,8 +137,13 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                         );
                       },
                       loading: () => const _LoadingSurface(),
-                      error: (error, _) =>
-                          _ErrorSurface(error: error.toString()),
+                      error: (error, _) => ErrorStateView.fromError(
+                        title: 'Failed to load procedure',
+                        error: error,
+                        onRetry: () => ref.invalidate(
+                          procedureDetailProvider(procedureId),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -177,8 +185,9 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                       child: procedureAsync.when(
                         data: (procedure) {
                           if (procedure == null) {
-                            return const _MessageSurface(
-                              message: 'Procedure not found',
+                            return const EmptyStateView.inline(
+                              icon: AppIcons.procedures,
+                              title: 'Procedure not found',
                             );
                           }
 
@@ -196,8 +205,13 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                           );
                         },
                         loading: () => const _LoadingSurface(),
-                        error: (error, _) =>
-                            _ErrorSurface(error: error.toString()),
+                        error: (error, _) => ErrorStateView.fromError(
+                          title: 'Failed to load procedure',
+                          error: error,
+                          onRetry: () => ref.invalidate(
+                            procedureDetailProvider(procedureId),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -214,8 +228,9 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                       child: procedureAsync.when(
                         data: (procedure) {
                           if (procedure == null) {
-                            return const _MessageSurface(
-                              message: 'Procedure not found',
+                            return const EmptyStateView.inline(
+                              icon: AppIcons.procedures,
+                              title: 'Procedure not found',
                             );
                           }
 
@@ -224,8 +239,13 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                           );
                         },
                         loading: () => const _LoadingSurface(),
-                        error: (error, _) =>
-                            _ErrorSurface(error: error.toString()),
+                        error: (error, _) => ErrorStateView.fromError(
+                          title: 'Failed to load procedure',
+                          error: error,
+                          onRetry: () => ref.invalidate(
+                            procedureDetailProvider(procedureId),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -746,43 +766,11 @@ class _ProcedureHeader extends StatelessWidget {
 
 /// Timestamps from the API are unix milliseconds.
 
-class _MessageSurface extends StatelessWidget {
-  const _MessageSurface({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return DetailSurface(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Center(child: Text(message)),
-      ),
-    );
-  }
-}
-
 class _LoadingSurface extends StatelessWidget {
   const _LoadingSurface();
 
   @override
   Widget build(BuildContext context) {
     return const AppSkeletonSurface();
-  }
-}
-
-class _ErrorSurface extends StatelessWidget {
-  const _ErrorSurface({required this.error});
-
-  final String error;
-
-  @override
-  Widget build(BuildContext context) {
-    return DetailSurface(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text('Error: $error'),
-      ),
-    );
   }
 }

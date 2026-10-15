@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
@@ -153,7 +154,7 @@ class VariablesView extends ConsumerWidget {
   }
 }
 
-class _VariableTile extends StatelessWidget {
+class _VariableTile extends StatefulWidget {
   const _VariableTile({
     required this.variable,
     required this.onEdit,
@@ -165,11 +166,61 @@ class _VariableTile extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
+  State<_VariableTile> createState() => _VariableTileState();
+}
+
+class _VariableTileState extends State<_VariableTile> {
+  var _revealed = false;
+
+  KomodoVariable get variable => widget.variable;
+  VoidCallback get onEdit => widget.onEdit;
+  VoidCallback get onDelete => widget.onDelete;
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: variable.value));
+    if (!mounted) return;
+    AppSnackBar.show(context, 'Value copied');
+  }
+
+  Widget _secretValueRow(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            _revealed ? variable.value : '••••••••',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.bodySmall?.copyWith(
+              fontFamily: 'monospace',
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        IconButton(
+          tooltip: _revealed ? 'Hide value' : 'Reveal value',
+          visualDensity: VisualDensity.compact,
+          icon: Icon(_revealed ? AppIcons.eyeOff : AppIcons.eye, size: 18),
+          onPressed: () => setState(() => _revealed = !_revealed),
+        ),
+        IconButton(
+          tooltip: 'Copy value',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(AppIcons.copy, size: 18),
+          onPressed: _copy,
+        ),
+      ],
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final subtitle = variable.description.trim().isNotEmpty
-        ? variable.description.trim()
-        : (variable.isSecret ? 'Secret value' : 'Value: ${variable.value}');
+    final description = variable.description.trim();
+    final subtitle = description.isNotEmpty
+        ? description
+        : (variable.isSecret ? null : 'Value: ${variable.value}');
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
@@ -190,10 +241,17 @@ class _VariableTile extends StatelessWidget {
               context,
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
-          subtitle: Text(
-            subtitle,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (subtitle != null)
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              if (variable.isSecret) _secretValueRow(context),
+            ],
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
