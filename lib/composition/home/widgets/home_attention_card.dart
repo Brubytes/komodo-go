@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/home/home_attention_provider.dart';
 import 'package:komodo_go/composition/home/widgets/home_sections.dart';
-import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/target_display_name_provider.dart';
@@ -113,7 +113,7 @@ class _AllClearRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            const Icon(AppIcons.ok, size: 22, color: AppTokens.statusGreen),
+            Icon(AppIcons.ok, size: 22, color: scheme.statusSuccess),
             const Gap(10),
             Text(
               'All clear',
@@ -147,7 +147,7 @@ class _AttentionRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final color = item.isCritical ? scheme.error : AppTokens.statusOrange;
+    final color = item.isCritical ? scheme.error : scheme.statusWarning;
     final route = item.route;
 
     var title = item.title;
