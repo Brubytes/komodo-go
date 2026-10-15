@@ -206,7 +206,7 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                           ),
                           Tab(
                             icon: Icon(AppIcons.notepadText),
-                            text: 'File content',
+                            text: 'Script',
                           ),
                         ],
                       ),
@@ -671,7 +671,6 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     void toggle(void Function() update) {
       setState(update);
@@ -681,30 +680,6 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DetailSubCard(
-          title: 'Script',
-          icon: AppIcons.notepadText,
-          child: ListenableBuilder(
-            listenable: _fileContentsController,
-            builder: (context, _) {
-              final script = _fileContentsController.text;
-              if (script.trim().isEmpty) {
-                return Text(
-                  'No script content',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                );
-              }
-              return DetailCodeBlock(
-                code: script,
-                language: DetailCodeLanguage.typescript,
-                maxHeight: 180,
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
         DetailSubCard(
           title: 'Arguments',
           icon: AppIcons.tag,
