@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/composition/resources/resource_manage_actions.dart';
 import 'package:komodo_go/composition/resources/resource_name_resolver_provider.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/actions/presentation/views/action_detail_view.dart';
@@ -28,9 +28,11 @@ class AdvancedActionDetailView extends ConsumerWidget {
     return ActionDetailView(
       actionId: actionId,
       actionName: actionName,
-      appBarActions: [
+      manageGroups: [
         if (action != null)
-          ResourceAdvancedMenuButton(
+          buildResourceManageGroup(
+            context: context,
+            ref: ref,
             metadata: ResourceMetadata(
               kind: ResourceKind.actions,
               id: action.id,
@@ -75,9 +77,11 @@ class AdvancedProcedureDetailView extends ConsumerWidget {
       child: ProcedureDetailView(
         procedureId: procedureId,
         procedureName: procedureName,
-        appBarActions: [
+        manageGroups: [
           if (procedure != null)
-            ResourceAdvancedMenuButton(
+            buildResourceManageGroup(
+              context: context,
+              ref: ref,
               metadata: ResourceMetadata(
                 kind: ResourceKind.procedures,
                 id: procedure.id,
@@ -114,9 +118,11 @@ class AdvancedServerDetailView extends ConsumerWidget {
     return ServerDetailView(
       serverId: serverId,
       serverName: serverName,
-      appBarActions: [
+      manageGroups: [
         if (server != null)
-          ResourceAdvancedMenuButton(
+          buildResourceManageGroup(
+            context: context,
+            ref: ref,
             metadata: ResourceMetadata(
               kind: ResourceKind.servers,
               id: server.id,

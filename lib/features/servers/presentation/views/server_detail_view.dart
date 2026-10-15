@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
@@ -19,27 +20,28 @@ class ServerDetailView extends ConsumerStatefulWidget {
   const ServerDetailView({
     required this.serverId,
     required this.serverName,
-    this.appBarActions = const <Widget>[],
+    this.manageGroups = const <DetailActionGroup>[],
     super.key,
   });
 
   final String serverId;
   final String serverName;
-  final List<Widget> appBarActions;
+
+  /// Extra "Manage" groups appended to the More menu (metadata, copy, ...).
+  final List<DetailActionGroup> manageGroups;
 
   @override
   ConsumerState<ServerDetailView> createState() => _ServerDetailViewState();
 }
 
 class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
-    with
-        SingleTickerProviderStateMixin,
-        DetailDirtySnackBarMixin<ServerDetailView> {
-  static const int _tabStats = 1;
+    with DetailDirtySnackBarMixin<ServerDetailView> {
+  static const _tabStats = 'stats';
+  static const _tabConfig = 'config';
+  static const _tabSystem = 'system';
 
-  late final TabController _tabController;
-  final _outerScrollController = ScrollController();
-  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
+  String _currentTabId = _tabStats;
+  var _dirty = false;
   Timer? _statsRefreshTimer;
   ProviderSubscription<AsyncValue<SystemStats?>>? _statsSubscription;
   final _configEditorKey = GlobalKey<ServerConfigEditorContentState>();
@@ -57,9 +59,6 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
   void initState() {
     super.initState();
 
-    _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(_onInnerTabChanged);
-
     _statsSubscription = ref.listenManual<AsyncValue<SystemStats?>>(
       serverStatsProvider(widget.serverId),
       (previous, next) {
@@ -76,10 +75,6 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
     _statsRefreshTimer = null;
     _statsSubscription?.close();
     _statsSubscription = null;
-    _tabController
-      ..removeListener(_onInnerTabChanged)
-      ..dispose();
-    _outerScrollController.dispose();
     super.dispose();
   }
 
@@ -90,8 +85,9 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
     super.onVisibilityChanged();
   }
 
-  void _onInnerTabChanged() {
+  void _onTabChanged(String id) {
     if (!mounted) return;
+    _currentTabId = id;
     _syncStatsTimer(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
   }
 
@@ -111,7 +107,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
   }
 
   void _syncStatsTimer({required bool isShellTabActive}) {
-    final isStatsTabActive = _tabController.index == _tabStats;
+    final isStatsTabActive = _currentTabId == _tabStats;
     final isActiveTab = isShellTabActive && isStatsTabActive;
     if (shouldPoll(isActiveTab: isActiveTab)) {
       _startStatsTimer();
@@ -192,125 +188,68 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
       }
     }
 
-    return Scaffold(
-      appBar: MainAppBar(
-        title: widget.serverName,
-        icon: AppIcons.server,
-        markColor: AppTokens.resourceServers,
-        markUseGradient: true,
-        centerTitle: true,
-        actions: widget.appBarActions,
-        status: serverAppBarStatus(
-          server: server,
-          listServer: listServer,
+    return UnsavedChangesGuard(
+      dirty: _dirty,
+      onDiscarded: hideDirtySnackBar,
+      child: Scaffold(
+        appBar: MainAppBar(
+          title: widget.serverName,
+          icon: AppIcons.server,
+          markColor: AppTokens.resourceServers,
+          markUseGradient: true,
+          centerTitle: true,
+          status: serverAppBarStatus(
+            server: server,
+            listServer: listServer,
+          ),
         ),
-      ),
-      body: NestedScrollView(
-        key: _nestedScrollKey,
-        controller: _outerScrollController,
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
+        body: DetailTabScaffold(
+          initialTabId: _tabStats,
+          onTabChanged: _onTabChanged,
+          headerSlivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: ServerHeader(
-                  server: server ?? listServer,
-                  listServer: listServer,
-                  stats: stats,
-                  systemInformation: systemInformation,
-                  ingressBytesPerSecond: _ingressBytesPerSecond,
-                  egressBytesPerSecond: _egressBytesPerSecond,
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ServerHeader(
+                      server: server ?? listServer,
+                      listServer: listServer,
+                      stats: stats,
+                      systemInformation: systemInformation,
+                      ingressBytesPerSecond: _ingressBytesPerSecond,
+                      egressBytesPerSecond: _egressBytesPerSecond,
+                    ),
+                    const Gap(AppSpacing.md),
+                    DetailActionBar(
+                      // The servers API client exposes no execute endpoints
+                      // (prune, stop containers, ...), so the only action is
+                      // refreshing what is shown.
+                      primary: DetailActionButton(
+                        label: 'Refresh',
+                        icon: AppIcons.refresh,
+                        onPressed: _refreshAll,
+                      ),
+                      moreGroups: widget.manageGroups,
+                    ),
+                  ],
                 ),
               ),
             ),
-            SliverOverlapAbsorber(
-              handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
-                context,
-              ),
-              sliver: SliverPersistentHeader(
-                pinned: true,
-                delegate: _PinnedTabBarHeaderDelegate(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  tabBar: buildDetailTabBar(
-                    context: context,
-                    controller: _tabController,
-                    outerScrollController: _outerScrollController,
-                    nestedScrollKey: _nestedScrollKey,
-                    tabs: const [
-                      Tab(
-                        icon: Icon(AppIcons.bolt),
-                        text: 'Config',
-                      ),
-                      Tab(
-                        icon: Icon(AppIcons.activity),
-                        text: 'Stats',
-                      ),
-                      Tab(
-                        icon: Icon(AppIcons.cpu),
-                        text: 'System',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ];
-        },
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _KeepAlive(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  ref
-                    ..invalidate(serverDetailProvider(widget.serverId))
-                    ..invalidate(
-                      serverSystemInformationProvider(widget.serverId),
-                    )
-                    ..invalidate(serverStatsProvider(widget.serverId));
-                },
-                child: DetailTabScrollView.box(
-                  scrollKey: PageStorageKey('server_${widget.serverId}_config'),
-                  child: serverAsync.when(
-                    data: (server) => server?.config != null
-                        ? ServerConfigEditorContent(
-                            key: _configEditorKey,
-                            initialConfig: server!.config!,
-                            onDirtyChanged: (dirty) {
-                              syncDirtySnackBar(
-                                dirty: dirty,
-                                onDiscard: () => _discardConfig(server),
-                                onSave: () => _saveConfig(server: server),
-                                saveEnabled: !_configSaveInFlight,
-                              );
-                            },
-                          )
-                        : const ServerMessageCard(
-                            message: 'No config available',
-                          ),
-                    loading: () => const ServerLoadingCard(),
-                    error: (error, _) =>
-                        ServerMessageCard(message: 'Config: $error'),
-                  ),
-                ),
-              ),
-            ),
-            _KeepAlive(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  ref
-                    ..invalidate(serverDetailProvider(widget.serverId))
-                    ..invalidate(
-                      serverSystemInformationProvider(widget.serverId),
-                    )
-                    ..invalidate(serverStatsProvider(widget.serverId))
-                    ..invalidate(
-                      serverStatsHistoryProvider(
-                        widget.serverId,
-                        _historyGranularity,
-                      ),
-                    );
-                },
+          ],
+          tabs: [
+            DetailTabSpec(
+              id: _tabStats,
+              label: 'Stats',
+              icon: AppIcons.activity,
+              body: RefreshIndicator(
+                onRefresh: () async => _refreshAll(),
                 child: DetailTabScrollView.box(
                   scrollKey: PageStorageKey('server_${widget.serverId}_stats'),
                   child: historyAsync.when(
@@ -329,23 +268,67 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                       ),
                     ),
                     loading: () => const ServerLoadingCard(),
-                    error: (error, _) => ServerMessageCard(
-                      message: 'Historical stats unavailable: $error',
+                    error: (error, _) => ServerErrorCard(
+                      title: 'Historical stats unavailable',
+                      error: error,
+                      onRetry: () => ref.invalidate(
+                        serverStatsHistoryProvider(
+                          widget.serverId,
+                          _historyGranularity,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-            _KeepAlive(
-              child: RefreshIndicator(
+            DetailTabSpec(
+              id: _tabConfig,
+              label: 'Config',
+              icon: AppIcons.bolt,
+              body: RefreshIndicator(
+                onRefresh: () async => _refreshAll(),
+                child: DetailTabScrollView.box(
+                  scrollKey: PageStorageKey('server_${widget.serverId}_config'),
+                  child: serverAsync.when(
+                    data: (server) => server?.config != null
+                        ? ServerConfigEditorContent(
+                            key: _configEditorKey,
+                            initialConfig: server!.config!,
+                            onDirtyChanged: (dirty) {
+                              _dirty = dirty;
+                              syncDirtySnackBar(
+                                dirty: dirty,
+                                onDiscard: () => _discardConfig(server),
+                                onSave: () => _saveConfig(server: server),
+                                saveEnabled: !_configSaveInFlight,
+                                saving: _configSaveInFlight,
+                              );
+                            },
+                          )
+                        : const ServerMessageCard(
+                            message: 'No config available',
+                          ),
+                    loading: () => const ServerLoadingCard(),
+                    error: (error, _) => ServerErrorCard(
+                      title: 'Could not load config',
+                      error: error,
+                      onRetry: () => ref.invalidate(
+                        serverDetailProvider(widget.serverId),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            DetailTabSpec(
+              id: _tabSystem,
+              label: 'System',
+              icon: AppIcons.cpu,
+              body: RefreshIndicator(
                 onRefresh: () async {
-                  ref
-                    ..invalidate(serverDetailProvider(widget.serverId))
-                    ..invalidate(
-                      serverSystemInformationProvider(widget.serverId),
-                    )
-                    ..invalidate(serverStatsProvider(widget.serverId))
-                    ..invalidate(serverProcessesProvider(widget.serverId));
+                  _refreshAll();
+                  ref.invalidate(serverProcessesProvider(widget.serverId));
                 },
                 child: DetailTabScrollView.box(
                   scrollKey: PageStorageKey('server_${widget.serverId}_system'),
@@ -355,14 +338,20 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                             child: Column(
                               children: [
                                 ServerSystemInfoContent(info: info),
-                                const SizedBox(height: 12),
+                                const Gap(AppSpacing.md),
                                 processesAsync.when(
                                   data: (processes) => SystemProcessesContent(
                                     processes: processes,
                                   ),
                                   loading: () => const ServerLoadingCard(),
-                                  error: (error, _) => ServerMessageCard(
-                                    message: 'Processes unavailable: $error',
+                                  error: (error, _) => ServerErrorCard(
+                                    title: 'Processes unavailable',
+                                    error: error,
+                                    onRetry: () => ref.invalidate(
+                                      serverProcessesProvider(
+                                        widget.serverId,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -372,8 +361,12 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                             message: 'System info unavailable',
                           ),
                     loading: () => const ServerLoadingCard(),
-                    error: (error, _) => ServerMessageCard(
-                      message: 'System info unavailable: $error',
+                    error: (error, _) => ServerErrorCard(
+                      title: 'System info unavailable',
+                      error: error,
+                      onRetry: () => ref.invalidate(
+                        serverSystemInformationProvider(widget.serverId),
+                      ),
                     ),
                   ),
                 ),
@@ -383,6 +376,16 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
         ),
       ),
     );
+  }
+
+  void _refreshAll() {
+    ref
+      ..invalidate(serverDetailProvider(widget.serverId))
+      ..invalidate(serverSystemInformationProvider(widget.serverId))
+      ..invalidate(serverStatsProvider(widget.serverId))
+      ..invalidate(
+        serverStatsHistoryProvider(widget.serverId, _historyGranularity),
+      );
   }
 
   void _discardConfig(Server server) {
@@ -411,6 +414,13 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
 
     final actions = ref.read(serverActionsProvider.notifier);
     setState(() => _configSaveInFlight = true);
+    syncDirtySnackBar(
+      dirty: true,
+      onDiscard: () => _discardConfig(server),
+      onSave: () => _saveConfig(server: server),
+      saving: true,
+      saveEnabled: false,
+    );
     final updated = await actions.updateServerConfig(
       serverId: server.id,
       partialConfig: partialConfig,
@@ -424,6 +434,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
         ..invalidate(serversProvider);
 
       _configEditorKey.currentState?.resetTo(updated.config!);
+      _dirty = false;
       hideDirtySnackBar();
       AppSnackBar.show(
         context,
@@ -452,66 +463,4 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
       saveEnabled: !_configSaveInFlight,
     );
   }
-}
-
-class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _PinnedTabBarHeaderDelegate({
-    required this.tabBar,
-    required this.backgroundColor,
-  });
-
-  final PreferredSizeWidget tabBar;
-  final Color backgroundColor;
-
-  @override
-  double get minExtent => tabBar.preferredSize.height + 1;
-
-  @override
-  double get maxExtent => tabBar.preferredSize.height + 1;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
-          ),
-        ),
-      ),
-      child: Align(alignment: Alignment.centerLeft, child: tabBar),
-    );
-  }
-
-  @override
-  bool shouldRebuild(_PinnedTabBarHeaderDelegate oldDelegate) =>
-      tabBar != oldDelegate.tabBar ||
-      backgroundColor != oldDelegate.backgroundColor;
-}
-
-class _KeepAlive extends StatefulWidget {
-  const _KeepAlive({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_KeepAlive> createState() => _KeepAliveState();
-}
-
-class _KeepAliveState extends State<_KeepAlive>
-    with AutomaticKeepAliveClientMixin<_KeepAlive> {
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return widget.child;
-  }
-
-  @override
-  bool get wantKeepAlive => true;
 }

@@ -25,12 +25,14 @@ class ActionDetailView extends ConsumerStatefulWidget {
     required this.actionId,
     required this.actionName,
     this.appBarActions = const <Widget>[],
+    this.manageGroups = const <DetailActionGroup>[],
     super.key,
   });
 
   final String actionId;
   final String actionName;
   final List<Widget> appBarActions;
+  final List<DetailActionGroup> manageGroups;
 
   @override
   ConsumerState<ActionDetailView> createState() => _ActionDetailViewState();
@@ -150,6 +152,7 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                                 loading: running || actionsState.isLoading,
                                 onPressed: onRun,
                               ),
+                              moreGroups: widget.manageGroups,
                             ),
                             if (_lastUpdateId != null &&
                                 _lastUpdateId!.isNotEmpty)

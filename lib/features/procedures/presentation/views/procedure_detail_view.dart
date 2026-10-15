@@ -22,12 +22,14 @@ class ProcedureDetailView extends ConsumerStatefulWidget {
     required this.procedureId,
     required this.procedureName,
     this.appBarActions = const <Widget>[],
+    this.manageGroups = const <DetailActionGroup>[],
     super.key,
   });
 
   final String procedureId;
   final String procedureName;
   final List<Widget> appBarActions;
+  final List<DetailActionGroup> manageGroups;
 
   @override
   ConsumerState<ProcedureDetailView> createState() =>
@@ -126,6 +128,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                                 loading: running || actionsState.isLoading,
                                 onPressed: onRun,
                               ),
+                              moreGroups: widget.manageGroups,
                             ),
                           ],
                         );
