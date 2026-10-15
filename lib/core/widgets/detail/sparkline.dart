@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class SparklineChart extends StatelessWidget {
@@ -17,13 +18,15 @@ class SparklineChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return CustomPaint(
-      painter: _SparklinePainter(
-        values: values,
-        color: color,
-        gridColor: scheme.outlineVariant.withValues(alpha: 0.6),
-        capMinY: capMinY,
-        capMaxY: capMaxY,
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: _SparklinePainter(
+          values: values,
+          color: color,
+          gridColor: scheme.outlineVariant.withValues(alpha: 0.6),
+          capMinY: capMinY,
+          capMaxY: capMaxY,
+        ),
       ),
     );
   }
@@ -46,13 +49,15 @@ class DualSparklineChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return CustomPaint(
-      painter: _DualSparklinePainter(
-        aValues: aValues,
-        bValues: bValues,
-        aColor: aColor,
-        bColor: bColor,
-        gridColor: scheme.outlineVariant.withValues(alpha: 0.6),
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: _DualSparklinePainter(
+          aValues: aValues,
+          bValues: bValues,
+          aColor: aColor,
+          bColor: bColor,
+          gridColor: scheme.outlineVariant.withValues(alpha: 0.6),
+        ),
       ),
     );
   }
@@ -158,7 +163,7 @@ class _SparklinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SparklinePainter oldDelegate) {
-    return oldDelegate.values != values ||
+    return !listEquals(oldDelegate.values, values) ||
         oldDelegate.color != color ||
         oldDelegate.gridColor != gridColor ||
         oldDelegate.capMinY != capMinY ||
@@ -247,8 +252,8 @@ class _DualSparklinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DualSparklinePainter oldDelegate) {
-    return oldDelegate.aValues != aValues ||
-        oldDelegate.bValues != bValues ||
+    return !listEquals(oldDelegate.aValues, aValues) ||
+        !listEquals(oldDelegate.bValues, bValues) ||
         oldDelegate.aColor != aColor ||
         oldDelegate.bColor != bColor ||
         oldDelegate.gridColor != gridColor;
