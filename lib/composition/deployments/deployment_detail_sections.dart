@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
@@ -908,6 +909,54 @@ class DeploymentConfigEditorContentState
     return partial;
   }
 
+  String _summaryServer() {
+    final id = _serverId.text.trim();
+    if (id.isEmpty) return 'Not set';
+    for (final server in widget.servers) {
+      if (server.id == id) return server.name;
+    }
+    return id;
+  }
+
+  String _summaryLines(String text, String noun) {
+    final count = text.split('\n').where((l) => l.trim().isNotEmpty).length;
+    if (count == 0) return 'None';
+    return '$count $noun${count == 1 ? '' : 's'}';
+  }
+
+  String _summaryCount(List<TextEditingController> controllers, String noun) {
+    final count = controllers.where((c) => c.text.trim().isNotEmpty).length;
+    if (count == 0) return 'None';
+    return '$count $noun${count == 1 ? '' : 's'}';
+  }
+
+  String _summaryAutoUpdate() {
+    final on = [
+      if (_pollForUpdates) 'Polling',
+      if (_autoUpdate) 'Auto update',
+    ];
+    return on.isEmpty ? 'All off' : on.join(' · ');
+  }
+
+  String _summaryAdvanced() {
+    final on = [
+      if (_sendAlerts) 'Alerts',
+      if (_redeployOnBuild) 'Redeploy on build',
+      if (_skipSecretInterp) 'Skip secrets',
+    ];
+    return on.isEmpty ? 'Defaults' : on.join(' · ');
+  }
+
+  String _summaryTermination() {
+    final signal = _terminationSignal;
+    final timeout = _terminationTimeout.text.trim();
+    final parts = [
+      if (signal != null && signal.isNotEmpty) signal,
+      if (timeout.isNotEmpty) '${timeout}s',
+    ];
+    return parts.isEmpty ? 'Defaults' : parts.join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -948,12 +997,20 @@ class DeploymentConfigEditorContentState
     final networkInList = _networkOptions.contains(_network.text);
     final networkIsHost = _network.text.trim().toLowerCase() == 'host';
 
+    final changedKeys = buildPartialConfigParams().keys.toSet();
+    bool modified(List<String> keys) => keys.any(changedKeys.contains);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Server
         DetailSubCard(
+          key: const ValueKey('deployment_cfg_server'),
           title: 'Server',
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _summaryServer(),
+          modified: modified(const ['server_id', 'custom_name']),
           icon: AppIcons.server,
           child: Column(
             children: [
@@ -1265,7 +1322,12 @@ class DeploymentConfigEditorContentState
 
         // Auto update (web-style ordering)
         DetailSubCard(
+          key: const ValueKey('deployment_cfg_auto_update'),
           title: 'Auto Update',
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _summaryAutoUpdate(),
+          modified: modified(const ['poll_for_updates', 'auto_update']),
           icon: AppIcons.updateAvailable,
           child: Column(
             children: [
@@ -1300,9 +1362,17 @@ class DeploymentConfigEditorContentState
 
         // Advanced
         DetailSubCard(
-          title: 'Advanced',
-          icon: AppIcons.settings,
+          key: const ValueKey('deployment_cfg_command'),
+          title: 'Command',
+          icon: AppIcons.activity,
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _command.text.trim().isEmpty
+              ? 'Default'
+              : _command.text.trim(),
+          modified: modified(const ['command']),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
                 controller: _command,
@@ -1312,15 +1382,22 @@ class DeploymentConfigEditorContentState
                   helperText: 'Replace the CMD, or extend the ENTRYPOINT.',
                 ),
               ),
-              const Gap(12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Labels',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              ),
-              const Gap(4),
+            ],
+          ),
+        ),
+        const Gap(12),
+
+        DetailSubCard(
+          key: const ValueKey('deployment_cfg_labels'),
+          title: 'Labels',
+          icon: AppIcons.tag,
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _summaryLines(_labelsController.text, 'label'),
+          modified: modified(const ['labels']),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1332,15 +1409,22 @@ class DeploymentConfigEditorContentState
               ),
               const Gap(8),
               DetailCodeEditor(controller: _labelsController, maxHeight: 180),
-              const Gap(12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Extra args',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              ),
-              const Gap(4),
+            ],
+          ),
+        ),
+        const Gap(12),
+
+        DetailSubCard(
+          key: const ValueKey('deployment_cfg_extra_args'),
+          title: 'Extra Args',
+          icon: AppIcons.settings,
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _summaryCount(_extraArgControllers, 'arg'),
+          modified: modified(const ['extra_args']),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1400,7 +1484,26 @@ class DeploymentConfigEditorContentState
                     ),
                   ],
                 ),
-              const Gap(12),
+            ],
+          ),
+        ),
+        const Gap(12),
+
+        DetailSubCard(
+          key: const ValueKey('deployment_cfg_advanced'),
+          title: 'Advanced',
+          icon: AppIcons.settings,
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _summaryAdvanced(),
+          modified: modified(const [
+            'send_alerts',
+            'redeploy_on_build',
+            'skip_secret_interp',
+          ]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _sendAlerts,
@@ -1435,7 +1538,16 @@ class DeploymentConfigEditorContentState
 
         // Termination
         DetailSubCard(
+          key: const ValueKey('deployment_cfg_termination'),
           title: 'Termination',
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _summaryTermination(),
+          modified: modified(const [
+            'termination_signal',
+            'termination_timeout',
+            'term_signal_labels',
+          ]),
           icon: AppIcons.warning,
           child: Column(
             children: [
@@ -1501,5 +1613,143 @@ class DeploymentMessageSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DetailSurface(child: Text(message));
+  }
+}
+
+/// State-aware action bar for the deployment detail screen.
+///
+/// Primary: Deploy / Redeploy / Start / Restart / Resume depending on the
+/// container state. Secondary jumps to the logs tab. The "More" menu only
+/// lists actions valid for the current state.
+class DeploymentActionBar extends StatelessWidget {
+  const DeploymentActionBar({
+    required this.deployment,
+    required this.onAction,
+    required this.onShowLogs,
+    this.manageItems = const [],
+    super.key,
+  });
+
+  final Deployment deployment;
+  final ValueChanged<DeploymentAction> onAction;
+  final VoidCallback onShowLogs;
+  final List<DetailActionItem> manageItems;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = deployment.info?.state ?? DeploymentState.unknown;
+    final updateAvailable = deployment.info?.updateAvailable ?? false;
+    final hasImage = deployment.imageLabel.isNotEmpty;
+
+    final notDeployed =
+        state == DeploymentState.notDeployed ||
+        state == DeploymentState.unknown ||
+        state == DeploymentState.dead;
+    final canStart =
+        state == DeploymentState.created || state == DeploymentState.exited;
+    final running = state.isRunning;
+    final paused = state.isPaused;
+
+    final DeploymentAction primaryAction;
+    final String primaryLabel;
+    final IconData primaryIcon;
+    if (notDeployed) {
+      primaryAction = DeploymentAction.deploy;
+      primaryLabel = 'Deploy';
+      primaryIcon = AppIcons.deployments;
+    } else if (updateAvailable) {
+      primaryAction = DeploymentAction.deploy;
+      primaryLabel = 'Redeploy';
+      primaryIcon = AppIcons.deployments;
+    } else if (canStart) {
+      primaryAction = DeploymentAction.start;
+      primaryLabel = 'Start';
+      primaryIcon = AppIcons.play;
+    } else if (paused) {
+      primaryAction = DeploymentAction.unpause;
+      primaryLabel = 'Resume';
+      primaryIcon = AppIcons.play;
+    } else if (running) {
+      primaryAction = DeploymentAction.restart;
+      primaryLabel = 'Restart';
+      primaryIcon = AppIcons.refresh;
+    } else {
+      primaryAction = DeploymentAction.deploy;
+      primaryLabel = 'Redeploy';
+      primaryIcon = AppIcons.deployments;
+    }
+
+    DetailActionItem item(
+      String label,
+      IconData icon,
+      DeploymentAction action, {
+      bool destructive = false,
+    }) {
+      return DetailActionItem(
+        label: label,
+        icon: icon,
+        destructive: destructive,
+        onSelected: () => onAction(action),
+      );
+    }
+
+    final lifecycle = <DetailActionItem>[
+      if (canStart && primaryAction != DeploymentAction.start)
+        item('Start', AppIcons.play, DeploymentAction.start),
+      if ((running || paused) && primaryAction != DeploymentAction.restart)
+        item('Restart', AppIcons.refresh, DeploymentAction.restart),
+      if (running) item('Pause', AppIcons.pause, DeploymentAction.pause),
+      if (paused && primaryAction != DeploymentAction.unpause)
+        item('Unpause', AppIcons.play, DeploymentAction.unpause),
+      if (running || paused) item('Stop', AppIcons.stop, DeploymentAction.stop),
+    ];
+
+    return DetailActionBar(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      primary: DetailActionButton(
+        label: primaryLabel,
+        icon: primaryIcon,
+        onPressed: () => onAction(primaryAction),
+      ),
+      secondary: DetailActionButton(
+        label: 'Logs',
+        icon: AppIcons.logs,
+        onPressed: onShowLogs,
+      ),
+      moreGroups: [
+        DetailActionGroup(label: 'Lifecycle', items: lifecycle),
+        DetailActionGroup(
+          label: 'Maintenance',
+          items: [
+            if (hasImage)
+              item(
+                'Pull image',
+                AppIcons.download,
+                DeploymentAction.pullImages,
+              ),
+            if (hasImage)
+              item(
+                'Check image now',
+                Icons.refresh_outlined,
+                DeploymentAction.checkUpdates,
+              ),
+            if (!notDeployed && primaryAction != DeploymentAction.deploy)
+              item('Redeploy', AppIcons.deployments, DeploymentAction.deploy),
+          ],
+        ),
+        DetailActionGroup(label: 'Manage', items: manageItems),
+        DetailActionGroup(
+          items: [
+            if (state != DeploymentState.notDeployed)
+              item(
+                'Destroy',
+                AppIcons.delete,
+                DeploymentAction.destroy,
+                destructive: true,
+              ),
+          ],
+        ),
+      ],
+    );
   }
 }
