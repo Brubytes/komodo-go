@@ -17,6 +17,7 @@ import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
@@ -362,19 +363,8 @@ class _ContainerDetailViewState extends ConsumerState<ContainerDetailView> {
       primaryIcon = AppIcons.play;
     }
 
-    DetailActionItem entry(
-      String label,
-      IconData icon,
-      ContainerAction action, {
-      bool destructive = false,
-    }) {
-      return DetailActionItem(
-        label: label,
-        icon: icon,
-        destructive: destructive,
-        onSelected: () => _handleAction(item, action),
-      );
-    }
+    VoidCallback call(ContainerAction action) =>
+        () => _handleAction(item, action);
 
     return DetailActionBar(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -393,32 +383,25 @@ class _ContainerDetailViewState extends ConsumerState<ContainerDetailView> {
           collapseHeader: true,
         ),
       ),
-      moreGroups: [
-        DetailActionGroup(
-          label: 'Lifecycle',
-          items: [
-            if (canStart && primaryAction != ContainerAction.start)
-              entry('Start', AppIcons.play, ContainerAction.start),
-            if (canRestart && primaryAction != ContainerAction.restart)
-              entry('Restart', AppIcons.refresh, ContainerAction.restart),
-            if (running) entry('Pause', AppIcons.pause, ContainerAction.pause),
-            if (paused && primaryAction != ContainerAction.unpause)
-              entry('Unpause', AppIcons.play, ContainerAction.unpause),
-            if (canStop) entry('Stop', AppIcons.stop, ContainerAction.stop),
-          ],
-        ),
-        DetailActionGroup(
-          items: [
-            if (!removing)
-              entry(
-                'Remove',
-                AppIcons.delete,
-                ContainerAction.remove,
-                destructive: true,
-              ),
-          ],
-        ),
-      ],
+      moreGroups: resourceMenuGroups(
+        lifecycle: [
+          if (canStart && primaryAction != ContainerAction.start)
+            ResourceMenuItems.start(call(ContainerAction.start)),
+          if (paused && primaryAction != ContainerAction.unpause)
+            ResourceMenuItems.unpause(call(ContainerAction.unpause)),
+          if (running) ResourceMenuItems.pause(call(ContainerAction.pause)),
+          if (canRestart && primaryAction != ContainerAction.restart)
+            ResourceMenuItems.restart(call(ContainerAction.restart)),
+          if (canStop) ResourceMenuItems.stop(call(ContainerAction.stop)),
+        ],
+        danger: [
+          if (!removing)
+            ResourceMenuItems.destroy(
+              call(ContainerAction.remove),
+              label: 'Remove',
+            ),
+        ],
+      ),
     );
   }
 

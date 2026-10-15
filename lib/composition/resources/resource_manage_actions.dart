@@ -116,6 +116,7 @@ DetailActionGroup buildResourceManageGroup({
 
   return DetailActionGroup(
     label: 'Manage',
+    sheetLabel: 'Manage…',
     items: [
       DetailActionItem(
         label: 'Edit metadata',

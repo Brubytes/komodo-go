@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
 
@@ -16,7 +17,7 @@ class StackActionBar extends StatelessWidget {
     required this.needsDeploy,
     required this.onAction,
     required this.onShowLogs,
-    this.manageItems = const [],
+    this.manageGroup,
     this.busy = false,
     super.key,
   });
@@ -27,7 +28,9 @@ class StackActionBar extends StatelessWidget {
   final bool needsDeploy;
   final ValueChanged<StackAction> onAction;
   final VoidCallback onShowLogs;
-  final List<DetailActionItem> manageItems;
+
+  /// Metadata/copy/rename/delete group, collapsed into a "Manage…" sheet.
+  final DetailActionGroup? manageGroup;
   final bool busy;
 
   @override
@@ -75,30 +78,17 @@ class StackActionBar extends StatelessWidget {
       );
     }
 
-    DetailActionItem item(
-      String label,
-      IconData icon,
-      StackAction action, {
-      bool destructive = false,
-    }) {
-      return DetailActionItem(
-        label: label,
-        icon: icon,
-        destructive: destructive,
-        onSelected: () => onAction(action),
-      );
-    }
+    VoidCallback call(StackAction action) =>
+        () => onAction(action);
 
     final lifecycle = <DetailActionItem>[
-      if (!running && !paused) item('Start', AppIcons.play, StackAction.start),
-      if (running) item('Restart', AppIcons.refresh, StackAction.restart),
-      if (running) item('Pause', AppIcons.pause, StackAction.pause),
-      if (running || paused) item('Stop', AppIcons.stop, StackAction.stop),
+      if (!running && !paused) ResourceMenuItems.start(call(StackAction.start)),
+      // The primary button already covers Restart / Resume.
+      if (running && primaryAction != StackAction.restart)
+        ResourceMenuItems.restart(call(StackAction.restart)),
+      if (running) ResourceMenuItems.pause(call(StackAction.pause)),
+      if (running || paused) ResourceMenuItems.stop(call(StackAction.stop)),
     ];
-    // The primary button already covers Restart / Resume.
-    if (primaryAction == StackAction.restart) {
-      lifecycle.removeWhere((i) => i.label == 'Restart');
-    }
 
     return DetailActionBar(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -109,36 +99,20 @@ class StackActionBar extends StatelessWidget {
         onPressed: onShowLogs,
       ),
       moreGroups: [
-        DetailActionGroup(label: 'Lifecycle', items: lifecycle),
-        DetailActionGroup(
-          label: 'Maintenance',
-          items: [
-            item('Pull images', AppIcons.download, StackAction.pullImages),
-            item(
-              'Check for image updates',
-              Icons.refresh_outlined,
-              StackAction.checkUpdates,
-            ),
-            item(
-              'Deploy if changed',
-              Icons.difference_outlined,
-              StackAction.deployIfChanged,
+        ...resourceMenuGroups(
+          lifecycle: lifecycle,
+          maintenance: [
+            ResourceMenuItems.pullImages(call(StackAction.pullImages)),
+            ResourceMenuItems.checkUpdates(call(StackAction.checkUpdates)),
+            ResourceMenuItems.deployIfChanged(
+              call(StackAction.deployIfChanged),
             ),
             if (running && primaryAction != StackAction.redeploy)
-              item('Redeploy', AppIcons.deployments, StackAction.redeploy),
+              ResourceMenuItems.redeploy(call(StackAction.redeploy)),
           ],
+          danger: [ResourceMenuItems.destroy(call(StackAction.destroy))],
         ),
-        DetailActionGroup(label: 'Manage', items: manageItems),
-        DetailActionGroup(
-          items: [
-            item(
-              'Destroy',
-              AppIcons.delete,
-              StackAction.destroy,
-              destructive: true,
-            ),
-          ],
-        ),
+        ?manageGroup,
       ],
     );
   }

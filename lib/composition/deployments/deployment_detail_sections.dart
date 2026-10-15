@@ -9,6 +9,7 @@ import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/presentation/widgets/deployment_card.dart';
 import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
@@ -1626,14 +1627,16 @@ class DeploymentActionBar extends StatelessWidget {
     required this.deployment,
     required this.onAction,
     required this.onShowLogs,
-    this.manageItems = const [],
+    this.manageGroup,
     super.key,
   });
 
   final Deployment deployment;
   final ValueChanged<DeploymentAction> onAction;
   final VoidCallback onShowLogs;
-  final List<DetailActionItem> manageItems;
+
+  /// Metadata/copy/rename/delete group, collapsed into a "Manage…" sheet.
+  final DetailActionGroup? manageGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -1679,29 +1682,19 @@ class DeploymentActionBar extends StatelessWidget {
       primaryIcon = AppIcons.deployments;
     }
 
-    DetailActionItem item(
-      String label,
-      IconData icon,
-      DeploymentAction action, {
-      bool destructive = false,
-    }) {
-      return DetailActionItem(
-        label: label,
-        icon: icon,
-        destructive: destructive,
-        onSelected: () => onAction(action),
-      );
-    }
+    VoidCallback call(DeploymentAction action) =>
+        () => onAction(action);
 
     final lifecycle = <DetailActionItem>[
       if (canStart && primaryAction != DeploymentAction.start)
-        item('Start', AppIcons.play, DeploymentAction.start),
+        ResourceMenuItems.start(call(DeploymentAction.start)),
       if ((running || paused) && primaryAction != DeploymentAction.restart)
-        item('Restart', AppIcons.refresh, DeploymentAction.restart),
-      if (running) item('Pause', AppIcons.pause, DeploymentAction.pause),
+        ResourceMenuItems.restart(call(DeploymentAction.restart)),
+      if (running) ResourceMenuItems.pause(call(DeploymentAction.pause)),
       if (paused && primaryAction != DeploymentAction.unpause)
-        item('Unpause', AppIcons.play, DeploymentAction.unpause),
-      if (running || paused) item('Stop', AppIcons.stop, DeploymentAction.stop),
+        ResourceMenuItems.unpause(call(DeploymentAction.unpause)),
+      if (running || paused)
+        ResourceMenuItems.stop(call(DeploymentAction.stop)),
     ];
 
     return DetailActionBar(
@@ -1717,38 +1710,24 @@ class DeploymentActionBar extends StatelessWidget {
         onPressed: onShowLogs,
       ),
       moreGroups: [
-        DetailActionGroup(label: 'Lifecycle', items: lifecycle),
-        DetailActionGroup(
-          label: 'Maintenance',
-          items: [
+        ...resourceMenuGroups(
+          lifecycle: lifecycle,
+          maintenance: [
             if (hasImage)
-              item(
-                'Pull image',
-                AppIcons.download,
-                DeploymentAction.pullImages,
-              ),
+              ResourceMenuItems.pullImages(call(DeploymentAction.pullImages)),
             if (hasImage)
-              item(
-                'Check image now',
-                Icons.refresh_outlined,
-                DeploymentAction.checkUpdates,
+              ResourceMenuItems.checkUpdates(
+                call(DeploymentAction.checkUpdates),
               ),
             if (!notDeployed && primaryAction != DeploymentAction.deploy)
-              item('Redeploy', AppIcons.deployments, DeploymentAction.deploy),
+              ResourceMenuItems.redeploy(call(DeploymentAction.deploy)),
           ],
-        ),
-        DetailActionGroup(label: 'Manage', items: manageItems),
-        DetailActionGroup(
-          items: [
+          danger: [
             if (state != DeploymentState.notDeployed)
-              item(
-                'Destroy',
-                AppIcons.delete,
-                DeploymentAction.destroy,
-                destructive: true,
-              ),
+              ResourceMenuItems.destroy(call(DeploymentAction.destroy)),
           ],
         ),
+        ?manageGroup,
       ],
     );
   }

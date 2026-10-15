@@ -33,13 +33,24 @@ import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/providers/resource_view_prefs_provider.dart';
 import 'package:komodo_go/shared/resources/providers/resources_target_provider.dart';
 
 /// Home dashboard view.
 class HomeView extends ConsumerWidget {
   const HomeView({super.key});
 
-  void _goToResources(BuildContext context, ResourceType resourceType) {
+  void _goToResources(
+    BuildContext context,
+    WidgetRef ref,
+    ResourceType resourceType, {
+    bool problemsOnly = false,
+  }) {
+    if (problemsOnly) {
+      final kind = ResourceKind.values.byName(resourceType.name);
+      ref.read(resourceProblemsOnlyProvider(kind.name).notifier).enabled = true;
+    }
     final route = switch (resourceType) {
       ResourceType.servers => AppRoutes.servers,
       ResourceType.deployments => AppRoutes.deployments,
@@ -244,6 +255,7 @@ class HomeView extends ConsumerWidget {
                                 icon: AppIcons.server,
                                 onTap: () => _goToResources(
                                   context,
+                                  ref,
                                   ResourceType.servers,
                                 ),
                               ),
@@ -252,8 +264,11 @@ class HomeView extends ConsumerWidget {
                           const Gap(16),
                           HomeSectionHeader(
                             title: 'Server stats',
-                            onSeeAll: () =>
-                                _goToResources(context, ResourceType.servers),
+                            onSeeAll: () => _goToResources(
+                              context,
+                              ref,
+                              ResourceType.servers,
+                            ),
                           ),
                           const Gap(8),
                           SizedBox(
@@ -387,7 +402,14 @@ class HomeView extends ConsumerWidget {
                     buildsAsync: buildsAsync,
                     proceduresAsync: proceduresAsync,
                     actionsAsync: actionsAsync,
-                    onNavigate: (type) => _goToResources(context, type),
+                    onNavigate: (row) => _goToResources(
+                      context,
+                      ref,
+                      row.type,
+                      problemsOnly: row.statuses.any(
+                        (s) => s.tone == HomeOpsTone.failed && s.count > 0,
+                      ),
+                    ),
                   ),
                   const Gap(20),
                 ],
@@ -409,7 +431,7 @@ Widget _buildOpsPulseCard({
   required AsyncValue<List<BuildListItem>> buildsAsync,
   required AsyncValue<List<ProcedureListItem>> proceduresAsync,
   required AsyncValue<List<ActionListItem>> actionsAsync,
-  required void Function(ResourceType type) onNavigate,
+  required void Function(HomeOpsRowData row) onNavigate,
 }) {
   final asyncValues = <AsyncValue<dynamic>>[
     deploymentsAsync,
@@ -514,7 +536,7 @@ Widget _buildOpsPulseCard({
               child: HomeOpsStatusRow(
                 title: row.title,
                 statuses: row.statuses,
-                onTap: () => onNavigate(row.type),
+                onTap: () => onNavigate(row),
               ),
             ),
           ),

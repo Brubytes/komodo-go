@@ -6,6 +6,7 @@ import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_list_view.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
@@ -65,6 +66,15 @@ Future<void> _handleAction(
   String buildId,
   BuildAction action,
 ) async {
+  if (action == BuildAction.cancel) {
+    final ok = await confirmDestructive(
+      context,
+      title: 'Cancel build?',
+      message: 'The running build will be cancelled.',
+      confirmLabel: 'Cancel build',
+    );
+    if (!ok || !context.mounted) return;
+  }
   final actions = ref.read(buildActionsProvider.notifier);
   final success = await switch (action) {
     BuildAction.run => actions.run(buildId),

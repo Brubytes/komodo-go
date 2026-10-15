@@ -9,8 +9,6 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
-import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
-import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 import 'package:komodo_go/features/notifications/presentation/utils/alert_navigation_utils.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
@@ -392,111 +390,6 @@ class HomeAlertSummaryCard extends StatelessWidget {
   }
 }
 
-class HomeUpdatePreviewTile extends StatelessWidget {
-  const HomeUpdatePreviewTile({required this.update, super.key});
-
-  final UpdateListItem update;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final statusColor = _statusColor(update, scheme);
-    final route = routeForUpdate(update);
-    final label = update.operation.isNotEmpty
-        ? _humanizeVariant(update.operation)
-        : 'Update';
-    final targetName = update.target?.displayName ?? 'Unknown target';
-
-    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
-
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: ListTile(
-          leading: Icon(
-            _iconForTargetType(update.target?.type),
-            color: statusColor,
-          ),
-          title: Text(label),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                targetName,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-              const Gap(4),
-              Text(
-                _formatTimestamp(update.timestamp.toLocal()),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ],
-          ),
-          trailing: _StatusChip(
-            label: _statusLabel(update.status, update.success),
-            color: statusColor,
-          ),
-          onTap: route == null ? null : () => context.go(route),
-        ),
-      ),
-    );
-  }
-
-  Color _statusColor(UpdateListItem update, ColorScheme scheme) {
-    return switch (update.status) {
-      UpdateStatus.success => scheme.statusSuccess,
-      UpdateStatus.failed => scheme.error,
-      UpdateStatus.running || UpdateStatus.queued => scheme.primary,
-      UpdateStatus.canceled => scheme.onSurfaceVariant,
-      UpdateStatus.unknown =>
-        update.success ? scheme.statusSuccess : scheme.onSurfaceVariant,
-    };
-  }
-
-  String _statusLabel(UpdateStatus status, bool success) {
-    return switch (status) {
-      UpdateStatus.running => 'RUNNING',
-      UpdateStatus.queued => 'QUEUED',
-      UpdateStatus.success => 'SUCCESS',
-      UpdateStatus.failed => 'FAILED',
-      UpdateStatus.canceled => 'CANCELED',
-      UpdateStatus.unknown => success ? 'SUCCESS' : 'UNKNOWN',
-    };
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
 class _StatRow extends StatelessWidget {
   const _StatRow({
     required this.icon,
@@ -685,32 +578,6 @@ class _CompactStatLine extends StatelessWidget {
       ),
     );
   }
-}
-
-IconData _iconForTargetType(ResourceTargetType? type) {
-  return switch (type) {
-    ResourceTargetType.system => AppIcons.settings,
-    ResourceTargetType.server => AppIcons.server,
-    ResourceTargetType.stack => AppIcons.stacks,
-    ResourceTargetType.deployment => AppIcons.deployments,
-    ResourceTargetType.build => AppIcons.builds,
-    ResourceTargetType.repo => AppIcons.repos,
-    ResourceTargetType.procedure => AppIcons.procedures,
-    ResourceTargetType.action => AppIcons.actions,
-    ResourceTargetType.resourceSync => AppIcons.syncs,
-    ResourceTargetType.builder => AppIcons.factory,
-    ResourceTargetType.alerter => AppIcons.notifications,
-    ResourceTargetType.unknown || null => AppIcons.widgets,
-  };
-}
-
-String _humanizeVariant(String value) {
-  final withSpaces = value.replaceAllMapped(
-    RegExp('(?<=[a-z0-9])(?=[A-Z])'),
-    (_) => ' ',
-  );
-  if (withSpaces.isEmpty) return value;
-  return withSpaces[0].toUpperCase() + withSpaces.substring(1);
 }
 
 String _formatTimestamp(DateTime dateTime) {

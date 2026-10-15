@@ -241,7 +241,7 @@ class _DeploymentDetailViewState
                                     _tabLogs,
                                     collapseHeader: true,
                                   ),
-                              manageItems: buildResourceManageGroup(
+                              manageGroup: buildResourceManageGroup(
                                 context: context,
                                 ref: ref,
                                 metadata: ResourceMetadata(
@@ -259,7 +259,7 @@ class _DeploymentDetailViewState
                                       deploymentDetailProvider(deploymentId),
                                     );
                                 },
-                              ).items,
+                              ),
                             ),
                           ],
                         );
