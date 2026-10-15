@@ -15,6 +15,7 @@ import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_filters_provider.dart';
@@ -24,6 +25,7 @@ import 'package:komodo_go/features/servers/presentation/providers/servers_provid
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/resource_sorting.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 /// View displaying the list of all deployments.
@@ -105,6 +107,39 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
     final availableTags = tagOptions.isNotEmpty ? tagOptions : fallbackTags;
     final tagNameById = {for (final tag in availableTags) tag.id: tag.name};
 
+    const listId = 'deployments';
+    final prefs = watchResourceViewPrefs(ref, listId);
+    final activeFilterCount = countActiveResourceFilters(
+      query: searchQuery,
+      selectedTags: selectedTags,
+      problemsOnly: prefs.problemsOnly,
+      selectedStates: prefs.states,
+      selectedServers: prefs.servers,
+      extra:
+          (pendingUpdate ? 1 : 0) +
+          (templateFilter == TemplateFilter.exclude ? 0 : 1),
+    );
+    final loadedItems = deploymentsAsync.maybeWhen(
+      data: (items) => items,
+      orElse: () => <Deployment>[],
+    );
+    final stateOptions = collectDistinct<Deployment>(loadedItems, _stateLabel);
+    final serverOptions = collectDistinct<Deployment>(
+      loadedItems,
+      (i) => _serverNameOf(i, serverNames),
+    );
+    void clearAllFilters() {
+      _searchController.clear();
+      ref.read(deploymentsSearchQueryProvider.notifier).query = '';
+      ref.read(deploymentsTagFilterProvider.notifier).clear();
+      ref.read(deploymentsTemplateFilterStateProvider.notifier).value =
+          TemplateFilter.exclude;
+      ref.read(deploymentsPendingUpdateFilterProvider.notifier).enabled = false;
+      clearResourceViewFilters(ref, listId);
+    }
+
+    final panelCollapsed = !_isSearchVisible || !_areFiltersExpanded;
+
     return Scaffold(
       appBar: MainAppBar(
         title: 'Deployments',
@@ -113,9 +148,9 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
         markUseGradient: true,
         centerTitle: true,
         actions: [
-          IconButton(
-            tooltip: _isSearchVisible ? 'Hide search' : 'Search',
-            icon: Icon(_isSearchVisible ? Icons.close : Icons.search),
+          ResourceFilterToggleButton(
+            visible: _isSearchVisible,
+            activeCount: activeFilterCount,
             onPressed: () {
               setState(() => _isSearchVisible = !_isSearchVisible);
               if (_isSearchVisible) {
@@ -189,17 +224,17 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                                     const Gap(10),
                                     ResourceFilterDisclosure(
                                       expanded: _areFiltersExpanded,
-                                      activeFilterCount:
-                                          selectedTags.length +
-                                          (pendingUpdate ? 1 : 0) +
-                                          (templateFilter ==
-                                                  TemplateFilter.exclude
-                                              ? 0
-                                              : 1),
+                                      activeFilterCount: activeFilterCount,
                                       onExpansionChanged: (value) => setState(
                                         () => _areFiltersExpanded = value,
                                       ),
                                       child: _FiltersPanel(
+                                        viewSection: ResourceViewFiltersSection(
+                                          listId: listId,
+                                          stateOptions: stateOptions,
+                                          serverOptions: serverOptions,
+                                        ),
+
                                         pendingUpdate: pendingUpdate,
                                         templateFilter: templateFilter,
                                         selectedTags: selectedTags,
@@ -241,6 +276,64 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                                 )
                               : const SizedBox.shrink(),
                         ),
+                        if (activeFilterCount > 0 && panelCollapsed) ...[
+                          const Gap(8),
+                          ResourceActiveFilterChips(
+                            listId: listId,
+                            onClearAll: clearAllFilters,
+                            extraChips: [
+                              if (searchQuery.trim().isNotEmpty)
+                                ActiveFilterChip(
+                                  label: 'Search: ${searchQuery.trim()}',
+                                  onRemove: () {
+                                    _searchController.clear();
+                                    ref
+                                            .read(
+                                              deploymentsSearchQueryProvider
+                                                  .notifier,
+                                            )
+                                            .query =
+                                        '';
+                                  },
+                                ),
+                              for (final tag in selectedTags)
+                                ActiveFilterChip(
+                                  label: 'Tag: ${tagNameById[tag] ?? tag}',
+                                  onRemove: () => ref
+                                      .read(
+                                        deploymentsTagFilterProvider.notifier,
+                                      )
+                                      .toggle(tag),
+                                ),
+                              if (pendingUpdate)
+                                ActiveFilterChip(
+                                  label: 'Pending updates',
+                                  onRemove: () =>
+                                      ref
+                                              .read(
+                                                deploymentsPendingUpdateFilterProvider
+                                                    .notifier,
+                                              )
+                                              .enabled =
+                                          false,
+                                ),
+                              if (templateFilter != TemplateFilter.exclude)
+                                ActiveFilterChip(
+                                  label: templateFilter == TemplateFilter.only
+                                      ? 'Only templates'
+                                      : 'With templates',
+                                  onRemove: () =>
+                                      ref
+                                          .read(
+                                            deploymentsTemplateFilterStateProvider
+                                                .notifier,
+                                          )
+                                          .value = TemplateFilter
+                                          .exclude,
+                                ),
+                            ],
+                          ),
+                        ],
                         const Gap(12),
                       ],
                     ),
@@ -251,7 +344,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                   skipLoadingOnRefresh: true,
                   skipLoadingOnReload: true,
                   data: (deployments) {
-                    final filtered = _applyFilters(
+                    final searched = _applyFilters(
                       deployments,
                       query: searchQuery,
                       selectedTags: selectedTags,
@@ -260,17 +353,28 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                       serverNames: serverNames,
                       tagNameById: tagNameById,
                     );
+
+                    final filtered = prefs.process<Deployment>(
+                      searched,
+                      severityOf: _severityOf,
+                      nameOf: (item) => item.name,
+                      stateLabelOf: _stateLabel,
+                      serverNameOf: (item) => _serverNameOf(item, serverNames),
+                    );
                     if (filtered.isEmpty) {
                       return SliverFillRemaining(
                         hasScrollBody: false,
                         child: _EmptyState(
-                          hasFilters: _hasActiveFilters(
-                            query: searchQuery,
-                            selectedTags: selectedTags,
-                            pendingUpdate: pendingUpdate,
-                            templateFilter: templateFilter,
-                          ),
+                          hasFilters:
+                              _hasActiveFilters(
+                                query: searchQuery,
+                                selectedTags: selectedTags,
+                                pendingUpdate: pendingUpdate,
+                                templateFilter: templateFilter,
+                              ) ||
+                              prefs.activeCount > 0,
                           onClearFilters: () {
+                            clearResourceViewFilters(ref, listId);
                             _searchController.clear();
                             ref
                                     .read(
@@ -448,6 +552,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
 
 class _FiltersPanel extends StatelessWidget {
   const _FiltersPanel({
+    required this.viewSection,
     required this.pendingUpdate,
     required this.templateFilter,
     required this.selectedTags,
@@ -459,6 +564,7 @@ class _FiltersPanel extends StatelessWidget {
     required this.onClearTags,
   });
 
+  final Widget viewSection;
   final bool pendingUpdate;
   final TemplateFilter templateFilter;
   final Set<String> selectedTags;
@@ -486,6 +592,7 @@ class _FiltersPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          viewSection,
           _FilterRow(
             icon: AppIcons.updateAvailable,
             label: 'Pending updates',
@@ -911,4 +1018,34 @@ List<String> _collectTags(List<Deployment> deployments) {
 List<String> _displayTags(List<String> tags, Map<String, String> tagNameById) {
   if (tags.isEmpty) return const [];
   return [for (final tag in tags) tagNameById[tag] ?? tag];
+}
+
+int _severityOf(Deployment deployment) {
+  final state = deployment.info?.state ?? DeploymentState.unknown;
+  return switch (state) {
+    DeploymentState.dead => ResourceSeverity.attention,
+    DeploymentState.restarting ||
+    DeploymentState.deploying ||
+    DeploymentState.removing => ResourceSeverity.warning,
+    DeploymentState.running =>
+      (deployment.info?.updateAvailable ?? false)
+          ? ResourceSeverity.warning
+          : ResourceSeverity.healthy,
+    DeploymentState.paused ||
+    DeploymentState.created ||
+    DeploymentState.exited ||
+    DeploymentState.notDeployed ||
+    DeploymentState.unknown => ResourceSeverity.inactive,
+  };
+}
+
+String _stateLabel(Deployment deployment) =>
+    resourceStateLabel(deployment.info?.state ?? DeploymentState.unknown);
+
+String? _serverNameOf(Deployment deployment, Map<String, String> serverNames) {
+  final name =
+      serverNames[deployment.info?.serverId] ??
+      deployment.info?.serverName ??
+      '';
+  return name.trim().isEmpty ? null : name.trim();
 }
