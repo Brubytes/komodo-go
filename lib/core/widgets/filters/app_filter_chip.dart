@@ -132,6 +132,7 @@ class AppFilterChipBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
+      width: double.infinity,
       height: kAppFilterChipHeight + verticalPadding * 2,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
