@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -10,11 +9,11 @@ import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pill_list.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
-
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -124,9 +123,7 @@ class _AlerterTile extends ConsumerWidget {
                             Expanded(
                               child: Text(
                                 item.name,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
+                                style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.w600),
                               ),
                             ),
@@ -153,10 +150,9 @@ class _AlerterTile extends ConsumerWidget {
                           leading: [
                             TextPill(
                               label: info.enabled ? 'Enabled' : 'Disabled',
-                              tone:
-                                  info.enabled
-                                      ? PillTone.success
-                                      : PillTone.neutral,
+                              tone: info.enabled
+                                  ? PillTone.success
+                                  : PillTone.neutral,
                             ),
                             if (item.template)
                               const TextPill(label: 'Template'),
@@ -279,24 +275,13 @@ class _AlerterTile extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete alerter'),
-        content: Text('Delete "${item.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await confirmDestructive(
+      context,
+      title: 'Delete alerter',
+      message: 'Delete "${item.name}"?',
+      confirmLabel: 'Delete',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     if (!context.mounted) return;
 
     final ok = await ref

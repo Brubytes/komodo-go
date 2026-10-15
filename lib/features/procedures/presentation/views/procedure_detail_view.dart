@@ -1,20 +1,22 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/utils/relative_time.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
+import 'package:komodo_go/features/procedures/presentation/widgets/procedure_stages_timeline.dart';
+import 'package:komodo_go/shared/widgets/automation_toggles_block.dart';
 
 /// View displaying detailed procedure information.
 class ProcedureDetailView extends ConsumerStatefulWidget {
@@ -22,12 +24,14 @@ class ProcedureDetailView extends ConsumerStatefulWidget {
     required this.procedureId,
     required this.procedureName,
     this.appBarActions = const <Widget>[],
+    this.manageGroups = const <DetailActionGroup>[],
     super.key,
   });
 
   final String procedureId;
   final String procedureName;
   final List<Widget> appBarActions;
+  final List<DetailActionGroup> manageGroups;
 
   @override
   ConsumerState<ProcedureDetailView> createState() =>
@@ -84,16 +88,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
         markUseGradient: true,
         centerTitle: true,
         status: procedureAppBarStatus(listItem: listItem),
-        actions: [
-          ...widget.appBarActions,
-          IconButton(
-            icon: const Icon(AppIcons.play),
-            tooltip: 'Run',
-            onPressed: actionsState.isLoading
-                ? null
-                : () => _runProcedure(context, procedureId),
-          ),
-        ],
+        actions: widget.appBarActions,
       ),
       body: Stack(
         children: [
@@ -108,24 +103,47 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                     child: procedureAsync.when(
                       data: (procedure) {
                         if (procedure == null) {
-                          return const _MessageSurface(
-                            message: 'Procedure not found',
+                          return const EmptyStateView.inline(
+                            icon: AppIcons.procedures,
+                            title: 'Procedure not found',
                           );
                         }
 
-                        return _ProcedureHeader(
-                          procedure: procedure,
-                          listItem: listItem,
-                          onRun: actionsState.isLoading
-                              ? null
-                              : () => unawaited(
-                                  _runProcedure(context, procedureId),
-                                ),
+                        final running =
+                            listItem?.info.state == ProcedureState.running;
+                        final onRun = actionsState.isLoading || running
+                            ? null
+                            : () =>
+                                  unawaited(_runProcedure(context, procedure));
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _ProcedureHeader(
+                              procedure: procedure,
+                              listItem: listItem,
+                              onRun: onRun,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            DetailActionBar(
+                              primary: DetailActionButton(
+                                label: running ? 'Running…' : 'Run',
+                                icon: AppIcons.play,
+                                loading: running || actionsState.isLoading,
+                                onPressed: onRun,
+                              ),
+                              moreGroups: widget.manageGroups,
+                            ),
+                          ],
                         );
                       },
                       loading: () => const _LoadingSurface(),
-                      error: (error, _) =>
-                          _ErrorSurface(error: error.toString()),
+                      error: (error, _) => ErrorStateView.fromError(
+                        title: 'Failed to load procedure',
+                        error: error,
+                        onRetry: () => ref.invalidate(
+                          procedureDetailProvider(procedureId),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -167,8 +185,9 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                       child: procedureAsync.when(
                         data: (procedure) {
                           if (procedure == null) {
-                            return const _MessageSurface(
-                              message: 'Procedure not found',
+                            return const EmptyStateView.inline(
+                              icon: AppIcons.procedures,
+                              title: 'Procedure not found',
                             );
                           }
 
@@ -186,8 +205,13 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                           );
                         },
                         loading: () => const _LoadingSurface(),
-                        error: (error, _) =>
-                            _ErrorSurface(error: error.toString()),
+                        error: (error, _) => ErrorStateView.fromError(
+                          title: 'Failed to load procedure',
+                          error: error,
+                          onRetry: () => ref.invalidate(
+                            procedureDetailProvider(procedureId),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -204,18 +228,24 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                       child: procedureAsync.when(
                         data: (procedure) {
                           if (procedure == null) {
-                            return const _MessageSurface(
-                              message: 'Procedure not found',
+                            return const EmptyStateView.inline(
+                              icon: AppIcons.procedures,
+                              title: 'Procedure not found',
                             );
                           }
 
-                          return _ProcedureStagesContent(
-                            config: procedure.config,
+                          return ProcedureStagesTimeline(
+                            stages: procedure.config.stages,
                           );
                         },
                         loading: () => const _LoadingSurface(),
-                        error: (error, _) =>
-                            _ErrorSurface(error: error.toString()),
+                        error: (error, _) => ErrorStateView.fromError(
+                          title: 'Failed to load procedure',
+                          error: error,
+                          onRetry: () => ref.invalidate(
+                            procedureDetailProvider(procedureId),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -233,15 +263,29 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
     );
   }
 
-  Future<void> _runProcedure(BuildContext context, String procedureId) async {
+  Future<void> _runProcedure(
+    BuildContext context,
+    KomodoProcedure procedure,
+  ) async {
+    final stages = procedure.config.stages.length;
+    final confirmed = await confirmDestructive(
+      context,
+      title: 'Run ${procedure.name}?',
+      message:
+          'Executes all $stages ${stages == 1 ? 'stage' : 'stages'} in order.',
+      confirmLabel: 'Run',
+      destructive: false,
+    );
+    if (!confirmed || !mounted) return;
+
     final actions = ref.read(procedureActionsProvider.notifier);
-    final success = await actions.run(procedureId);
+    final success = await actions.run(procedure.id);
 
     if (!mounted) return;
 
     if (success) {
       ref
-        ..invalidate(procedureDetailProvider(procedureId))
+        ..invalidate(procedureDetailProvider(widget.procedureId))
         ..invalidate(proceduresProvider);
     }
 
@@ -540,6 +584,11 @@ class ProcedureConfigEditorContentState
     return params;
   }
 
+  void _toggle(void Function() update) {
+    setState(update);
+    _notifyDirtyIfChanged();
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -547,55 +596,38 @@ class ProcedureConfigEditorContentState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DetailSubCard(
-          title: 'Toggles',
-          icon: AppIcons.settings,
-          child: Column(
-            children: [
-              SwitchListTile.adaptive(
-                value: _scheduleEnabled,
-                onChanged: (v) {
-                  setState(() => _scheduleEnabled = v);
-                  _notifyDirtyIfChanged();
-                },
-                title: const Text('Schedule enabled'),
-                secondary: const Icon(AppIcons.clock),
-                contentPadding: EdgeInsets.zero,
-              ),
-              SwitchListTile.adaptive(
-                value: _webhookEnabled,
-                onChanged: (v) {
-                  setState(() => _webhookEnabled = v);
-                  _notifyDirtyIfChanged();
-                },
-                title: const Text('Webhook enabled'),
-                secondary: const Icon(AppIcons.network),
-                contentPadding: EdgeInsets.zero,
-              ),
-              SwitchListTile.adaptive(
-                value: _scheduleAlert,
-                onChanged: (v) {
-                  setState(() => _scheduleAlert = v);
-                  _notifyDirtyIfChanged();
-                },
-                title: const Text('Schedule alerts'),
-                secondary: const Icon(AppIcons.notifications),
-                contentPadding: EdgeInsets.zero,
-              ),
-              SwitchListTile.adaptive(
-                value: _failureAlert,
-                onChanged: (v) {
-                  setState(() => _failureAlert = v);
-                  _notifyDirtyIfChanged();
-                },
-                title: const Text('Failure alerts'),
-                secondary: const Icon(AppIcons.warning),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ],
+        AutomationTogglesBlock(
+          primary: [
+            AutomationToggle(
+              label: 'Schedule enabled',
+              icon: AppIcons.clock,
+              value: _scheduleEnabled,
+              onChanged: (v) => _toggle(() => _scheduleEnabled = v),
+            ),
+            AutomationToggle(
+              label: 'Failure alerts',
+              icon: AppIcons.warning,
+              value: _failureAlert,
+              onChanged: (v) => _toggle(() => _failureAlert = v),
+            ),
+          ],
+          rare: [
+            AutomationToggle(
+              label: 'Schedule alerts',
+              icon: AppIcons.notifications,
+              value: _scheduleAlert,
+              onChanged: (v) => _toggle(() => _scheduleAlert = v),
+            ),
+          ],
+          webhookEnabled: AutomationToggle(
+            label: 'Webhook enabled',
+            icon: AppIcons.network,
+            value: _webhookEnabled,
+            onChanged: (v) => _toggle(() => _webhookEnabled = v),
           ),
+          webhookSecret: _webhookSecret,
         ),
-        const Gap(12),
+        const SizedBox(height: AppSpacing.md),
         DetailSubCard(
           title: 'Schedule',
           icon: AppIcons.clock,
@@ -624,7 +656,7 @@ class ProcedureConfigEditorContentState
                   prefixIcon: Icon(AppIcons.clock),
                 ),
               ),
-              const Gap(12),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _scheduleTimezone,
                 decoration: InputDecoration(
@@ -633,7 +665,7 @@ class ProcedureConfigEditorContentState
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                 ),
               ),
-              const Gap(12),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _schedule,
                 minLines: 1,
@@ -644,23 +676,6 @@ class ProcedureConfigEditorContentState
                   helperText: _scheduleFormat == ScheduleFormat.cron
                       ? 'Cron (e.g. 0 0 * * *)'
                       : 'English (e.g. every day at 01:00)',
-                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Webhook',
-          icon: AppIcons.network,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _webhookSecret,
-                decoration: InputDecoration(
-                  labelText: 'Webhook secret',
-                  prefixIcon: const Icon(AppIcons.key),
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                 ),
               ),
@@ -723,7 +738,7 @@ class _ProcedureHeader extends StatelessWidget {
           : null,
       facts: [
         DetailFact(
-          icon: AppIcons.stacks,
+          icon: AppIcons.procedures,
           label: 'Stages',
           value: procedure.config.stages.length.toString(),
         ),
@@ -751,161 +766,11 @@ class _ProcedureHeader extends StatelessWidget {
 
 /// Timestamps from the API are unix milliseconds.
 
-class _ProcedureStagesContent extends StatelessWidget {
-  const _ProcedureStagesContent({required this.config});
-
-  final ProcedureConfig config;
-
-  @override
-  Widget build(BuildContext context) {
-    if (config.stages.isEmpty) {
-      return const EmptyStateView.inline(
-        icon: AppIcons.procedures,
-        title: 'No stages configured',
-        message: 'Configure stages in the Komodo web interface.',
-      );
-    }
-
-    return Column(
-      children: [
-        for (final stage in config.stages) ...[
-          _StageCard(stage: stage),
-          if (stage != config.stages.last) const Gap(12),
-        ],
-      ],
-    );
-  }
-}
-
-class _StageCard extends StatelessWidget {
-  const _StageCard({required this.stage});
-
-  final ProcedureStage stage;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabledExecutions = stage.executions.where((e) => e.enabled).length;
-    final totalExecutions = stage.executions.length;
-
-    return DetailSubCard(
-      title: stage.name.isNotEmpty ? stage.name : 'Stage',
-      icon: AppIcons.stacks,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              StatusPill.onOff(
-                isOn: stage.enabled,
-                onLabel: 'Enabled',
-                offLabel: 'Disabled',
-                onIcon: AppIcons.ok,
-                offIcon: AppIcons.canceled,
-              ),
-              TextPill(label: '$enabledExecutions/$totalExecutions executions'),
-            ],
-          ),
-          if (totalExecutions > 0) ...[
-            const Gap(12),
-            for (var i = 0; i < stage.executions.length; i++) ...[
-              _ExecutionBlock(index: i, execution: stage.executions[i]),
-              if (i != stage.executions.length - 1) const Gap(12),
-            ],
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ExecutionBlock extends StatelessWidget {
-  const _ExecutionBlock({required this.index, required this.execution});
-
-  final int index;
-  final EnabledExecution execution;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = 'Execution ${index + 1}';
-    final code = _pretty(execution.execution);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const Gap(8),
-            StatusPill.onOff(
-              isOn: execution.enabled,
-              onLabel: 'On',
-              offLabel: 'Off',
-              onIcon: AppIcons.ok,
-              offIcon: AppIcons.pause,
-            ),
-          ],
-        ),
-        const Gap(8),
-        DetailCodeBlock(code: code, maxHeight: 220),
-      ],
-    );
-  }
-}
-
-String _pretty(Object? value) {
-  if (value == null) return 'null';
-  if (value is String) return value.trim().isEmpty ? '""' : value.trim();
-  try {
-    return const JsonEncoder.withIndent('  ').convert(value);
-  } on Exception {
-    return value.toString();
-  }
-}
-
-class _MessageSurface extends StatelessWidget {
-  const _MessageSurface({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return DetailSurface(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Center(child: Text(message)),
-      ),
-    );
-  }
-}
-
 class _LoadingSurface extends StatelessWidget {
   const _LoadingSurface();
 
   @override
   Widget build(BuildContext context) {
     return const AppSkeletonSurface();
-  }
-}
-
-class _ErrorSurface extends StatelessWidget {
-  const _ErrorSurface({required this.error});
-
-  final String error;
-
-  @override
-  Widget build(BuildContext context) {
-    return DetailSurface(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text('Error: $error'),
-      ),
-    );
   }
 }

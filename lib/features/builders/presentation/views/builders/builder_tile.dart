@@ -12,7 +12,6 @@ import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
-
 import 'package:komodo_go/features/builders/presentation/views/builders/builder_config_editor_sheet.dart';
 
 class BuilderTile extends ConsumerWidget {

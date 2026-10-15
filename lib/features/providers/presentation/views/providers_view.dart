@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -229,24 +229,13 @@ class ProvidersView extends ConsumerWidget {
     WidgetRef ref,
     GitProviderAccount provider,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete provider'),
-        content: Text('Delete ${provider.username}@${provider.domain}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await confirmDestructive(
+      context,
+      title: 'Delete provider',
+      message: 'Delete ${provider.username}@${provider.domain}?',
+      confirmLabel: 'Delete',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     if (!context.mounted) return;
 
     final ok = await ref
@@ -295,24 +284,13 @@ class ProvidersView extends ConsumerWidget {
     WidgetRef ref,
     DockerRegistryAccount registry,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete registry'),
-        content: Text('Delete ${registry.username}@${registry.domain}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await confirmDestructive(
+      context,
+      title: 'Delete registry',
+      message: 'Delete ${registry.username}@${registry.domain}?',
+      confirmLabel: 'Delete',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     if (!context.mounted) return;
 
     final ok = await ref
