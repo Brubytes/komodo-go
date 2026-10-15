@@ -116,51 +116,99 @@ PreferredSizeWidget buildDetailTabBar({
     };
   }
 
-  // Compact tabs: icon and label inline (~44pt) instead of stacked (~72pt).
-  final compactTabs = [
-    for (final tab in tabs)
-      if (tab is Tab &&
-          tab.child == null &&
-          (tab.icon != null || tab.text != null))
-        Tab(
-          key: tab.key,
-          height: 44,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (tab.icon != null)
-                IconTheme.merge(
-                  data: const IconThemeData(size: 18),
-                  child: tab.icon!,
-                ),
-              if (tab.icon != null && tab.text != null)
-                const SizedBox(width: 6),
-              if (tab.text != null) Text(tab.text!),
-            ],
-          ),
-        )
-      else
-        tab,
-  ];
+  const tabHeight = 44.0;
+  const iconSize = 18.0;
+  const iconGap = 6.0;
+  final horizontalLabelPadding = labelPadding.resolve(
+    Directionality.of(context),
+  );
+  final textDirection = Directionality.of(context);
+  final textScaler = MediaQuery.textScalerOf(context);
 
-  final tabBar = TabBar(
-    controller: controller,
-    tabs: compactTabs,
-    onTap: resolvedOnTap,
-    labelStyle: labelStyle,
-    unselectedLabelStyle: labelStyle,
-    labelColor: scheme.primary,
-    unselectedLabelColor: scheme.onSurfaceVariant,
-    indicator: UnderlineTabIndicator(
-      borderSide: BorderSide(
-        width: 3,
-        color: scheme.primary,
+  double labelWidth(String text) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: labelStyle),
+      textDirection: textDirection,
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
+  }
+
+  Widget buildTabBar({
+    required bool showIcons,
+    required bool scrollable,
+  }) {
+    final compactTabs = [
+      for (final tab in tabs)
+        if (tab is Tab &&
+            tab.child == null &&
+            (tab.icon != null || tab.text != null))
+          Tab(
+            key: tab.key,
+            height: tabHeight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showIcons && tab.icon != null)
+                  IconTheme.merge(
+                    data: const IconThemeData(size: iconSize),
+                    child: tab.icon!,
+                  ),
+                if (showIcons && tab.icon != null && tab.text != null)
+                  const SizedBox(width: iconGap),
+                if (tab.text != null)
+                  Flexible(
+                    child: Text(
+                      tab.text!,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.fade,
+                    ),
+                  ),
+              ],
+            ),
+          )
+        else
+          tab,
+    ];
+
+    return TabBar(
+      controller: controller,
+      tabs: compactTabs,
+      onTap: resolvedOnTap,
+      isScrollable: scrollable,
+      tabAlignment: scrollable ? TabAlignment.start : null,
+      labelStyle: labelStyle,
+      unselectedLabelStyle: labelStyle,
+      labelColor: scheme.primary,
+      unselectedLabelColor: scheme.onSurfaceVariant,
+      indicator: UnderlineTabIndicator(
+        borderSide: BorderSide(
+          width: 3,
+          color: scheme.primary,
+        ),
+        insets: const EdgeInsets.symmetric(horizontal: 14),
       ),
-      insets: const EdgeInsets.symmetric(horizontal: 14),
-    ),
-    indicatorSize: TabBarIndicatorSize.tab,
-    dividerColor: scheme.outlineVariant,
-    labelPadding: labelPadding,
+      indicatorSize: TabBarIndicatorSize.tab,
+      dividerColor: scheme.outlineVariant,
+      labelPadding: labelPadding,
+    );
+  }
+
+  final adaptive = _AdaptiveDetailTabBar(
+    tabs: tabs,
+    height: tabHeight,
+    labelWidth: labelWidth,
+    horizontalPadding: horizontalLabelPadding.horizontal,
+    iconWidth: iconSize + iconGap,
+    builder: buildTabBar,
+  );
+  final tabBar = PreferredSize(
+    preferredSize: const Size.fromHeight(tabHeight + 2),
+    child: adaptive,
   );
 
   if (bottomGap <= 0) return tabBar;
@@ -175,4 +223,62 @@ PreferredSizeWidget buildDetailTabBar({
       ],
     ),
   );
+}
+
+/// Chooses between inline icon+label, label-only and scrollable layouts based
+/// on the width actually available, so tabs never overflow.
+class _AdaptiveDetailTabBar extends StatelessWidget {
+  const _AdaptiveDetailTabBar({
+    required this.tabs,
+    required this.height,
+    required this.labelWidth,
+    required this.horizontalPadding,
+    required this.iconWidth,
+    required this.builder,
+  });
+
+  final List<Widget> tabs;
+  final double height;
+  final double Function(String) labelWidth;
+  final double horizontalPadding;
+  final double iconWidth;
+  final Widget Function({required bool showIcons, required bool scrollable})
+  builder;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final available = constraints.maxWidth;
+        final count = tabs.isEmpty ? 1 : tabs.length;
+        final perTab = available / count;
+
+        var maxLabel = 0.0;
+        var maxInline = 0.0;
+        for (final tab in tabs) {
+          if (tab is! Tab) continue;
+          final text = tab.text;
+          final label = text == null ? 0.0 : labelWidth(text);
+          final hasIcon = tab.icon != null;
+          if (label > maxLabel) maxLabel = label;
+          final inline = label + (hasIcon && text != null ? iconWidth : 0);
+          if (inline > maxInline) maxInline = inline;
+        }
+        // Small safety margin for rounding / glyph hinting differences.
+        const safety = 4.0;
+        final inlineFits = maxInline + horizontalPadding + safety <= perTab;
+        final labelsFit = maxLabel + horizontalPadding + safety <= perTab;
+
+        final Widget bar;
+        if (inlineFits) {
+          bar = builder(showIcons: true, scrollable: false);
+        } else if (labelsFit) {
+          bar = builder(showIcons: false, scrollable: false);
+        } else {
+          bar = builder(showIcons: false, scrollable: true);
+        }
+        return bar;
+      },
+    );
+  }
 }

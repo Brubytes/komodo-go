@@ -4,6 +4,7 @@ import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
+import 'package:komodo_go/features/containers/presentation/widgets/container_card_parts.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
 
@@ -254,11 +255,46 @@ void main() {
       );
 
       expect(find.text('Server One'), findsOneWidget);
-      expect(find.text('nginx:latest'), findsOneWidget);
-      expect(find.text('CPU 1.5%'), findsOneWidget);
-      expect(find.text('Mem 10MiB / 1GiB'), findsOneWidget);
-      expect(find.textContaining('bridge'), findsNothing);
-      expect(find.text('1kB / 2kB'), findsNothing);
+      expect(find.text('nginx'), findsOneWidget);
+      expect(find.text(':latest'), findsOneWidget);
+      expect(find.text('CPU'), findsOneWidget);
+      expect(find.text('1.5%'), findsOneWidget);
+      expect(find.text('MEM'), findsOneWidget);
+      expect(find.textContaining('10MiB/1GiB'), findsOneWidget);
+      expect(find.text('↓ 1kB  ↑ 2kB'), findsOneWidget);
+      expect(find.byType(ContainerMetricsGrid), findsOneWidget);
+    });
+
+    testWidgets('exited container hides metrics', (tester) async {
+      await pumpContainer(
+        tester,
+        _container(
+          ContainerState.exited,
+          stats: const ContainerStats(cpuPerc: '1.5%'),
+        ),
+      );
+      expect(find.byType(ContainerMetricsGrid), findsNothing);
+    });
+
+    test('formatContainerImage strips registry and library prefix', () {
+      expect(
+        formatContainerImage('docker.io/jlesage/jdownloader-2:latest'),
+        'jlesage/jdownloader-2:latest',
+      );
+      expect(
+        formatContainerImage('lscr.io/linuxserver/overseerr:latest'),
+        'linuxserver/overseerr:latest',
+      );
+      expect(formatContainerImage('nginx'), 'nginx');
+      expect(
+        formatContainerImage('ghcr.io/komodo/billing:2.3.0'),
+        'komodo/billing:2.3.0',
+      );
+      expect(formatContainerImage('docker.io/library/redis:7'), 'redis:7');
+      expect(
+        formatContainerImage('localhost:5000/app:1'),
+        'app:1',
+      );
     });
   });
 }

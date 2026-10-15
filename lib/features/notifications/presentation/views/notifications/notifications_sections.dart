@@ -8,6 +8,8 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
+import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
@@ -35,17 +37,17 @@ class AlertsTab extends ConsumerWidget {
       children: [
         _FilterBar(
           chips: [
-            FilterChip(
+            AppFilterChip(
               key: const ValueKey('alerts_filter_unresolved'),
-              label: const Text('Unresolved'),
+              label: 'Unresolved',
               selected: filters.unresolvedOnly,
               onSelected: (value) =>
                   ref.read(alertFiltersProvider.notifier).filters = filters
                       .copyWith(unresolvedOnly: value),
             ),
-            FilterChip(
+            AppFilterChip(
               key: const ValueKey('alerts_filter_critical'),
-              label: const Text('Critical'),
+              label: 'Critical',
               selected: filters.criticalOnly,
               onSelected: (value) =>
                   ref.read(alertFiltersProvider.notifier).filters = filters
@@ -154,18 +156,7 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.sm,
-          AppSpacing.lg,
-          AppSpacing.xxs,
-        ),
-        child: Wrap(spacing: 8, runSpacing: 4, children: chips),
-      ),
-    );
+    return AppFilterChipBar(children: chips);
   }
 }
 
@@ -211,9 +202,9 @@ class UpdatesTab extends ConsumerWidget {
       children: [
         _FilterBar(
           chips: [
-            FilterChip(
+            AppFilterChip(
               key: const ValueKey('updates_filter_failed'),
-              label: const Text('Failed only'),
+              label: 'Failed only',
               selected: failedOnly,
               onSelected: (value) =>
                   ref.read(updatesFailedOnlyProvider.notifier).value = value,
@@ -454,59 +445,87 @@ class UpdateTile extends ConsumerWidget {
         color: Colors.transparent,
         borderRadius: cardRadius,
         clipBehavior: Clip.antiAlias,
-        child: ListTile(
-          dense: true,
-          leading: Icon(
-            _iconForTargetType(target?.type),
-            color: scheme.primary,
-          ),
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              NotificationsStatusChip(
-                label: _labelForUpdateStatus(update),
-                kind: _kindForUpdate(update),
-              ),
-            ],
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.xxs),
-            child: Column(
+        child: InkWell(
+          onTap: route == null ? null : () => context.push(route),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+            ),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (!isCurrent)
-                  Text(
-                    targetName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: muted,
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Icon(
+                    _iconForTargetType(target?.type),
+                    color: scheme.primary,
+                    size: 22,
                   ),
-                Text(
-                  operator == null ? startTime : '$startTime  ·  $operator',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: muted,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (!isCurrent)
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                          child: Text(
+                            targetName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: muted,
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                        child: Text(
+                          operator == null
+                              ? startTime
+                              : '$startTime  ·  $operator',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _updateStatusPill(update),
+                    if (resourceRoute != null)
+                      IconButton(
+                        key: ValueKey('update_open_resource_${update.id}'),
+                        tooltip: 'Open resource',
+                        visualDensity: VisualDensity.compact,
+                        iconSize: 18,
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
+                        onPressed: () => context.push(resourceRoute),
+                        icon: const Icon(AppIcons.externalLink),
+                      ),
+                  ],
                 ),
               ],
             ),
           ),
-          trailing: resourceRoute == null
-              ? null
-              : IconButton(
-                  key: ValueKey('update_open_resource_${update.id}'),
-                  tooltip: 'Open resource',
-                  visualDensity: VisualDensity.compact,
-                  iconSize: 18,
-                  onPressed: () => context.push(resourceRoute),
-                  icon: const Icon(AppIcons.externalLink),
-                ),
-          onTap: route == null ? null : () => context.push(route),
         ),
       ),
     );
@@ -888,29 +907,19 @@ String _labelForSeverity(SeverityLevel level) {
   };
 }
 
-String _labelForUpdateStatus(UpdateListItem update) {
-  return switch (update.status) {
-    UpdateStatus.running => 'RUNNING',
-    UpdateStatus.queued => 'QUEUED',
-    UpdateStatus.success => 'SUCCESS',
-    UpdateStatus.failed => 'FAILED',
-    UpdateStatus.canceled => 'CANCELED',
-    UpdateStatus.unknown => update.success ? 'SUCCESS' : 'UNKNOWN',
-  };
-}
-
-NotificationsStatusChipKind _kindForUpdate(UpdateListItem update) {
-  return switch (update.status) {
-    UpdateStatus.success => NotificationsStatusChipKind.success,
-    UpdateStatus.failed => NotificationsStatusChipKind.error,
-    UpdateStatus.running ||
-    UpdateStatus.queued => NotificationsStatusChipKind.working,
-    UpdateStatus.canceled => NotificationsStatusChipKind.neutral,
+StatusPill _updateStatusPill(UpdateListItem update) {
+  final (label, icon, tone) = switch (update.status) {
+    UpdateStatus.running => ('Running', AppIcons.loading, PillTone.warning),
+    UpdateStatus.queued => ('Queued', AppIcons.waiting, PillTone.neutral),
+    UpdateStatus.success => ('Success', AppIcons.ok, PillTone.success),
+    UpdateStatus.failed => ('Failed', AppIcons.error, PillTone.alert),
+    UpdateStatus.canceled => ('Canceled', AppIcons.canceled, PillTone.neutral),
     UpdateStatus.unknown =>
       update.success
-          ? NotificationsStatusChipKind.success
-          : NotificationsStatusChipKind.neutral,
+          ? ('Success', AppIcons.ok, PillTone.success)
+          : ('Unknown', AppIcons.unknown, PillTone.neutral),
   };
+  return StatusPill(label: label, icon: icon, tone: tone);
 }
 
 NotificationsStatusChipKind _chipKindForAlertLevel(SeverityLevel level) {

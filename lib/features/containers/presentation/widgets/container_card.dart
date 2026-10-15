@@ -8,6 +8,7 @@ import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
+import 'package:komodo_go/features/containers/presentation/widgets/container_card_parts.dart';
 
 /// Card widget displaying container information.
 ///
@@ -41,32 +42,50 @@ class ContainerCard extends StatelessWidget {
         ? const <DetailActionGroup>[]
         : containerMenuGroups(container.state, onAction);
 
-    final bottomRows = <Widget>[
-      if (stats != null) _UsageLine(stats: stats),
-    ];
+    final scheme = Theme.of(context).colorScheme;
+    final showMetrics =
+        container.state == ContainerState.running &&
+        stats != null &&
+        ContainerMetricsGrid.hasData(stats);
+    final exitInfo = container.state == ContainerState.exited
+        ? container.status?.trim()
+        : null;
+
+    final bottom = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (image.isNotEmpty) ContainerImageLine(image: image),
+        if (item.serverName.isNotEmpty) ...[
+          const Gap(AppSpacing.xs),
+          ResourceIconLabel(icon: AppIcons.server, label: item.serverName),
+        ],
+        if (container.ports.isNotEmpty) ...[
+          const Gap(AppSpacing.sm),
+          ContainerPortChips(ports: container.ports),
+        ],
+        if (showMetrics) ...[
+          const Gap(AppSpacing.md),
+          ContainerMetricsGrid(stats: stats),
+        ] else if (exitInfo != null && exitInfo.isNotEmpty) ...[
+          const Gap(AppSpacing.xs),
+          Text(
+            exitInfo,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ],
+    );
 
     return ResourceCard(
       key: ValueKey('container_card_$keyId'),
       menuKey: ValueKey('container_card_menu_$keyId'),
       title: name,
       status: containerStatusSpec(container),
-      meta: [
-        if (item.serverName.isNotEmpty)
-          ResourceIconLabel(icon: AppIcons.server, label: item.serverName),
-        if (image.isNotEmpty)
-          ResourceIconLabel(icon: AppIcons.package, label: image),
-      ],
-      bottom: bottomRows.isEmpty
-          ? null
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (var i = 0; i < bottomRows.length; i++) ...[
-                  if (i > 0) const Gap(AppSpacing.sm),
-                  bottomRows[i],
-                ],
-              ],
-            ),
+      bottom: bottom,
       menu: menu,
       onTap: onTap,
     );
@@ -140,30 +159,6 @@ List<DetailActionGroup> containerMenuGroups(
       ResourceMenuItems.destroy(call(ContainerAction.remove), label: 'Remove'),
     ],
   );
-}
-
-/// CPU and memory on one compact line.
-class _UsageLine extends StatelessWidget {
-  const _UsageLine({required this.stats});
-
-  final ContainerStats stats;
-
-  @override
-  Widget build(BuildContext context) {
-    final cpu = stats.cpuPerc.trim().isNotEmpty ? stats.cpuPerc.trim() : '-';
-    final mem = stats.memUsage.trim().isNotEmpty
-        ? stats.memUsage.trim()
-        : (stats.memPerc.trim().isNotEmpty ? stats.memPerc.trim() : '-');
-    return Row(
-      children: [
-        ResourceIconLabel(icon: AppIcons.cpu, label: 'CPU $cpu'),
-        const Gap(AppSpacing.md),
-        Flexible(
-          child: ResourceIconLabel(icon: AppIcons.memory, label: 'Mem $mem'),
-        ),
-      ],
-    );
-  }
 }
 
 /// Actions available for a container.
