@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/composition/resources/resource_manage_actions.dart';
 import 'package:komodo_go/composition/stacks/stack_config_editor.dart';
+import 'package:komodo_go/composition/stacks/stack_updates_provider.dart';
 import 'package:komodo_go/composition/stacks/stack_updates_tab.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/core_info_provider.dart';
@@ -17,10 +18,10 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
-import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
@@ -51,139 +52,50 @@ class StackDetailView extends ConsumerStatefulWidget {
 }
 
 class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
-    with TickerProviderStateMixin, DetailDirtySnackBarMixin<StackDetailView> {
-  late TabController _tabController;
-  final _outerScrollController = ScrollController();
-  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
+    with DetailDirtySnackBarMixin<StackDetailView> {
+  static const _tabServices = 'services';
+  static const _tabConfig = 'config';
+  static const _tabLogs = 'logs';
 
-  Timer? _logRefreshTimer;
-  var _autoRefreshLogs = true;
+  final _tabsKey = GlobalKey<DetailTabScaffoldState>();
   final _configEditorKey = GlobalKey<StackConfigEditorContentState>();
   final _infoEditorKey = GlobalKey<StackInfoTabContentState>();
 
-  var _configSaveInFlight = false;
-  var _infoSaveInFlight = false;
-  var _hasInfoTab = false;
+  String _activeTabId = _tabServices;
+  var _autoRefreshLogs = true;
+  var _saveInFlight = false;
+  var _configDirty = false;
+  var _infoDirty = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    _tabController.addListener(_onInnerTabChanged);
-  }
+  bool get _dirty => _configDirty || _infoDirty;
 
-  @override
-  void dispose() {
-    _logRefreshTimer?.cancel();
-    _logRefreshTimer = null;
-    _tabController
-      ..removeListener(_onInnerTabChanged)
-      ..dispose();
-    _outerScrollController.dispose();
-    super.dispose();
-  }
+  KomodoStack? get _currentStack =>
+      ref.read(stackDetailProvider(widget.stackId)).asData?.value;
 
-  @override
-  void onVisibilityChanged() {
-    if (!mounted) return;
-    _syncLogPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
-    super.onVisibilityChanged();
-  }
-
-  void _onInnerTabChanged() {
-    if (!mounted) return;
-    _syncLogPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
-  }
-
-  void _startLogPolling() {
-    _logRefreshTimer?.cancel();
-    _logRefreshTimer = null;
-    if (!_autoRefreshLogs) return;
-
-    _logRefreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
-      ref.invalidate(stackLogProvider(widget.stackId));
-    });
-  }
-
-  void _stopLogPolling() {
-    _logRefreshTimer?.cancel();
-    _logRefreshTimer = null;
-  }
-
-  void _syncLogPolling({required bool isShellTabActive}) {
-    final isLogsTabActive = _tabController.index == _logsTabIndex;
-    final isActiveTab = isShellTabActive && isLogsTabActive;
-    if (shouldPoll(isActiveTab: isActiveTab, enabled: _autoRefreshLogs)) {
-      _startLogPolling();
-    } else {
-      _stopLogPolling();
-    }
-  }
-
-  int get _logsTabIndex => _hasInfoTab ? 4 : 3;
-
-  bool _shouldShowInfoTab(KomodoStack? stack) {
-    if (stack == null) return false;
-    if (stack.config.filesOnHost) return true;
-    return stack.config.linkedRepo.trim().isNotEmpty ||
-        stack.config.repo.trim().isNotEmpty;
-  }
-
-  int _mapTabIndex({
-    required int oldIndex,
-    required bool oldHasInfoTab,
-    required bool newHasInfoTab,
-  }) {
-    if (oldHasInfoTab == newHasInfoTab) return oldIndex;
-    if (!oldHasInfoTab && newHasInfoTab) {
-      return switch (oldIndex) {
-        0 => 0,
-        1 => 2,
-        2 => 3,
-        _ => 4,
-      };
-    }
-    return switch (oldIndex) {
-      0 => 0,
-      1 => 1,
-      2 => 1,
-      3 => 2,
-      _ => 3,
-    };
-  }
-
-  void _updateTabController({required bool hasInfoTab}) {
-    if (_hasInfoTab == hasInfoTab) return;
-    final oldIndex = _tabController.index;
-    final oldHasInfoTab = _hasInfoTab;
-    final nextLength = hasInfoTab ? 5 : 4;
-    final nextIndex = _mapTabIndex(
-      oldIndex: oldIndex,
-      oldHasInfoTab: oldHasInfoTab,
-      newHasInfoTab: hasInfoTab,
-    ).clamp(0, nextLength - 1);
-
-    _tabController
-      ..removeListener(_onInnerTabChanged)
-      ..dispose();
-    _hasInfoTab = hasInfoTab;
-    _tabController = TabController(length: nextLength, vsync: this)
-      ..index = nextIndex
-      ..addListener(_onInnerTabChanged);
-
-    if (mounted) {
-      setState(() {});
-      _syncLogPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
+  void _onDirtyChanged({bool? config, bool? info}) {
+    final before = _dirty;
+    if (config != null) _configDirty = config;
+    if (info != null) _infoDirty = info;
+    syncDirtySnackBar(
+      dirty: _dirty,
+      onDiscard: _discardAll,
+      onSave: _saveAll,
+      saveEnabled: !_saveInFlight,
+    );
+    if (before != _dirty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isActiveTab = ref.watch(mainShellIndexProvider) == 1;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _syncLogPolling(isShellTabActive: isActiveTab);
-    });
+    final isShellActive = ref.watch(mainShellIndexProvider) == 1;
+    final logsPolling = shouldPoll(
+      isActiveTab: isShellActive && _activeTabId == _tabLogs,
+      enabled: _autoRefreshLogs,
+    );
 
     final stackAsync = ref.watch(stackDetailProvider(widget.stackId));
     final coreInfoAsync = ref.watch(coreInfoProvider);
@@ -194,7 +106,6 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     final registryAccountsAsync = ref.watch(dockerRegistryAccountsProvider);
     final tagsAsync = ref.watch(tagsProvider);
     final actionsState = ref.watch(stackActionsProvider);
-    final stack = stackAsync.asData?.value;
 
     final scheme = Theme.of(context).colorScheme;
 
@@ -232,117 +143,39 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       },
       orElse: () => <String, String>{},
     );
-    final hasInfoTab = _hasInfoTab;
-    final desiredHasInfoTab = _shouldShowInfoTab(stackAsync.asData?.value);
-    if (desiredHasInfoTab != _hasInfoTab) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _updateTabController(hasInfoTab: desiredHasInfoTab);
-      });
-    }
+    final stack = stackAsync.asData?.value;
+    final hasInfo = _shouldShowInfo(stack);
 
-    return Scaffold(
-      appBar: MainAppBar(
-        title: widget.stackName,
-        icon: AppIcons.stacks,
-        markColor: AppTokens.resourceStacks,
-        markUseGradient: true,
-        centerTitle: true,
-        status: stackAppBarStatus(
-          listItem: listItem,
-          serviceCount: serviceCount,
-        ),
-        actions: [
-          PopupMenuButton<StackAction>(
-            icon: const Icon(AppIcons.moreVertical),
-            onSelected: (action) =>
-                _handleAction(context, widget.stackId, action),
-            itemBuilder: (context) => [
-              komodoPopupMenuItem(
-                value: StackAction.checkUpdates,
-                icon: Icons.refresh_outlined,
-                label: 'Check images now',
-                iconColor: scheme.primary,
-              ),
-              komodoPopupMenuItem(
-                value: StackAction.deployIfChanged,
-                icon: Icons.difference_outlined,
-                label: 'Deploy if changed',
-                iconColor: scheme.primary,
-              ),
-              komodoPopupMenuItem(
-                value: StackAction.redeploy,
-                icon: AppIcons.deployments,
-                label: 'Redeploy',
-                iconColor: scheme.primary,
-              ),
-              komodoPopupMenuItem(
-                value: StackAction.pullImages,
-                icon: AppIcons.download,
-                label: 'Pull images',
-                iconColor: scheme.primary,
-              ),
-              komodoPopupMenuItem(
-                value: StackAction.restart,
-                icon: AppIcons.refresh,
-                label: 'Restart',
-                iconColor: scheme.primary,
-              ),
-              komodoPopupMenuItem(
-                value: StackAction.pause,
-                icon: AppIcons.pause,
-                label: 'Pause',
-                iconColor: scheme.tertiary,
-              ),
-              komodoPopupMenuDivider(),
-              komodoPopupMenuItem(
-                value: StackAction.start,
-                icon: AppIcons.play,
-                label: 'Start',
-                iconColor: scheme.secondary,
-              ),
-              komodoPopupMenuItem(
-                value: StackAction.stop,
-                icon: AppIcons.stop,
-                label: 'Stop',
-                iconColor: scheme.tertiary,
-              ),
-              komodoPopupMenuItem(
-                value: StackAction.destroy,
-                icon: AppIcons.delete,
-                label: 'Destroy',
-                destructive: true,
-              ),
-            ],
+    return UnsavedChangesGuard(
+      dirty: _dirty,
+      onDiscarded: hideDirtySnackBar,
+      child: Scaffold(
+        appBar: MainAppBar(
+          title: widget.stackName,
+          icon: AppIcons.stacks,
+          markColor: AppTokens.resourceStacks,
+          markUseGradient: true,
+          centerTitle: true,
+          status: stackAppBarStatus(
+            listItem: listItem,
+            serviceCount: serviceCount,
           ),
-          if (stack != null)
-            ResourceAdvancedMenuButton(
-              metadata: ResourceMetadata(
-                kind: ResourceKind.stacks,
-                id: stack.id,
-                name: stack.name,
-                description: stack.description,
-                template: stack.template,
-                tags: stack.tags,
-              ),
-              onMutated: () {
-                ref
-                  ..invalidate(stacksProvider)
-                  ..invalidate(stackDetailProvider(widget.stackId));
-              },
-            ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          NestedScrollView(
-            key: _nestedScrollKey,
-            controller: _outerScrollController,
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
+        ),
+        body: Stack(
+          children: [
+            DetailTabScaffold(
+              key: _tabsKey,
+              initialTabId: _tabServices,
+              onTabChanged: (id) => setState(() => _activeTabId = id),
+              headerSlivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                    ),
                     child: stackAsync.when(
                       data: (stack) => stack != null
                           ? Column(
@@ -370,11 +203,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                     stack.tags,
                                     tagNameById,
                                   ),
-                                  onAction: (action) => _handleAction(
-                                    context,
-                                    widget.stackId,
-                                    action,
-                                  ),
+                                  onAction: _handleAction,
                                   onServerTap: stack.config.serverId.isEmpty
                                       ? null
                                       : () => context.push(
@@ -396,7 +225,40 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                           ),
                                         ),
                                 ),
-                                const Gap(12),
+                                const Gap(AppSpacing.md),
+                                StackActionBar(
+                                  state: listItem?.info.state,
+                                  needsDeploy: stackNeedsDeploy(
+                                    stack: stack,
+                                    listItem: listItem,
+                                    updateCount: updateCount,
+                                  ),
+                                  onAction: _handleAction,
+                                  onShowLogs: () =>
+                                      _tabsKey.currentState?.selectTab(
+                                        _tabLogs,
+                                        collapseHeader: true,
+                                      ),
+                                  manageItems: buildResourceManageGroup(
+                                    context: context,
+                                    ref: ref,
+                                    metadata: ResourceMetadata(
+                                      kind: ResourceKind.stacks,
+                                      id: stack.id,
+                                      name: stack.name,
+                                      description: stack.description,
+                                      template: stack.template,
+                                      tags: stack.tags,
+                                    ),
+                                    onMutated: () {
+                                      ref
+                                        ..invalidate(stacksProvider)
+                                        ..invalidate(
+                                          stackDetailProvider(widget.stackId),
+                                        );
+                                    },
+                                  ).items,
+                                ),
                               ],
                             )
                           : const StackMessageSurface(
@@ -408,58 +270,58 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                     ),
                   ),
                 ),
-                SliverOverlapAbsorber(
-                  handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
-                    context,
-                  ),
-                  sliver: SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _PinnedTabBarHeaderDelegate(
-                      backgroundColor: scheme.surface,
-                      tabBar: buildDetailTabBar(
-                        context: context,
-                        controller: _tabController,
-                        outerScrollController: _outerScrollController,
-                        nestedScrollKey: _nestedScrollKey,
-                        tabs: [
-                          const Tab(
-                            key: ValueKey('stack_tab_config'),
-                            icon: Icon(AppIcons.bolt),
-                            text: 'Config',
-                          ),
-                          if (hasInfoTab)
-                            const Tab(
-                              key: ValueKey('stack_tab_info'),
-                              icon: Icon(AppIcons.info),
-                              text: 'Info',
+              ],
+              tabs: [
+                DetailTabSpec(
+                  id: _tabServices,
+                  label: 'Services',
+                  icon: AppIcons.toolbox,
+                  body: RefreshIndicator(
+                    onRefresh: () async {
+                      ref
+                        ..invalidate(stackServicesProvider(widget.stackId))
+                        ..invalidate(stackUpdatesProvider(widget.stackId));
+                    },
+                    child: DetailTabScrollView.box(
+                      scrollKey: PageStorageKey(
+                        'stack_${widget.stackId}_services',
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          servicesAsync.when(
+                            data: (services) => services.isEmpty
+                                ? const EmptyStateView.inline(
+                                    icon: AppIcons.containers,
+                                    title: 'No services found',
+                                    message:
+                                        'Services will appear here once '
+                                        'the stack is deployed.',
+                                  )
+                                : Column(
+                                    children: [
+                                      for (final service in services) ...[
+                                        StackServiceCard(service: service),
+                                        const Gap(AppSpacing.md),
+                                      ],
+                                    ],
+                                  ),
+                            loading: () => const StackLoadingSurface(),
+                            error: (error, _) => StackMessageSurface(
+                              message: 'Services unavailable: $error',
                             ),
-                          const Tab(
-                            key: ValueKey('stack_tab_services'),
-                            icon: Icon(AppIcons.toolbox),
-                            text: 'Services',
                           ),
-                          const Tab(
-                            key: ValueKey('stack_tab_updates'),
-                            icon: Icon(AppIcons.history),
-                            text: 'Updates',
-                          ),
-                          const Tab(
-                            key: ValueKey('stack_tab_logs'),
-                            icon: Icon(AppIcons.logs),
-                            text: 'Logs',
-                          ),
+                          StackUpdatesSection(stackId: widget.stackId),
                         ],
                       ),
                     ),
                   ),
                 ),
-              ];
-            },
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                _KeepAlive(
-                  child: RefreshIndicator(
+                DetailTabSpec(
+                  id: _tabConfig,
+                  label: 'Config',
+                  icon: AppIcons.bolt,
+                  body: RefreshIndicator(
                     onRefresh: () async {
                       ref.invalidate(stackDetailProvider(widget.stackId));
                     },
@@ -469,25 +331,44 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                       ),
                       child: stackAsync.when(
                         data: (stack) => stack != null
-                            ? StackConfigEditorContent(
-                                key: _configEditorKey,
-                                stackIdOrName: widget.stackId,
-                                initialConfig: stack.config,
-                                webhookBaseUrl: coreInfoAsync.maybeWhen(
-                                  data: (info) => info.webhookBaseUrl,
-                                  orElse: () => '',
-                                ),
-                                servers: servers,
-                                repos: repos,
-                                registryAccounts: registryAccounts,
-                                onDirtyChanged: (dirty) {
-                                  syncDirtySnackBar(
-                                    dirty: dirty,
-                                    onDiscard: () => _discardConfig(stack),
-                                    onSave: () => _saveConfig(stack: stack),
-                                    saveEnabled: !_configSaveInFlight,
-                                  );
-                                },
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  StackConfigEditorContent(
+                                    key: _configEditorKey,
+                                    stackIdOrName: widget.stackId,
+                                    initialConfig: stack.config,
+                                    webhookBaseUrl: coreInfoAsync.maybeWhen(
+                                      data: (info) => info.webhookBaseUrl,
+                                      orElse: () => '',
+                                    ),
+                                    servers: servers,
+                                    repos: repos,
+                                    registryAccounts: registryAccounts,
+                                    onDirtyChanged: (dirty) =>
+                                        _onDirtyChanged(config: dirty),
+                                  ),
+                                  if (hasInfo) ...[
+                                    const Gap(AppSpacing.md),
+                                    StackInfoTabContent(
+                                      key: _infoEditorKey,
+                                      info: stack.info,
+                                      onSaveFile:
+                                          (
+                                            path,
+                                            contents, {
+                                            showSnackBar = true,
+                                          }) => _saveStackFile(
+                                            stackId: stack.id,
+                                            filePath: path,
+                                            contents: contents,
+                                            showSnackBar: showSnackBar,
+                                          ),
+                                      onDirtyChanged: (dirty) =>
+                                          _onDirtyChanged(info: dirty),
+                                    ),
+                                  ],
+                                ],
                               )
                             : const StackMessageSurface(
                                 message: 'Stack not found',
@@ -499,148 +380,62 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                     ),
                   ),
                 ),
-                if (hasInfoTab)
-                  _KeepAlive(
-                    child: RefreshIndicator(
-                      onRefresh: () async {
-                        ref.invalidate(stackDetailProvider(widget.stackId));
-                      },
-                      child: DetailTabScrollView.box(
-                        scrollKey: PageStorageKey(
-                          'stack_${widget.stackId}_info',
-                        ),
-                        child: stackAsync.when(
-                          data: (stack) => stack != null
-                              ? StackInfoTabContent(
-                                  key: _infoEditorKey,
-                                  info: stack.info,
-                                  onSaveFile:
-                                      (
-                                        path,
-                                        contents, {
-                                        showSnackBar = true,
-                                      }) => _saveStackFile(
-                                        stackId: stack.id,
-                                        filePath: path,
-                                        contents: contents,
-                                        showSnackBar: showSnackBar,
-                                      ),
-                                  onDirtyChanged: (dirty) {
-                                    syncDirtySnackBar(
-                                      dirty: dirty,
-                                      onDiscard: _discardInfoChanges,
-                                      onSave: _saveInfoChanges,
-                                      saveEnabled: !_infoSaveInFlight,
-                                    );
-                                  },
-                                )
-                              : const StackMessageSurface(
-                                  message: 'Stack not found',
-                                ),
-                          loading: () => const StackLoadingSurface(),
-                          error: (error, _) =>
-                              StackMessageSurface(message: 'Error: $error'),
-                        ),
-                      ),
-                    ),
-                  ),
-                _KeepAlive(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(stackServicesProvider(widget.stackId));
-                    },
-                    child: DetailTabScrollView.box(
-                      scrollKey: PageStorageKey(
-                        'stack_${widget.stackId}_services',
-                      ),
-                      child: servicesAsync.when(
-                        data: (services) => services.isEmpty
-                            ? const EmptyStateView.inline(
-                                icon: AppIcons.containers,
-                                title: 'No services found',
-                                message:
-                                    'Services will appear here once '
-                                    'the stack is deployed.',
+                DetailTabSpec(
+                  id: _tabLogs,
+                  label: 'Logs',
+                  icon: AppIcons.logs,
+                  body: DetailTabFillBody(
+                    child: ServerLogExplorer(
+                      key: ValueKey('stack_log_explorer_${widget.stackId}'),
+                      fillHeight: true,
+                      autoRefresh: logsPolling,
+                      onAutoRefreshChanged: (value) =>
+                          setState(() => _autoRefreshLogs = value),
+                      loader: (request) async {
+                        final repository = ref.read(stackRepositoryProvider);
+                        if (repository == null) {
+                          throw StateError('No active Komodo connection.');
+                        }
+                        final result = request.isSearch
+                            ? await repository.searchServerLog(
+                                stackIdOrName: widget.stackId,
+                                terms: request.terms,
+                                combinator: request.combinator,
+                                invert: request.invert,
+                                timestamps: request.timestamps,
                               )
-                            : Column(
-                                children: [
-                                  for (final service in services) ...[
-                                    StackServiceCard(service: service),
-                                    const Gap(12),
-                                  ],
-                                ],
-                              ),
-                        loading: () => const StackLoadingSurface(),
-                        error: (error, _) => StackMessageSurface(
-                          message: 'Services unavailable: $error',
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                _KeepAlive(child: StackUpdatesTab(stackId: widget.stackId)),
-                _KeepAlive(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(stackLogProvider(widget.stackId));
-                    },
-                    child: DetailTabScrollView.list(
-                      scrollKey: PageStorageKey('stack_${widget.stackId}_logs'),
-                      maxContentWidth: 1100,
-                      children: [
-                        ServerLogExplorer(
-                          key: ValueKey('stack_log_explorer_${widget.stackId}'),
-                          autoRefresh: _autoRefreshLogs,
-                          onAutoRefreshChanged: (value) {
-                            setState(() => _autoRefreshLogs = value);
-                            _syncLogPolling(
-                              isShellTabActive:
-                                  ref.read(mainShellIndexProvider) == 1,
-                            );
-                          },
-                          loader: (request) async {
-                            final repository = ref.read(
-                              stackRepositoryProvider,
-                            );
-                            if (repository == null) {
-                              throw StateError('No active Komodo connection.');
-                            }
-                            final result = request.isSearch
-                                ? await repository.searchServerLog(
-                                    stackIdOrName: widget.stackId,
-                                    terms: request.terms,
-                                    combinator: request.combinator,
-                                    invert: request.invert,
-                                    timestamps: request.timestamps,
-                                  )
-                                : await repository.loadServerLog(
-                                    stackIdOrName: widget.stackId,
-                                    tail: request.tail,
-                                    timestamps: request.timestamps,
-                                  );
-                            return result.fold(
-                              (failure) => throw StateError(
-                                failure.displayMessage,
-                              ),
-                              (log) => log,
-                            );
-                          },
-                        ),
-                      ],
+                            : await repository.loadServerLog(
+                                stackIdOrName: widget.stackId,
+                                tail: request.tail,
+                                timestamps: request.timestamps,
+                              );
+                        return result.fold(
+                          (failure) => throw StateError(failure.displayMessage),
+                          (log) => log,
+                        );
+                      },
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: scheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
-        ],
+            if (actionsState.isLoading)
+              ColoredBox(
+                color: scheme.scrim.withValues(alpha: 0.25),
+                child: const Center(child: AppSkeletonCard()),
+              ),
+          ],
+        ),
       ),
     );
+  }
+
+  /// Remote files / deployed config only exist for repo or on-host stacks.
+  bool _shouldShowInfo(KomodoStack? stack) {
+    if (stack == null) return false;
+    if (stack.config.filesOnHost) return true;
+    return stack.config.linkedRepo.trim().isNotEmpty ||
+        stack.config.repo.trim().isNotEmpty;
   }
 
   IconData _sourceIcon({
@@ -720,15 +515,13 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     return [for (final tag in tags) tagNameById[tag] ?? tag];
   }
 
-  Future<void> _handleAction(
-    BuildContext context,
-    String stackId,
-    StackAction action,
-  ) async {
+  Future<void> _handleAction(StackAction action) async {
+    final stackId = widget.stackId;
+    final name = widget.stackName;
     final actions = ref.read(stackActionsProvider.notifier);
     if (action == StackAction.checkUpdates) {
       final services = await actions.checkForUpdates(stackId);
-      if (!mounted || !context.mounted) return;
+      if (!mounted) return;
       ref
         ..invalidate(stackDetailProvider(stackId))
         ..invalidate(stackServicesProvider(stackId))
@@ -751,28 +544,25 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       );
       return;
     }
-    if (action == StackAction.destroy) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Destroy stack?'),
-          content: const Text(
-            'This will run docker compose down and remove the stack containers. Continue?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Destroy'),
-            ),
-          ],
-        ),
+    if (action == StackAction.stop) {
+      final confirmed = await confirmDestructive(
+        context,
+        title: 'Stop $name?',
+        message: 'This stops all containers of "$name". Continue?',
+        confirmLabel: 'Stop',
       );
-      if (confirmed != true) return;
-      if (!mounted) return;
+      if (!confirmed || !mounted) return;
+    }
+    if (action == StackAction.destroy) {
+      final confirmed = await confirmDestructive(
+        context,
+        title: 'Destroy $name?',
+        message:
+            'This runs docker compose down and removes the containers of '
+            '"$name". Continue?',
+        confirmLabel: 'Destroy',
+      );
+      if (!confirmed || !mounted) return;
     }
 
     final success = await switch (action) {
@@ -798,35 +588,67 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       ref
         ..invalidate(stackDetailProvider(stackId))
         ..invalidate(stackServicesProvider(stackId))
-        ..invalidate(stackLogProvider(stackId));
+        ..invalidate(stacksProvider);
     }
 
-    if (context.mounted) {
-      AppSnackBar.show(
-        context,
-        success
-            ? 'Action submitted. Check updates for the result.'
-            : hasActionError
-            ? 'Action failed: $actionErrorMessage'
-            : 'Action failed. Please try again.',
-        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
-      );
-    }
+    AppSnackBar.show(
+      context,
+      success
+          ? 'Action submitted. Check updates for the result.'
+          : hasActionError
+          ? 'Action failed: $actionErrorMessage'
+          : 'Action failed. Please try again.',
+      tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
+    );
   }
 
-  void _discardConfig(KomodoStack stack) {
-    _configEditorKey.currentState?.resetTo(stack.config);
-    hideDirtySnackBar();
-  }
-
-  void _discardInfoChanges() {
+  void _discardAll() {
+    final stack = _currentStack;
+    if (stack != null) _configEditorKey.currentState?.resetTo(stack.config);
     _infoEditorKey.currentState?.resetAll();
     hideDirtySnackBar();
   }
 
-  Future<void> _saveConfig({required KomodoStack stack}) async {
-    if (_configSaveInFlight) return;
+  bool _stillDirty() {
+    final config =
+        _configEditorKey.currentState?.buildPartialConfigParams().isNotEmpty ??
+        false;
+    final info = _infoEditorKey.currentState?.isDirty ?? false;
+    return config || info;
+  }
 
+  /// Saves config changes and edited stack files in one go.
+  Future<void> _saveAll() async {
+    if (_saveInFlight) return;
+    final stack = _currentStack;
+    if (stack == null) return;
+
+    setState(() => _saveInFlight = true);
+    var ok = true;
+    if (_configEditorKey.currentState?.buildPartialConfigParams().isNotEmpty ??
+        false) {
+      ok = await _saveConfig(stack);
+    }
+    if (ok && (_infoEditorKey.currentState?.isDirty ?? false)) {
+      ok = await _saveInfoChanges();
+    }
+    if (!mounted) return;
+    setState(() => _saveInFlight = false);
+
+    if (ok) {
+      hideDirtySnackBar();
+      AppSnackBar.show(context, 'Stack updated', tone: AppSnackBarTone.success);
+      return;
+    }
+
+    reShowDirtySnackBarIfStillDirty(
+      isStillDirty: _stillDirty,
+      onDiscard: _discardAll,
+      onSave: _saveAll,
+    );
+  }
+
+  Future<bool> _saveConfig(KomodoStack stack) async {
     final draft = _configEditorKey.currentState;
     if (draft == null) {
       AppSnackBar.show(
@@ -834,33 +656,25 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
         'Editor not ready. Please try again.',
         tone: AppSnackBarTone.error,
       );
-      return;
+      return false;
     }
 
     final partialConfig = draft.buildPartialConfigParams();
-    if (partialConfig.isEmpty) {
-      hideDirtySnackBar();
-      return;
-    }
+    if (partialConfig.isEmpty) return true;
 
     final actions = ref.read(stackActionsProvider.notifier);
-    setState(() => _configSaveInFlight = true);
     final updated = await actions.updateStackConfig(
       stackId: stack.id,
       partialConfig: partialConfig,
     );
-    if (!mounted) return;
-    setState(() => _configSaveInFlight = false);
+    if (!mounted) return false;
 
     if (updated != null) {
       ref
         ..invalidate(stackDetailProvider(stack.id))
         ..invalidate(stacksProvider);
-
       _configEditorKey.currentState?.resetTo(updated.config);
-      hideDirtySnackBar();
-      AppSnackBar.show(context, 'Stack updated', tone: AppSnackBarTone.success);
-      return;
+      return true;
     }
 
     final err = ref.read(stackActionsProvider).asError?.error;
@@ -869,50 +683,22 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       err != null ? 'Failed: $err' : 'Failed to update stack',
       tone: AppSnackBarTone.error,
     );
-
-    reShowDirtySnackBarIfStillDirty(
-      isStillDirty: () {
-        return _configEditorKey.currentState
-                ?.buildPartialConfigParams()
-                .isNotEmpty ??
-            false;
-      },
-      onDiscard: () => _discardConfig(stack),
-      onSave: () => _saveConfig(stack: stack),
-      saveEnabled: !_configSaveInFlight,
-    );
+    return false;
   }
 
-  Future<void> _saveInfoChanges() async {
-    if (_infoSaveInFlight) return;
+  Future<bool> _saveInfoChanges() async {
     final editor = _infoEditorKey.currentState;
-    if (editor == null) return;
-
-    setState(() => _infoSaveInFlight = true);
+    if (editor == null) return true;
     final success = await editor.saveAll();
-    if (!mounted) return;
-    setState(() => _infoSaveInFlight = false);
-
-    if (success) {
-      hideDirtySnackBar();
-      AppSnackBar.show(context, 'Files updated', tone: AppSnackBarTone.success);
-      return;
+    if (!mounted) return false;
+    if (!success) {
+      AppSnackBar.show(
+        context,
+        'Failed to update files',
+        tone: AppSnackBarTone.error,
+      );
     }
-
-    AppSnackBar.show(
-      context,
-      'Failed to update files',
-      tone: AppSnackBarTone.error,
-    );
-
-    reShowDirtySnackBarIfStillDirty(
-      isStillDirty: () {
-        return _infoEditorKey.currentState?.isDirty ?? false;
-      },
-      onDiscard: _discardInfoChanges,
-      onSave: _saveInfoChanges,
-      saveEnabled: !_infoSaveInFlight,
-    );
+    return success;
   }
 
   Future<bool> _saveStackFile({
@@ -963,61 +749,5 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       );
     }
     return false;
-  }
-}
-
-class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _PinnedTabBarHeaderDelegate({
-    required this.tabBar,
-    required this.backgroundColor,
-  });
-
-  final PreferredSizeWidget tabBar;
-  final Color backgroundColor;
-
-  @override
-  double get minExtent => tabBar.preferredSize.height;
-
-  @override
-  double get maxExtent => tabBar.preferredSize.height;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Material(
-      color: backgroundColor,
-      elevation: overlapsContent ? 1 : 0,
-      child: tabBar,
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _PinnedTabBarHeaderDelegate oldDelegate) {
-    return oldDelegate.tabBar != tabBar ||
-        oldDelegate.backgroundColor != backgroundColor;
-  }
-}
-
-class _KeepAlive extends StatefulWidget {
-  const _KeepAlive({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_KeepAlive> createState() => _KeepAliveState();
-}
-
-class _KeepAliveState extends State<_KeepAlive>
-    with AutomaticKeepAliveClientMixin<_KeepAlive> {
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return widget.child;
   }
 }

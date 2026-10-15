@@ -183,7 +183,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('stack_tab_config')), findsOneWidget);
+    expect(find.byKey(const ValueKey('detail_tab_config')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('detail_tab_config')));
+    await tester.pumpAndSettle();
     // Check that the Server section is rendered in the config tab
     expect(find.text('Server'), findsWidgets);
   });

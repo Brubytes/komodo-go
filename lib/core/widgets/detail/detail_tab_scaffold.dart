@@ -125,9 +125,24 @@ class DetailTabScaffoldState extends State<DetailTabScaffold>
   }
 
   /// Selects the tab with [id] (no-op for unknown ids).
-  void selectTab(String id, {bool animate = true}) {
+  ///
+  /// With [collapseHeader] the header slivers are scrolled away so the tab
+  /// body gets the full height (useful for logs).
+  void selectTab(
+    String id, {
+    bool animate = true,
+    bool collapseHeader = false,
+  }) {
     final index = widget.tabs.indexWhere((t) => t.id == id);
     if (index < 0) return;
+    if (collapseHeader && _outerScrollController.hasClients) {
+      final max = _outerScrollController.position.maxScrollExtent;
+      _outerScrollController.animateTo(
+        max,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+      );
+    }
     if (animate) {
       _controller.animateTo(index);
     } else {
