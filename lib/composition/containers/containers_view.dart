@@ -8,22 +8,24 @@ import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
-import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_filters_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/shared/resources/resource_sorting.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 
 class ContainersView extends ConsumerStatefulWidget {
   const ContainersView({super.key});
@@ -337,28 +339,20 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
     }
 
     final actions = ref.read(containerActionsProvider.notifier);
-    if (action == ContainerAction.remove) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Remove container?'),
-          content: Text(
-            'This permanently removes ${item.container.name}. '
-            'A managed Stack or Deployment may recreate it.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Remove'),
-            ),
-          ],
-        ),
+    if (action == ContainerAction.remove || action == ContainerAction.stop) {
+      final remove = action == ContainerAction.remove;
+      final confirmed = await confirmDestructive(
+        context,
+        title: remove
+            ? 'Remove ${item.container.name}?'
+            : 'Stop ${item.container.name}?',
+        message: remove
+            ? 'This permanently removes "${item.container.name}". '
+                  'A managed Stack or Deployment may recreate it.'
+            : 'This will stop "${item.container.name}".',
+        confirmLabel: remove ? 'Remove' : 'Stop',
       );
-      if (confirmed != true || !context.mounted) return;
+      if (!confirmed || !context.mounted) return;
     }
     final success = await switch (action) {
       ContainerAction.start => actions.start(
@@ -721,51 +715,18 @@ class _ContainersSkeletonBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Skeletonizer(
-      child: Column(
-        children: List.generate(
-          3,
-          (index) => Padding(
-            padding: EdgeInsets.only(bottom: index == 2 ? 0 : 12),
-            child: AppCardSurface(
-              padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const CircleAvatar(radius: 16),
-                        const Gap(10),
-                        Expanded(
-                          child: Text(
-                            'Container name',
-                            style: textTheme.titleSmall,
-                          ),
-                        ),
-                        const Gap(8),
-                        const CircleAvatar(radius: 6),
-                      ],
-                    ),
-                    const Gap(10),
-                    Text('Image • Status • Server', style: textTheme.bodySmall),
-                    const Gap(10),
-                    const Row(
-                      children: [
-                        Chip(label: Text('Running')),
-                        Gap(8),
-                        Chip(label: Text('CPU 12%')),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+    return const ResourceCardSkeletonList(
+      title: 'Container name',
+      metaLeft: 'Server',
+      metaRight: 'image:latest',
+      count: 3,
+      padding: EdgeInsets.zero,
+      bottom: Row(
+        children: [
+          ResourceIconLabel(icon: AppIcons.cpu, label: 'CPU 0.5%'),
+          SizedBox(width: AppSpacing.md),
+          ResourceIconLabel(icon: AppIcons.memory, label: 'Mem 128MiB / 1GiB'),
+        ],
       ),
     );
   }

@@ -236,22 +236,22 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('stack_card_menu_s1')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('stack_card_destroy_s1')));
+      await tester.tap(find.text('Destroy'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Destroy stack?'), findsOneWidget);
+      expect(find.text('Destroy Stack One?'), findsOneWidget);
 
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Destroy stack?'), findsNothing);
+      expect(find.text('Destroy Stack One?'), findsNothing);
       verifyNever(() => repository.destroyStack('s1'));
 
       await tester.tap(find.byKey(const ValueKey('stack_card_menu_s1')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('stack_card_destroy_s1')));
-      await tester.pumpAndSettle();
       await tester.tap(find.text('Destroy'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Destroy'));
       await tester.pumpAndSettle();
 
       verify(() => repository.destroyStack('s1')).called(1);

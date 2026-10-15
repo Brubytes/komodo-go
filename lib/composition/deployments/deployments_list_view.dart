@@ -8,12 +8,14 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/filters/template_filter.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -26,7 +28,6 @@ import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dar
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/resource_sorting.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 
 /// View displaying the list of all deployments.
 class DeploymentsListView extends ConsumerStatefulWidget {
@@ -437,6 +438,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                                 context,
                                 ref,
                                 deployment.id,
+                                deployment.name,
                                 action,
                               ),
                             ),
@@ -477,32 +479,20 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
     BuildContext context,
     WidgetRef ref,
     String deploymentId,
+    String deploymentName,
     DeploymentAction action,
   ) async {
-    if (action == DeploymentAction.destroy) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          key: ValueKey('deployment_destroy_dialog_$deploymentId'),
-          title: const Text('Destroy deployment?'),
-          content: const Text(
-            'This will stop and remove the container. Continue?',
-          ),
-          actions: [
-            TextButton(
-              key: ValueKey('deployment_destroy_cancel_$deploymentId'),
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              key: ValueKey('deployment_destroy_confirm_$deploymentId'),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Destroy'),
-            ),
-          ],
-        ),
+    if (action == DeploymentAction.destroy || action == DeploymentAction.stop) {
+      final destroy = action == DeploymentAction.destroy;
+      final confirmed = await confirmDestructive(
+        context,
+        title: destroy ? 'Destroy $deploymentName?' : 'Stop $deploymentName?',
+        message: destroy
+            ? 'This will stop and remove the container of "$deploymentName".'
+            : 'This will stop the container of "$deploymentName".',
+        confirmLabel: destroy ? 'Destroy' : 'Stop',
       );
-      if (confirmed != true) return;
+      if (!confirmed) return;
       if (!context.mounted) return;
     }
 
@@ -817,47 +807,12 @@ class _DeploymentsSkeletonSliver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Skeletonizer.sliver(
-      child: SliverList.separated(
-        itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
-        itemBuilder: (_, _) => AppCardSurface(
-          padding: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const CircleAvatar(radius: 16),
-                    const Gap(10),
-                    Expanded(
-                      child: Text(
-                        'Deployment name',
-                        style: textTheme.titleSmall,
-                      ),
-                    ),
-                    const Gap(8),
-                    const CircleAvatar(radius: 6),
-                  ],
-                ),
-                const Gap(10),
-                Text('Image • Server', style: textTheme.bodySmall),
-                const Gap(10),
-                const Row(
-                  children: [
-                    Chip(label: Text('Running')),
-                    Gap(8),
-                    Chip(label: Text('Healthy')),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+    return const SliverToBoxAdapter(
+      child: ResourceCardSkeletonList(
+        title: 'Deployment name',
+        subtitle: 'registry/image:latest',
+        metaLeft: 'Server',
+        padding: EdgeInsets.zero,
       ),
     );
   }

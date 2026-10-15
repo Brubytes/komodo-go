@@ -8,10 +8,12 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -25,7 +27,6 @@ import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dar
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/resource_sorting.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 
 /// View displaying the list of all stacks.
 class StacksListView extends ConsumerStatefulWidget {
@@ -399,6 +400,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                                 context,
                                 ref,
                                 filtered[i].id,
+                                filtered[i].name,
                                 action,
                               ),
                             ),
@@ -435,30 +437,22 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
     BuildContext context,
     WidgetRef ref,
     String stackId,
+    String stackName,
     StackAction action,
   ) async {
     final actions = ref.read(stackActionsProvider.notifier);
-    if (action == StackAction.destroy) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Destroy stack?'),
-          content: const Text(
-            'This will run docker compose down and remove the stack containers. Continue?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Destroy'),
-            ),
-          ],
-        ),
+    if (action == StackAction.destroy || action == StackAction.stop) {
+      final destroy = action == StackAction.destroy;
+      final confirmed = await confirmDestructive(
+        context,
+        title: destroy ? 'Destroy $stackName?' : 'Stop $stackName?',
+        message: destroy
+            ? 'This will run docker compose down and remove the stack '
+                  'containers of "$stackName".'
+            : 'This will stop all containers of "$stackName".',
+        confirmLabel: destroy ? 'Destroy' : 'Stop',
       );
-      if (confirmed != true) return;
+      if (!confirmed) return;
       if (!context.mounted) return;
     }
 
@@ -785,50 +779,11 @@ class _StacksSkeletonList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Skeletonizer(
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
-        itemBuilder: (_, _) => AppCardSurface(
-          padding: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const CircleAvatar(radius: 16),
-                    const Gap(10),
-                    Expanded(
-                      child: Text('Stack name', style: textTheme.titleSmall),
-                    ),
-                    const Gap(8),
-                    const CircleAvatar(radius: 6),
-                  ],
-                ),
-                const Gap(10),
-                Text('Source • Server', style: textTheme.bodySmall),
-                const Gap(10),
-                const Row(
-                  children: [
-                    Chip(label: Text('Update available')),
-                    Gap(8),
-                    Chip(label: Text('Tag')),
-                  ],
-                ),
-                const Gap(8),
-                Text('Status message', style: textTheme.bodySmall),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return const ResourceCardSkeletonList(
+      title: 'Stack name',
+      subtitle: 'owner/repository · main',
+      metaLeft: 'Server',
+      metaRight: '3 services',
     );
   }
 }

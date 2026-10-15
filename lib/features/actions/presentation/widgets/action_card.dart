@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
-import 'package:komodo_go/core/theme/app_tokens.dart';
-import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/detail/detail_action_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
-
-import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 
 /// Card widget displaying action information.
@@ -25,161 +23,55 @@ class ActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = action.info.state;
     final scheduleError = action.info.scheduleError ?? '';
     final hasSchedule = action.info.nextScheduledRun != null;
-    final tagPills = _buildTagPills(displayTags);
+    final onRun = this.onRun;
+    final scheme = Theme.of(context).colorScheme;
 
-    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
-
-    return AppCardSurface(
+    return ResourceCard(
       key: ValueKey('action_card_${action.id}'),
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: cardRadius,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 96),
-            child: SizedBox(
-              width: double.infinity,
-              child: Stack(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          action.name,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        const Gap(4),
-                        Text(
-                          hasSchedule ? 'Scheduled' : 'No schedule',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withValues(alpha: 0.7),
-                              ),
-                        ),
-                        if (action.template || tagPills.isNotEmpty) ...[
-                          const Gap(10),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              if (action.template)
-                                const TextPill(label: 'Template'),
-                              ...tagPills,
-                            ],
-                          ),
-                        ],
-                        if (scheduleError.isNotEmpty) ...[
-                          const Gap(8),
-                          Text(
-                            scheduleError,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
+      menuKey: ValueKey('action_card_menu_${action.id}'),
+      title: action.name,
+      subtitle: hasSchedule ? 'Scheduled' : 'No schedule',
+      status: _status(action.info.state),
+      pills: [
+        if (action.template) const TextPill(label: 'Template'),
+        ...resourceTagPills(displayTags),
+      ],
+      bottom: scheduleError.isEmpty
+          ? null
+          : Text(
+              scheduleError,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.error),
+            ),
+      menu: onRun == null
+          ? const []
+          : [
+              DetailActionGroup(
+                items: [
+                  DetailActionItem(
+                    label: 'Run',
+                    icon: AppIcons.play,
+                    onSelected: onRun,
                   ),
-                  Positioned(
-                    top: 8,
-                    right: 12,
-                    child: _StatusBadge(state: state, compact: true),
-                  ),
-                  if (onRun != null)
-                    Positioned(
-                      right: 6,
-                      top: 0,
-                      bottom: 0,
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          icon: const Icon(AppIcons.play),
-                          key: ValueKey('action_card_run_${action.id}'),
-                          onPressed: onRun,
-                          tooltip: 'Run',
-                        ),
-                      ),
-                    ),
                 ],
               ),
-            ),
-          ),
-        ),
-      ),
+            ],
+      onTap: onTap,
     );
   }
-}
 
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.state, this.compact = false});
-
-  final ActionState state;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final (color, icon) = switch (state) {
-      ActionState.running => (scheme.primary, AppIcons.loading),
-      ActionState.ok => (scheme.statusSuccess, AppIcons.ok),
-      ActionState.failed => (scheme.error, AppIcons.error),
-      ActionState.unknown => (scheme.onSurfaceVariant, AppIcons.unknown),
+  ResourceStatusSpec _status(ActionState state) {
+    final (tone, icon) = switch (state) {
+      ActionState.ok => (PillTone.success, AppIcons.ok),
+      ActionState.failed => (PillTone.alert, AppIcons.error),
+      ActionState.running => (PillTone.warning, AppIcons.loading),
+      ActionState.unknown => (PillTone.neutral, AppIcons.unknown),
     };
-
-    final padding = compact
-        ? const EdgeInsets.symmetric(horizontal: 5, vertical: 1)
-        : const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
-    final iconSize = compact ? 11.0 : 14.0;
-    final fontSize = compact ? 10.0 : 12.0;
-
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: iconSize, color: color),
-          Gap(compact ? 2 : 4),
-          Text(
-            state.displayName,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w500,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
+    return ResourceStatusSpec(label: state.displayName, icon: icon, tone: tone);
   }
-}
-
-List<Widget> _buildTagPills(List<String> tags) {
-  if (tags.isEmpty) return [];
-  final capped = tags.take(3).toList();
-  final remaining = tags.length - capped.length;
-  return [
-    for (final tag in capped) TextPill(label: tag),
-    if (remaining > 0) ValuePill(label: 'More', value: '+$remaining'),
-  ];
 }
