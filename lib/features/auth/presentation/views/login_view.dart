@@ -218,9 +218,15 @@ class LoginView extends HookConsumerWidget {
                         ),
                       ),
                       child: Image.asset(
-                        'assets/komodo-go-logo_circle.png',
+                        'assets/komodo-go-logo_circle_small.png',
                         width: 88,
                         height: 88,
+                        cacheWidth:
+                            (88 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
+                        cacheHeight:
+                            (88 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
                       ),
                     ),
                     const Gap(16),
