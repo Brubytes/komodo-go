@@ -160,7 +160,7 @@ class ResourceManageActions {
   }
 
   Future<void> _copy() async {
-    final name = await _promptName(
+    final name = await promptResourceName(
       context,
       title: 'Copy ${metadata.kind.singularLabel}',
       actionLabel: 'Copy',
@@ -185,7 +185,7 @@ class ResourceManageActions {
   }
 
   Future<void> _rename() async {
-    final name = await _promptName(
+    final name = await promptResourceName(
       context,
       title: 'Rename ${metadata.kind.singularLabel}',
       actionLabel: 'Rename',
@@ -525,7 +525,7 @@ class _ResourceMetadataEditorSheetState
   }
 }
 
-Future<String?> _promptName(
+Future<String?> promptResourceName(
   BuildContext context, {
   required String title,
   required String actionLabel,

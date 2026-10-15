@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/composition/resources/resource_manage_actions.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/actions/presentation/views/action_detail_view.dart';
 import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
@@ -105,9 +106,11 @@ class AdvancedServerDetailView extends ConsumerWidget {
     return ServerDetailView(
       serverId: serverId,
       serverName: serverName,
-      appBarActions: [
+      manageGroups: [
         if (server != null)
-          ResourceAdvancedMenuButton(
+          buildResourceManageGroup(
+            context: context,
+            ref: ref,
             metadata: ResourceMetadata(
               kind: ResourceKind.servers,
               id: server.id,
