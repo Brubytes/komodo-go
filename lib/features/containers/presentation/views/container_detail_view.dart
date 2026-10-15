@@ -375,14 +375,6 @@ class _ContainerDetailViewState extends ConsumerState<ContainerDetailView> {
             ? null
             : () => _handleAction(item, primaryAction!),
       ),
-      secondary: DetailActionButton(
-        label: 'Inspect',
-        icon: AppIcons.eye,
-        onPressed: () => _tabsKey.currentState?.selectTab(
-          _tabInspect,
-          collapseHeader: true,
-        ),
-      ),
       moreGroups: resourceMenuGroups(
         lifecycle: [
           if (canStart && primaryAction != ContainerAction.start)
