@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart' hide Tags;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
 import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_list_view.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
@@ -103,7 +104,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('resource_filter_disclosure')));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilterChip, 'vps'));
+    final vps = find.widgetWithText(AppFilterChip, 'vps');
+    await tester.ensureVisible(vps);
+    await tester.tap(vps);
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('card_bad')), findsOneWidget);

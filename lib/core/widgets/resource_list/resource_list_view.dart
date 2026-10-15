@@ -5,6 +5,7 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
 import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/filters/template_filter.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
@@ -432,12 +433,8 @@ class _FiltersPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final tagLabel = selectedTags.isEmpty
-        ? 'Tags'
-        : 'Tags (${selectedTags.length})';
     final templateLabel = switch (templateFilter) {
-      TemplateFilter.exclude => 'Exclude',
+      TemplateFilter.exclude => 'Off',
       TemplateFilter.include => 'Include',
       TemplateFilter.only => 'Only',
     };
@@ -452,67 +449,51 @@ class _FiltersPanel extends StatelessWidget {
             stateOptions: stateOptions,
             serverOptions: serverOptions,
             supportsRecentlyUpdated: supportsRecentlyUpdated,
-          ),
-          _FilterRow(
-            icon: AppIcons.factory,
-            label: 'Templates',
-            trailing: PopupMenuButton<TemplateFilter>(
-              onSelected: onTemplateFilterChanged,
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: TemplateFilter.exclude,
-                  child: Text('Exclude templates'),
-                ),
-                PopupMenuItem(
-                  value: TemplateFilter.include,
-                  child: Text('Include templates'),
-                ),
-                PopupMenuItem(
-                  value: TemplateFilter.only,
-                  child: Text('Only templates'),
-                ),
-              ],
-              child: _FilterValueButton(
-                label: templateLabel,
-                icon: Icons.expand_more,
-              ),
-            ),
-          ),
-          Divider(
-            height: 20,
-            color: scheme.outlineVariant.withValues(alpha: .35),
-          ),
-          _FilterRow(
-            icon: AppIcons.tag,
-            label: tagLabel,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _FilterValueButton(
-                  label: 'Select',
-                  icon: Icons.tune,
-                  onPressed: () async {
-                    final next = await TagFilterSheet.show(
-                      context,
-                      availableTags: availableTags,
-                      selected: selectedTags,
-                      resourceName: resourceName,
-                    );
-                    if (next != null) {
-                      onSelectTags(next);
-                    }
-                  },
-                ),
-                if (selectedTags.isNotEmpty) ...[
-                  const Gap(6),
-                  IconButton(
-                    tooltip: 'Clear tags',
-                    icon: const Icon(AppIcons.close),
-                    onPressed: onClearTags,
+            extraChips: [
+              const ResourceChipGroupDivider(),
+              AppFilterMenuChip<TemplateFilter>(
+                key: const ValueKey('resource_template_filter'),
+                icon: AppIcons.factory,
+                label: templateFilter == TemplateFilter.exclude
+                    ? 'Templates'
+                    : 'Templates: $templateLabel',
+                active: templateFilter != TemplateFilter.exclude,
+                value: templateFilter,
+                options: const [
+                  AppFilterMenuOption(
+                    value: TemplateFilter.exclude,
+                    label: 'Exclude templates',
+                  ),
+                  AppFilterMenuOption(
+                    value: TemplateFilter.include,
+                    label: 'Include templates',
+                  ),
+                  AppFilterMenuOption(
+                    value: TemplateFilter.only,
+                    label: 'Only templates',
                   ),
                 ],
-              ],
-            ),
+                onSelected: onTemplateFilterChanged,
+              ),
+              AppFilterChip(
+                key: const ValueKey('resource_tag_filter'),
+                icon: AppIcons.tag,
+                label: 'Tags',
+                count: selectedTags.isEmpty ? null : selectedTags.length,
+                selected: selectedTags.isNotEmpty,
+                onSelected: (_) async {
+                  final next = await TagFilterSheet.show(
+                    context,
+                    availableTags: availableTags,
+                    selected: selectedTags,
+                    resourceName: resourceName,
+                  );
+                  if (next != null) {
+                    onSelectTags(next);
+                  }
+                },
+              ),
+            ],
           ),
           if (selectedTags.isNotEmpty) ...[
             const Gap(8),
@@ -541,87 +522,6 @@ class _FiltersPanel extends StatelessWidget {
       for (final tag in capped) TextPill(label: tag),
       if (remaining > 0) ValuePill(label: 'More', value: '+$remaining'),
     ];
-  }
-}
-
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({
-    required this.icon,
-    required this.label,
-    required this.trailing,
-  });
-
-  final IconData icon;
-  final String label;
-  final Widget trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: scheme.onSurfaceVariant),
-        const Gap(8),
-        Expanded(
-          child: Text(
-            label,
-            style: textTheme.bodyMedium?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-        trailing,
-      ],
-    );
-  }
-}
-
-class _FilterValueButton extends StatelessWidget {
-  const _FilterValueButton({
-    required this.label,
-    required this.icon,
-    this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark
-        ? scheme.surfaceContainerHigh
-        : scheme.surfaceContainerHighest;
-
-    return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface,
-                ),
-              ),
-              const Gap(6),
-              Icon(icon, size: 16, color: scheme.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 

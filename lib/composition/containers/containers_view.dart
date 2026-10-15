@@ -14,9 +14,9 @@ import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
-import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
@@ -139,6 +139,13 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
         title: 'Containers',
         icon: AppIcons.containers,
         actions: [
+          _SortMenuButton(
+            sortState: sortState,
+            onFieldChanged: (value) =>
+                ref.read(containersSortProvider.notifier).field = value,
+            onToggleDirection: () =>
+                ref.read(containersSortProvider.notifier).toggleDirection(),
+          ),
           ResourceFilterToggleButton(
             visible: _isSearchVisible,
             activeCount: activeFilterCount,
@@ -155,165 +162,173 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
           ),
         ],
       ),
-      body: Stack(
+      body: Column(
         children: [
-          RefreshIndicator(
-            onRefresh: () => ref.read(containersProvider.notifier).refresh(),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
+          AppFilterChipBar(
+            key: const ValueKey('containers_filter_bar'),
+            children: [
+              _ServerMenuChip(
+                servers: serversAsync.maybeWhen(
+                  data: (servers) => servers,
+                  orElse: () => const <Server>[],
+                ),
+                selectedServerId: selectedServerId,
+                onChanged: (value) =>
+                    ref.read(containersServerFilterProvider.notifier).serverId =
+                        value,
+              ),
+              ...buildResourceQuickFilterChips(
+                ref,
+                listId: listId,
+                stateOptions: stateOptions,
+              ),
+            ],
+          ),
+          Expanded(
+            child: Stack(
               children: [
-                _FiltersRow(
-                  serversAsync: serversAsync,
-                  selectedServerId: selectedServerId,
-                  onServerChanged: (value) =>
-                      ref
-                              .read(containersServerFilterProvider.notifier)
-                              .serverId =
-                          value,
-                ),
-                const Gap(12),
-                ResourceViewFiltersSection(
-                  listId: listId,
-                  stateOptions: stateOptions,
-                  showSort: false,
-                ),
-                const Gap(12),
-                _SortRow(
-                  sortState: sortState,
-                  onFieldChanged: (value) =>
-                      ref.read(containersSortProvider.notifier).field = value,
-                  onToggleDirection: () => ref
-                      .read(containersSortProvider.notifier)
-                      .toggleDirection(),
-                ),
-                AnimatedSwitcher(
-                  duration: AppMotion.base,
-                  switchInCurve: AppMotion.enterCurve,
-                  switchOutCurve: AppMotion.exitCurve,
-                  child: _isSearchVisible
-                      ? Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: _SearchField(
-                            focusNode: _searchFocusNode,
-                            controller: _searchController,
-                            onChanged: (value) =>
+                RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(containersProvider.notifier).refresh(),
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      AnimatedSwitcher(
+                        duration: AppMotion.base,
+                        switchInCurve: AppMotion.enterCurve,
+                        switchOutCurve: AppMotion.exitCurve,
+                        child: _isSearchVisible
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: _SearchField(
+                                  focusNode: _searchFocusNode,
+                                  controller: _searchController,
+                                  onChanged: (value) =>
+                                      ref
+                                              .read(
+                                                containersSearchQueryProvider
+                                                    .notifier,
+                                              )
+                                              .query =
+                                          value,
+                                  onClear: () {
+                                    _searchController.clear();
+                                    ref
+                                            .read(
+                                              containersSearchQueryProvider
+                                                  .notifier,
+                                            )
+                                            .query =
+                                        '';
+                                  },
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      if (!_isSearchVisible &&
+                          searchQuery.trim().isNotEmpty) ...[
+                        const Gap(8),
+                        ResourceActiveFilterChips(
+                          listId: listId,
+                          includeQuickFilters: false,
+                          onClearAll: clearAllFilters,
+                          extraChips: [
+                            ActiveFilterChip(
+                              label: 'Search: ${searchQuery.trim()}',
+                              onRemove: () {
+                                _searchController.clear();
                                 ref
                                         .read(
                                           containersSearchQueryProvider
                                               .notifier,
                                         )
                                         .query =
-                                    value,
-                            onClear: () {
-                              _searchController.clear();
-                              ref
-                                      .read(
-                                        containersSearchQueryProvider.notifier,
-                                      )
-                                      .query =
-                                  '';
-                            },
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                if (!_isSearchVisible && searchQuery.trim().isNotEmpty) ...[
-                  const Gap(8),
-                  ResourceActiveFilterChips(
-                    listId: listId,
-                    includeQuickFilters: false,
-                    onClearAll: clearAllFilters,
-                    extraChips: [
-                      ActiveFilterChip(
-                        label: 'Search: ${searchQuery.trim()}',
-                        onRemove: () {
-                          _searchController.clear();
-                          ref
-                                  .read(containersSearchQueryProvider.notifier)
-                                  .query =
-                              '';
+                                    '';
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                      const Gap(12),
+                      containersAsync.when(
+                        skipLoadingOnRefresh: true,
+                        skipLoadingOnReload: true,
+                        data: (result) {
+                          final filtered = _applyFilters(
+                            result.items,
+                            serverId: selectedServerId,
+                            query: searchQuery,
+                            sort: sortState,
+                            problemsOnly: prefs.problemsOnly,
+                            states: prefs.states,
+                          );
+
+                          if (filtered.isEmpty) {
+                            return const _EmptyState();
+                          }
+
+                          return Column(
+                            children: [
+                              if (result.errors.isNotEmpty) ...[
+                                _PartialErrorBanner(errors: result.errors),
+                                const Gap(12),
+                              ],
+                              for (var i = 0; i < filtered.length; i++) ...[
+                                AppFadeSlide(
+                                  delay: AppMotion.stagger(i),
+                                  play: i < 10,
+                                  child: ContainerCard(
+                                    item: filtered[i],
+                                    onTap: () {
+                                      final containerKey =
+                                          filtered[i].container.id ??
+                                          filtered[i].container.name;
+                                      unawaited(
+                                        context.push(
+                                          '${AppRoutes.containers}/${filtered[i].serverId}/${Uri.encodeComponent(containerKey)}',
+                                          extra: filtered[i],
+                                        ),
+                                      );
+                                    },
+                                    onAction: (action) => unawaited(
+                                      _handleAction(
+                                        context,
+                                        ref,
+                                        filtered[i],
+                                        action,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const Gap(12),
+                              ],
+                              const SizedBox(height: 12),
+                            ],
+                          );
                         },
+                        loading: () => const Padding(
+                          padding: EdgeInsets.only(top: 16),
+                          child: _ContainersSkeletonBlock(),
+                        ),
+                        error: (error, stack) => ErrorStateView(
+                          title: 'Failed to load containers',
+                          message: error.toString(),
+                          onRetry: () => ref.invalidate(containersProvider),
+                        ),
                       ),
                     ],
                   ),
-                ],
-                const Gap(12),
-                containersAsync.when(
-                  skipLoadingOnRefresh: true,
-                  skipLoadingOnReload: true,
-                  data: (result) {
-                    final filtered = _applyFilters(
-                      result.items,
-                      serverId: selectedServerId,
-                      query: searchQuery,
-                      sort: sortState,
-                      problemsOnly: prefs.problemsOnly,
-                      states: prefs.states,
-                    );
-
-                    if (filtered.isEmpty) {
-                      return const _EmptyState();
-                    }
-
-                    return Column(
-                      children: [
-                        if (result.errors.isNotEmpty) ...[
-                          _PartialErrorBanner(errors: result.errors),
-                          const Gap(12),
-                        ],
-                        for (var i = 0; i < filtered.length; i++) ...[
-                          AppFadeSlide(
-                            delay: AppMotion.stagger(i),
-                            play: i < 10,
-                            child: ContainerCard(
-                              item: filtered[i],
-                              onTap: () {
-                                final containerKey =
-                                    filtered[i].container.id ??
-                                    filtered[i].container.name;
-                                unawaited(
-                                  context.push(
-                                    '${AppRoutes.containers}/${filtered[i].serverId}/${Uri.encodeComponent(containerKey)}',
-                                    extra: filtered[i],
-                                  ),
-                                );
-                              },
-                              onAction: (action) => unawaited(
-                                _handleAction(
-                                  context,
-                                  ref,
-                                  filtered[i],
-                                  action,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const Gap(12),
-                        ],
-                        const SizedBox(height: 12),
-                      ],
-                    );
-                  },
-                  loading: () => const Padding(
-                    padding: EdgeInsets.only(top: 16),
-                    child: _ContainersSkeletonBlock(),
-                  ),
-                  error: (error, stack) => ErrorStateView(
-                    title: 'Failed to load containers',
-                    message: error.toString(),
-                    onRetry: () => ref.invalidate(containersProvider),
-                  ),
                 ),
+                if (actionsState.isLoading)
+                  ColoredBox(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.scrim.withValues(alpha: 0.25),
+                    child: const Center(child: AppSkeletonCard()),
+                  ),
               ],
             ),
           ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: Theme.of(
-                context,
-              ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
         ],
       ),
     );
@@ -393,43 +408,34 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
   }
 }
 
-class _FiltersRow extends StatelessWidget {
-  const _FiltersRow({
-    required this.serversAsync,
+class _ServerMenuChip extends StatelessWidget {
+  const _ServerMenuChip({
+    required this.servers,
     required this.selectedServerId,
-    required this.onServerChanged,
+    required this.onChanged,
   });
 
-  final AsyncValue<List<Server>> serversAsync;
+  final List<Server> servers;
   final String? selectedServerId;
-  final ValueChanged<String?> onServerChanged;
+  final ValueChanged<String?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final serverField = serversAsync.maybeWhen(
-      data: (servers) => KomodoSelectMenuFormField<String?>(
-        initialValue: selectedServerId,
-        decoration: const InputDecoration(
-          labelText: 'Server',
-          prefixIcon: Icon(AppIcons.server),
-        ),
-        items: [
-          const KomodoSelectMenuItem(value: null, label: 'All servers'),
-          for (final server in servers)
-            KomodoSelectMenuItem(value: server.id, label: server.name),
-        ],
-        onChanged: onServerChanged,
-      ),
-      orElse: () => KomodoSelectMenuFormField<String?>(
-        decoration: const InputDecoration(
-          labelText: 'Server',
-          prefixIcon: Icon(AppIcons.server),
-        ),
-        items: const [KomodoSelectMenuItem(value: null, label: 'All servers')],
-      ),
+    final selected = servers.where((s) => s.id == selectedServerId);
+    final selectedName = selected.isEmpty ? null : selected.first.name;
+    return AppFilterMenuChip<String?>(
+      key: const ValueKey('containers_server_filter'),
+      icon: AppIcons.server,
+      label: 'Server: ${selectedName ?? 'All'}',
+      active: selectedServerId != null,
+      value: selectedServerId,
+      options: [
+        const AppFilterMenuOption<String?>(value: null, label: 'All servers'),
+        for (final server in servers)
+          AppFilterMenuOption<String?>(value: server.id, label: server.name),
+      ],
+      onSelected: onChanged,
     );
-
-    return serverField;
   }
 }
 
@@ -469,8 +475,18 @@ class _SearchField extends StatelessWidget {
   }
 }
 
-class _SortRow extends StatelessWidget {
-  const _SortRow({
+const _sortLabels = <ContainersSortField, String>{
+  ContainersSortField.name: 'Name',
+  ContainersSortField.cpu: 'CPU',
+  ContainersSortField.memory: 'Memory',
+  ContainersSortField.network: 'Network I/O',
+  ContainersSortField.blockIo: 'Drive I/O',
+  ContainersSortField.pids: 'PIDs',
+};
+
+/// Compact app bar sort menu: field choices plus a direction toggle.
+class _SortMenuButton extends StatelessWidget {
+  const _SortMenuButton({
     required this.sortState,
     required this.onFieldChanged,
     required this.onToggleDirection,
@@ -482,68 +498,45 @@ class _SortRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final directionIcon = sortState.descending
-        ? Icons.arrow_downward_rounded
-        : Icons.arrow_upward_rounded;
-    final directionLabel = sortState.descending ? 'Descending' : 'Ascending';
-
-    return Row(
-      children: [
-        Expanded(
-          child: KomodoSelectMenuFormField<ContainersSortField>(
-            initialValue: sortState.field,
-            decoration: const InputDecoration(
-              labelText: 'Sort by',
-              prefixIcon: Icon(Icons.sort),
+    final scheme = Theme.of(context).colorScheme;
+    return PopupMenuButton<Object>(
+      key: const ValueKey('containers_sort_menu'),
+      tooltip: 'Sort: ${_sortLabels[sortState.field]}',
+      icon: const Icon(Icons.sort),
+      onSelected: (value) {
+        if (value is ContainersSortField) {
+          onFieldChanged(value);
+        } else {
+          onToggleDirection();
+        }
+      },
+      itemBuilder: (context) => [
+        for (final entry in _sortLabels.entries)
+          PopupMenuItem<Object>(
+            value: entry.key,
+            child: Row(
+              children: [
+                Expanded(child: Text(entry.value)),
+                if (entry.key == sortState.field)
+                  Icon(Icons.check, size: 18, color: scheme.primary),
+              ],
             ),
-            items: const [
-              KomodoSelectMenuItem(
-                value: ContainersSortField.problems,
-                label: 'Problems first',
+          ),
+        const PopupMenuDivider(),
+        PopupMenuItem<Object>(
+          value: 'direction',
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(sortState.descending ? 'Descending' : 'Ascending'),
               ),
-              KomodoSelectMenuItem(
-                value: ContainersSortField.name,
-                label: 'Name',
-              ),
-              KomodoSelectMenuItem(
-                value: ContainersSortField.cpu,
-                label: 'CPU',
-              ),
-              KomodoSelectMenuItem(
-                value: ContainersSortField.memory,
-                label: 'Memory',
-              ),
-              KomodoSelectMenuItem(
-                value: ContainersSortField.network,
-                label: 'Network I/O',
-              ),
-              KomodoSelectMenuItem(
-                value: ContainersSortField.blockIo,
-                label: 'Drive I/O',
-              ),
-              KomodoSelectMenuItem(
-                value: ContainersSortField.pids,
-                label: 'PIDs',
+              Icon(
+                sortState.descending
+                    ? Icons.arrow_downward_rounded
+                    : Icons.arrow_upward_rounded,
+                size: 18,
               ),
             ],
-            onChanged: (value) {
-              if (value == null) return;
-              onFieldChanged(value);
-            },
-          ),
-        ),
-        const Gap(8),
-        Material(
-          color: theme.cardTheme.color ?? scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(12),
-          child: IconButton(
-            tooltip: directionLabel,
-            icon: Icon(directionIcon),
-            onPressed: sortState.field == ContainersSortField.problems
-                ? null
-                : onToggleDirection,
           ),
         ),
       ],
@@ -629,9 +622,6 @@ int _compareBySort(
   final nameB = b.container.name.toLowerCase();
 
   final result = switch (sort.field) {
-    ContainersSortField.problems => containerSeverity(
-      a.container,
-    ).compareTo(containerSeverity(b.container)),
     ContainersSortField.name =>
       sort.descending ? -nameA.compareTo(nameB) : nameA.compareTo(nameB),
     ContainersSortField.cpu => _compareMetric(
