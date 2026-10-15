@@ -139,7 +139,7 @@ void main() {
       await tester.tap(find.text('Deploy'));
       expect(calls, ['deploy']);
 
-      await tester.tap(find.text('More'));
+      await tester.tap(find.byKey(const ValueKey('detail_action_bar_more')));
       await tester.pumpAndSettle();
       final restartY = tester.getTopLeft(find.text('Restart')).dy;
       final destroyY = tester.getTopLeft(find.text('Destroy')).dy;

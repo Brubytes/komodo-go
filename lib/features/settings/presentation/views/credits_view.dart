@@ -91,12 +91,6 @@ class CreditsView extends StatelessWidget {
                       url: 'https://github.com/Brubytes/komodo-go',
                       icon: AppIcons.github,
                     ),
-                    _CreditLink(
-                      label: 'Contact & feedback',
-                      url:
-                          'mailto:info@komodogo.eu?subject=Komodo%20Go%20Feedback',
-                      icon: AppIcons.mail,
-                    ),
                   ].map((link) => _LinkChip(link: link)).toList(),
                 ),
               ],

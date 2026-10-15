@@ -383,14 +383,6 @@ class _ContainerDetailViewState
             ? null
             : () => _handleAction(item, primaryAction!),
       ),
-      secondary: DetailActionButton(
-        label: 'Inspect',
-        icon: AppIcons.eye,
-        onPressed: () => _tabsKey.currentState?.selectTab(
-          _tabInspect,
-          collapseHeader: true,
-        ),
-      ),
       moreGroups: resourceMenuGroups(
         lifecycle: [
           if (canStart && primaryAction != ContainerAction.start)
@@ -575,7 +567,7 @@ class _ContainerInspectionPanel extends StatelessWidget {
                 ),
               ],
               const Gap(12),
-              ExpansionTile(
+              IsolatedExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 title: const Text('Raw Docker inspection'),
                 children: [

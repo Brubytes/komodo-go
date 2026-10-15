@@ -12,8 +12,8 @@ UpdateStatus updateStatusFromJson(Object? value, {bool success = false}) {
   return switch (normalized) {
     'queued' => UpdateStatus.queued,
     'inprogress' || 'running' => UpdateStatus.running,
-    'complete' || 'completed' =>
-      success ? UpdateStatus.success : UpdateStatus.failed,
+    'complete' ||
+    'completed' => success ? UpdateStatus.success : UpdateStatus.failed,
     'success' => UpdateStatus.success,
     'failed' => UpdateStatus.failed,
     'canceled' => UpdateStatus.canceled,

@@ -188,7 +188,12 @@ class ConnectionsView extends ConsumerWidget {
         useSafeArea: true,
         showDragHandle: true,
         builder: (context) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, AppSpacing.md, 20, AppSpacing.xl),
+          padding: const EdgeInsets.fromLTRB(
+            20,
+            AppSpacing.md,
+            20,
+            AppSpacing.xl,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

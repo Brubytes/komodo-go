@@ -374,8 +374,8 @@ class _DiffTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = diff.data;
     return Card(
-      child: ExpansionTile(
-        key: ValueKey('sync_diff_${diff.target.type}_${diff.name}'),
+      child: IsolatedExpansionTile(
+        tileKey: ValueKey('sync_diff_${diff.target.type}_${diff.name}'),
         leading: Checkbox(
           value: selected,
           onChanged: (value) => onChanged(value ?? false),

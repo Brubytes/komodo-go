@@ -262,6 +262,11 @@ class DetailActionBar extends StatelessWidget {
     final hasMore = moreGroups.any((g) => g.items.isNotEmpty);
     final secondary = this.secondary;
 
+    Widget fit(String label) => FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(label, maxLines: 1, softWrap: false),
+    );
+
     return Padding(
       padding: padding,
       child: Row(
@@ -279,7 +284,7 @@ class DetailActionBar extends StatelessWidget {
                       ),
                     )
                   : Icon(primary.icon, size: 18),
-              label: Text(primary.label, overflow: TextOverflow.ellipsis),
+              label: fit(primary.label),
             ),
           ),
           if (secondary != null) ...[
@@ -294,7 +299,7 @@ class DetailActionBar extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : Icon(secondary.icon, size: 18),
-                label: Text(secondary.label, overflow: TextOverflow.ellipsis),
+                label: fit(secondary.label),
               ),
             ),
           ],
@@ -302,30 +307,20 @@ class DetailActionBar extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             DetailActionMenuButton(
               groups: moreGroups,
+              tooltip: 'More actions',
               child: Container(
                 key: const ValueKey('detail_action_bar_more'),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm + 2,
-                ),
+                width: 48,
+                height: 48,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(AppTokens.radiusLg),
                   border: Border.all(color: scheme.outlineVariant),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      AppIcons.moreVertical,
-                      size: 18,
-                      color: scheme.onSurface,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      'More',
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                  ],
+                child: Icon(
+                  AppIcons.moreVertical,
+                  size: 20,
+                  color: scheme.onSurface,
                 ),
               ),
             ),
