@@ -12,21 +12,18 @@ import 'package:komodo_go/features/containers/data/models/container.dart';
 /// Card widget displaying container information.
 ///
 /// In lists the card stays compact: server + image, and CPU/memory on a single
-/// line. Pass [detailed] (container detail header) to also show networks,
-/// ports and I/O.
+/// line.
 class ContainerCard extends StatelessWidget {
   const ContainerCard({
     required this.item,
     this.onTap,
     this.onAction,
-    this.detailed = false,
     super.key,
   });
 
   final ContainerOverviewItem item;
   final VoidCallback? onTap;
   final void Function(ContainerAction action)? onAction;
-  final bool detailed;
 
   @override
   Widget build(BuildContext context) {
@@ -44,12 +41,8 @@ class ContainerCard extends StatelessWidget {
         ? const <DetailActionGroup>[]
         : containerMenuGroups(container.state, onAction);
 
-    final networks = container.networks;
-    final portsLabel = _formatPorts(container.ports);
-
     final bottomRows = <Widget>[
       if (stats != null) _UsageLine(stats: stats),
-      if (detailed && stats != null) _IoLine(stats: stats),
     ];
 
     return ResourceCard(
@@ -63,19 +56,6 @@ class ContainerCard extends StatelessWidget {
         if (image.isNotEmpty)
           ResourceIconLabel(icon: AppIcons.package, label: image),
       ],
-      pills: detailed
-          ? [
-              if (networks.isNotEmpty)
-                ValuePill(
-                  label: 'Networks',
-                  value:
-                      '${networks.take(2).join(', ')}'
-                      '${networks.length > 2 ? '…' : ''}',
-                ),
-              if (portsLabel.isNotEmpty)
-                ValuePill(label: 'Ports', value: portsLabel),
-            ]
-          : const [],
       bottom: bottomRows.isEmpty
           ? null
           : Column(
@@ -184,45 +164,6 @@ class _UsageLine extends StatelessWidget {
       ],
     );
   }
-}
-
-class _IoLine extends StatelessWidget {
-  const _IoLine({required this.stats});
-
-  final ContainerStats stats;
-
-  @override
-  Widget build(BuildContext context) {
-    final net = stats.netIo.trim();
-    final block = stats.blockIo.trim();
-    if (net.isEmpty && block.isEmpty) return const SizedBox.shrink();
-    return Row(
-      children: [
-        if (net.isNotEmpty)
-          Flexible(
-            child: ResourceIconLabel(icon: AppIcons.network, label: net),
-          ),
-        if (net.isNotEmpty && block.isNotEmpty) const Gap(AppSpacing.md),
-        if (block.isNotEmpty)
-          Flexible(
-            child: ResourceIconLabel(icon: AppIcons.hardDrive, label: block),
-          ),
-      ],
-    );
-  }
-}
-
-String _formatPorts(List<ContainerPort> ports) {
-  final values =
-      ports
-          .map((port) => port.publicPort ?? port.privatePort)
-          .where((port) => port > 0)
-          .toSet()
-          .toList()
-        ..sort();
-
-  if (values.isEmpty) return '';
-  return values.take(6).join(' • ') + (values.length > 6 ? '…' : '');
 }
 
 /// Actions available for a container.

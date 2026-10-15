@@ -22,10 +22,19 @@ class DetailActionItem {
 
 /// A labelled group of [DetailActionItem]s.
 class DetailActionGroup {
-  const DetailActionGroup({required this.items, this.label});
+  const DetailActionGroup({
+    required this.items,
+    this.label,
+    this.sheetLabel,
+  });
 
   final String? label;
   final List<DetailActionItem> items;
+
+  /// When set (e.g. "Manage…") and the menu has other groups, the whole group
+  /// collapses into a single menu entry that opens [items] in a bottom sheet.
+  /// This keeps long menus short enough to reach Danger actions on phones.
+  final String? sheetLabel;
 }
 
 /// A prominent button used in [DetailActionBar].
@@ -72,7 +81,16 @@ List<PopupMenuEntry<DetailActionItem>> buildDetailActionMenuEntries(
     );
   }
 
+  final sheetGroups = <DetailActionGroup>[];
+  final hasOtherGroups = groups.any(
+    (g) => g.sheetLabel == null && g.items.isNotEmpty,
+  );
+
   for (final group in groups) {
+    if (group.sheetLabel != null && hasOtherGroups) {
+      if (group.items.isNotEmpty) sheetGroups.add(group);
+      continue;
+    }
     final normal = group.items.where((i) => !i.destructive).toList();
     destructive.addAll(group.items.where((i) => i.destructive));
     if (normal.isEmpty) continue;
@@ -97,11 +115,74 @@ List<PopupMenuEntry<DetailActionItem>> buildDetailActionMenuEntries(
     entries.addAll(normal.map(row));
   }
 
+  if (sheetGroups.isNotEmpty) {
+    if (entries.isNotEmpty) entries.add(komodoPopupMenuDivider());
+    for (final group in sheetGroups) {
+      entries.add(
+        row(
+          DetailActionItem(
+            label: group.sheetLabel!,
+            icon: AppIcons.settings,
+            onSelected: () => showDetailActionSheet(context, group),
+          ),
+        ),
+      );
+    }
+  }
+
   if (destructive.isNotEmpty) {
     if (entries.isNotEmpty) entries.add(komodoPopupMenuDivider());
     entries.addAll(destructive.map(row));
   }
   return entries;
+}
+
+/// Shows [group]'s items in a compact bottom sheet (used for "Manage…").
+Future<void> showDetailActionSheet(
+  BuildContext context,
+  DetailActionGroup group,
+) {
+  final title = group.label ?? group.sheetLabel ?? 'Actions';
+  return showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    showDragHandle: true,
+    builder: (sheetContext) {
+      final scheme = Theme.of(sheetContext).colorScheme;
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+            child: Text(
+              title,
+              style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ),
+          for (final item in group.items)
+            ListTile(
+              enabled: item.enabled && item.onSelected != null,
+              leading: Icon(
+                item.icon,
+                color: item.destructive ? scheme.error : null,
+              ),
+              title: Text(
+                item.label,
+                style: item.destructive ? TextStyle(color: scheme.error) : null,
+              ),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                item.onSelected?.call();
+              },
+            ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+      );
+    },
+  );
 }
 
 /// Opens the grouped action menu at [position] (global coordinates) and runs

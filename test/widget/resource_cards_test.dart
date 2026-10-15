@@ -178,13 +178,11 @@ void main() {
       WidgetTester tester,
       ContainerOverviewItem item, {
       List<ContainerAction>? actions,
-      bool detailed = false,
     }) async {
       await tester.pumpWidget(
         _wrap(
           ContainerCard(
             item: item,
-            detailed: detailed,
             onAction: (a) => actions?.add(a),
           ),
         ),
@@ -261,20 +259,6 @@ void main() {
       expect(find.text('Mem 10MiB / 1GiB'), findsOneWidget);
       expect(find.textContaining('bridge'), findsNothing);
       expect(find.text('1kB / 2kB'), findsNothing);
-    });
-
-    testWidgets('detailed card also shows networks and I/O', (tester) async {
-      await pumpContainer(
-        tester,
-        _container(
-          ContainerState.running,
-          stats: const ContainerStats(cpuPerc: '1%', netIo: '1kB / 2kB'),
-        ),
-        detailed: true,
-      );
-
-      expect(find.textContaining('bridge'), findsOneWidget);
-      expect(find.text('1kB / 2kB'), findsOneWidget);
     });
   });
 }

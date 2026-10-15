@@ -239,7 +239,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                         _tabLogs,
                                         collapseHeader: true,
                                       ),
-                                  manageItems: buildResourceManageGroup(
+                                  manageGroup: buildResourceManageGroup(
                                     context: context,
                                     ref: ref,
                                     metadata: ResourceMetadata(
@@ -257,7 +257,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                                           stackDetailProvider(widget.stackId),
                                         );
                                     },
-                                  ).items,
+                                  ),
                                 ),
                               ],
                             )
