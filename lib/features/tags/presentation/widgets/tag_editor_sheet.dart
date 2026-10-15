@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
-
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/sheets/editor_sheet_scaffold.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
 
 class TagEditorResult {
@@ -20,13 +20,9 @@ class TagEditorSheet extends StatefulWidget {
     BuildContext context, {
     KomodoTag? initial,
   }) {
-    return showModalBottomSheet<TagEditorResult>(
-      context: context,
-      useSafeArea: true,
-      useRootNavigator: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => TagEditorSheet(initial: initial),
+    return showEditorSheet<TagEditorResult>(
+      context,
+      (context) => TagEditorSheet(initial: initial),
     );
   }
 
@@ -37,6 +33,7 @@ class TagEditorSheet extends StatefulWidget {
 class _TagEditorSheetState extends State<TagEditorSheet> {
   late final TextEditingController _nameController;
   late TagColor _color;
+  var _touched = false;
 
   @override
   void initState() {
@@ -70,44 +67,33 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
   Widget build(BuildContext context) {
     final isEditing = widget.initial != null;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
-        top: 8,
-      ),
+    final name = _nameController.text.trim();
+    final dirty =
+        name != (widget.initial?.name ?? '') ||
+        _color != (widget.initial?.color ?? TagColor.slate);
+
+    return EditorSheetScaffold(
+      title: isEditing ? 'Edit tag' : 'New tag',
+      saveLabel: isEditing ? 'Save' : 'Create',
+      dirty: dirty,
+      canSave: name.isNotEmpty,
+      onSave: () =>
+          Navigator.of(context).pop(TagEditorResult(name: name, color: _color)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Text(
-                isEditing ? 'Edit tag' : 'New tag',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                tooltip: 'Close',
-                icon: const Icon(AppIcons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-          const Gap(12),
           TextField(
             key: const ValueKey('tag_editor_name'),
             controller: _nameController,
             textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(
+            onChanged: (_) => setState(() => _touched = true),
+            decoration: InputDecoration(
               labelText: 'Name',
-              prefixIcon: Icon(AppIcons.tag),
+              prefixIcon: const Icon(AppIcons.tag),
+              errorText: _touched && name.isEmpty ? 'Enter a tag name.' : null,
             ),
           ),
-          const Gap(12),
+          const SizedBox(height: AppSpacing.md),
           InkWell(
             key: const ValueKey('tag_editor_color'),
             borderRadius: BorderRadius.circular(12),
@@ -127,27 +113,13 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  const Gap(10),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(child: Text(_color.label)),
                   const Icon(Icons.expand_more, size: 20),
                 ],
               ),
             ),
           ),
-          const Gap(16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              key: const ValueKey('tag_editor_submit'),
-              onPressed: () {
-                final name = _nameController.text.trim();
-                if (name.isEmpty) return;
-                Navigator.of(context).pop(TagEditorResult(name: name, color: _color));
-              },
-              child: Text(isEditing ? 'Save' : 'Create'),
-            ),
-          ),
-          const Gap(12),
         ],
       ),
     );
