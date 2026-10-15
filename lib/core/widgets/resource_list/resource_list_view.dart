@@ -10,6 +10,7 @@ import 'package:komodo_go/core/widgets/filters/template_filter.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -17,7 +18,6 @@ import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
 import 'package:komodo_go/shared/resources/providers/resource_filters_provider.dart';
 import 'package:komodo_go/shared/resources/resource_list_filtering.dart';
 import 'package:komodo_go/shared/resources/resource_sorting.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 
 /// Generic list screen for Komodo resources.
 class ResourceListView<T> extends ConsumerStatefulWidget {
@@ -678,46 +678,11 @@ class _ResourceSkeletonList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Skeletonizer(
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
-        itemBuilder: (_, _) => AppCardSurface(
-          padding: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const CircleAvatar(radius: 16),
-                    const Gap(10),
-                    Expanded(child: Text(title, style: textTheme.titleSmall)),
-                    const Gap(8),
-                    const CircleAvatar(radius: 6),
-                  ],
-                ),
-                const Gap(10),
-                Text(subtitle, style: textTheme.bodySmall),
-                const Gap(10),
-                Row(
-                  children: [
-                    Chip(label: Text(chipLeft)),
-                    const Gap(8),
-                    Chip(label: Text(chipRight)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return ResourceCardSkeletonList(
+      title: title,
+      subtitle: subtitle,
+      metaLeft: chipLeft,
+      metaRight: chipRight,
     );
   }
 }

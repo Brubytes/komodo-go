@@ -193,22 +193,22 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('deployment_card_menu_d1')));
       await tester.pumpAndSettle();
       await tester.tap(
-        find.byKey(const ValueKey('deployment_card_destroy_d1')),
+        find.text('Destroy'),
       );
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('deployment_destroy_dialog_d1')),
+        find.text('Destroy Deployment One?'),
         findsOneWidget,
       );
 
       await tester.tap(
-        find.byKey(const ValueKey('deployment_destroy_cancel_d1')),
+        find.text('Cancel'),
       );
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('deployment_destroy_dialog_d1')),
+        find.text('Destroy Deployment One?'),
         findsNothing,
       );
       verifyNever(() => repository.destroyDeployment('d1'));
@@ -216,11 +216,11 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('deployment_card_menu_d1')));
       await tester.pumpAndSettle();
       await tester.tap(
-        find.byKey(const ValueKey('deployment_card_destroy_d1')),
+        find.text('Destroy'),
       );
       await tester.pumpAndSettle();
       await tester.tap(
-        find.byKey(const ValueKey('deployment_destroy_confirm_d1')),
+        find.widgetWithText(FilledButton, 'Destroy'),
       );
       await tester.pumpAndSettle();
 

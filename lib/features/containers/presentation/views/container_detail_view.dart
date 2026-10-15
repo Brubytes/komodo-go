@@ -63,6 +63,7 @@ class ContainerDetailView extends ConsumerWidget {
       data: (item) => item == null
           ? const _NotFound()
           : ContainerCard(
+              detailed: true,
               item: item,
               onAction: (action) => _handleAction(
                 context,
@@ -77,6 +78,7 @@ class ContainerDetailView extends ConsumerWidget {
       loading: () => initialItem == null
           ? const AppSkeletonCard()
           : ContainerCard(
+              detailed: true,
               item: initialItem,
               onAction: (action) => _handleAction(
                 context,
