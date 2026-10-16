@@ -108,11 +108,8 @@ class AlertsTab extends ConsumerWidget {
                               : 'No unresolved alerts',
                           showAllLabel: 'Show all alerts',
                           onShowAll: () =>
-                              ref
-                                  .read(alertFiltersProvider.notifier)
-                                  .filters = const AlertFilters(
-                                unresolvedOnly: false,
-                              ),
+                              ref.read(alertFiltersProvider.notifier).filters =
+                                  const AlertFilters(),
                         );
                       }
                       final isFooter = isEmpty

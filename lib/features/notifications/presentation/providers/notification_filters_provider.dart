@@ -2,14 +2,14 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 
-/// Filters for the Alerts tab. Unresolved alerts only by default.
+/// Filters for the Alerts tab. All alerts are shown by default.
 class AlertFilters {
-  const AlertFilters({this.unresolvedOnly = true, this.criticalOnly = false});
+  const AlertFilters({this.unresolvedOnly = false, this.criticalOnly = false});
 
   final bool unresolvedOnly;
   final bool criticalOnly;
 
-  bool get isDefault => unresolvedOnly && !criticalOnly;
+  bool get isDefault => !unresolvedOnly && !criticalOnly;
 
   AlertFilters copyWith({bool? unresolvedOnly, bool? criticalOnly}) {
     return AlertFilters(
