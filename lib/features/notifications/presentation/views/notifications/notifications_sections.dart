@@ -33,9 +33,18 @@ class AlertsTab extends ConsumerWidget {
     final alertsAsync = ref.watch(alertsProvider);
     final filters = ref.watch(alertFiltersProvider);
 
+    final alertItems = alertsAsync.asData?.value.items;
+    final alertCount = alertItems == null
+        ? null
+        : filters.apply(alertItems).length;
+    final alertSummary = alertCount == null
+        ? null
+        : '$alertCount ${filters.unresolvedOnly ? 'unresolved' : 'alerts'}';
+
     return Column(
       children: [
         _FilterBar(
+          summary: alertSummary,
           chips: [
             AppFilterChip(
               key: const ValueKey('alerts_filter_unresolved'),
@@ -149,14 +158,45 @@ class AlertsTab extends ConsumerWidget {
   }
 }
 
+/// Filter row anchored under the tab bar: same surface, hairline divider,
+/// chips on the left and a muted result summary on the right.
 class _FilterBar extends StatelessWidget {
-  const _FilterBar({required this.chips});
+  const _FilterBar({required this.chips, this.summary});
 
   final List<Widget> chips;
+  final String? summary;
 
   @override
   Widget build(BuildContext context) {
-    return AppFilterChipBar(children: chips);
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: SizedBox(
+        height: 52,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Row(
+            children: [
+              for (var i = 0; i < chips.length; i++) ...[
+                if (i > 0) const SizedBox(width: AppSpacing.sm),
+                chips[i],
+              ],
+              const Spacer(),
+              if (summary != null)
+                Text(
+                  summary!,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -198,9 +238,18 @@ class UpdatesTab extends ConsumerWidget {
     final updatesAsync = ref.watch(updatesProvider);
     final failedOnly = ref.watch(updatesFailedOnlyProvider);
 
+    final updateItems = updatesAsync.asData?.value.items;
+    final updateCount = updateItems == null
+        ? null
+        : applyUpdatesFilter(updateItems, failedOnly: failedOnly).length;
+    final updateSummary = updateCount == null
+        ? null
+        : '$updateCount ${failedOnly ? 'failed' : 'updates'}';
+
     return Column(
       children: [
         _FilterBar(
+          summary: updateSummary,
           chips: [
             AppFilterChip(
               key: const ValueKey('updates_filter_failed'),

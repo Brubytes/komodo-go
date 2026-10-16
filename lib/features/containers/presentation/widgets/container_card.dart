@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
@@ -7,13 +10,15 @@ import 'package:komodo_go/core/widgets/detail/detail_action_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
+import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card_parts.dart';
 
 /// Card widget displaying container information.
 ///
-/// In lists the card stays compact: server + image, and CPU/memory on a single
-/// line.
+/// Header: icon tile, wrapping name and a status pill with the actions menu.
+/// Below: tonal chips (server, image, networks, ports), then either a compact
+/// 2x2 stats grid (running) or the muted exit status line (exited).
 class ContainerCard extends StatelessWidget {
   const ContainerCard({
     required this.item,
@@ -29,6 +34,8 @@ class ContainerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final container = item.container;
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final name = container.name.isEmpty ? 'Unnamed' : container.name;
     final image = container.image ?? '';
     final stats = container.stats;
@@ -41,8 +48,9 @@ class ContainerCard extends StatelessWidget {
     final menu = onAction == null || container.state == ContainerState.removing
         ? const <DetailActionGroup>[]
         : containerMenuGroups(container.state, onAction);
+    final hasMenu = menu.any((g) => g.items.isNotEmpty);
+    final status = containerStatusSpec(container);
 
-    final scheme = Theme.of(context).colorScheme;
     final showMetrics =
         container.state == ContainerState.running &&
         stats != null &&
@@ -51,43 +59,115 @@ class ContainerCard extends StatelessWidget {
         ? container.status?.trim()
         : null;
 
-    final bottom = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (image.isNotEmpty) ContainerImageLine(image: image),
-        if (item.serverName.isNotEmpty) ...[
-          const Gap(AppSpacing.xs),
-          ResourceIconLabel(icon: AppIcons.server, label: item.serverName),
-        ],
-        if (container.ports.isNotEmpty) ...[
-          const Gap(AppSpacing.sm),
-          ContainerPortChips(ports: container.ports),
-        ],
-        if (showMetrics) ...[
-          const Gap(AppSpacing.md),
-          ContainerMetricsGrid(stats: stats),
-        ] else if (exitInfo != null && exitInfo.isNotEmpty) ...[
-          const Gap(AppSpacing.xs),
-          Text(
-            exitInfo,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
+    final networks = container.networks;
+    final ports = container.ports.map(formatContainerPort).toSet().toList();
+    final shownPorts = ports.take(3).toList();
+    final extraPorts = ports.length - shownPorts.length;
+
+    final radius = BorderRadius.circular(AppTokens.radiusLg);
+
+    return AppCardSurface(
+      key: ValueKey('container_card_$keyId'),
+      padding: EdgeInsets.zero,
+      child: GestureDetector(
+        onLongPressStart: hasMenu
+            ? (details) {
+                unawaited(HapticFeedback.selectionClick());
+                unawaited(
+                  showDetailActionMenu(
+                    context,
+                    groups: menu,
+                    position: details.globalPosition,
+                  ),
+                );
+              }
+            : null,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: radius,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ContainerIconTile(tone: status.tone),
+                      const Gap(AppSpacing.md),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.sm),
+                          child: Text(
+                            name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Gap(AppSpacing.md),
+                      ContainerStatusPill(
+                        status: status,
+                        menu: menu,
+                        menuKey: ValueKey('container_card_menu_$keyId'),
+                      ),
+                    ],
+                  ),
+                  const Gap(AppSpacing.md),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      if (item.serverName.isNotEmpty)
+                        ContainerInfoChip(
+                          icon: AppIcons.server,
+                          label: item.serverName,
+                        ),
+                      if (image.isNotEmpty)
+                        ContainerInfoChip(
+                          icon: AppIcons.package,
+                          label: formatContainerImage(image),
+                          tooltip: image,
+                        ),
+                      if (networks.isNotEmpty)
+                        ContainerInfoChip(
+                          icon: AppIcons.network,
+                          label:
+                              '${networks.take(2).join(', ')}'
+                              '${networks.length > 2 ? '…' : ''}',
+                        ),
+                      for (final p in shownPorts) ContainerInfoChip(label: p),
+                      if (extraPorts > 0)
+                        ContainerInfoChip(label: '+$extraPorts'),
+                    ],
+                  ),
+                  if (showMetrics) ...[
+                    const Gap(AppSpacing.md),
+                    ContainerMetricsGrid(stats: stats),
+                  ] else if (exitInfo != null && exitInfo.isNotEmpty) ...[
+                    const Gap(AppSpacing.sm),
+                    Text(
+                      exitInfo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
-        ],
-      ],
-    );
-
-    return ResourceCard(
-      key: ValueKey('container_card_$keyId'),
-      menuKey: ValueKey('container_card_menu_$keyId'),
-      title: name,
-      status: containerStatusSpec(container),
-      bottom: bottom,
-      menu: menu,
-      onTap: onTap,
+        ),
+      ),
     );
   }
 }

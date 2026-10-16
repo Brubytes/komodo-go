@@ -14,9 +14,9 @@ import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
-import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
@@ -25,6 +25,7 @@ import 'package:komodo_go/features/containers/presentation/providers/containers_
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/shared/resources/providers/resource_view_prefs_provider.dart';
 import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 class ContainersView extends ConsumerStatefulWidget {
@@ -141,13 +142,6 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
         title: 'Containers',
         icon: AppIcons.containers,
         actions: [
-          _SortMenuButton(
-            sortState: sortState,
-            onFieldChanged: (value) =>
-                ref.read(containersSortProvider.notifier).field = value,
-            onToggleDirection: () =>
-                ref.read(containersSortProvider.notifier).toggleDirection(),
-          ),
           ResourceFilterToggleButton(
             visible: _isSearchVisible,
             activeCount: activeFilterCount,
@@ -166,26 +160,6 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
       ),
       body: Column(
         children: [
-          AppFilterChipBar(
-            key: const ValueKey('containers_filter_bar'),
-            children: [
-              _ServerMenuChip(
-                servers: serversAsync.maybeWhen(
-                  data: (servers) => servers,
-                  orElse: () => const <Server>[],
-                ),
-                selectedServerId: selectedServerId,
-                onChanged: (value) =>
-                    ref.read(containersServerFilterProvider.notifier).serverId =
-                        value,
-              ),
-              ...buildResourceQuickFilterChips(
-                ref,
-                listId: listId,
-                stateOptions: stateOptions,
-              ),
-            ],
-          ),
           Expanded(
             child: Stack(
               children: [
@@ -195,6 +169,35 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
+                      _FiltersRow(
+                        servers: serversAsync.maybeWhen(
+                          data: (servers) => servers,
+                          orElse: () => const <Server>[],
+                        ),
+                        selectedServerId: selectedServerId,
+                        onServerChanged: (value) =>
+                            ref
+                                    .read(
+                                      containersServerFilterProvider.notifier,
+                                    )
+                                    .serverId =
+                                value,
+                        stateOptions: stateOptions,
+                        problemsOnly: prefs.problemsOnly,
+                        selectedStates: prefs.states,
+                        onFilterChanged: (value) =>
+                            _setQuickFilter(value, listId),
+                      ),
+                      const Gap(AppSpacing.md),
+                      _SortRow(
+                        sortState: sortState,
+                        onFieldChanged: (value) =>
+                            ref.read(containersSortProvider.notifier).field =
+                                value,
+                        onToggleDirection: () => ref
+                            .read(containersSortProvider.notifier)
+                            .toggleDirection(),
+                      ),
                       AnimatedSwitcher(
                         duration: AppMotion.base,
                         switchInCurve: AppMotion.enterCurve,
@@ -336,6 +339,15 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
     );
   }
 
+  void _setQuickFilter(String value, String listId) {
+    final problems = ref.read(resourceProblemsOnlyProvider(listId).notifier);
+    final states = ref.read(resourceStateFilterProvider(listId).notifier);
+    problems.enabled = value == _filterProblems;
+    states.selected = value == _filterAll || value == _filterProblems
+        ? <String>{}
+        : {value};
+  }
+
   Future<void> _handleAction(
     BuildContext context,
     WidgetRef ref,
@@ -410,33 +422,79 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
   }
 }
 
-class _ServerMenuChip extends StatelessWidget {
-  const _ServerMenuChip({
+const _filterAll = '__all__';
+const _filterProblems = '__problems__';
+
+/// Top row: Server dropdown (left half) and quick Filter dropdown (right half).
+class _FiltersRow extends StatelessWidget {
+  const _FiltersRow({
     required this.servers,
     required this.selectedServerId,
-    required this.onChanged,
+    required this.onServerChanged,
+    required this.stateOptions,
+    required this.problemsOnly,
+    required this.selectedStates,
+    required this.onFilterChanged,
   });
 
   final List<Server> servers;
   final String? selectedServerId;
-  final ValueChanged<String?> onChanged;
+  final ValueChanged<String?> onServerChanged;
+  final List<String> stateOptions;
+  final bool problemsOnly;
+  final Set<String> selectedStates;
+  final ValueChanged<String> onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
-    final selected = servers.where((s) => s.id == selectedServerId);
-    final selectedName = selected.isEmpty ? null : selected.first.name;
-    return AppFilterMenuChip<String?>(
-      key: const ValueKey('containers_server_filter'),
-      icon: AppIcons.server,
-      label: 'Server: ${selectedName ?? 'All'}',
-      active: selectedServerId != null,
-      value: selectedServerId,
-      options: [
-        const AppFilterMenuOption<String?>(value: null, label: 'All servers'),
-        for (final server in servers)
-          AppFilterMenuOption<String?>(value: server.id, label: server.name),
+    final states = {...stateOptions, ...selectedStates}.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final filterValue = problemsOnly
+        ? _filterProblems
+        : (selectedStates.isEmpty ? _filterAll : selectedStates.first);
+
+    return Row(
+      children: [
+        Expanded(
+          child: KomodoSelectMenuField<String?>(
+            key: const ValueKey('containers_server_filter'),
+            value: selectedServerId,
+            decoration: const InputDecoration(
+              labelText: 'Server',
+              prefixIcon: Icon(AppIcons.server),
+            ),
+            items: [
+              const KomodoSelectMenuItem(value: null, label: 'All servers'),
+              for (final server in servers)
+                KomodoSelectMenuItem(value: server.id, label: server.name),
+            ],
+            onChanged: onServerChanged,
+          ),
+        ),
+        const Gap(AppSpacing.sm),
+        Expanded(
+          child: KomodoSelectMenuField<String>(
+            key: const ValueKey('containers_state_filter'),
+            value: filterValue,
+            decoration: const InputDecoration(
+              labelText: 'Filter',
+              prefixIcon: Icon(Icons.filter_list_rounded),
+            ),
+            items: [
+              const KomodoSelectMenuItem(value: _filterAll, label: 'All'),
+              const KomodoSelectMenuItem(
+                value: _filterProblems,
+                label: 'Problems only',
+              ),
+              for (final state in states)
+                KomodoSelectMenuItem(value: state, label: state),
+            ],
+            onChanged: (value) {
+              if (value != null) onFilterChanged(value);
+            },
+          ),
+        ),
       ],
-      onSelected: onChanged,
     );
   }
 }
@@ -477,18 +535,8 @@ class _SearchField extends StatelessWidget {
   }
 }
 
-const _sortLabels = <ContainersSortField, String>{
-  ContainersSortField.name: 'Name',
-  ContainersSortField.cpu: 'CPU',
-  ContainersSortField.memory: 'Memory',
-  ContainersSortField.network: 'Network I/O',
-  ContainersSortField.blockIo: 'Drive I/O',
-  ContainersSortField.pids: 'PIDs',
-};
-
-/// Compact app bar sort menu: field choices plus a direction toggle.
-class _SortMenuButton extends StatelessWidget {
-  const _SortMenuButton({
+class _SortRow extends StatelessWidget {
+  const _SortRow({
     required this.sortState,
     required this.onFieldChanged,
     required this.onToggleDirection,
@@ -500,45 +548,64 @@ class _SortMenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return PopupMenuButton<Object>(
-      key: const ValueKey('containers_sort_menu'),
-      tooltip: 'Sort: ${_sortLabels[sortState.field]}',
-      icon: const Icon(Icons.sort),
-      onSelected: (value) {
-        if (value is ContainersSortField) {
-          onFieldChanged(value);
-        } else {
-          onToggleDirection();
-        }
-      },
-      itemBuilder: (context) => [
-        for (final entry in _sortLabels.entries)
-          PopupMenuItem<Object>(
-            value: entry.key,
-            child: Row(
-              children: [
-                Expanded(child: Text(entry.value)),
-                if (entry.key == sortState.field)
-                  Icon(Icons.check, size: 18, color: scheme.primary),
-              ],
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final directionIcon = sortState.descending
+        ? Icons.arrow_downward_rounded
+        : Icons.arrow_upward_rounded;
+    final directionLabel = sortState.descending ? 'Descending' : 'Ascending';
+
+    return Row(
+      children: [
+        Expanded(
+          child: KomodoSelectMenuField<ContainersSortField>(
+            key: const ValueKey('containers_sort_field'),
+            value: sortState.field,
+            decoration: const InputDecoration(
+              labelText: 'Sort by',
+              prefixIcon: Icon(Icons.sort),
             ),
-          ),
-        const PopupMenuDivider(),
-        PopupMenuItem<Object>(
-          value: 'direction',
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(sortState.descending ? 'Descending' : 'Ascending'),
+            items: const [
+              KomodoSelectMenuItem(
+                value: ContainersSortField.name,
+                label: 'Name',
               ),
-              Icon(
-                sortState.descending
-                    ? Icons.arrow_downward_rounded
-                    : Icons.arrow_upward_rounded,
-                size: 18,
+              KomodoSelectMenuItem(
+                value: ContainersSortField.cpu,
+                label: 'CPU',
+              ),
+              KomodoSelectMenuItem(
+                value: ContainersSortField.memory,
+                label: 'Memory',
+              ),
+              KomodoSelectMenuItem(
+                value: ContainersSortField.network,
+                label: 'Network I/O',
+              ),
+              KomodoSelectMenuItem(
+                value: ContainersSortField.blockIo,
+                label: 'Drive I/O',
+              ),
+              KomodoSelectMenuItem(
+                value: ContainersSortField.pids,
+                label: 'PIDs',
               ),
             ],
+            onChanged: (value) {
+              if (value == null) return;
+              onFieldChanged(value);
+            },
+          ),
+        ),
+        const Gap(AppSpacing.sm),
+        Material(
+          color: theme.cardTheme.color ?? scheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          child: IconButton(
+            key: const ValueKey('containers_sort_direction'),
+            tooltip: directionLabel,
+            icon: Icon(directionIcon),
+            onPressed: onToggleDirection,
           ),
         ),
       ],
