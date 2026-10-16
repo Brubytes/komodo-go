@@ -255,8 +255,7 @@ void main() {
       );
 
       expect(find.text('Server One'), findsOneWidget);
-      expect(find.text('nginx'), findsOneWidget);
-      expect(find.text(':latest'), findsOneWidget);
+      expect(find.text('nginx:latest'), findsOneWidget);
       expect(find.text('CPU'), findsOneWidget);
       expect(find.text('1.5%'), findsOneWidget);
       expect(find.text('MEM'), findsOneWidget);
@@ -295,6 +294,82 @@ void main() {
         formatContainerImage('localhost:5000/app:1'),
         'app:1',
       );
+    });
+
+    test('formatContainerImage shortens hashes and keeps the name', () {
+      expect(
+        formatContainerImage(
+          'gitea.tuna-carat.ts.net/madnex/familienarchiv-photo-manager:'
+          'release-9d0b572dd234d14b9496c4c369a60501',
+        ),
+        'madnex/familienarchiv-photo-manager:release-9d0b…',
+      );
+      expect(
+        formatContainerImage(
+          'registry.example.com:5000/team/sub/app:'
+          '0123456789abcdef0123456789abcdef',
+        ),
+        'team/sub/app:0123456789ab…',
+      );
+      expect(
+        formatContainerImage(
+          'docker:sha256:1f029db43a32aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        ),
+        'docker@sha256:1f029db43a32',
+      );
+      expect(
+        formatContainerImage(
+          'docker.io/library/nginx@sha256:'
+          '1f029db43a32bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        ),
+        'nginx@sha256:1f029db43a32',
+      );
+      expect(formatContainerImage('redis:7.2.4-alpine'), 'redis:7.2.4-alpine');
+      expect(formatContainerImage(':release-abc'), isNotEmpty);
+    });
+
+    testWidgets('long image and name do not overflow at 360pt', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        _wrap(
+          const ContainerCard(
+            item: ContainerOverviewItem(
+              serverId: 'srv',
+              serverName: 'a-really-long-server-name-for-the-home-lab',
+              container: ContainerListItem(
+                id: 'c1',
+                name: 'familienarchiv-photo-manager-production-worker-instance',
+                image:
+                    'gitea.tuna-carat.ts.net/madnex/familienarchiv-photo-manager:'
+                    'release-9d0b572dd234d14b9496c4c369a60501',
+                state: ContainerState.running,
+                networks: ['familienarchiv-internal-network', 'proxy'],
+                ports: [
+                  ContainerPort(privatePort: 8765, publicPort: 18765),
+                  ContainerPort(privatePort: 80, publicPort: 8080),
+                  ContainerPort(privatePort: 443, publicPort: 8443),
+                  ContainerPort(privatePort: 22, publicPort: 2222),
+                ],
+                stats: ContainerStats(
+                  cpuPerc: '1.5%',
+                  memUsage: '10MiB / 1GiB',
+                  memPerc: '1%',
+                  netIo: '1kB / 2kB',
+                  blockIo: '0B / 0B',
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('+1'), findsOneWidget);
+      expect(find.text('18765→8765'), findsOneWidget);
+      expect(find.text('2222→22'), findsNothing);
     });
   });
 }

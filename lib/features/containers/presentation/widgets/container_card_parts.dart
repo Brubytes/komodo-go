@@ -1,31 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/detail/detail_action_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 
-/// Splits a Docker image reference into a short repo path and tag.
+/// Display form of an image reference: registry-less `owner/name:tag`.
 ///
-/// Strips the registry host (`docker.io/`, `lscr.io/`, `ghcr.io/`, ...) and a
-/// leading `library/`. The tag (or digest) is returned separately so it can
-/// stay visible when the repo path is ellipsized.
-({String repo, String? tag}) splitContainerImage(String image) {
-  var ref = image.trim();
-  String? tag;
+/// - Strips the registry host (anything with a `.`/`:` or `localhost` before
+///   the first `/`) and a leading `library/`.
+/// - The name is never empty; falls back to the raw reference.
+/// - Long hash/digest tags are shortened: `sha256:<12>` digests keep their
+///   `@sha256:` form, other tags longer than 20 chars keep 12 chars + `…`.
+String formatContainerImage(String image) {
+  final raw = image.trim();
+  var ref = raw;
+  String? digest;
   final at = ref.indexOf('@');
   if (at >= 0) {
-    final digest = ref.substring(at + 1);
-    tag = digest.length > 19 ? digest.substring(0, 19) : digest;
+    digest = ref.substring(at + 1);
     ref = ref.substring(0, at);
   }
+  String? tag;
   final slash = ref.lastIndexOf('/');
-  final colon = ref.lastIndexOf(':');
-  if (colon > slash) {
-    tag ??= ref.substring(colon + 1);
+  final colon = ref.indexOf(':', slash + 1);
+  if (colon >= 0) {
+    tag = ref.substring(colon + 1);
     ref = ref.substring(0, colon);
   }
-  final parts = ref.split('/');
+  // `name:sha256:abc` is really a digest.
+  if (digest == null && tag != null && tag.startsWith('sha256:')) {
+    digest = tag;
+    tag = null;
+  }
+
+  final parts = ref.split('/').where((p) => p.isNotEmpty).toList();
   if (parts.length > 1) {
     final first = parts.first;
     if (first.contains('.') || first.contains(':') || first == 'localhost') {
@@ -33,13 +45,19 @@ import 'package:komodo_go/features/containers/data/models/container.dart';
     }
   }
   if (parts.length > 1 && parts.first == 'library') parts.removeAt(0);
-  return (repo: parts.join('/'), tag: tag);
-}
+  var name = parts.join('/');
+  if (name.isEmpty) name = raw;
 
-/// Display form of an image: registry-less `owner/name:tag`.
-String formatContainerImage(String image) {
-  final (:repo, :tag) = splitContainerImage(image);
-  return tag == null ? repo : '$repo:$tag';
+  if (digest != null && digest.isNotEmpty) {
+    final colonAt = digest.indexOf(':');
+    final algo = colonAt >= 0 ? digest.substring(0, colonAt + 1) : '';
+    final hash = colonAt >= 0 ? digest.substring(colonAt + 1) : digest;
+    final short = hash.length > 12 ? hash.substring(0, 12) : hash;
+    return '$name@$algo$short';
+  }
+  if (tag == null || tag.isEmpty) return name;
+  final shortTag = tag.length > 20 ? '${tag.substring(0, 12)}…' : tag;
+  return '$name:$shortTag';
 }
 
 /// Short label for a port: `3086→80/tcp`, or `80/tcp` when not published.
@@ -51,89 +69,146 @@ String formatContainerPort(ContainerPort port) {
       : '$public→${port.privatePort}$type';
 }
 
-/// Image line with the repo path ellipsized and the tag always visible.
-class ContainerImageLine extends StatelessWidget {
-  const ContainerImageLine({required this.image, super.key});
-
-  final String image;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
-      color: scheme.onSurfaceVariant,
-      fontWeight: FontWeight.w600,
-    );
-    final (:repo, :tag) = splitContainerImage(image);
-    return Tooltip(
-      message: image,
-      child: Row(
-        children: [
-          Icon(AppIcons.package, size: 14, color: scheme.onSurfaceVariant),
-          const Gap(6),
-          Flexible(
-            child: Text(
-              repo,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: style,
-            ),
-          ),
-          if (tag != null)
-            Text(
-              ':$tag',
-              maxLines: 1,
-              style: style?.copyWith(color: scheme.primary),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Up to [max] port chips plus a `+N` overflow chip.
-class ContainerPortChips extends StatelessWidget {
-  const ContainerPortChips({required this.ports, this.max = 3, super.key});
-
-  final List<ContainerPort> ports;
-  final int max;
-
-  @override
-  Widget build(BuildContext context) {
-    final list = ports.map(formatContainerPort).toSet().toList();
-    final shown = list.take(max).toList();
-    final extra = list.length - shown.length;
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.xs,
-      children: [
-        for (final l in shown) _MiniChip(label: l),
-        if (extra > 0) _MiniChip(label: '+$extra'),
-      ],
-    );
-  }
-}
-
-class _MiniChip extends StatelessWidget {
-  const _MiniChip({required this.label});
+/// Tonal info chip (icon + single-line ellipsized text).
+///
+/// Never wider than the space its parent offers, so long values cannot
+/// overflow the card.
+class ContainerInfoChip extends StatelessWidget {
+  const ContainerInfoChip({
+    required this.label,
+    this.icon,
+    this.tooltip,
+    super.key,
+  });
 
   final String label;
+  final IconData? icon;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    final chip = DecoratedBox(
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
+        color: scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: scheme.onSurfaceVariant,
-          fontWeight: FontWeight.w600,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: scheme.onSurfaceVariant),
+              const Gap(6),
+            ],
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+    return tooltip == null ? chip : Tooltip(message: tooltip, child: chip);
+  }
+}
+
+/// Status pill with the actions menu integrated (`RUNNING ⋮`).
+class ContainerStatusPill extends StatelessWidget {
+  const ContainerStatusPill({
+    required this.status,
+    required this.menu,
+    this.menuKey,
+    super.key,
+  });
+
+  final ResourceStatusSpec status;
+  final List<DetailActionGroup> menu;
+  final Key? menuKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final (bg, fg) = switch (status.tone) {
+      PillTone.success => (scheme.statusSuccessContainer, scheme.statusSuccess),
+      PillTone.warning => (scheme.statusWarningContainer, scheme.statusWarning),
+      PillTone.alert => (scheme.errorContainer, scheme.onErrorContainer),
+      PillTone.neutral => (
+        isDark ? scheme.surfaceContainerHighest : scheme.surfaceContainerHigh,
+        scheme.onSurface,
+      ),
+    };
+    final hasMenu = menu.any((g) => g.items.isNotEmpty);
+    final pill = DecoratedBox(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 10,
+          right: hasMenu ? 6 : 10,
+          top: 6,
+          bottom: 6,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              status.label.toUpperCase(),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: fg,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+              ),
+            ),
+            if (hasMenu) ...[
+              const Gap(4),
+              Icon(AppIcons.moreVertical, size: 16, color: fg),
+            ],
+          ],
+        ),
+      ),
+    );
+    if (!hasMenu) return pill;
+    return DetailActionMenuButton(
+      key: menuKey,
+      groups: menu,
+      tooltip: 'Actions',
+      child: pill,
+    );
+  }
+}
+
+/// Rounded leading tile with the container icon on a tinted surface.
+class ContainerIconTile extends StatelessWidget {
+  const ContainerIconTile({required this.tone, super.key});
+
+  final PillTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = tone == PillTone.neutral
+        ? scheme.onSurfaceVariant
+        : pillToneForeground(scheme, tone);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Icon(AppIcons.containers, color: color),
       ),
     );
   }
