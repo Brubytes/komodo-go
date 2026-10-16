@@ -384,13 +384,18 @@ class AlertTile extends ConsumerWidget {
         borderRadius: cardRadius,
         clipBehavior: Clip.antiAlias,
         child: ListTile(
+          titleAlignment: ListTileTitleAlignment.top,
           leading: Icon(_iconForAlert(alert), color: severityColor),
           title: Text(title),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (primary != null && primary.isNotEmpty) Text(primary),
-              if (targetName != null && targetName.isNotEmpty) ...[
+              // The target name usually equals the payload's primary name;
+              // only show it when it adds information.
+              if (targetName != null &&
+                  targetName.isNotEmpty &&
+                  targetName != primary) ...[
                 const Gap(AppSpacing.xs),
                 Text(
                   targetName,
