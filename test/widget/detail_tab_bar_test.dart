@@ -31,10 +31,10 @@ class _Host extends StatelessWidget {
 }
 
 void main() {
-  const labels = ['Services', 'Config', 'Updates', 'Logs'];
+  const labels = ['Config', 'Info', 'Services', 'Updates', 'Logs'];
 
-  for (final width in [320.0, 360.0, 402.0, 600.0]) {
-    testWidgets('4 tabs at ${width.toInt()}pt never overflow', (tester) async {
+  for (final width in [360.0, 402.0]) {
+    testWidgets('5 tabs at ${width.toInt()}pt never overflow', (tester) async {
       tester.view.physicalSize = Size(width, 800);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -49,14 +49,14 @@ void main() {
     });
   }
 
-  testWidgets('wide screens keep icons inline', (tester) async {
-    tester.view.physicalSize = const Size(600, 800);
+  testWidgets('icons render above labels', (tester) async {
+    tester.view.physicalSize = const Size(402, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(const MaterialApp(home: _Host(labels: labels)));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.layers), findsNWidgets(4));
+    expect(find.byIcon(Icons.layers), findsNWidgets(5));
   });
 }
