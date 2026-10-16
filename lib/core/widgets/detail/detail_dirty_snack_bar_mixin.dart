@@ -1,13 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
+import 'package:komodo_go/core/widgets/detail/detail_unsaved_changes.dart';
 
 mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
   ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _dirtySnackBar;
   ScaffoldMessengerState? _dirtySnackBarMessenger;
   String? _dirtySnackBarMessage;
   bool? _dirtySnackBarSaveEnabled;
+  int? _dirtySnackBarChangeCount;
+  bool? _dirtySnackBarSaving;
 
   bool get isDirtySnackBarVisible => _dirtySnackBar != null;
 
@@ -23,6 +25,8 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
     required VoidCallback onSave,
     String message = 'Unsaved changes',
     bool saveEnabled = true,
+    int? changeCount,
+    bool saving = false,
   }) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -34,6 +38,8 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
           onSave: onSave,
           message: message,
           saveEnabled: saveEnabled,
+          changeCount: changeCount,
+          saving: saving,
         );
       }
     });
@@ -44,11 +50,15 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
     required VoidCallback onSave,
     String message = 'Unsaved changes',
     bool saveEnabled = true,
+    int? changeCount,
+    bool saving = false,
   }) {
     if (_dirtySnackBar != null) {
       final needsUpdate =
           message != _dirtySnackBarMessage ||
-          saveEnabled != _dirtySnackBarSaveEnabled;
+          saveEnabled != _dirtySnackBarSaveEnabled ||
+          changeCount != _dirtySnackBarChangeCount ||
+          saving != _dirtySnackBarSaving;
       if (!needsUpdate) return;
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -56,38 +66,21 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
     }
 
     final messenger = _dirtySnackBarMessenger ?? ScaffoldMessenger.of(context);
-    final scheme = Theme.of(context).colorScheme;
-
     final controller = messenger.showSnackBar(
       SnackBar(
-        backgroundColor: scheme.inverseSurface,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        padding: EdgeInsets.zero,
         duration: const Duration(days: 1),
         dismissDirection: DismissDirection.none,
         behavior: SnackBarBehavior.floating,
-        content: DefaultTextStyle(
-          style: TextStyle(color: scheme.onInverseSurface),
-          child: Row(
-            children: [
-              Expanded(child: Text(message)),
-              TextButton(
-                style: TextButton.styleFrom(
-                  foregroundColor: scheme.onInverseSurface,
-                ),
-                onPressed: onDiscard,
-                child: const Text('Discard'),
-              ),
-              const Gap(8),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: scheme.secondary,
-                  foregroundColor: scheme.onSecondary,
-                  visualDensity: VisualDensity.compact,
-                ),
-                onPressed: saveEnabled ? onSave : null,
-                child: const Text('Save'),
-              ),
-            ],
-          ),
+        content: DetailUnsavedChangesBar(
+          message: message,
+          changeCount: changeCount,
+          saving: saving,
+          saveEnabled: saveEnabled,
+          onDiscard: onDiscard,
+          onSave: onSave,
         ),
       ),
     );
@@ -95,14 +88,20 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
     _dirtySnackBar = controller;
     _dirtySnackBarMessage = message;
     _dirtySnackBarSaveEnabled = saveEnabled;
-    unawaited(controller.closed.then((_) {
-      if (!mounted) return;
-      if (_dirtySnackBar == controller) {
-        _dirtySnackBar = null;
-        _dirtySnackBarMessage = null;
-        _dirtySnackBarSaveEnabled = null;
-      }
-    }));
+    _dirtySnackBarChangeCount = changeCount;
+    _dirtySnackBarSaving = saving;
+    unawaited(
+      controller.closed.then((_) {
+        if (!mounted) return;
+        if (_dirtySnackBar == controller) {
+          _dirtySnackBar = null;
+          _dirtySnackBarMessage = null;
+          _dirtySnackBarSaveEnabled = null;
+          _dirtySnackBarChangeCount = null;
+          _dirtySnackBarSaving = null;
+        }
+      }),
+    );
   }
 
   void hideDirtySnackBar() {
@@ -111,6 +110,8 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
     _dirtySnackBar = null;
     _dirtySnackBarMessage = null;
     _dirtySnackBarSaveEnabled = null;
+    _dirtySnackBarChangeCount = null;
+    _dirtySnackBarSaving = null;
   }
 
   @override
@@ -126,6 +127,8 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
       _dirtySnackBar = null;
       _dirtySnackBarMessage = null;
       _dirtySnackBarSaveEnabled = null;
+      _dirtySnackBarChangeCount = null;
+      _dirtySnackBarSaving = null;
     }
     super.dispose();
   }
@@ -136,6 +139,8 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
     required VoidCallback onSave,
     String message = 'Unsaved changes',
     bool saveEnabled = true,
+    int? changeCount,
+    bool saving = false,
   }) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -145,6 +150,8 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
           onSave: onSave,
           message: message,
           saveEnabled: saveEnabled,
+          changeCount: changeCount,
+          saving: saving,
         );
       }
     });

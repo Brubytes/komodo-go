@@ -22,13 +22,19 @@ T unwrapOrThrow<T>(Either<Failure, T> result) {
   );
 }
 
-/// Retry policy for the root `ProviderScope`: transient network failures are
-/// retried up to 3 times with exponential backoff; everything else surfaces
-/// immediately.
+/// Retry policy for the root `ProviderScope`.
+///
+/// A transient network failure is retried once after a short delay;
+/// everything else surfaces immediately. Riverpod's retry callback does not
+/// say whether the provider already holds a value (poll/refresh), so the
+/// budget is kept at one: polling providers already retry on their next tick,
+/// and repeated retries against an unreachable server multiply requests.
 Duration? providerRetry(int retryCount, Object error) {
-  if (retryCount >= 3) return null;
+  if (retryCount >= maxProviderRetries) return null;
   if (error is FailureException && error.failure is NetworkFailure) {
-    return Duration(milliseconds: 200 * (1 << retryCount));
+    return const Duration(milliseconds: 400);
   }
   return null;
 }
+
+const maxProviderRetries = 1;

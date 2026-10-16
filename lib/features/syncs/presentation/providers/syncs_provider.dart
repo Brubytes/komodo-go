@@ -12,7 +12,7 @@ part 'syncs_provider.g.dart';
 class Syncs extends _$Syncs {
   @override
   Future<List<ResourceSyncListItem>> build() async {
-    ref.watch(resourceActivityProvider);
+    ref.watch(resourceScopeActivityProvider(ActivityScope.syncs));
     final repository = ref.watch(syncRepositoryProvider);
     if (repository == null) {
       return [];
@@ -37,7 +37,7 @@ class Syncs extends _$Syncs {
 /// Provides details for a specific sync.
 @riverpod
 Future<KomodoResourceSync?> syncDetail(Ref ref, String syncIdOrName) async {
-  ref.watch(resourceActivityProvider);
+  ref.watch(resourceScopeActivityProvider(ActivityScope.syncs));
   final repository = ref.watch(syncRepositoryProvider);
   if (repository == null) {
     return null;
@@ -62,7 +62,8 @@ class SyncActions extends _$SyncActions
   void invalidateList() => ref.invalidate(syncsProvider);
 
   @override
-  void markResourceActivity() => ref.markResourceActivity();
+  void markResourceActivity() =>
+      ref.markResourceActivity({ActivityScope.syncs});
 
   @override
   bool get isMounted => ref.mounted;

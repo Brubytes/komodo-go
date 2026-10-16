@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -69,9 +70,9 @@ class VariablesView extends ConsumerWidget {
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   itemCount: variables.length,
-                  separatorBuilder: (_, _) => const Gap(12),
+                  separatorBuilder: (_, _) => const Gap(AppSpacing.md),
                   itemBuilder: (context, index) => AppFadeSlide(
                     delay: AppMotion.stagger(index),
                     play: index < 10,
@@ -106,26 +107,13 @@ class VariablesView extends ConsumerWidget {
                       },
                       onDelete: () async {
                         final variable = variables[index];
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Delete variable'),
-                            content: Text('Delete "${variable.name}"?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(false),
-                                child: const Text('Cancel'),
-                              ),
-                              FilledButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(true),
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          ),
+                        final confirmed = await confirmDestructive(
+                          context,
+                          title: 'Delete variable',
+                          message: 'Delete "${variable.name}"?',
+                          confirmLabel: 'Delete',
                         );
-                        if (confirmed != true) return;
+                        if (!confirmed) return;
                         if (!context.mounted) return;
 
                         final ok = await ref
@@ -166,7 +154,7 @@ class VariablesView extends ConsumerWidget {
   }
 }
 
-class _VariableTile extends StatelessWidget {
+class _VariableTile extends StatefulWidget {
   const _VariableTile({
     required this.variable,
     required this.onEdit,
@@ -178,11 +166,61 @@ class _VariableTile extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
+  State<_VariableTile> createState() => _VariableTileState();
+}
+
+class _VariableTileState extends State<_VariableTile> {
+  var _revealed = false;
+
+  KomodoVariable get variable => widget.variable;
+  VoidCallback get onEdit => widget.onEdit;
+  VoidCallback get onDelete => widget.onDelete;
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: variable.value));
+    if (!mounted) return;
+    AppSnackBar.show(context, 'Value copied');
+  }
+
+  Widget _secretValueRow(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            _revealed ? variable.value : '••••••••',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.bodySmall?.copyWith(
+              fontFamily: 'monospace',
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        IconButton(
+          tooltip: _revealed ? 'Hide value' : 'Reveal value',
+          visualDensity: VisualDensity.compact,
+          icon: Icon(_revealed ? AppIcons.eyeOff : AppIcons.eye, size: 18),
+          onPressed: () => setState(() => _revealed = !_revealed),
+        ),
+        IconButton(
+          tooltip: 'Copy value',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(AppIcons.copy, size: 18),
+          onPressed: _copy,
+        ),
+      ],
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final subtitle = variable.description.trim().isNotEmpty
-        ? variable.description.trim()
-        : (variable.isSecret ? 'Secret value' : 'Value: ${variable.value}');
+    final description = variable.description.trim();
+    final subtitle = description.isNotEmpty
+        ? description
+        : (variable.isSecret ? null : 'Value: ${variable.value}');
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
@@ -203,16 +241,23 @@ class _VariableTile extends StatelessWidget {
               context,
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
-          subtitle: Text(
-            subtitle,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (subtitle != null)
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              if (variable.isSecret) _secretValueRow(context),
+            ],
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (variable.isSecret) const TextPill(label: 'Secret'),
-              const Gap(8),
+              const Gap(AppSpacing.sm),
               PopupMenuButton<_VariableAction>(
                 onSelected: (action) {
                   switch (action) {
@@ -228,7 +273,7 @@ class _VariableTile extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(AppIcons.edit, color: scheme.primary, size: 18),
-                        const Gap(10),
+                        const Gap(AppSpacing.sm),
                         const Text('Edit'),
                       ],
                     ),
@@ -238,7 +283,7 @@ class _VariableTile extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(AppIcons.delete, color: scheme.error, size: 18),
-                        const Gap(10),
+                        const Gap(AppSpacing.sm),
                         const Text('Delete'),
                       ],
                     ),
@@ -263,9 +308,9 @@ class _VariablesSkeletonList extends StatelessWidget {
 
     return Skeletonizer(
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
+        separatorBuilder: (_, _) => const Gap(AppSpacing.md),
         itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
@@ -273,18 +318,18 @@ class _VariablesSkeletonList extends StatelessWidget {
             child: Row(
               children: [
                 const CircleAvatar(radius: 16),
-                const Gap(10),
+                const Gap(AppSpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Variable key', style: textTheme.titleSmall),
-                      const Gap(6),
+                      const Gap(AppSpacing.xs),
                       Text('Description or value', style: textTheme.bodySmall),
                     ],
                   ),
                 ),
-                const Gap(8),
+                const Gap(AppSpacing.sm),
                 const Chip(label: Text('Secret')),
               ],
             ),
@@ -304,7 +349,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
         const Gap(48),
         Icon(
@@ -312,13 +357,13 @@ class _EmptyState extends StatelessWidget {
           size: 64,
           color: scheme.primary.withValues(alpha: 0.5),
         ),
-        const Gap(16),
+        const Gap(AppSpacing.lg),
         Text(
           'No variables found',
           style: Theme.of(context).textTheme.titleMedium,
           textAlign: TextAlign.center,
         ),
-        const Gap(8),
+        const Gap(AppSpacing.sm),
         Text(
           'Create global variables for interpolation in deployments/builds.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(

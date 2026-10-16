@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
-import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/detail/detail_action_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
-import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
-import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 
 /// Card widget displaying repo information.
@@ -24,223 +23,65 @@ class RepoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = repo.info.state;
     final repoPath = repo.info.repo;
     final branch = repo.info.branch;
     final gitProvider = repo.info.gitProvider.trim();
-    final tagPills = _buildTagPills(displayTags);
+    final onAction = this.onAction;
 
-    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
-
-    return AppCardSurface(
+    return ResourceCard(
       key: ValueKey('repo_card_${repo.id}'),
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: cardRadius,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 96),
-            child: SizedBox(
-              width: double.infinity,
-              child: Stack(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        repo.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      const Gap(4),
-                      Text(
-                        repoPath.isNotEmpty
-                            ? (branch.isNotEmpty
-                                  ? '$repoPath · $branch'
-                                  : repoPath)
-                            : 'No repo',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.7),
-                            ),
-                      ),
-                      if (gitProvider.isNotEmpty) ...[
-                        const Gap(10),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 8,
-                          children: [
-                            _IconLabel(
-                              icon: AppIcons.repos,
-                              label: gitProvider,
-                            ),
-                          ],
-                        ),
-                      ],
-                      if (repo.template || tagPills.isNotEmpty) ...[
-                        const Gap(10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            if (repo.template) const TextPill(label: 'Template'),
-                            ...tagPills,
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 12,
-                  child: _StatusBadge(state: state, compact: true),
-                ),
-                if (onAction != null)
-                  Positioned(
-                    right: 6,
-                    top: 0,
-                    bottom: 0,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: PopupMenuButton<RepoAction>(
-                        key: ValueKey('repo_card_menu_${repo.id}'),
-                        icon: const Icon(AppIcons.moreVertical),
-                        onSelected: onAction,
-                        itemBuilder: (context) {
-                          final scheme = Theme.of(context).colorScheme;
-                          return [
-                            komodoPopupMenuItem(
-                              key: ValueKey('repo_card_clone_${repo.id}'),
-                              value: RepoAction.clone,
-                              icon: AppIcons.download,
-                              label: 'Clone',
-                              iconColor: scheme.primary,
-                            ),
-                            komodoPopupMenuItem(
-                              key: ValueKey('repo_card_pull_${repo.id}'),
-                              value: RepoAction.pull,
-                              icon: AppIcons.refresh,
-                              label: 'Pull',
-                              iconColor: scheme.secondary,
-                            ),
-                            komodoPopupMenuItem(
-                              key: ValueKey('repo_card_build_${repo.id}'),
-                              value: RepoAction.build,
-                              icon: AppIcons.builds,
-                              label: 'Build',
-                              iconColor: scheme.tertiary,
-                            ),
-                          ];
-                        },
-                      ),
-                    ),
-                  ),
-              ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.state, this.compact = false});
-
-  final RepoState state;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final (color, icon) = switch (state) {
-      RepoState.ok => (scheme.secondary, AppIcons.ok),
-      RepoState.failed => (scheme.error, AppIcons.error),
-      RepoState.cloning => (scheme.primary, AppIcons.loading),
-      RepoState.pulling => (scheme.primary, AppIcons.loading),
-      RepoState.building => (scheme.tertiary, AppIcons.loading),
-      RepoState.unknown => (scheme.tertiary, AppIcons.unknown),
-    };
-
-    final padding =
-        compact
-            ? const EdgeInsets.symmetric(horizontal: 5, vertical: 1)
-            : const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
-    final iconSize = compact ? 11.0 : 14.0;
-    final fontSize = compact ? 10.0 : 12.0;
-
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: iconSize, color: color),
-          Gap(compact ? 2 : 4),
-          Text(
-            state.displayName,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w500,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _IconLabel extends StatelessWidget {
-  const _IconLabel({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: scheme.onSurfaceVariant),
-        const Gap(6),
-        Text(
-          label,
-          style: textTheme.bodySmall?.copyWith(
-            color: scheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+      menuKey: ValueKey('repo_card_menu_${repo.id}'),
+      title: repo.name,
+      subtitle: repoPath.isEmpty
+          ? 'No repo'
+          : (branch.isEmpty ? repoPath : '$repoPath · $branch'),
+      status: _status(repo.info.state),
+      meta: [
+        if (gitProvider.isNotEmpty)
+          ResourceIconLabel(icon: AppIcons.repos, label: gitProvider),
       ],
+      pills: [
+        if (repo.template) const TextPill(label: 'Template'),
+        ...resourceTagPills(displayTags),
+      ],
+      menuBuilder: onAction == null
+          ? null
+          : () => [
+              DetailActionGroup(
+                items: [
+                  DetailActionItem(
+                    label: 'Pull',
+                    icon: AppIcons.refresh,
+                    onSelected: () => onAction(RepoAction.pull),
+                  ),
+                  DetailActionItem(
+                    label: 'Clone',
+                    icon: AppIcons.download,
+                    onSelected: () => onAction(RepoAction.clone),
+                  ),
+                  DetailActionItem(
+                    label: 'Build',
+                    icon: AppIcons.builds,
+                    onSelected: () => onAction(RepoAction.build),
+                  ),
+                ],
+              ),
+            ],
+      onTap: onTap,
     );
   }
-}
 
-List<Widget> _buildTagPills(List<String> tags) {
-  if (tags.isEmpty) return [];
-  final capped = tags.take(3).toList();
-  final remaining = tags.length - capped.length;
-  return [
-    for (final tag in capped) TextPill(label: tag),
-    if (remaining > 0) ValuePill(label: 'More', value: '+$remaining'),
-  ];
+  ResourceStatusSpec _status(RepoState state) {
+    final (tone, icon) = switch (state) {
+      RepoState.ok => (PillTone.success, AppIcons.ok),
+      RepoState.failed => (PillTone.alert, AppIcons.error),
+      RepoState.cloning ||
+      RepoState.pulling ||
+      RepoState.building => (PillTone.warning, AppIcons.loading),
+      RepoState.unknown => (PillTone.neutral, AppIcons.unknown),
+    };
+    return ResourceStatusSpec(label: state.displayName, icon: icon, tone: tone);
+  }
 }
 
 /// Actions available for a repo.

@@ -1,16 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/syntax_highlight/app_syntax_highlight.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/utils/relative_time.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
+import 'package:komodo_go/shared/widgets/automation_toggles_block.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
 
 /// View displaying detailed action information.
@@ -19,12 +27,14 @@ class ActionDetailView extends ConsumerStatefulWidget {
     required this.actionId,
     required this.actionName,
     this.appBarActions = const <Widget>[],
+    this.manageGroups = const <DetailActionGroup>[],
     super.key,
   });
 
   final String actionId;
   final String actionName;
   final List<Widget> appBarActions;
+  final List<DetailActionGroup> manageGroups;
 
   @override
   ConsumerState<ActionDetailView> createState() => _ActionDetailViewState();
@@ -40,6 +50,7 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
   CodeEditorController? _fileContentsController;
   final _configEditorKey = GlobalKey<ActionConfigEditorContentState>();
   var _configSaveInFlight = false;
+  String? _lastUpdateId;
 
   @override
   void initState() {
@@ -101,16 +112,8 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
         markColor: AppTokens.resourceActions,
         markUseGradient: true,
         centerTitle: true,
-        actions: [
-          ...widget.appBarActions,
-          IconButton(
-            icon: const Icon(AppIcons.play),
-            tooltip: 'Run',
-            onPressed: actionsState.isLoading
-                ? null
-                : () => _runAction(context, actionId),
-          ),
-        ],
+        status: actionAppBarStatus(listItem: listItem),
+        actions: widget.appBarActions,
       ),
       body: Stack(
         children: [
@@ -125,19 +128,61 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                     child: actionAsync.when(
                       data: (action) {
                         if (action == null) {
-                          return const _MessageSurface(
-                            message: 'Action not found',
+                          return const EmptyStateView.inline(
+                            icon: AppIcons.actions,
+                            title: 'Action not found',
                           );
                         }
 
-                        return _ActionHeroPanel(
-                          action: action,
-                          listItem: listItem,
+                        final running =
+                            listItem?.info.state == ActionState.running;
+                        final onRun = actionsState.isLoading || running
+                            ? null
+                            : () => unawaited(_runAction(context, action));
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _ActionHeader(
+                              action: action,
+                              listItem: listItem,
+                              onRun: onRun,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            DetailActionBar(
+                              primary: DetailActionButton(
+                                label: running ? 'Running…' : 'Run',
+                                icon: AppIcons.play,
+                                loading: running || actionsState.isLoading,
+                                onPressed: onRun,
+                              ),
+                              moreGroups: widget.manageGroups,
+                            ),
+                            if (_lastUpdateId != null &&
+                                _lastUpdateId!.isNotEmpty)
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton.icon(
+                                  key: const ValueKey('action_view_update'),
+                                  onPressed: () => unawaited(
+                                    context.push(
+                                      '${AppRoutes.updateDetails}/'
+                                      '${Uri.encodeComponent(_lastUpdateId!)}',
+                                    ),
+                                  ),
+                                  icon: const Icon(AppIcons.notepadText),
+                                  label: const Text('View update'),
+                                ),
+                              ),
+                          ],
                         );
                       },
                       loading: () => const _LoadingSurface(),
-                      error: (error, _) =>
-                          _ErrorSurface(error: error.toString()),
+                      error: (error, _) => ErrorStateView.fromError(
+                        title: 'Failed to load action',
+                        error: error,
+                        onRetry: () =>
+                            ref.invalidate(actionDetailProvider(actionId)),
+                      ),
                     ),
                   ),
                 ),
@@ -161,7 +206,7 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                           ),
                           Tab(
                             icon: Icon(AppIcons.notepadText),
-                            text: 'File content',
+                            text: 'Script',
                           ),
                         ],
                       ),
@@ -185,8 +230,9 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                       child: actionAsync.when(
                         data: (action) {
                           if (action == null) {
-                            return const _MessageSurface(
-                              message: 'Action not found',
+                            return const EmptyStateView.inline(
+                              icon: AppIcons.actions,
+                              title: 'Action not found',
                             );
                           }
 
@@ -208,8 +254,12 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                           );
                         },
                         loading: () => const _LoadingSurface(),
-                        error: (error, _) =>
-                            _ErrorSurface(error: error.toString()),
+                        error: (error, _) => ErrorStateView.fromError(
+                          title: 'Failed to load action',
+                          error: error,
+                          onRetry: () =>
+                              ref.invalidate(actionDetailProvider(actionId)),
+                        ),
                       ),
                     ),
                   ),
@@ -226,8 +276,9 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                       child: actionAsync.when(
                         data: (action) {
                           if (action == null) {
-                            return const _MessageSurface(
-                              message: 'Action not found',
+                            return const EmptyStateView.inline(
+                              icon: AppIcons.actions,
+                              title: 'Action not found',
                             );
                           }
 
@@ -240,8 +291,12 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                           );
                         },
                         loading: () => const _LoadingSurface(),
-                        error: (error, _) =>
-                            _ErrorSurface(error: error.toString()),
+                        error: (error, _) => ErrorStateView.fromError(
+                          title: 'Failed to load action',
+                          error: error,
+                          onRetry: () =>
+                              ref.invalidate(actionDetailProvider(actionId)),
+                        ),
                       ),
                     ),
                   ),
@@ -259,15 +314,31 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
     );
   }
 
-  Future<void> _runAction(BuildContext context, String actionId) async {
-    final actions = ref.read(actionActionsProvider.notifier);
-    final success = await actions.run(actionId);
+  Future<void> _runAction(BuildContext context, KomodoAction action) async {
+    final args = action.config.arguments.trim();
+    final preview = args.isEmpty
+        ? 'No arguments.'
+        : 'Arguments:\n${_previewLines(args, 6)}';
+    final confirmed = await confirmDestructive(
+      context,
+      title: 'Run ${action.name}?',
+      message: preview,
+      confirmLabel: 'Run',
+      destructive: false,
+    );
+    if (!confirmed || !mounted) return;
+
+    final updateId = await ref
+        .read(actionActionsProvider.notifier)
+        .runWithUpdate(action.id);
+    final success = updateId != null;
 
     if (!mounted) return;
 
     if (success) {
+      setState(() => _lastUpdateId = updateId);
       ref
-        ..invalidate(actionDetailProvider(actionId))
+        ..invalidate(actionDetailProvider(widget.actionId))
         ..invalidate(actionsProvider);
     }
 
@@ -278,6 +349,12 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
         tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
       );
     }
+  }
+
+  static String _previewLines(String text, int max) {
+    final lines = text.split('\n');
+    if (lines.length <= max) return text;
+    return '${lines.take(max).join('\n')}\n… (+${lines.length - max} more)';
   }
 
   void _discardConfig(KomodoAction action) {
@@ -584,82 +661,113 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
     return params;
   }
 
+  String _argumentsFormatLabel(FileFormat f) => switch (f) {
+    FileFormat.keyValue => 'KeyValue',
+    FileFormat.toml => 'TOML',
+    FileFormat.yaml => 'YAML',
+    FileFormat.json => 'JSON',
+  };
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
+    void toggle(void Function() update) {
+      setState(update);
+      _notifyDirtyIfChanged();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DetailSubCard(
-          title: 'Toggles',
-          icon: AppIcons.settings,
+          title: 'Arguments',
+          icon: AppIcons.tag,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SwitchListTile.adaptive(
-                value: _runAtStartup,
-                onChanged: (v) {
-                  setState(() => _runAtStartup = v);
-                  _notifyDirtyIfChanged();
-                },
-                title: const Text('Run at startup'),
-                secondary: const Icon(AppIcons.play),
-                contentPadding: EdgeInsets.zero,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: PopupMenuButton<FileFormat>(
+                  key: const ValueKey('action_arguments_format'),
+                  tooltip: 'Arguments format',
+                  initialValue: _argumentsFormat,
+                  onSelected: (v) => toggle(() => _argumentsFormat = v),
+                  itemBuilder: (context) => [
+                    for (final f in FileFormat.values)
+                      PopupMenuItem(
+                        value: f,
+                        child: Text(_argumentsFormatLabel(f)),
+                      ),
+                  ],
+                  child: Chip(
+                    avatar: const Icon(AppIcons.tag, size: 16),
+                    label: Text(
+                      'Format: ${_argumentsFormatLabel(_argumentsFormat)}',
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
               ),
-              SwitchListTile.adaptive(
-                value: _scheduleEnabled,
-                onChanged: (v) {
-                  setState(() => _scheduleEnabled = v);
-                  _notifyDirtyIfChanged();
-                },
-                title: const Text('Schedule enabled'),
-                secondary: const Icon(AppIcons.clock),
-                contentPadding: EdgeInsets.zero,
-              ),
-              SwitchListTile.adaptive(
-                value: _webhookEnabled,
-                onChanged: (v) {
-                  setState(() => _webhookEnabled = v);
-                  _notifyDirtyIfChanged();
-                },
-                title: const Text('Webhook enabled'),
-                secondary: const Icon(AppIcons.network),
-                contentPadding: EdgeInsets.zero,
-              ),
-              SwitchListTile.adaptive(
-                value: _reloadDenoDeps,
-                onChanged: (v) {
-                  setState(() => _reloadDenoDeps = v);
-                  _notifyDirtyIfChanged();
-                },
-                title: const Text('Reload Deno deps'),
-                secondary: const Icon(AppIcons.refresh),
-                contentPadding: EdgeInsets.zero,
-              ),
-              SwitchListTile.adaptive(
-                value: _scheduleAlert,
-                onChanged: (v) {
-                  setState(() => _scheduleAlert = v);
-                  _notifyDirtyIfChanged();
-                },
-                title: const Text('Schedule alerts'),
-                secondary: const Icon(AppIcons.notifications),
-                contentPadding: EdgeInsets.zero,
-              ),
-              SwitchListTile.adaptive(
-                value: _failureAlert,
-                onChanged: (v) {
-                  setState(() => _failureAlert = v);
-                  _notifyDirtyIfChanged();
-                },
-                title: const Text('Failure alerts'),
-                secondary: const Icon(AppIcons.warning),
-                contentPadding: EdgeInsets.zero,
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _arguments,
+                minLines: 2,
+                maxLines: 10,
+                decoration: InputDecoration(
+                  labelText: 'Arguments',
+                  prefixIcon: const Icon(AppIcons.package),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                ),
               ),
             ],
           ),
         ),
-        const Gap(12),
+        const SizedBox(height: AppSpacing.md),
+        AutomationTogglesBlock(
+          primary: [
+            AutomationToggle(
+              label: 'Run at startup',
+              icon: AppIcons.play,
+              value: _runAtStartup,
+              onChanged: (v) => toggle(() => _runAtStartup = v),
+            ),
+            AutomationToggle(
+              label: 'Schedule enabled',
+              icon: AppIcons.clock,
+              value: _scheduleEnabled,
+              onChanged: (v) => toggle(() => _scheduleEnabled = v),
+            ),
+            AutomationToggle(
+              label: 'Failure alerts',
+              icon: AppIcons.warning,
+              value: _failureAlert,
+              onChanged: (v) => toggle(() => _failureAlert = v),
+            ),
+          ],
+          rare: [
+            AutomationToggle(
+              label: 'Reload Deno deps',
+              icon: AppIcons.refresh,
+              value: _reloadDenoDeps,
+              onChanged: (v) => toggle(() => _reloadDenoDeps = v),
+            ),
+            AutomationToggle(
+              label: 'Schedule alerts',
+              icon: AppIcons.notifications,
+              value: _scheduleAlert,
+              onChanged: (v) => toggle(() => _scheduleAlert = v),
+            ),
+          ],
+          webhookEnabled: AutomationToggle(
+            label: 'Webhook enabled',
+            icon: AppIcons.network,
+            value: _webhookEnabled,
+            onChanged: (v) => toggle(() => _webhookEnabled = v),
+          ),
+          webhookSecret: _webhookSecret,
+        ),
+        const SizedBox(height: AppSpacing.md),
         DetailSubCard(
           title: 'Schedule',
           icon: AppIcons.clock,
@@ -680,15 +788,14 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
                 ],
                 onChanged: (v) {
                   if (v == null) return;
-                  setState(() => _scheduleFormat = v);
-                  _notifyDirtyIfChanged();
+                  toggle(() => _scheduleFormat = v);
                 },
                 decoration: const InputDecoration(
                   labelText: 'Schedule format',
                   prefixIcon: Icon(AppIcons.clock),
                 ),
               ),
-              const Gap(12),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _scheduleTimezone,
                 decoration: InputDecoration(
@@ -697,7 +804,7 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                 ),
               ),
-              const Gap(12),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _schedule,
                 minLines: 1,
@@ -708,65 +815,6 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
                   helperText: _scheduleFormat == ScheduleFormat.cron
                       ? 'Cron (e.g. 0 0 * * *)'
                       : 'English (e.g. every day at 01:00)',
-                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Webhook',
-          icon: AppIcons.network,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _webhookSecret,
-                decoration: InputDecoration(
-                  labelText: 'Webhook secret',
-                  prefixIcon: const Icon(AppIcons.key),
-                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Gap(12),
-        DetailSubCard(
-          title: 'Arguments',
-          icon: AppIcons.tag,
-          child: Column(
-            children: [
-              KomodoSelectMenuField<FileFormat>(
-                key: const ValueKey('action_arguments_format'),
-                value: _argumentsFormat,
-                items: const [
-                  KomodoSelectMenuItem(
-                    value: FileFormat.keyValue,
-                    label: 'KeyValue',
-                  ),
-                  KomodoSelectMenuItem(value: FileFormat.toml, label: 'TOML'),
-                  KomodoSelectMenuItem(value: FileFormat.yaml, label: 'YAML'),
-                  KomodoSelectMenuItem(value: FileFormat.json, label: 'JSON'),
-                ],
-                onChanged: (v) {
-                  if (v == null) return;
-                  setState(() => _argumentsFormat = v);
-                  _notifyDirtyIfChanged();
-                },
-                decoration: const InputDecoration(
-                  labelText: 'Arguments format',
-                  prefixIcon: Icon(AppIcons.tag),
-                ),
-              ),
-              const Gap(12),
-              TextFormField(
-                controller: _arguments,
-                minLines: 2,
-                maxLines: 10,
-                decoration: InputDecoration(
-                  labelText: 'Arguments',
-                  prefixIcon: const Icon(AppIcons.package),
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                 ),
               ),
@@ -840,125 +888,77 @@ class _KeepAliveState extends State<_KeepAlive>
   bool get wantKeepAlive => true;
 }
 
-class _ActionHeroPanel extends StatelessWidget {
-  const _ActionHeroPanel({required this.action, required this.listItem});
+/// App bar status line: state plus time since the last run.
+MainAppBarStatus? actionAppBarStatus({required ActionListItem? listItem}) {
+  final info = listItem?.info;
+  final state = info?.state;
+  if (info == null || state == null) return null;
+  final lastRun = info.lastRunAt;
+  final ran = state == ActionState.running || lastRun == null
+      ? ''
+      : ' · ran ${formatTimeAgo(lastRun)}';
+  return MainAppBarStatus(
+    label: '${state.displayName}$ran',
+    tone: switch (state) {
+      ActionState.ok => PillTone.success,
+      ActionState.failed => PillTone.alert,
+      ActionState.running => PillTone.warning,
+      ActionState.unknown => PillTone.neutral,
+    },
+  );
+}
+
+class _ActionHeader extends StatelessWidget {
+  const _ActionHeader({
+    required this.action,
+    required this.listItem,
+    required this.onRun,
+  });
 
   final KomodoAction action;
   final ActionListItem? listItem;
+  final VoidCallback? onRun;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final status = listItem?.info.state;
-    final description = action.description.trim();
+    final schedule = action.config.schedule.trim();
+    final nextRun = listItem?.info.nextScheduledRun;
+    final failed = listItem?.info.state == ActionState.failed;
 
-    return DetailHeroPanel(
-      metrics: [
-        if (status != null)
-          DetailMetricTileData(
-            label: 'Status',
-            value: status.displayName,
-            icon: switch (status) {
-              ActionState.ok => AppIcons.ok,
-              ActionState.failed => AppIcons.error,
-              ActionState.running => AppIcons.loading,
-              ActionState.unknown => AppIcons.unknown,
-            },
-            tone: switch (status) {
-              ActionState.ok => DetailMetricTone.success,
-              ActionState.failed => DetailMetricTone.alert,
-              ActionState.running => DetailMetricTone.neutral,
-              ActionState.unknown => DetailMetricTone.neutral,
-            },
-          ),
-        DetailMetricTileData(
-          label: 'Startup',
-          value: action.config.runAtStartup ? 'On' : 'Off',
-          icon: action.config.runAtStartup ? AppIcons.ok : AppIcons.pause,
-          tone: action.config.runAtStartup
-              ? DetailMetricTone.success
-              : DetailMetricTone.neutral,
-        ),
-        if (listItem?.info.lastRunAt != null)
-          DetailMetricTileData(
-            label: 'Last Run',
-            value: _formatTimestampSeconds(listItem!.info.lastRunAt!),
+    return DetailResourceHeader(
+      banner: failed
+          ? DetailAttentionBanner(
+              icon: AppIcons.error,
+              message: 'Last run failed',
+              tone: PillTone.alert,
+              actionLabel: onRun == null ? null : 'Run',
+              onAction: onRun,
+            )
+          : null,
+      facts: [
+        if (schedule.isNotEmpty)
+          DetailFact(
             icon: AppIcons.clock,
-            tone: DetailMetricTone.neutral,
+            label: 'Schedule',
+            value: schedule,
           ),
-        if (action.config.scheduleEnabled)
-          DetailMetricTileData(
-            label: 'Schedule',
-            value: action.config.schedule.isNotEmpty
-                ? action.config.schedule
-                : 'Enabled',
-            icon: AppIcons.clock,
-            tone: DetailMetricTone.tertiary,
-          )
-        else
-          const DetailMetricTileData(
-            label: 'Schedule',
-            value: 'Off',
-            icon: AppIcons.pause,
-            tone: DetailMetricTone.neutral,
+        if (nextRun != null)
+          DetailFact(
+            icon: AppIcons.waiting,
+            label: 'Next run',
+            value: formatTimeUntil(nextRun),
+            fullValue: DateTime.fromMillisecondsSinceEpoch(
+              nextRun,
+            ).toLocal().toString(),
           ),
       ],
-      footer: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (action.tags.isNotEmpty)
-            DetailPillList(
-              items: action.tags,
-              showEmptyLabel: false,
-            ),
-          if (description.isNotEmpty) ...[
-            if (action.tags.isNotEmpty) const Gap(12),
-            Text(
-              'Description',
-              style: textTheme.labelMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Gap(6),
-            Text(
-              description,
-              style: textTheme.bodyMedium,
-            ),
-          ],
-        ],
-      ),
+      tags: action.tags,
+      description: action.description,
     );
   }
 }
 
-String _formatTimestampSeconds(int timestamp) {
-  final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
-  final now = DateTime.now();
-  final diff = now.difference(date);
-
-  if (diff.inDays > 0) return '${diff.inDays}d ago';
-  if (diff.inHours > 0) return '${diff.inHours}h ago';
-  if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-  return 'Just now';
-}
-
-class _MessageSurface extends StatelessWidget {
-  const _MessageSurface({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return DetailSurface(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Center(child: Text(message)),
-      ),
-    );
-  }
-}
+/// Timestamps from the API are unix milliseconds.
 
 class _LoadingSurface extends StatelessWidget {
   const _LoadingSurface();
@@ -966,21 +966,5 @@ class _LoadingSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const AppSkeletonSurface();
-  }
-}
-
-class _ErrorSurface extends StatelessWidget {
-  const _ErrorSurface({required this.error});
-
-  final String error;
-
-  @override
-  Widget build(BuildContext context) {
-    return DetailSurface(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text('Error: $error'),
-      ),
-    );
   }
 }

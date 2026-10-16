@@ -45,56 +45,61 @@ class AppFadeSlide extends StatefulWidget {
 
 class _AppFadeSlideState extends State<AppFadeSlide>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _animation;
+  // Only created when the widget actually animates, so non-animating cards
+  // (the vast majority in long lists) carry no controller or ticker.
+  AnimationController? _controller;
+  Animation<double>? _animation;
   Timer? _delayTimer;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: widget.duration);
-    _animation = CurvedAnimation(parent: _controller, curve: widget.curve);
-    _startAnimation();
+    if (widget.play) _startAnimation();
   }
 
   @override
   void didUpdateWidget(AppFadeSlide oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!widget.play && _controller.value != 1) {
-      _controller.value = 1;
+    final controller = _controller;
+    if (controller != null && !widget.play && controller.value != 1) {
+      _delayTimer?.cancel();
+      controller.value = 1;
     }
   }
 
   void _startAnimation() {
-    if (!widget.play) {
-      _controller.value = 1;
-      return;
-    }
+    final controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+    );
+    _controller = controller;
+    _animation = CurvedAnimation(parent: controller, curve: widget.curve);
     if (widget.delay == Duration.zero) {
-      _controller.forward();
+      controller.forward();
       return;
     }
     _delayTimer = Timer(widget.delay, () {
-      if (mounted) _controller.forward();
+      if (mounted) controller.forward();
     });
   }
 
   @override
   void dispose() {
     _delayTimer?.cancel();
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.play) return widget.child;
+    final animation = _animation;
+    if (animation == null) return widget.child;
 
     return AnimatedBuilder(
-      animation: _animation,
+      animation: animation,
       child: widget.child,
       builder: (context, child) {
-        final value = _animation.value;
+        final value = animation.value;
         final dy = lerpDouble(widget.offsetY, 0, value) ?? 0;
         return Opacity(
           opacity: value,

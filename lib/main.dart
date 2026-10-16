@@ -9,8 +9,11 @@ import 'package:komodo_go/shared/resources/providers/resource_name_resolver_prov
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AppSyntaxHighlight.ensureInitialized();
-  await DemoBootstrap.ensureInitialized();
+  // Independent startup work runs concurrently instead of back to back.
+  await Future.wait<void>([
+    AppSyntaxHighlight.ensureInitialized(),
+    DemoBootstrap.ensureInitialized(),
+  ]);
 
   runApp(
     ProviderScope(

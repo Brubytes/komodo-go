@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -64,9 +64,9 @@ class TagsView extends ConsumerWidget {
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   itemCount: tags.length,
-                  separatorBuilder: (_, _) => const Gap(12),
+                  separatorBuilder: (_, _) => const Gap(AppSpacing.md),
                   itemBuilder: (context, index) => AppFadeSlide(
                     delay: AppMotion.stagger(index),
                     play: index < 10,
@@ -100,31 +100,14 @@ class TagsView extends ConsumerWidget {
                       },
                       onDelete: () async {
                         final tag = tags[index];
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            key: ValueKey('tag_delete_dialog_${tag.id}'),
-                            title: const Text('Delete tag'),
-                            content: Text(
+                        final confirmed = await confirmDestructive(
+                          context,
+                          title: 'Delete tag',
+                          message:
                               'Delete "${tag.name}"? This removes it from all resources.',
-                            ),
-                            actions: [
-                              TextButton(
-                                key: ValueKey('tag_delete_cancel_${tag.id}'),
-                                onPressed: () =>
-                                    Navigator.of(context).pop(false),
-                                child: const Text('Cancel'),
-                              ),
-                              FilledButton(
-                                key: ValueKey('tag_delete_confirm_${tag.id}'),
-                                onPressed: () =>
-                                    Navigator.of(context).pop(true),
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          ),
+                          confirmLabel: 'Delete',
                         );
-                        if (confirmed != true) return;
+                        if (!confirmed) return;
                         if (!context.mounted) return;
 
                         final ok = await ref
@@ -224,7 +207,7 @@ class _TagTile extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(AppIcons.edit, color: scheme.primary, size: 18),
-                        const Gap(10),
+                        const Gap(AppSpacing.sm),
                         const Text('Edit'),
                       ],
                     ),
@@ -235,7 +218,7 @@ class _TagTile extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(AppIcons.delete, color: scheme.error, size: 18),
-                        const Gap(10),
+                        const Gap(AppSpacing.sm),
                         const Text('Delete'),
                       ],
                     ),
@@ -260,9 +243,9 @@ class _TagsSkeletonList extends StatelessWidget {
 
     return Skeletonizer(
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
+        separatorBuilder: (_, _) => const Gap(AppSpacing.md),
         itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
@@ -270,18 +253,18 @@ class _TagsSkeletonList extends StatelessWidget {
             child: Row(
               children: [
                 const CircleAvatar(radius: 16),
-                const Gap(10),
+                const Gap(AppSpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Tag label', style: textTheme.titleSmall),
-                      const Gap(6),
+                      const Gap(AppSpacing.xs),
                       Text('Owner • Usage', style: textTheme.bodySmall),
                     ],
                   ),
                 ),
-                const Gap(8),
+                const Gap(AppSpacing.sm),
                 const Chip(label: Text('3')),
               ],
             ),
@@ -301,7 +284,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
         const Gap(48),
         Icon(
@@ -309,13 +292,13 @@ class _EmptyState extends StatelessWidget {
           size: 64,
           color: scheme.primary.withValues(alpha: 0.5),
         ),
-        const Gap(16),
+        const Gap(AppSpacing.lg),
         Text(
           'No tags found',
           style: Theme.of(context).textTheme.titleMedium,
           textAlign: TextAlign.center,
         ),
-        const Gap(8),
+        const Gap(AppSpacing.sm),
         Text(
           'Create tags to organize and filter resources.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(

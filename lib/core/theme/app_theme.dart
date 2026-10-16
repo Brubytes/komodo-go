@@ -195,10 +195,6 @@ class AppTheme {
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: radius),
-          backgroundColor: isDark ? colorScheme.secondary : colorScheme.primary,
-          foregroundColor: isDark
-              ? colorScheme.onSecondary
-              : colorScheme.onPrimary,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -216,14 +212,22 @@ class AppTheme {
         ),
       ),
       switchTheme: SwitchThemeData(
-        trackOutlineColor: WidgetStateProperty.all(colorScheme.outlineVariant),
+        trackOutlineColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? null
+              : colorScheme.outlineVariant,
+        ),
         trackColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
+          (states) => states.contains(WidgetState.disabled)
+              ? null
+              : states.contains(WidgetState.selected)
               ? colorScheme.primary
               : colorScheme.surfaceContainerHighest,
         ),
         thumbColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
+          (states) => states.contains(WidgetState.disabled)
+              ? null
+              : states.contains(WidgetState.selected)
               ? colorScheme.onPrimary
               : colorScheme.onSurfaceVariant,
         ),
@@ -232,15 +236,23 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         side: BorderSide(color: colorScheme.outline),
         fillColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
+          (states) => states.contains(WidgetState.disabled)
+              ? null
+              : states.contains(WidgetState.selected)
               ? colorScheme.primary
               : Colors.transparent,
         ),
-        checkColor: WidgetStateProperty.all(colorScheme.onPrimary),
+        checkColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? null
+              : colorScheme.onPrimary,
+        ),
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
+          (states) => states.contains(WidgetState.disabled)
+              ? null
+              : states.contains(WidgetState.selected)
               ? colorScheme.primary
               : colorScheme.onSurfaceVariant,
         ),

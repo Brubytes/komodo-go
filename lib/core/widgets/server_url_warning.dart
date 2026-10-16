@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 
 class ServerUrlWarning extends StatelessWidget {
@@ -59,24 +60,24 @@ class _WarningBox extends StatelessWidget {
 
   final String message;
 
-  /// When true, uses the warning (tertiary) tone instead of the neutral
+  /// When true, uses the warning tone instead of the neutral
   /// informational styling.
   final bool emphasize;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accent = emphasize ? colorScheme.tertiary : colorScheme.primary;
+    final accent = emphasize ? colorScheme.statusWarning : colorScheme.primary;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: emphasize
-            ? colorScheme.tertiaryContainer.withValues(alpha: 0.35)
+            ? colorScheme.statusWarningContainer
             : colorScheme.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: emphasize
-              ? colorScheme.tertiary.withValues(alpha: 0.45)
+              ? colorScheme.statusWarning.withValues(alpha: 0.45)
               : colorScheme.outlineVariant,
         ),
       ),

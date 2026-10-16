@@ -64,28 +64,37 @@ class HomeStatCard<T> extends StatelessWidget {
               final iconPadding = isTight ? 3.0 : (isSpacious ? 10.0 : 8.0);
               final showSubtitle = !isTight;
 
-              final valueStyle = (isTight
-                      ? textTheme.titleMedium
-                      : isSpacious
-                      ? textTheme.headlineLarge
-                      : textTheme.headlineMedium)
-                  ?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.5);
-              final titleStyle = (isTight
-                      ? textTheme.titleSmall
-                      : isSpacious
-                      ? textTheme.titleLarge
-                      : textTheme.titleMedium)
-                  ?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurfaceVariant,
-                    letterSpacing: -0.1,
-                  );
-              final subtitleStyle = (isTight
-                      ? textTheme.labelMedium
-                      : isSpacious
-                      ? textTheme.titleSmall
-                      : textTheme.labelLarge)
-                  ?.copyWith(color: color, fontWeight: FontWeight.w700);
+              final valueStyle =
+                  (isTight
+                          ? textTheme.titleMedium
+                          : isSpacious
+                          ? textTheme.headlineLarge
+                          : textTheme.headlineMedium)
+                      ?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      );
+              final titleStyle =
+                  (isTight
+                          ? textTheme.titleSmall
+                          : isSpacious
+                          ? textTheme.titleLarge
+                          : textTheme.titleMedium)
+                      ?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurfaceVariant,
+                        letterSpacing: -0.1,
+                      );
+              final subtitleStyle =
+                  (isTight
+                          ? textTheme.labelMedium
+                          : isSpacious
+                          ? textTheme.titleSmall
+                          : textTheme.labelLarge)
+                      ?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      );
 
               return Padding(
                 padding: EdgeInsets.all(padding),

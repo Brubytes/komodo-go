@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -59,10 +59,10 @@ class ProvidersView extends ConsumerWidget {
                   }
 
                   return ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(AppSpacing.lg),
                     children: [
                       const _SectionHeader(title: 'Git Providers'),
-                      const Gap(8),
+                      const Gap(AppSpacing.sm),
                       if (providers.isEmpty)
                         const _SectionHint(
                           message: 'No git provider accounts yet.',
@@ -81,7 +81,7 @@ class ProvidersView extends ConsumerWidget {
                         ),
                       const Gap(20),
                       const _SectionHeader(title: 'Registry Accounts'),
-                      const Gap(8),
+                      const Gap(AppSpacing.sm),
                       if (registries.isEmpty)
                         const _SectionHint(message: 'No registry accounts yet.')
                       else
@@ -138,7 +138,7 @@ class ProvidersView extends ConsumerWidget {
         ),
       );
       index += 1;
-      items.add(const Gap(12));
+      items.add(const Gap(AppSpacing.md));
     }
     if (items.isNotEmpty) {
       items.removeLast();
@@ -229,24 +229,13 @@ class ProvidersView extends ConsumerWidget {
     WidgetRef ref,
     GitProviderAccount provider,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete provider'),
-        content: Text('Delete ${provider.username}@${provider.domain}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await confirmDestructive(
+      context,
+      title: 'Delete provider',
+      message: 'Delete ${provider.username}@${provider.domain}?',
+      confirmLabel: 'Delete',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     if (!context.mounted) return;
 
     final ok = await ref
@@ -295,24 +284,13 @@ class ProvidersView extends ConsumerWidget {
     WidgetRef ref,
     DockerRegistryAccount registry,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete registry'),
-        content: Text('Delete ${registry.username}@${registry.domain}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await confirmDestructive(
+      context,
+      title: 'Delete registry',
+      message: 'Delete ${registry.username}@${registry.domain}?',
+      confirmLabel: 'Delete',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     if (!context.mounted) return;
 
     final ok = await ref
@@ -337,14 +315,14 @@ class _ProvidersSkeletonList extends StatelessWidget {
 
     return Skeletonizer(
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           Text('Git Providers', style: textTheme.titleSmall),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           ...List.generate(
             3,
             (_) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
               child: AppCardSurface(
                 padding: EdgeInsets.zero,
                 child: Padding(
@@ -352,18 +330,18 @@ class _ProvidersSkeletonList extends StatelessWidget {
                   child: Row(
                     children: [
                       const CircleAvatar(radius: 16),
-                      const Gap(10),
+                      const Gap(AppSpacing.sm),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Provider name', style: textTheme.titleSmall),
-                            const Gap(6),
+                            const Gap(AppSpacing.xs),
                             Text('Username • Host', style: textTheme.bodySmall),
                           ],
                         ),
                       ),
-                      const Gap(8),
+                      const Gap(AppSpacing.sm),
                       const Chip(label: Text('Active')),
                     ],
                   ),
@@ -371,13 +349,13 @@ class _ProvidersSkeletonList extends StatelessWidget {
               ),
             ),
           ),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           Text('Registry Accounts', style: textTheme.titleSmall),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           ...List.generate(
             3,
             (_) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
               child: AppCardSurface(
                 padding: EdgeInsets.zero,
                 child: Padding(
@@ -385,18 +363,18 @@ class _ProvidersSkeletonList extends StatelessWidget {
                   child: Row(
                     children: [
                       const CircleAvatar(radius: 16),
-                      const Gap(10),
+                      const Gap(AppSpacing.sm),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Registry name', style: textTheme.titleSmall),
-                            const Gap(6),
+                            const Gap(AppSpacing.xs),
                             Text('Username • Host', style: textTheme.bodySmall),
                           ],
                         ),
                       ),
-                      const Gap(8),
+                      const Gap(AppSpacing.sm),
                       const Chip(label: Text('Active')),
                     ],
                   ),
@@ -430,7 +408,7 @@ class _ProviderTypeSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, AppSpacing.sm, 20, 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -441,14 +419,14 @@ class _ProviderTypeSheet extends StatelessWidget {
               letterSpacing: -0.2,
             ),
           ),
-          const Gap(12),
+          const Gap(AppSpacing.md),
           ListTile(
             leading: const Icon(AppIcons.repos),
             title: const Text('Git provider'),
             subtitle: const Text('Connect GitHub, GitLab, and more'),
             onTap: () => Navigator.of(context).pop(_ProviderType.git),
           ),
-          const Gap(4),
+          const Gap(AppSpacing.xs),
           ListTile(
             leading: const Icon(AppIcons.package),
             title: const Text('Registry account'),
@@ -472,7 +450,7 @@ class _SectionHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
       child: Row(
         children: [
           Text(
@@ -505,7 +483,10 @@ class _SectionHint extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 6,
+      ),
       child: Text(
         message,
         style: Theme.of(
@@ -565,7 +546,7 @@ class _ProviderTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextPill(label: provider.https ? 'HTTPS' : 'HTTP'),
-              const Gap(6),
+              const Gap(AppSpacing.xs),
               PopupMenuButton<_ProviderAction>(
                 onSelected: (action) {
                   switch (action) {
@@ -581,7 +562,7 @@ class _ProviderTile extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(AppIcons.edit, color: scheme.primary, size: 18),
-                        const Gap(10),
+                        const Gap(AppSpacing.sm),
                         const Text('Edit'),
                       ],
                     ),
@@ -591,7 +572,7 @@ class _ProviderTile extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(AppIcons.delete, color: scheme.error, size: 18),
-                        const Gap(10),
+                        const Gap(AppSpacing.sm),
                         const Text('Delete'),
                       ],
                     ),
@@ -667,7 +648,7 @@ class _RegistryTile extends StatelessWidget {
                 child: Row(
                   children: [
                     Icon(AppIcons.edit, color: scheme.primary, size: 18),
-                    const Gap(10),
+                    const Gap(AppSpacing.sm),
                     const Text('Edit'),
                   ],
                 ),
@@ -677,7 +658,7 @@ class _RegistryTile extends StatelessWidget {
                 child: Row(
                   children: [
                     Icon(AppIcons.delete, color: scheme.error, size: 18),
-                    const Gap(10),
+                    const Gap(AppSpacing.sm),
                     const Text('Delete'),
                   ],
                 ),
@@ -698,7 +679,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
         const Gap(48),
         Icon(
@@ -706,13 +687,13 @@ class _EmptyState extends StatelessWidget {
           size: 64,
           color: scheme.primary.withValues(alpha: 0.5),
         ),
-        const Gap(16),
+        const Gap(AppSpacing.lg),
         Text(
           'No providers found',
           style: Theme.of(context).textTheme.titleMedium,
           textAlign: TextAlign.center,
         ),
-        const Gap(8),
+        const Gap(AppSpacing.sm),
         Text(
           'Create git providers and registry accounts to access private sources.',
           style: Theme.of(

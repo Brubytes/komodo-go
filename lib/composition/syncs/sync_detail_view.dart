@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/composition/resources/resource_manage_actions.dart';
 import 'package:komodo_go/composition/syncs/advanced_sync_section.dart';
 import 'package:komodo_go/composition/syncs/sync_detail_sections.dart';
+import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/router/resource_routes.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/utils/relative_time.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -39,6 +46,44 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
     with DetailDirtySnackBarMixin<SyncDetailView> {
   final _configEditorKey = GlobalKey<SyncConfigEditorContentState>();
   var _configSaveInFlight = false;
+  var _dirty = false;
+
+  void _onDirtyChanged(bool dirty, KomodoResourceSync sync) {
+    _dirty = dirty;
+    syncDirtySnackBar(
+      dirty: dirty,
+      onDiscard: () => _discardConfig(sync),
+      onSave: () => _saveConfig(sync: sync),
+      saving: _configSaveInFlight,
+    );
+  }
+
+  Future<void> _confirmAndExecute(KomodoResourceSync sync) async {
+    final pending = _pendingChangeCount(sync);
+    final ok = await confirmDestructive(
+      context,
+      title: 'Execute sync?',
+      message: pending > 0
+          ? 'All $pending pending change${pending == 1 ? '' : 's'} will be '
+                'applied. Use the plan tab to apply only selected resources.'
+          : 'The sync will be executed with its current pending state.',
+      confirmLabel: 'Execute',
+      destructive: false,
+    );
+    if (!ok || !mounted) return;
+    final success = await ref.read(syncActionsProvider.notifier).run(sync.id);
+    if (!mounted) return;
+    if (success) {
+      ref
+        ..invalidate(syncDetailProvider(sync.id))
+        ..invalidate(syncsProvider);
+    }
+    AppSnackBar.show(
+      context,
+      success ? 'Sync started.' : 'Failed to start sync.',
+      tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,103 +98,217 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
     final gitProviders =
         gitProvidersAsync.asData?.value ?? const <GitProviderAccount>[];
 
-    return Scaffold(
-      appBar: MainAppBar(
-        title: widget.syncName,
-        icon: AppIcons.syncs,
-        markColor: AppTokens.resourceSyncs,
-        markUseGradient: true,
-        centerTitle: true,
-        actions: [
-          if (sync != null)
-            ResourceAdvancedMenuButton(
-              metadata: ResourceMetadata(
-                kind: ResourceKind.syncs,
-                id: sync.id,
-                name: sync.name,
-                description: sync.description,
-                template: sync.template,
-                tags: sync.tags,
-              ),
-              onMutated: () {
-                ref
-                  ..invalidate(syncsProvider)
-                  ..invalidate(syncDetailProvider(widget.syncId));
-              },
-            ),
-          IconButton(
-            icon: const Icon(Icons.account_tree_outlined),
-            tooltip: 'Refresh proposed sync plan',
-            onPressed: actionsState.isLoading
-                ? null
-                : () => _previewSync(widget.syncId),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(syncDetailProvider(widget.syncId));
-            },
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              children: [
-                syncAsync.when(
-                  data: (sync) => sync != null
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _SyncHeroPanel(syncResource: sync),
-                            const Gap(16),
-                            SyncConfigEditorContent(
-                              key: _configEditorKey,
-                              initialConfig: sync.config,
-                              repos: repos,
-                              gitProviders: gitProviders,
-                              onDirtyChanged: (dirty) {
-                                syncDirtySnackBar(
-                                  dirty: dirty,
-                                  onDiscard: () => _discardConfig(sync),
-                                  onSave: () => _saveConfig(sync: sync),
-                                );
-                              },
-                            ),
-                            const Gap(16),
-                            AdvancedSyncSection(
-                              syncResource: sync,
-                              onUpdated: (_) {
-                                ref
-                                  ..invalidate(syncDetailProvider(sync.id))
-                                  ..invalidate(syncsProvider);
-                              },
-                            ),
-                            const Gap(16),
-                            _LastSyncContent(syncResource: sync),
-                            if (sync.info.pendingError != null &&
-                                sync.info.pendingError!.trim().isNotEmpty) ...[
-                              const Gap(16),
-                              DetailSection(
-                                title: 'Pending Error',
-                                icon: AppIcons.error,
-                                child: _ErrorContent(syncResource: sync),
+    String? repoNameForId(String repoId) {
+      if (repoId.isEmpty) return null;
+      for (final r in repos) {
+        if (r.id == repoId) return r.name;
+      }
+      return null;
+    }
+
+    ResourceSyncState? listState;
+    final syncList = ref.watch(syncsProvider).asData?.value;
+    if (syncList != null) {
+      for (final s in syncList) {
+        if (s.id == widget.syncId) {
+          listState = s.info.state;
+          break;
+        }
+      }
+    }
+
+    void retry() {
+      ref.invalidate(syncDetailProvider(widget.syncId));
+    }
+
+    final pendingCount = sync == null ? 0 : _pendingChangeCount(sync);
+
+    return UnsavedChangesGuard(
+      dirty: _dirty,
+      onDiscarded: hideDirtySnackBar,
+      child: Scaffold(
+        appBar: MainAppBar(
+          title: widget.syncName,
+          icon: AppIcons.syncs,
+          markColor: AppTokens.resourceSyncs,
+          markUseGradient: true,
+          centerTitle: true,
+          status: sync == null ? null : _syncAppBarStatus(sync, listState),
+        ),
+        body: Stack(
+          children: [
+            DetailTabScaffold(
+              headerSlivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        syncAsync.when(
+                          data: (sync) => sync != null
+                              ? _SyncHeader(
+                                  syncResource: sync,
+                                  repoName: repoNameForId(
+                                    sync.config.linkedRepo.trim(),
+                                  ),
+                                  onRepoTap:
+                                      sync.config.linkedRepo.trim().isEmpty
+                                      ? null
+                                      : () => context.push(
+                                          resourceDetailRoute(
+                                            AppRoutes.repos,
+                                            sync.config.linkedRepo.trim(),
+                                            name: repoNameForId(
+                                              sync.config.linkedRepo.trim(),
+                                            ),
+                                          ),
+                                        ),
+                                  onRetryPreview: () => _previewSync(sync.id),
+                                )
+                              : const _MessageSurface(
+                                  message: 'Sync not found',
+                                ),
+                          loading: () => const _LoadingSurface(),
+                          error: (error, _) =>
+                              _ErrorSurface(error: error, onRetry: retry),
+                        ),
+                        const Gap(AppSpacing.md),
+                        DetailActionBar(
+                          primary: DetailActionButton(
+                            label: pendingCount > 0
+                                ? 'Execute sync ($pendingCount)'
+                                : 'Execute sync',
+                            icon: AppIcons.play,
+                            onPressed: sync == null
+                                ? null
+                                : () => _confirmAndExecute(sync),
+                          ),
+                          secondary: DetailActionButton(
+                            label: 'Refresh plan',
+                            icon: AppIcons.refresh,
+                            onPressed: () => _previewSync(widget.syncId),
+                          ),
+                          moreGroups: [
+                            if (sync != null)
+                              buildResourceManageGroup(
+                                context: context,
+                                ref: ref,
+                                metadata: ResourceMetadata(
+                                  kind: ResourceKind.syncs,
+                                  id: sync.id,
+                                  name: sync.name,
+                                  description: sync.description,
+                                  template: sync.template,
+                                  tags: sync.tags,
+                                ),
+                                onMutated: () {
+                                  ref
+                                    ..invalidate(syncsProvider)
+                                    ..invalidate(
+                                      syncDetailProvider(widget.syncId),
+                                    );
+                                },
                               ),
-                            ],
                           ],
-                        )
-                      : const _MessageSurface(message: 'Sync not found'),
-                  loading: () => const _LoadingSurface(),
-                  error: (error, _) => _ErrorSurface(error: error.toString()),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              tabs: [
+                DetailTabSpec(
+                  id: 'plan',
+                  label: 'Plan',
+                  icon: AppIcons.syncs,
+                  body: RefreshIndicator(
+                    onRefresh: () async => retry(),
+                    child: DetailTabScrollView.box(
+                      scrollKey: PageStorageKey('sync_${widget.syncId}_plan'),
+                      child: syncAsync.when(
+                        data: (sync) => sync != null
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  AdvancedSyncSection(
+                                    syncResource: sync,
+                                    onUpdated: (_) {
+                                      ref
+                                        ..invalidate(
+                                          syncDetailProvider(sync.id),
+                                        )
+                                        ..invalidate(syncsProvider);
+                                    },
+                                  ),
+                                  const Gap(AppSpacing.lg),
+                                  _LastSyncContent(syncResource: sync),
+                                  if ((sync.info.pendingError ?? '')
+                                      .trim()
+                                      .isNotEmpty) ...[
+                                    const Gap(AppSpacing.md),
+                                    DetailSubCard(
+                                      key: const ValueKey('sync_error_card'),
+                                      title: 'Error details',
+                                      icon: AppIcons.error,
+                                      collapsible: true,
+                                      initiallyExpanded: false,
+                                      summary: _firstLine(
+                                        sync.info.pendingError!,
+                                      ),
+                                      child: _ErrorContent(syncResource: sync),
+                                    ),
+                                  ],
+                                ],
+                              )
+                            : const _MessageSurface(message: 'Sync not found'),
+                        loading: () => const _LoadingSurface(),
+                        error: (error, _) =>
+                            _ErrorSurface(error: error, onRetry: retry),
+                      ),
+                    ),
+                  ),
+                ),
+                DetailTabSpec(
+                  id: 'config',
+                  label: 'Config',
+                  icon: AppIcons.bolt,
+                  body: RefreshIndicator(
+                    onRefresh: () async => retry(),
+                    child: DetailTabScrollView.box(
+                      scrollKey: PageStorageKey('sync_${widget.syncId}_config'),
+                      child: syncAsync.when(
+                        data: (sync) => sync != null
+                            ? SyncConfigEditorContent(
+                                key: _configEditorKey,
+                                initialConfig: sync.config,
+                                repos: repos,
+                                gitProviders: gitProviders,
+                                onDirtyChanged: (dirty) =>
+                                    _onDirtyChanged(dirty, sync),
+                              )
+                            : const _MessageSurface(message: 'Sync not found'),
+                        loading: () => const _LoadingSurface(),
+                        error: (error, _) =>
+                            _ErrorSurface(error: error, onRetry: retry),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: scheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
-        ],
+            if (actionsState.isLoading)
+              ColoredBox(
+                color: scheme.scrim.withValues(alpha: 0.25),
+                child: const Center(child: AppSkeletonCard()),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -180,6 +339,13 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
 
     final actions = ref.read(syncActionsProvider.notifier);
     _configSaveInFlight = true;
+    syncDirtySnackBar(
+      dirty: true,
+      onDiscard: () => _discardConfig(sync),
+      onSave: () => _saveConfig(sync: sync),
+      saving: true,
+      saveEnabled: false,
+    );
     final updated = await actions.updateSyncConfig(
       syncId: sync.id,
       partialConfig: partialConfig,
@@ -195,6 +361,7 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
         ..invalidate(syncsProvider);
 
       _configEditorKey.currentState?.resetTo(updated.config);
+      _dirty = false;
       hideDirtySnackBar();
     }
 
@@ -237,99 +404,118 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
     AppSnackBar.show(
       context,
       updated != null
-          ? 'Proposed sync plan refreshed below.'
+          ? 'Proposed sync plan refreshed.'
           : 'Failed to refresh sync plan.',
       tone: updated != null ? AppSnackBarTone.success : AppSnackBarTone.error,
     );
   }
 }
 
-// Hero Panel
-class _SyncHeroPanel extends StatelessWidget {
-  const _SyncHeroPanel({required this.syncResource});
+// Header
+PillTone _syncStateTone(ResourceSyncState state) => switch (state) {
+  ResourceSyncState.ok => PillTone.success,
+  ResourceSyncState.failed => PillTone.alert,
+  ResourceSyncState.pending || ResourceSyncState.syncing => PillTone.warning,
+  ResourceSyncState.unknown => PillTone.neutral,
+};
+
+int _pendingChangeCount(KomodoResourceSync sync) =>
+    sync.info.resourceUpdates.length +
+    sync.info.variableUpdates.length +
+    sync.info.userGroupUpdates.length;
+
+ResourceSyncState _effectiveSyncState(
+  KomodoResourceSync sync,
+  ResourceSyncState? listState,
+) {
+  if (listState != null && listState != ResourceSyncState.unknown) {
+    return listState;
+  }
+  if ((sync.info.pendingError ?? '').trim().isNotEmpty) {
+    return ResourceSyncState.failed;
+  }
+  if (_pendingChangeCount(sync) > 0) return ResourceSyncState.pending;
+  return sync.info.lastSyncTs > 0
+      ? ResourceSyncState.ok
+      : ResourceSyncState.unknown;
+}
+
+MainAppBarStatus? _syncAppBarStatus(
+  KomodoResourceSync sync,
+  ResourceSyncState? listState,
+) {
+  final state = _effectiveSyncState(sync, listState);
+  final synced = sync.info.lastSyncTs > 0
+      ? ' · synced ${formatTimeAgo(sync.info.lastSyncTs)}'
+      : '';
+  return MainAppBarStatus(
+    label: '${state.displayName}$synced',
+    tone: _syncStateTone(state),
+  );
+}
+
+class _SyncHeader extends StatelessWidget {
+  const _SyncHeader({
+    required this.syncResource,
+    required this.repoName,
+    required this.onRepoTap,
+    required this.onRetryPreview,
+  });
 
   final KomodoResourceSync syncResource;
+  final String? repoName;
+  final VoidCallback? onRepoTap;
+  final VoidCallback onRetryPreview;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final description = syncResource.description.trim();
-    final metrics = <DetailMetricTileData>[
-      if (syncResource.config.repo.isNotEmpty)
-        DetailMetricTileData(
-          label: 'Repository',
-          value: syncResource.config.branch.isNotEmpty
-              ? '${syncResource.config.repo} (${syncResource.config.branch})'
-              : syncResource.config.repo,
-          icon: AppIcons.repos,
-          tone: DetailMetricTone.neutral,
-        ),
-      if (syncResource.config.resourcePath.isNotEmpty)
-        DetailMetricTileData(
-          label: 'Path',
-          value: syncResource.config.resourcePath.join('/'),
-          icon: AppIcons.repos,
-          tone: DetailMetricTone.neutral,
-        ),
-      if (syncResource.info.lastSyncTs > 0)
-        DetailMetricTileData(
-          label: 'Last Synced',
-          value: _formatTimestamp(syncResource.info.lastSyncTs),
-          icon: AppIcons.clock,
-          tone: DetailMetricTone.neutral,
-        ),
-    ];
-    final hasTags = syncResource.tags.isNotEmpty;
-    final hasFooter = hasTags || description.isNotEmpty;
-    if (metrics.isEmpty && !hasFooter) {
-      return const SizedBox.shrink();
-    }
+    final config = syncResource.config;
+    final repoLabel = (repoName ?? '').isNotEmpty ? repoName! : config.repo;
+    final branch = config.branch.trim();
+    final path = config.resourcePath.join('/');
 
-    return DetailHeroPanel(
-      metrics: metrics,
-      footer: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (hasTags)
-            DetailPillList(
-              items: syncResource.tags,
-              showEmptyLabel: false,
-            ),
-          if (description.isNotEmpty) ...[
-            if (hasTags) const Gap(12),
-            Text(
-              'Description',
-              style: textTheme.labelMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Gap(6),
-            Text(
-              description,
-              style: textTheme.bodyMedium,
-            ),
-          ],
-        ],
-      ),
+    return DetailResourceHeader(
+      banner: _banner(),
+      facts: [
+        if (repoLabel.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.repos,
+            label: 'Repository',
+            value: branch.isNotEmpty ? '$repoLabel · $branch' : repoLabel,
+            onTap: onRepoTap,
+          ),
+        if (path.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.package,
+            label: 'Path',
+            value: path,
+            fullValue: path,
+          ),
+      ],
+      tags: syncResource.tags,
+      description: syncResource.description,
     );
   }
 
-  String _formatTimestamp(int timestamp) {
-    final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
-    final now = DateTime.now();
-    final diff = now.difference(date);
-
-    if (diff.inDays > 0) {
-      return '${diff.inDays}d ago';
-    } else if (diff.inHours > 0) {
-      return '${diff.inHours}h ago';
-    } else if (diff.inMinutes > 0) {
-      return '${diff.inMinutes}m ago';
-    } else {
-      return 'Just now';
+  Widget? _banner() {
+    final error = syncResource.info.pendingError?.trim() ?? '';
+    if (error.isNotEmpty) {
+      return DetailAttentionBanner(
+        icon: AppIcons.error,
+        message: 'Sync plan failed: ${_firstLine(error)}',
+        tone: PillTone.alert,
+        actionLabel: 'Retry',
+        onAction: onRetryPreview,
+      );
     }
+    final pending = _pendingChangeCount(syncResource);
+    if (pending > 0) {
+      return DetailAttentionBanner(
+        icon: AppIcons.warning,
+        message: '$pending pending change${pending == 1 ? '' : 's'}',
+      );
+    }
+    return null;
   }
 }
 
@@ -415,6 +601,11 @@ class _ErrorContent extends StatelessWidget {
 }
 
 // Helper Surfaces
+String _firstLine(String text) {
+  final line = text.trim().split('\n').first.trim();
+  return line.length > 120 ? '${line.substring(0, 117)}…' : line;
+}
+
 class _MessageSurface extends StatelessWidget {
   const _MessageSurface({required this.message});
 
@@ -424,8 +615,8 @@ class _MessageSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     return DetailSurface(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Center(child: Text(message)),
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: EmptyStateView.inline(icon: AppIcons.info, title: message),
       ),
     );
   }
@@ -441,16 +632,18 @@ class _LoadingSurface extends StatelessWidget {
 }
 
 class _ErrorSurface extends StatelessWidget {
-  const _ErrorSurface({required this.error});
+  const _ErrorSurface({required this.error, required this.onRetry});
 
-  final String error;
+  final Object error;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     return DetailSurface(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text('Error: $error'),
+      child: ErrorStateView.fromError(
+        title: 'Could not load sync',
+        error: error,
+        onRetry: onRetry,
       ),
     );
   }

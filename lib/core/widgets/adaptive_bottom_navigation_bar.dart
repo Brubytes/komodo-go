@@ -52,13 +52,16 @@ class AdaptiveBottomNavigationBar extends StatelessWidget {
             for (final item in items)
               BottomNavigationBarItem(
                 icon: item.key == null
-                    ? item.icon
-                    : KeyedSubtree(key: item.key, child: item.icon),
-                activeIcon: item.key == null
-                    ? (item.activeIcon ?? item.icon)
+                    ? item.badged(item.icon)
                     : KeyedSubtree(
                         key: item.key,
-                        child: item.activeIcon ?? item.icon,
+                        child: item.badged(item.icon),
+                      ),
+                activeIcon: item.key == null
+                    ? item.badged(item.activeIcon ?? item.icon)
+                    : KeyedSubtree(
+                        key: item.key,
+                        child: item.badged(item.activeIcon ?? item.icon),
                       ),
                 label: item.label,
               ),
@@ -91,8 +94,8 @@ class AdaptiveBottomNavigationBar extends StatelessWidget {
           for (final item in items)
             NavigationDestination(
               key: item.key,
-              icon: item.icon,
-              selectedIcon: item.activeIcon,
+              icon: item.badged(item.icon),
+              selectedIcon: item.badged(item.activeIcon ?? item.icon),
               label: item.label,
             ),
         ],
@@ -107,10 +110,22 @@ class AdaptiveNavigationItem {
     required this.label,
     this.activeIcon,
     this.key,
+    this.badgeCount = 0,
   });
 
   final Widget icon;
   final String label;
   final Widget? activeIcon;
   final Key? key;
+
+  /// Shows a count badge on the icon when greater than zero.
+  final int badgeCount;
+
+  Widget badged(Widget icon) {
+    if (badgeCount <= 0) return icon;
+    return Badge(
+      label: Text(badgeCount > 99 ? '99+' : '$badgeCount'),
+      child: icon,
+    );
+  }
 }

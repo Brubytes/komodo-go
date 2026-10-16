@@ -17,7 +17,8 @@ PreferredSizeWidget buildDetailTabBar({
 }) {
   final scheme = Theme.of(context).colorScheme;
   final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-    fontSize: 10,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
     height: 1.1,
   );
 
@@ -115,24 +116,60 @@ PreferredSizeWidget buildDetailTabBar({
     };
   }
 
-  final tabBar = TabBar(
-    controller: controller,
-    tabs: tabs,
-    onTap: resolvedOnTap,
-    labelStyle: labelStyle,
-    unselectedLabelStyle: labelStyle,
-    labelColor: scheme.primary,
-    unselectedLabelColor: scheme.onSurfaceVariant,
-    indicator: UnderlineTabIndicator(
-      borderSide: BorderSide(
-        width: 3,
-        color: scheme.primary,
+  const iconSize = 20.0;
+  const tabHeight = 56.0;
+
+  // Icon stacked above the label; labels scale down instead of clipping so
+  // every tab keeps an equal-width slot.
+  final compactTabs = [
+    for (final tab in tabs)
+      if (tab is Tab &&
+          tab.child == null &&
+          (tab.icon != null || tab.text != null))
+        Tab(
+          key: tab.key,
+          height: tabHeight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (tab.icon != null)
+                IconTheme.merge(
+                  data: const IconThemeData(size: iconSize),
+                  child: tab.icon!,
+                ),
+              if (tab.icon != null && tab.text != null)
+                const SizedBox(height: 4),
+              if (tab.text != null)
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(tab.text!, maxLines: 1, softWrap: false),
+                ),
+            ],
+          ),
+        )
+      else
+        tab,
+  ];
+
+  final tabBar = PreferredSize(
+    preferredSize: const Size.fromHeight(tabHeight + 2),
+    child: TabBar(
+      controller: controller,
+      tabs: compactTabs,
+      onTap: resolvedOnTap,
+      labelStyle: labelStyle,
+      unselectedLabelStyle: labelStyle,
+      labelColor: scheme.primary,
+      unselectedLabelColor: scheme.onSurfaceVariant,
+      indicator: UnderlineTabIndicator(
+        borderSide: BorderSide(width: 3, color: scheme.primary),
+        insets: const EdgeInsets.symmetric(horizontal: 14),
       ),
-      insets: const EdgeInsets.symmetric(horizontal: 14),
+      indicatorSize: TabBarIndicatorSize.tab,
+      dividerColor: scheme.outlineVariant,
+      labelPadding: labelPadding,
     ),
-    indicatorSize: TabBarIndicatorSize.tab,
-    dividerColor: scheme.outlineVariant,
-    labelPadding: labelPadding,
   );
 
   if (bottomGap <= 0) return tabBar;

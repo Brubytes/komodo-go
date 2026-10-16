@@ -12,6 +12,7 @@ import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.d
 import 'package:komodo_go/features/syncs/presentation/widgets/sync_card.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
+import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all syncs.
 class SyncsListView extends StatelessWidget {
@@ -50,6 +51,10 @@ final _syncsListConfig = ResourceListConfig<ResourceSyncListItem>(
     item.info.resourcePath.join(' '),
     item.info.state.name,
   ],
+  nameOf: (item) => item.name,
+  severityOf: _severityOf,
+  stateLabelOf: (item) => resourceStateLabel(item.info.state),
+  updatedAtOf: (item) => item.info.lastSyncTs,
   cardBuilder: (context, ref, item, displayTags) => SyncCard(
     sync: item,
     displayTags: displayTags,
@@ -76,3 +81,11 @@ Future<void> _runSync(
     );
   }
 }
+
+int _severityOf(ResourceSyncListItem item) => switch (item.info.state) {
+  ResourceSyncState.failed => ResourceSeverity.attention,
+  ResourceSyncState.syncing ||
+  ResourceSyncState.pending => ResourceSeverity.warning,
+  ResourceSyncState.ok => ResourceSeverity.healthy,
+  ResourceSyncState.unknown => ResourceSeverity.inactive,
+};

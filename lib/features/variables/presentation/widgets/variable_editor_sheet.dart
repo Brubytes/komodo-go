@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
-
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/sheets/editor_sheet_scaffold.dart';
 import 'package:komodo_go/features/variables/data/models/variable.dart';
 import 'package:komodo_go/features/variables/domain/variable_validation.dart';
 
@@ -28,13 +28,9 @@ class VariableEditorSheet extends StatefulWidget {
     BuildContext context, {
     KomodoVariable? initial,
   }) {
-    return showModalBottomSheet<VariableEditorResult>(
-      context: context,
-      useSafeArea: true,
-      useRootNavigator: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => VariableEditorSheet(initial: initial),
+    return showEditorSheet<VariableEditorResult>(
+      context,
+      (context) => VariableEditorSheet(initial: initial),
     );
   }
 
@@ -71,46 +67,54 @@ class _VariableEditorSheetState extends State<VariableEditorSheet> {
     super.dispose();
   }
 
+  bool get _dirty {
+    final initial = widget.initial;
+    return _nameController.text != (initial?.name ?? '') ||
+        _valueController.text != (initial?.value ?? '') ||
+        _descriptionController.text != (initial?.description ?? '') ||
+        _isSecret != (initial?.isSecret ?? false);
+  }
+
+  void _save() {
+    final name = _nameController.text.trim();
+    final validationError = validateVariableName(name);
+    if (validationError != null) {
+      setState(() => _nameError = validationError);
+      return;
+    }
+    Navigator.of(context).pop(
+      VariableEditorResult(
+        name: name,
+        value: _valueController.text,
+        description: _descriptionController.text,
+        isSecret: _isSecret,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.initial != null;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
-        top: 8,
-      ),
+    return EditorSheetScaffold(
+      title: isEditing ? 'Edit variable' : 'New variable',
+      saveLabel: isEditing ? 'Save' : 'Create',
+      dirty: _dirty,
+      canSave: isEditing || _nameController.text.trim().isNotEmpty,
+      onSave: _save,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Text(
-                isEditing ? 'Edit variable' : 'New variable',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                tooltip: 'Close',
-                icon: const Icon(AppIcons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-          const Gap(12),
           TextField(
             controller: _nameController,
             enabled: !isEditing,
             textInputAction: TextInputAction.next,
             maxLength: variableNameMaxLength,
-            onChanged: (_) {
-              if (_nameError != null) setState(() => _nameError = null);
-            },
+            onChanged: (value) => setState(() {
+              _nameError = value.trim().isEmpty
+                  ? null
+                  : validateVariableName(value);
+            }),
             decoration: InputDecoration(
               labelText: 'Name',
               prefixIcon: const Icon(AppIcons.tag),
@@ -118,21 +122,23 @@ class _VariableEditorSheetState extends State<VariableEditorSheet> {
               helperText: 'Letters, numbers, and underscores only',
             ),
           ),
-          const Gap(12),
+          const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _descriptionController,
             textInputAction: TextInputAction.next,
+            onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(
               labelText: 'Description',
               prefixIcon: Icon(AppIcons.edit),
             ),
           ),
-          const Gap(12),
+          const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _valueController,
             obscureText: _obscureValue,
             minLines: 1,
             maxLines: _obscureValue ? 1 : 6,
+            onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               labelText: 'Value',
               prefixIcon: const Icon(AppIcons.key),
@@ -143,7 +149,7 @@ class _VariableEditorSheetState extends State<VariableEditorSheet> {
               ),
             ),
           ),
-          const Gap(10),
+          const SizedBox(height: AppSpacing.sm),
           SwitchListTile.adaptive(
             value: _isSecret,
             onChanged: (value) {
@@ -157,30 +163,6 @@ class _VariableEditorSheetState extends State<VariableEditorSheet> {
               'Secret variables have their values hidden for non-admin users.',
             ),
           ),
-          const Gap(12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () {
-                final name = _nameController.text.trim();
-                final validationError = validateVariableName(name);
-                if (validationError != null) {
-                  setState(() => _nameError = validationError);
-                  return;
-                }
-                Navigator.of(context).pop(
-                  VariableEditorResult(
-                    name: name,
-                    value: _valueController.text,
-                    description: _descriptionController.text,
-                    isSecret: _isSecret,
-                  ),
-                );
-              },
-              child: Text(isEditing ? 'Save' : 'Create'),
-            ),
-          ),
-          const Gap(12),
         ],
       ),
     );

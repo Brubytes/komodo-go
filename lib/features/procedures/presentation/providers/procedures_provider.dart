@@ -12,7 +12,7 @@ part 'procedures_provider.g.dart';
 class Procedures extends _$Procedures {
   @override
   Future<List<ProcedureListItem>> build() async {
-    ref.watch(resourceActivityProvider);
+    ref.watch(resourceScopeActivityProvider(ActivityScope.procedures));
     final repository = ref.watch(procedureRepositoryProvider);
     if (repository == null) {
       return [];
@@ -40,7 +40,7 @@ Future<KomodoProcedure?> procedureDetail(
   Ref ref,
   String procedureIdOrName,
 ) async {
-  ref.watch(resourceActivityProvider);
+  ref.watch(resourceScopeActivityProvider(ActivityScope.procedures));
   final repository = ref.watch(procedureRepositoryProvider);
   if (repository == null) {
     return null;
@@ -66,7 +66,8 @@ class ProcedureActions extends _$ProcedureActions
   void invalidateList() => ref.invalidate(proceduresProvider);
 
   @override
-  void markResourceActivity() => ref.markResourceActivity();
+  void markResourceActivity() =>
+      ref.markResourceActivity({ActivityScope.procedures});
 
   @override
   bool get isMounted => ref.mounted;

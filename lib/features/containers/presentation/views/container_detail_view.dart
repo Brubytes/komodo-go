@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -6,22 +5,32 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/containers/containers_provider.dart';
+import 'package:komodo_go/composition/resources/resource_name_resolver_provider.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/router/polling_route_aware_state.dart';
+import 'package:komodo_go/core/router/resource_routes.dart';
+import 'package:komodo_go/core/router/shell_state_provider.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/data/repositories/container_repository.dart';
 import 'package:komodo_go/features/containers/presentation/providers/container_inspection_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
 import 'package:komodo_go/shared/logs/server_log_explorer.dart';
+import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/models/resource_ref.dart';
 import 'package:riverpod/misc.dart' show FutureProviderFamily;
 
-class ContainerDetailView extends ConsumerWidget {
+class ContainerDetailView extends ConsumerStatefulWidget {
   const ContainerDetailView({
     required this.serverId,
     required this.containerIdOrName,
@@ -34,222 +43,399 @@ class ContainerDetailView extends ConsumerWidget {
   final ContainerOverviewItem? initialItem;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ContainerDetailView> createState() =>
+      _ContainerDetailViewState();
+}
+
+class _ContainerDetailViewState
+    extends PollingRouteAwareState<ContainerDetailView> {
+  static const _tabLogs = 'logs';
+  static const _tabInspect = 'inspect';
+
+  final _tabsKey = GlobalKey<DetailTabScaffoldState>();
+  String _activeTabId = _tabLogs;
+  var _autoRefreshLogs = true;
+
+  String get _container => Uri.decodeComponent(widget.containerIdOrName);
+
+  @override
+  Widget build(BuildContext context) {
+    final serverId = widget.serverId;
+    final container = _container;
     final itemAsync = ref.watch(
       _containerItemProviderFamily(
         _ContainerItemArgs(
           serverId: serverId,
-          containerIdOrName: containerIdOrName,
+          containerIdOrName: widget.containerIdOrName,
         ),
       ),
     );
-    final decodedContainerIdOrName = Uri.decodeComponent(containerIdOrName);
     final inspectionAsync = ref.watch(
       containerInspectionProvider(
         serverIdOrName: serverId,
-        containerIdOrName: decodedContainerIdOrName,
+        containerIdOrName: container,
       ),
     );
     final resourceAsync = ref.watch(
       containerAssociatedResourceProvider(
         serverIdOrName: serverId,
-        containerIdOrName: decodedContainerIdOrName,
+        containerIdOrName: container,
       ),
     );
     ref.watch(containerActionsProvider);
-    final initialItem = this.initialItem;
-    final currentItem = itemAsync.asData?.value ?? initialItem;
-    final itemContent = itemAsync.when(
-      data: (item) => item == null
-          ? const _NotFound()
-          : ContainerCard(
-              item: item,
-              onAction: (action) => _handleAction(
-                context,
-                ref,
-                item,
-                action,
-                decodedContainerIdOrName,
-              ),
-            ),
-      // While (re)loading, keep showing the item passed in from the list as
-      // a placeholder instead of a skeleton.
-      loading: () => initialItem == null
-          ? const AppSkeletonCard()
-          : ContainerCard(
-              item: initialItem,
-              onAction: (action) => _handleAction(
-                context,
-                ref,
-                initialItem,
-                action,
-                decodedContainerIdOrName,
-              ),
-            ),
-      error: (error, stack) => _ErrorState(
+    final isShellActive = ref.watch(mainShellIndexProvider) == 2;
+    final logsPolling = shouldPoll(
+      isActiveTab: isShellActive && _activeTabId == _tabLogs,
+      enabled: _autoRefreshLogs,
+    );
+
+    // While (re)loading, keep showing the item passed in from the list as
+    // a placeholder instead of a skeleton.
+    final item = itemAsync.asData?.value ?? widget.initialItem;
+    final notFound = itemAsync.hasValue && itemAsync.value == null;
+
+    final Widget headerContent;
+    if (itemAsync.hasError && item == null) {
+      headerContent = ErrorStateView.fromError(
         title: 'Failed to load container',
-        message: error.toString(),
+        error: itemAsync.error!,
         onRetry: () => ref.invalidate(containersProvider),
-      ),
-    );
-    final logContent = ServerLogExplorer(
-      key: ValueKey('container_log_explorer_$decodedContainerIdOrName'),
-      loader: (request) async {
-        final repository = ref.read(containerRepositoryProvider);
-        if (repository == null) {
-          throw StateError('No active Komodo connection.');
-        }
-        final result = request.isSearch
-            ? await repository.searchServerLog(
-                serverIdOrName: serverId,
-                containerIdOrName: decodedContainerIdOrName,
-                terms: request.terms,
-                combinator: request.combinator,
-                invert: request.invert,
-                timestamps: request.timestamps,
-              )
-            : await repository.loadServerLog(
-                serverIdOrName: serverId,
-                containerIdOrName: decodedContainerIdOrName,
-                tail: request.tail,
-                timestamps: request.timestamps,
-              );
-        return result.fold(
-          (failure) => throw StateError(failure.displayMessage),
-          (log) => log,
-        );
-      },
-    );
-    final inspectionContent = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _AssociatedResourcePanel(
-          resourceAsync: resourceAsync,
-          onOpen: (resource) {
-            final base = resource.type == ContainerResourceType.stack
-                ? AppRoutes.stacks
-                : AppRoutes.deployments;
-            unawaited(context.push('$base/${resource.id}'));
-          },
-        ),
-        const Gap(16),
-        _ContainerInspectionPanel(
-          inspectionAsync: inspectionAsync,
-          onRetry: () => ref.invalidate(
-            containerInspectionProvider(
-              serverIdOrName: serverId,
-              containerIdOrName: decodedContainerIdOrName,
-            ),
-          ),
-        ),
-      ],
-    );
+      );
+    } else if (notFound) {
+      headerContent = const _NotFound();
+    } else if (item == null) {
+      headerContent = const AppSkeletonCard();
+    } else {
+      headerContent = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(context, item, resourceAsync.asData?.value),
+          const Gap(AppSpacing.md),
+          _buildActionBar(context, item),
+        ],
+      );
+    }
 
     return Scaffold(
       appBar: MainAppBar(
-        title: currentItem?.container.name ?? decodedContainerIdOrName,
+        title: item?.container.name ?? container,
         icon: AppIcons.containers,
+        status: item == null ? null : _appBarStatus(item.container.state),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref
-            ..invalidate(containersProvider)
-            ..invalidate(
-              containerInspectionProvider(
-                serverIdOrName: serverId,
-                containerIdOrName: decodedContainerIdOrName,
+      body: DetailTabScaffold(
+        key: _tabsKey,
+        initialTabId: _tabLogs,
+        onTabChanged: (id) => setState(() => _activeTabId = id),
+        headerSlivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.sm,
               ),
-            )
-            ..invalidate(
-              containerAssociatedResourceProvider(
-                serverIdOrName: serverId,
-                containerIdOrName: decodedContainerIdOrName,
-              ),
-            );
-        },
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth < 720) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      itemContent,
-                      if (currentItem != null) ...[
-                        const Gap(16),
-                        inspectionContent,
-                      ],
-                      const Gap(16),
-                      logContent,
-                    ],
+              child: headerContent,
+            ),
+          ),
+        ],
+        tabs: [
+          DetailTabSpec(
+            id: _tabLogs,
+            label: 'Logs',
+            icon: AppIcons.logs,
+            body: DetailTabFillBody(
+              child: ServerLogExplorer(
+                key: ValueKey('container_log_explorer_$container'),
+                fillHeight: true,
+                autoRefresh: logsPolling,
+                onAutoRefreshChanged: (value) =>
+                    setState(() => _autoRefreshLogs = value),
+                loader: (request) async {
+                  final repository = ref.read(containerRepositoryProvider);
+                  if (repository == null) {
+                    throw StateError('No active Komodo connection.');
+                  }
+                  final result = request.isSearch
+                      ? await repository.searchServerLog(
+                          serverIdOrName: serverId,
+                          containerIdOrName: container,
+                          terms: request.terms,
+                          combinator: request.combinator,
+                          invert: request.invert,
+                          timestamps: request.timestamps,
+                        )
+                      : await repository.loadServerLog(
+                          serverIdOrName: serverId,
+                          containerIdOrName: container,
+                          tail: request.tail,
+                          timestamps: request.timestamps,
+                        );
+                  return result.fold(
+                    (failure) => throw StateError(failure.displayMessage),
+                    (log) => log,
                   );
-                }
-
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1120),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 4,
-                          child: Column(
-                            children: [
-                              itemContent,
-                              if (currentItem != null) ...[
-                                const Gap(16),
-                                inspectionContent,
-                              ],
-                            ],
-                          ),
-                        ),
-                        const Gap(16),
-                        Expanded(flex: 6, child: logContent),
-                      ],
+                },
+              ),
+            ),
+          ),
+          DetailTabSpec(
+            id: _tabInspect,
+            label: 'Inspect',
+            icon: AppIcons.eye,
+            body: RefreshIndicator(
+              onRefresh: () async {
+                ref
+                  ..invalidate(containersProvider)
+                  ..invalidate(
+                    containerInspectionProvider(
+                      serverIdOrName: serverId,
+                      containerIdOrName: container,
+                    ),
+                  )
+                  ..invalidate(
+                    containerAssociatedResourceProvider(
+                      serverIdOrName: serverId,
+                      containerIdOrName: container,
+                    ),
+                  );
+              },
+              child: DetailTabScrollView.box(
+                scrollKey: PageStorageKey('container_${container}_inspect'),
+                child: _ContainerInspectionPanel(
+                  inspectionAsync: inspectionAsync,
+                  onRetry: () => ref.invalidate(
+                    containerInspectionProvider(
+                      serverIdOrName: serverId,
+                      containerIdOrName: container,
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  MainAppBarStatus _appBarStatus(ContainerState state) {
+    final name = state.name;
+    return MainAppBarStatus(
+      label: '${name[0].toUpperCase()}${name.substring(1)}',
+      tone: switch (state) {
+        ContainerState.running => PillTone.success,
+        ContainerState.dead => PillTone.alert,
+        ContainerState.restarting ||
+        ContainerState.paused ||
+        ContainerState.removing => PillTone.warning,
+        _ => PillTone.neutral,
+      },
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context,
+    ContainerOverviewItem item,
+    ContainerAssociatedResource? resource,
+  ) {
+    final info = item.container;
+    final image = info.image ?? '';
+    final stats = info.stats;
+    final ports =
+        info.ports
+            .map((port) => port.publicPort ?? port.privatePort)
+            .where((port) => port > 0)
+            .toSet()
+            .toList()
+          ..sort();
+
+    DetailFact? linkedFact;
+    if (resource != null) {
+      final isStack = resource.type == ContainerResourceType.stack;
+      final name = ref
+          .watch(_linkedResourceNameProvider((resource.type, resource.id)))
+          .asData
+          ?.value;
+      linkedFact = DetailFact(
+        icon: isStack ? AppIcons.stacks : AppIcons.deployments,
+        label: isStack ? 'Stack' : 'Deployment',
+        value: (name ?? '').isNotEmpty ? name! : resource.id,
+        onTap: () => context.push(
+          resourceDetailRoute(
+            isStack ? AppRoutes.stacks : AppRoutes.deployments,
+            resource.id,
+            name: name,
+          ),
         ),
+      );
+    }
+
+    return DetailResourceHeader(
+      facts: [
+        if (item.serverName.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.server,
+            label: 'Server',
+            value: item.serverName,
+            onTap: () => context.push(
+              resourceDetailRoute(
+                AppRoutes.servers,
+                item.serverId,
+                name: item.serverName,
+              ),
+            ),
+          ),
+        if (image.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.package,
+            label: 'Image',
+            value: image,
+            fullValue: image,
+          ),
+        ?linkedFact,
+        if (info.networks.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.network,
+            label: 'Networks',
+            value: info.networks.join(', '),
+          ),
+        if (ports.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.plug,
+            label: 'Ports',
+            value: ports.join(', '),
+          ),
+      ],
+      stats: [
+        if (stats != null && stats.cpuPerc.trim().isNotEmpty)
+          DetailStat(
+            label: 'CPU',
+            value: stats.cpuPerc,
+            progress: stats.cpuPercentValue == null
+                ? null
+                : (stats.cpuPercentValue! / 100).clamp(0, 1),
+          ),
+        if (stats != null &&
+            (stats.memUsage.trim().isNotEmpty ||
+                stats.memPerc.trim().isNotEmpty))
+          DetailStat(
+            label: 'Memory',
+            value: stats.memUsage.trim().isNotEmpty
+                ? stats.memUsage
+                : stats.memPerc,
+            progress: stats.memPercentValue == null
+                ? null
+                : (stats.memPercentValue! / 100).clamp(0, 1),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildActionBar(BuildContext context, ContainerOverviewItem item) {
+    final state = item.container.state;
+    final running = state == ContainerState.running;
+    final paused = state == ContainerState.paused;
+    final restarting = state == ContainerState.restarting;
+    final canStart =
+        state == ContainerState.exited ||
+        state == ContainerState.created ||
+        state == ContainerState.dead;
+    final canRestart =
+        running ||
+        paused ||
+        restarting ||
+        state == ContainerState.exited ||
+        state == ContainerState.created;
+    final canStop = running || paused || restarting;
+    final removing = state == ContainerState.removing;
+
+    final ContainerAction? primaryAction;
+    final String primaryLabel;
+    final IconData primaryIcon;
+    if (canStart) {
+      primaryAction = ContainerAction.start;
+      primaryLabel = 'Start';
+      primaryIcon = AppIcons.play;
+    } else if (paused) {
+      primaryAction = ContainerAction.unpause;
+      primaryLabel = 'Resume';
+      primaryIcon = AppIcons.play;
+    } else if (canRestart) {
+      primaryAction = ContainerAction.restart;
+      primaryLabel = 'Restart';
+      primaryIcon = AppIcons.refresh;
+    } else {
+      primaryAction = null;
+      primaryLabel = 'Start';
+      primaryIcon = AppIcons.play;
+    }
+
+    VoidCallback call(ContainerAction action) =>
+        () => _handleAction(item, action);
+
+    return DetailActionBar(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      primary: DetailActionButton(
+        label: primaryLabel,
+        icon: primaryIcon,
+        onPressed: primaryAction == null
+            ? null
+            : () => _handleAction(item, primaryAction!),
+      ),
+      moreGroups: resourceMenuGroups(
+        lifecycle: [
+          if (canStart && primaryAction != ContainerAction.start)
+            ResourceMenuItems.start(call(ContainerAction.start)),
+          if (paused && primaryAction != ContainerAction.unpause)
+            ResourceMenuItems.unpause(call(ContainerAction.unpause)),
+          if (running) ResourceMenuItems.pause(call(ContainerAction.pause)),
+          if (canRestart && primaryAction != ContainerAction.restart)
+            ResourceMenuItems.restart(call(ContainerAction.restart)),
+          if (canStop) ResourceMenuItems.stop(call(ContainerAction.stop)),
+        ],
+        danger: [
+          if (!removing)
+            ResourceMenuItems.destroy(
+              call(ContainerAction.remove),
+              label: 'Remove',
+            ),
+        ],
       ),
     );
   }
 
   Future<void> _handleAction(
-    BuildContext context,
-    WidgetRef ref,
     ContainerOverviewItem item,
     ContainerAction action,
-    String container,
   ) async {
-    if (action == ContainerAction.remove) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Remove container?'),
-          content: Text(
-            'This permanently removes ${item.container.name}. '
-            'A managed Stack or Deployment may recreate it.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Remove'),
-            ),
-          ],
-        ),
+    final container = _container;
+    final name = item.container.name.isEmpty ? container : item.container.name;
+
+    if (action == ContainerAction.stop) {
+      final confirmed = await confirmDestructive(
+        context,
+        title: 'Stop $name?',
+        message:
+            'This stops the container $name. A managed Stack or Deployment '
+            'may start it again.',
+        confirmLabel: 'Stop',
       );
-      if (confirmed != true || !context.mounted) return;
+      if (!confirmed || !mounted) return;
+    }
+    if (action == ContainerAction.remove) {
+      final confirmed = await confirmDestructive(
+        context,
+        title: 'Remove container?',
+        message:
+            'This permanently removes $name. '
+            'A managed Stack or Deployment may recreate it.',
+        confirmLabel: 'Remove',
+      );
+      if (!confirmed || !mounted) return;
     }
 
+    final serverId = widget.serverId;
     final actions = ref.read(containerActionsProvider.notifier);
     final success = await switch (action) {
       ContainerAction.start => actions.start(
@@ -277,10 +463,12 @@ class ContainerDetailView extends ConsumerWidget {
         containerIdOrName: container,
       ),
     };
-    if (!context.mounted) return;
+    if (!mounted) return;
     AppSnackBar.show(
       context,
-      success ? 'Action submitted. Check updates for the result.' : 'Action failed',
+      success
+          ? 'Action submitted. Check updates for the result.'
+          : 'Action failed',
       tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
     );
     if (success) {
@@ -301,45 +489,23 @@ class ContainerDetailView extends ConsumerWidget {
   }
 }
 
-class _AssociatedResourcePanel extends StatelessWidget {
-  const _AssociatedResourcePanel({
-    required this.resourceAsync,
-    required this.onOpen,
-  });
-
-  final AsyncValue<ContainerAssociatedResource?> resourceAsync;
-  final ValueChanged<ContainerAssociatedResource> onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCardSurface(
-      child: resourceAsync.when(
-        data: (resource) {
-          if (resource == null) {
-            return const Text('Not associated with a Stack or Deployment.');
-          }
-          final label = resource.type == ContainerResourceType.stack
-              ? 'Stack'
-              : 'Deployment';
-          return ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              resource.type == ContainerResourceType.stack
-                  ? AppIcons.stacks
-                  : AppIcons.deployments,
-            ),
-            title: Text('Managed by $label'),
-            subtitle: Text(resource.id),
-            trailing: const Icon(AppIcons.chevron),
-            onTap: () => onOpen(resource),
-          );
-        },
-        loading: () => const AppInlineSkeleton(),
-        error: (error, _) => Text('Association unavailable: $error'),
-      ),
-    );
-  }
-}
+final FutureProviderFamily<String?, (ContainerResourceType, String)>
+_linkedResourceNameProvider = FutureProvider.autoDispose
+    .family<String?, (ContainerResourceType, String)>((ref, args) async {
+      try {
+        final resolver = ref.watch(composedResourceNameResolverProvider);
+        return await resolver(
+          ResourceRef(
+            kind: args.$1 == ContainerResourceType.stack
+                ? ResourceKind.stacks
+                : ResourceKind.deployments,
+            id: args.$2,
+          ),
+        );
+      } on Object {
+        return null;
+      }
+    });
 
 class _ContainerInspectionPanel extends StatelessWidget {
   const _ContainerInspectionPanel({
@@ -401,7 +567,7 @@ class _ContainerInspectionPanel extends StatelessWidget {
                 ),
               ],
               const Gap(12),
-              ExpansionTile(
+              IsolatedExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 title: const Text('Raw Docker inspection'),
                 children: [
@@ -418,9 +584,9 @@ class _ContainerInspectionPanel extends StatelessWidget {
         );
       },
       loading: () => const AppSkeletonCard(),
-      error: (error, _) => _ErrorState(
+      error: (error, _) => ErrorStateView.fromError(
         title: 'Inspection unavailable',
-        message: error.toString(),
+        error: error,
         onRetry: onRetry,
       ),
     );
@@ -471,42 +637,6 @@ class _NotFound extends StatelessWidget {
   Widget build(BuildContext context) {
     return const AppCardSurface(
       child: Text('Container not found.'),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    required this.title,
-    required this.message,
-    required this.onRetry,
-  });
-
-  final String title;
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCardSurface(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const Gap(8),
-          Text(message),
-          const Gap(12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(onPressed: onRetry, child: const Text('Retry')),
-          ),
-        ],
-      ),
     );
   }
 }

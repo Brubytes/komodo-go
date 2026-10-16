@@ -13,7 +13,7 @@ part 'deployments_provider.g.dart';
 class Deployments extends _$Deployments {
   @override
   Future<List<Deployment>> build() async {
-    ref.watch(resourceActivityProvider);
+    ref.watch(resourceScopeActivityProvider(ActivityScope.deployments));
     final repository = ref.watch(deploymentRepositoryProvider);
 
     // Not authenticated yet - return empty list and wait for auth
@@ -40,15 +40,29 @@ class Deployments extends _$Deployments {
 /// Provides details for a specific deployment.
 @riverpod
 Future<Deployment?> deploymentDetail(Ref ref, String deploymentId) async {
-  ref.watch(resourceActivityProvider);
+  ref.watch(resourceScopeActivityProvider(ActivityScope.deployments));
   final repository = ref.watch(deploymentRepositoryProvider);
   if (repository == null) {
     return null;
   }
 
   final result = await repository.getDeployment(deploymentId);
+  final deployment = unwrapOrThrow(result);
+  if (deployment.info != null) {
+    return deployment;
+  }
 
-  return unwrapOrThrow(result);
+  // `GetDeployment` only returns `config`; runtime info (state, image, build,
+  // update availability) is only exposed by `ListDeployments`.
+  try {
+    final deployments = await ref.watch(deploymentsProvider.future);
+    final listItem = deployments
+        .where((d) => d.id == deployment.id || d.id == deploymentId)
+        .firstOrNull;
+    return deployment.copyWith(info: listItem?.info);
+  } on Exception {
+    return deployment;
+  }
 }
 
 /// Action state for deployment operations.
@@ -117,7 +131,11 @@ class DeploymentActions extends _$DeploymentActions {
       (_) {
         state = const AsyncValue.data(null);
         ref.invalidate(deploymentsProvider);
-        ref.read(resourceActivityProvider.notifier).markChanged();
+        ref
+            .read(resourceActivityProvider.notifier)
+            .markChanged(
+              scopes: {ActivityScope.deployments, ActivityScope.containers},
+            );
         return true;
       },
     );
@@ -146,7 +164,11 @@ class DeploymentActions extends _$DeploymentActions {
       (value) {
         state = const AsyncValue.data(null);
         ref.invalidate(deploymentsProvider);
-        ref.read(resourceActivityProvider.notifier).markChanged();
+        ref
+            .read(resourceActivityProvider.notifier)
+            .markChanged(
+              scopes: {ActivityScope.deployments, ActivityScope.containers},
+            );
         return value;
       },
     );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,7 @@ import 'package:komodo_go/core/providers/theme_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -30,30 +33,33 @@ class SettingsView extends ConsumerWidget {
     return Scaffold(
       appBar: const MainAppBar(title: 'Settings', icon: AppIcons.settings),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          28,
+        ),
         children: [
-          const Gap(4),
+          const Gap(AppSpacing.xs),
           const _SettingsSectionHeader(title: 'Connection'),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           _SettingsCardTile(
             icon: AppIcons.server,
             accentColor: scheme.primary,
             title: 'Connections',
-            subtitle: connection == null
-                ? 'Manage server connections'
-                : connection.baseUrl,
+            subtitle: connection?.baseUrl,
             trailing: _CardTrailing(label: connection?.name, showChevron: true),
             onTap: () => context.push(AppRoutes.connections),
           ),
           if (coreVersion != null) ...[
-            const Gap(10),
+            const Gap(AppSpacing.sm),
             _SettingsCardTile(
               icon: AppIcons.info,
               accentColor: scheme.primary,
               title: 'Komodo Core',
               subtitle: capabilities.isLegacyV22
                   ? 'Komodo 2.2 compatibility mode'
-                  : 'Connected instance version',
+                  : null,
               trailing: _CardTrailing(
                 label: coreVersion.display,
                 showChevron: false,
@@ -62,101 +68,64 @@ class SettingsView extends ConsumerWidget {
           ],
           const Gap(20),
           const _SettingsSectionHeader(title: 'Appearance'),
-          const Gap(8),
-          _SettingsCardTile(
-            icon: AppIcons.theme,
-            accentColor: scheme.primary,
-            title: 'Theme',
-            subtitle: 'Customize the app appearance',
-            trailing: _CardTrailing(
-              label: _themeModeLabel(themeMode),
-              showChevron: true,
+          const Gap(AppSpacing.sm),
+          AppCardSurface(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
             ),
-            onTap: () async {
-              final selectedMode = await _ThemePickerSheet.show(
-                context: context,
-                currentMode: themeMode,
-              );
-
-              if (selectedMode != null && context.mounted) {
-                await ref
-                    .read(themeModeProvider.notifier)
-                    .setThemeMode(selectedMode);
-              }
-            },
-          ),
-          const Gap(20),
-          const _SettingsSectionHeader(title: 'Komodo'),
-          const Gap(8),
-          _SettingsCardTile(
-            icon: Icons.system_update_alt,
-            accentColor: scheme.primary,
-            title: 'Auto-update review',
-            subtitle: 'Check images and review updates before deployment',
-            trailing: const _CardTrailing(showChevron: true),
-            onTap: () => context.push(AppRoutes.autoUpdateReview),
-          ),
-          const Gap(10),
-          _SettingsCardTile(
-            icon: AppIcons.key,
-            accentColor: scheme.primary,
-            title: 'Variables',
-            subtitle: 'View and edit global variables',
-            trailing: const _CardTrailing(showChevron: true),
-            onTap: () => context.push(AppRoutes.komodoVariables),
-          ),
-          const Gap(10),
-          _SettingsCardTile(
-            icon: AppIcons.tag,
-            accentColor: scheme.primary,
-            title: 'Tags',
-            subtitle: 'View and edit tags',
-            trailing: const _CardTrailing(showChevron: true),
-            onTap: () => context.push(AppRoutes.komodoTags),
-          ),
-          const Gap(10),
-          _SettingsCardTile(
-            icon: AppIcons.repos,
-            accentColor: scheme.primary,
-            title: 'Providers',
-            subtitle: 'Manage git and registry accounts',
-            trailing: const _CardTrailing(showChevron: true),
-            onTap: () => context.push(AppRoutes.komodoProviders),
-          ),
-          const Gap(10),
-          _SettingsCardTile(
-            icon: AppIcons.factory,
-            accentColor: scheme.primary,
-            title: 'Builders',
-            subtitle: 'View and manage builders',
-            trailing: const _CardTrailing(showChevron: true),
-            onTap: () => context.push(AppRoutes.komodoBuilders),
-          ),
-          const Gap(10),
-          _SettingsCardTile(
-            icon: AppIcons.notifications,
-            accentColor: scheme.primary,
-            title: 'Alerters',
-            subtitle: 'View and manage alerters',
-            trailing: const _CardTrailing(showChevron: true),
-            onTap: () => context.push(AppRoutes.komodoAlerters),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(AppIcons.theme, size: 20, color: scheme.primary),
+                ),
+                const Gap(AppSpacing.md),
+                Expanded(
+                  child: SegmentedButton<ThemeMode>(
+                    key: const ValueKey('settings_theme_selector'),
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                        value: ThemeMode.system,
+                        label: Text('System'),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        label: Text('Light'),
+                      ),
+                      ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
+                    ],
+                    selected: {themeMode},
+                    onSelectionChanged: (selection) => unawaited(
+                      ref
+                          .read(themeModeProvider.notifier)
+                          .setThemeMode(selection.first),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const Gap(20),
           const _SettingsSectionHeader(title: 'About'),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           _SettingsCardTile(
             icon: AppIcons.heart,
             accentColor: scheme.primary,
-            title: 'Credits',
-            subtitle: 'Acknowledgments and open source licenses',
+            title: 'About Komodo Go',
             trailing: const _CardTrailing(showChevron: true),
             onTap: () => context.push(AppRoutes.credits),
           ),
-          const Gap(10),
+          const Gap(AppSpacing.sm),
           _SettingsCardTile(
             icon: AppIcons.mail,
             accentColor: scheme.primary,
-            title: 'Contact & Feedback',
+            title: 'Contact & feedback',
             subtitle: 'Questions, suggestions, or bug reports',
             trailing: const _CardTrailing(showChevron: false),
             onTap: () async {
@@ -171,22 +140,21 @@ class SettingsView extends ConsumerWidget {
                 mode: LaunchMode.externalApplication,
               );
               if (!launched && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('No email app available to handle this.'),
-                  ),
+                AppSnackBar.show(
+                  context,
+                  'No email app available to handle this.',
+                  tone: AppSnackBarTone.error,
                 );
               }
             },
           ),
           const Gap(20),
           const _SettingsSectionHeader(title: 'Account'),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
           _SettingsCardTile(
             icon: AppIcons.logout,
             accentColor: scheme.error,
             title: 'Logout',
-            subtitle: 'Disconnect from the current instance',
             enabled: !authAsync.isLoading,
             trailing: const _CardTrailing(showChevron: false),
             onTap: () async {
@@ -223,14 +191,6 @@ class SettingsView extends ConsumerWidget {
       ),
     );
   }
-
-  String _themeModeLabel(ThemeMode mode) {
-    return switch (mode) {
-      ThemeMode.system => 'System',
-      ThemeMode.light => 'Light',
-      ThemeMode.dark => 'Dark',
-    };
-  }
 }
 
 class _SettingsSectionHeader extends StatelessWidget {
@@ -244,7 +204,7 @@ class _SettingsSectionHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
       child: Row(
         children: [
           Text(
@@ -272,7 +232,7 @@ class _SettingsCardTile extends StatelessWidget {
     required this.icon,
     required this.accentColor,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     this.onTap,
     this.trailing,
     this.enabled = true,
@@ -281,7 +241,7 @@ class _SettingsCardTile extends StatelessWidget {
   final IconData icon;
   final Color accentColor;
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final VoidCallback? onTap;
   final Widget? trailing;
   final bool enabled;
@@ -303,7 +263,10 @@ class _SettingsCardTile extends StatelessWidget {
           onTap: enabled ? onTap : null,
           borderRadius: cardRadius,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Row(
               children: [
                 Container(
@@ -314,7 +277,7 @@ class _SettingsCardTile extends StatelessWidget {
                   ),
                   child: Icon(icon, size: 20, color: accentColor),
                 ),
-                const Gap(12),
+                const Gap(AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,20 +289,22 @@ class _SettingsCardTile extends StatelessWidget {
                           letterSpacing: -0.2,
                         ),
                       ),
-                      const Gap(2),
-                      Text(
-                        subtitle,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          height: 1.25,
+                      if (subtitle != null) ...[
+                        const Gap(AppSpacing.xxs),
+                        Text(
+                          subtitle!,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            height: 1.25,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      ],
                     ],
                   ),
                 ),
-                const Gap(12),
+                const Gap(AppSpacing.md),
                 DefaultTextStyle.merge(
                   style: TextStyle(color: scheme.onSurfaceVariant),
                   child:
@@ -373,7 +338,7 @@ class _CardTrailing extends StatelessWidget {
       children: [
         if (label != null && label!.trim().isNotEmpty) ...[
           TextPill(label: label!),
-          const Gap(8),
+          const Gap(AppSpacing.sm),
         ],
         if (showChevron)
           Icon(
@@ -381,181 +346,6 @@ class _CardTrailing extends StatelessWidget {
             color: scheme.onSurfaceVariant.withValues(alpha: 0.65),
           ),
       ],
-    );
-  }
-}
-
-class _ThemePickerSheet extends StatelessWidget {
-  const _ThemePickerSheet({required this.currentMode});
-
-  final ThemeMode currentMode;
-
-  static Future<ThemeMode?> show({
-    required BuildContext context,
-    required ThemeMode currentMode,
-  }) {
-    return showModalBottomSheet<ThemeMode>(
-      context: context,
-      useSafeArea: true,
-      showDragHandle: true,
-      builder: (context) => _ThemePickerSheet(currentMode: currentMode),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-      child: Center(
-        widthFactor: 1,
-        heightFactor: 1,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Theme',
-                style: textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.2,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const Gap(8),
-              Text(
-                'Choose how Komodo Go looks on this device.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const Gap(16),
-              _ThemeChoiceTile(
-                icon: AppIcons.themeSystem,
-                title: 'System',
-                subtitle: 'Follow device settings',
-                isSelected: currentMode == ThemeMode.system,
-                onTap: () => Navigator.of(context).pop(ThemeMode.system),
-              ),
-              const Gap(10),
-              _ThemeChoiceTile(
-                icon: AppIcons.themeLight,
-                title: 'Light',
-                subtitle: 'Always use light mode',
-                isSelected: currentMode == ThemeMode.light,
-                onTap: () => Navigator.of(context).pop(ThemeMode.light),
-              ),
-              const Gap(10),
-              _ThemeChoiceTile(
-                icon: AppIcons.themeDark,
-                title: 'Dark',
-                subtitle: 'Always use dark mode',
-                isSelected: currentMode == ThemeMode.dark,
-                onTap: () => Navigator.of(context).pop(ThemeMode.dark),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ThemeChoiceTile extends StatelessWidget {
-  const _ThemeChoiceTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final accent = scheme.secondary;
-
-    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
-
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: cardRadius,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, size: 20, color: accent),
-                ),
-                const Gap(12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      const Gap(2),
-                      Text(
-                        subtitle,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Gap(12),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? scheme.secondaryContainer.withValues(alpha: 0.55)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    isSelected ? AppIcons.check : AppIcons.chevron,
-                    size: 18,
-                    color: isSelected
-                        ? scheme.onSecondaryContainer
-                        : scheme.onSurfaceVariant.withValues(alpha: 0.65),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

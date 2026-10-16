@@ -12,7 +12,9 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/server_url_warning.dart';
+import 'package:komodo_go/features/auth/presentation/utils/connection_input.dart';
 import 'package:komodo_go/features/auth/presentation/widgets/advanced_connection_settings_card.dart';
+import 'package:komodo_go/features/auth/presentation/widgets/api_key_hint.dart';
 
 class EditConnectionSheet extends HookConsumerWidget {
   const EditConnectionSheet({
@@ -111,7 +113,7 @@ class EditConnectionSheet extends HookConsumerWidget {
             .updateConnectionDetails(
               connectionId: connection.id,
               name: nameController.text,
-              baseUrl: baseUrlController.text,
+              baseUrl: normalizeServerUrl(baseUrlController.text),
               apiKey: apiKeyController.text,
               apiSecret: apiSecretController.text,
               proxyAuthEnabled: proxyAuthEnabled.value,
@@ -169,7 +171,9 @@ class EditConnectionSheet extends HookConsumerWidget {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const Gap(24),
+                  const Gap(16),
+                  const ApiKeyHint(),
+                  const Gap(16),
                   TextFormField(
                     controller: nameController,
                     decoration: const InputDecoration(
@@ -194,7 +198,7 @@ class EditConnectionSheet extends HookConsumerWidget {
                     enableInteractiveSelection: true,
                     contextMenuBuilder: alwaysPasteContextMenu,
                     validator: (value) {
-                      final trimmed = value?.trim() ?? '';
+                      final trimmed = normalizeServerUrl(value ?? '');
                       if (trimmed.isEmpty) {
                         return 'Please enter the server URL';
                       }
@@ -203,7 +207,7 @@ class EditConnectionSheet extends HookConsumerWidget {
                           !uri.hasScheme ||
                           (uri.scheme != 'http' && uri.scheme != 'https') ||
                           uri.host.isEmpty) {
-                        return 'Please enter a valid URL including http:// or https://';
+                        return 'Please enter a valid server URL';
                       }
                       return null;
                     },
@@ -215,6 +219,12 @@ class EditConnectionSheet extends HookConsumerWidget {
                   const Gap(16),
                   TextFormField(
                     controller: apiKeyController,
+                    onChanged: (value) {
+                      final pair = splitKeySecret(value);
+                      if (pair == null) return;
+                      apiKeyController.text = pair.key;
+                      apiSecretController.text = pair.secret;
+                    },
                     decoration: const InputDecoration(
                       labelText: 'API Key',
                       prefixIcon: Icon(AppIcons.key),
@@ -240,6 +250,9 @@ class EditConnectionSheet extends HookConsumerWidget {
                       labelText: 'API Secret',
                       prefixIcon: const Icon(AppIcons.lock),
                       suffixIcon: IconButton(
+                        tooltip: obscureSecret.value
+                            ? 'Show API secret'
+                            : 'Hide API secret',
                         icon: Icon(
                           obscureSecret.value ? AppIcons.eye : AppIcons.eyeOff,
                         ),
@@ -264,29 +277,23 @@ class EditConnectionSheet extends HookConsumerWidget {
                     },
                   ),
                   const Gap(24),
-                  AdvancedConnectionSettingsCard(
+                  ConnectionAdvancedSettings(
                     expanded: showAdvancedConfig.value,
                     onToggle: () {
                       showAdvancedConfig.value = !showAdvancedConfig.value;
                     },
-                    children: [
-                      ProxyHeaderAuthSection(
-                        enabled: proxyAuthEnabled.value,
-                        onEnabledChanged: (value) {
-                          proxyAuthEnabled.value = value;
-                        },
-                        usernameController: proxyAuthUsernameController,
-                        passwordController: proxyAuthPasswordController,
-                        obscurePassword: obscureProxyAuthPassword,
-                        onSubmitted: save,
-                      ),
-                      CustomHeadersSection(
-                        headers: customHeaders.value,
-                        onChanged: (headers) {
-                          customHeaders.value = headers;
-                        },
-                      ),
-                    ],
+                    proxyAuthEnabled: proxyAuthEnabled.value,
+                    onProxyAuthEnabledChanged: (value) {
+                      proxyAuthEnabled.value = value;
+                    },
+                    proxyAuthUsernameController: proxyAuthUsernameController,
+                    proxyAuthPasswordController: proxyAuthPasswordController,
+                    obscureProxyAuthPassword: obscureProxyAuthPassword,
+                    customHeaders: customHeaders.value,
+                    onCustomHeadersChanged: (headers) {
+                      customHeaders.value = headers;
+                    },
+                    onSubmitted: save,
                   ),
                   const Gap(24),
                   if (saveError.value case final message?) ...[

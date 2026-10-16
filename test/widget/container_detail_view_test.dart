@@ -40,7 +40,7 @@ void main() {
             () => _TestContainers(
               () => ContainersResult(
                 items: [_item(image: image)],
-                errors: [],
+                errors: const [],
               ),
             ),
           ),
@@ -61,7 +61,13 @@ void main() {
 
     // The backend now reports a different image; pull-to-refresh must show it.
     image = 'nginx:2';
-    await tester.fling(find.byType(ListView), const Offset(0, 400), 1000);
+    await tester.tap(find.byKey(const ValueKey('detail_tab_inspect')));
+    await tester.pumpAndSettle();
+    await tester.fling(
+      find.byType(RefreshIndicator).last,
+      const Offset(0, 400),
+      1000,
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('nginx:2'), findsOneWidget);

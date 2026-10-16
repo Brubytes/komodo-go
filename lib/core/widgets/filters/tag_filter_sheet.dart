@@ -87,8 +87,8 @@ class _TagFilterSheetState extends State<TagFilterSheet> {
     final filtered = query.isEmpty
         ? sorted
         : sorted
-            .where((tag) => tag.name.toLowerCase().contains(query))
-            .toList();
+              .where((tag) => tag.name.toLowerCase().contains(query))
+              .toList();
 
     return DraggableScrollableSheet(
       expand: false,
@@ -166,10 +166,10 @@ class _TagFilterSheetState extends State<TagFilterSheet> {
                 ],
               ),
               const Gap(12),
-                DetailSurface(
-                  padding: EdgeInsets.zero,
-                  radius: 16,
-                  child: Column(
+              DetailSurface(
+                padding: EdgeInsets.zero,
+                radius: 16,
+                child: Column(
                   children: [
                     if (filtered.isEmpty)
                       Padding(

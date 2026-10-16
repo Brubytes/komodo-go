@@ -3,8 +3,10 @@ import 'package:fpdart/fpdart.dart' show Either;
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
@@ -38,7 +40,7 @@ class _ResourceAdvancedMenuButtonState
   Widget build(BuildContext context) {
     if (_busy) {
       return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 14),
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         child: AppInlineSkeleton(size: 20),
       );
     }
@@ -102,7 +104,7 @@ class _ResourceAdvancedMenuButtonState
   }
 
   Future<void> _copy() async {
-    final name = await _promptName(
+    final name = await promptResourceName(
       context,
       title: 'Copy ${widget.metadata.kind.singularLabel}',
       actionLabel: 'Copy',
@@ -127,7 +129,7 @@ class _ResourceAdvancedMenuButtonState
   }
 
   Future<void> _rename() async {
-    final name = await _promptName(
+    final name = await promptResourceName(
       context,
       title: 'Rename ${widget.metadata.kind.singularLabel}',
       actionLabel: 'Rename',
@@ -319,7 +321,7 @@ class _ResourceMetadataEditorSheetState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Gap(12),
+                    const Gap(AppSpacing.md),
                     TextField(
                       key: const ValueKey('resource_description_field'),
                       controller: _descriptionController,
@@ -330,7 +332,7 @@ class _ResourceMetadataEditorSheetState
                         alignLabelWithHint: true,
                       ),
                     ),
-                    const Gap(8),
+                    const Gap(AppSpacing.sm),
                     SwitchListTile(
                       key: const ValueKey('resource_template_switch'),
                       contentPadding: EdgeInsets.zero,
@@ -343,30 +345,32 @@ class _ResourceMetadataEditorSheetState
                           ? null
                           : (value) => setState(() => _template = value),
                     ),
-                    const Gap(8),
+                    const Gap(AppSpacing.sm),
                     Text(
                       'Tags',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const Gap(4),
+                    const Gap(AppSpacing.xs),
                     tagsAsync.when(
                       data: _buildTags,
                       loading: () => const Column(
                         children: [
                           AppSkeletonCard(showChips: false),
-                          Gap(12),
+                          Gap(AppSpacing.md),
                           AppSkeletonCard(showChips: false),
                         ],
                       ),
                       error: (error, _) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.xl,
+                        ),
                         child: Center(
                           child: Text('Failed to load tags: $error'),
                         ),
                       ),
                     ),
                     if (_error != null) ...[
-                      const Gap(8),
+                      const Gap(AppSpacing.sm),
                       Text(
                         _error!,
                         style: TextStyle(
@@ -374,7 +378,7 @@ class _ResourceMetadataEditorSheetState
                         ),
                       ),
                     ],
-                    const Gap(12),
+                    const Gap(AppSpacing.md),
                     FilledButton.icon(
                       key: const ValueKey('save_resource_metadata'),
                       onPressed: _saving ? null : _save,
@@ -383,7 +387,7 @@ class _ResourceMetadataEditorSheetState
                           : const Icon(AppIcons.check),
                       label: Text(_saving ? 'Saving…' : 'Save metadata'),
                     ),
-                    const Gap(4),
+                    const Gap(AppSpacing.xs),
                   ],
                 ),
               ),
@@ -399,7 +403,10 @@ class _ResourceMetadataEditorSheetState
     final unavailableIds = _selectedTags.difference(knownIds).toList()..sort();
 
     if (tags.isEmpty && unavailableIds.isEmpty) {
-      return const Center(child: Text('No tags have been created yet.'));
+      return const EmptyStateView.inline(
+        icon: AppIcons.tag,
+        title: 'No tags have been created yet.',
+      );
     }
 
     return Column(
@@ -467,7 +474,7 @@ class _ResourceMetadataEditorSheetState
   }
 }
 
-Future<String?> _promptName(
+Future<String?> promptResourceName(
   BuildContext context, {
   required String title,
   required String actionLabel,

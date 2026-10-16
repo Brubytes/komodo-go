@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/composition/home/home_ops_pulse.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -94,7 +95,10 @@ class HomeErrorTile extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(AppIcons.formError, color: Colors.red),
+            Icon(
+              AppIcons.formError,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const Gap(8),
             Expanded(child: Text(message)),
           ],
@@ -371,11 +375,11 @@ class _HomeOpsStatusLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final color = switch (status.tone) {
-      HomeOpsTone.healthy => AppTokens.statusGreen,
+      HomeOpsTone.healthy => scheme.statusSuccess,
       HomeOpsTone.active => scheme.primary,
-      HomeOpsTone.attention => AppTokens.statusOrange,
+      HomeOpsTone.attention => scheme.statusWarning,
       HomeOpsTone.failed => scheme.error,
-      HomeOpsTone.unknown => scheme.tertiary,
+      HomeOpsTone.unknown => scheme.onSurfaceVariant,
     };
     return Row(
       mainAxisSize: MainAxisSize.min,

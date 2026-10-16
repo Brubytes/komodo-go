@@ -1,12 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
+import 'package:komodo_go/core/widgets/detail/detail_action_bar.dart';
+import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/containers/data/models/container.dart';
+import 'package:komodo_go/features/containers/presentation/widgets/container_card_parts.dart';
 
+/// Card widget displaying container information.
+///
+/// Header: icon tile, wrapping name and a status pill with the actions menu.
+/// Below: tonal chips (server, image, networks, ports), then either a compact
+/// 2x2 stats grid (running) or the muted exit status line (exited).
 class ContainerCard extends StatelessWidget {
   const ContainerCard({
     required this.item,
@@ -21,386 +33,138 @@ class ContainerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final container = item.container;
     final scheme = Theme.of(context).colorScheme;
-
-    final name = item.container.name.isEmpty ? 'Unnamed' : item.container.name;
-    final image = item.container.image ?? '';
-    final networks = item.container.networks;
-    final stats = item.container.stats;
-
-    final stateColor = _stateColor(item.container.state, scheme);
-    final portsLabel = _formatPorts(item.container.ports);
-
-    final pillBg = scheme.surfaceContainerHigh;
-    final pillFg = scheme.onSurface;
-
-    final hasActions = _hasActions(item.container.state);
-    final keyId = (item.container.id?.trim().isNotEmpty ?? false)
-        ? item.container.id!.trim()
-        : (item.container.name.trim().isNotEmpty
-              ? item.container.name.trim()
+    final textTheme = Theme.of(context).textTheme;
+    final name = container.name.isEmpty ? 'Unnamed' : container.name;
+    final image = container.image ?? '';
+    final stats = container.stats;
+    final keyId = (container.id?.trim().isNotEmpty ?? false)
+        ? container.id!.trim()
+        : (container.name.trim().isNotEmpty
+              ? container.name.trim()
               : 'unknown');
+    final onAction = this.onAction;
+    final menu = onAction == null || container.state == ContainerState.removing
+        ? const <DetailActionGroup>[]
+        : containerMenuGroups(container.state, onAction);
+    final hasMenu = menu.any((g) => g.items.isNotEmpty);
+    final status = containerStatusSpec(container);
+
+    final showMetrics =
+        container.state == ContainerState.running &&
+        stats != null &&
+        ContainerMetricsGrid.hasData(stats);
+    final exitInfo = container.state == ContainerState.exited
+        ? container.status?.trim()
+        : null;
+
+    final networks = container.networks;
+    final ports = container.ports.map(formatContainerPort).toSet().toList();
+    final shownPorts = ports.take(3).toList();
+    final extraPorts = ports.length - shownPorts.length;
+
+    final radius = BorderRadius.circular(AppTokens.radiusLg);
 
     return AppCardSurface(
       key: ValueKey('container_card_$keyId'),
       padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _LeadingIcon(color: stateColor),
-                    const Gap(12),
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
+      child: GestureDetector(
+        onLongPressStart: hasMenu
+            ? (details) {
+                unawaited(HapticFeedback.selectionClick());
+                unawaited(
+                  showDetailActionMenu(
+                    context,
+                    groups: menu,
+                    position: details.globalPosition,
+                  ),
+                );
+              }
+            : null,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: radius,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ContainerIconTile(tone: status.tone),
+                      const Gap(AppSpacing.md),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.sm),
+                          child: Text(
+                            name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    const Gap(12),
-                    _StateChip(
-                      state: item.container.state,
-                      color: stateColor,
-                      showMenu: onAction != null && hasActions,
-                      onAction: onAction,
-                      itemsBuilder: (context) =>
-                          _buildMenuItems(context, item.container.state, keyId),
-                      menuKey: ValueKey('container_card_menu_$keyId'),
+                      const Gap(AppSpacing.md),
+                      ContainerStatusPill(
+                        status: status,
+                        menu: menu,
+                        menuKey: ValueKey('container_card_menu_$keyId'),
+                      ),
+                    ],
+                  ),
+                  const Gap(AppSpacing.md),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      if (item.serverName.isNotEmpty)
+                        ContainerInfoChip(
+                          icon: AppIcons.server,
+                          label: item.serverName,
+                        ),
+                      if (image.isNotEmpty)
+                        ContainerInfoChip(
+                          icon: AppIcons.package,
+                          label: formatContainerImage(image),
+                          tooltip: image,
+                        ),
+                      if (networks.isNotEmpty)
+                        ContainerInfoChip(
+                          icon: AppIcons.network,
+                          label:
+                              '${networks.take(2).join(', ')}'
+                              '${networks.length > 2 ? '…' : ''}',
+                        ),
+                      for (final p in shownPorts) ContainerInfoChip(label: p),
+                      if (extraPorts > 0)
+                        ContainerInfoChip(label: '+$extraPorts'),
+                    ],
+                  ),
+                  if (showMetrics) ...[
+                    const Gap(AppSpacing.md),
+                    ContainerMetricsGrid(stats: stats),
+                  ] else if (exitInfo != null && exitInfo.isNotEmpty) ...[
+                    const Gap(AppSpacing.sm),
+                    Text(
+                      exitInfo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
-                ),
-                const Gap(12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _InfoPill(
-                      icon: AppIcons.server,
-                      label: item.serverName,
-                      backgroundColor: pillBg,
-                      foregroundColor: pillFg,
-                    ),
-                    if (image.isNotEmpty)
-                      _InfoPill(
-                        icon: AppIcons.package,
-                        label: image,
-                        backgroundColor: pillBg,
-                        foregroundColor: pillFg,
-                      ),
-                    if (networks.isNotEmpty)
-                      _InfoPill(
-                        icon: AppIcons.network,
-                        label:
-                            '${networks.take(2).join(', ')}${networks.length > 2 ? '…' : ''}',
-                        backgroundColor: pillBg,
-                        foregroundColor: pillFg,
-                      ),
-                    if (portsLabel.isNotEmpty)
-                      _InfoPill(
-                        icon: AppIcons.plug,
-                        label: 'Ports: $portsLabel',
-                        backgroundColor: pillBg,
-                        foregroundColor: pillFg,
-                      ),
-                  ],
-                ),
-                if (stats != null) ...[
-                  const Gap(14),
-                  _UsageRow(
-                    icon: AppIcons.cpu,
-                    label: 'CPU',
-                    value: stats.cpuPerc.trim().isNotEmpty
-                        ? stats.cpuPerc
-                        : '-',
-                    progress: stats.cpuPercentValue != null
-                        ? stats.cpuPercentValue! / 100.0
-                        : null,
-                    accent: scheme.primary,
-                  ),
-                  const Gap(10),
-                  _UsageRow(
-                    icon: AppIcons.memory,
-                    label: 'Memory',
-                    value: stats.memUsage.trim().isNotEmpty
-                        ? stats.memUsage
-                        : (stats.memPerc.trim().isNotEmpty
-                              ? stats.memPerc
-                              : '-'),
-                    progress: stats.memPercentValue != null
-                        ? stats.memPercentValue! / 100.0
-                        : null,
-                    accent: scheme.secondary,
-                  ),
-                  const Gap(10),
-                  _IoRow(stats: stats),
                 ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  bool _hasActions(ContainerState state) {
-    return state != ContainerState.removing;
-  }
-
-  List<PopupMenuEntry<ContainerAction>> _buildMenuItems(
-    BuildContext context,
-    ContainerState state,
-    String keyId,
-  ) {
-    final scheme = Theme.of(context).colorScheme;
-    final items = <PopupMenuEntry<ContainerAction>>[];
-
-    final canStop =
-        state == ContainerState.running ||
-        state == ContainerState.paused ||
-        state == ContainerState.restarting;
-    final canRestart =
-        state == ContainerState.running ||
-        state == ContainerState.paused ||
-        state == ContainerState.restarting ||
-        state == ContainerState.exited ||
-        state == ContainerState.created;
-    final canStart =
-        state == ContainerState.exited ||
-        state == ContainerState.created ||
-        state == ContainerState.dead;
-    final canPause = state == ContainerState.running;
-    final canUnpause = state == ContainerState.paused;
-
-    if (canStart) {
-      items.add(
-        komodoPopupMenuItem(
-          key: ValueKey('container_card_start_$keyId'),
-          value: ContainerAction.start,
-          icon: AppIcons.play,
-          label: 'Start',
-          iconColor: scheme.primary,
-        ),
-      );
-    }
-    if (canPause) {
-      items.add(
-        komodoPopupMenuItem(
-          key: ValueKey('container_card_pause_$keyId'),
-          value: ContainerAction.pause,
-          icon: AppIcons.pause,
-          label: 'Pause',
-          iconColor: scheme.tertiary,
-        ),
-      );
-    }
-    if (canUnpause) {
-      items.add(
-        komodoPopupMenuItem(
-          key: ValueKey('container_card_unpause_$keyId'),
-          value: ContainerAction.unpause,
-          icon: AppIcons.play,
-          label: 'Unpause',
-          iconColor: scheme.primary,
-        ),
-      );
-    }
-
-    if (canRestart) {
-      items.add(
-        komodoPopupMenuItem(
-          key: ValueKey('container_card_restart_$keyId'),
-          value: ContainerAction.restart,
-          icon: AppIcons.refresh,
-          label: 'Restart',
-          iconColor: scheme.primary,
-        ),
-      );
-    }
-    if (canStop) {
-      items.add(
-        komodoPopupMenuItem(
-          key: ValueKey('container_card_stop_$keyId'),
-          value: ContainerAction.stop,
-          icon: AppIcons.stop,
-          label: 'Stop',
-          iconColor: scheme.tertiary,
-        ),
-      );
-    }
-    items.add(
-      komodoPopupMenuItem(
-        key: ValueKey('container_card_remove_$keyId'),
-        value: ContainerAction.remove,
-        icon: AppIcons.delete,
-        label: 'Remove',
-        iconColor: scheme.error,
-      ),
-    );
-
-    return items;
-  }
-}
-
-class _LeadingIcon extends StatelessWidget {
-  const _LeadingIcon({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: ShapeDecoration(
-        color: color.withValues(alpha: 0.18),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Icon(AppIcons.containers, color: color),
-      ),
-    );
-  }
-}
-
-class _StateChip extends StatelessWidget {
-  const _StateChip({
-    required this.state,
-    required this.color,
-    required this.showMenu,
-    this.onAction,
-    this.itemsBuilder,
-    this.menuKey,
-  });
-
-  final ContainerState state;
-  final Color color;
-  final bool showMenu;
-  final void Function(ContainerAction action)? onAction;
-  final List<PopupMenuEntry<ContainerAction>> Function(BuildContext context)?
-  itemsBuilder;
-  final Key? menuKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = switch (state) {
-      ContainerState.running => 'RUNNING',
-      ContainerState.exited => 'EXITED',
-      ContainerState.paused => 'PAUSED',
-      ContainerState.restarting => 'RESTARTING',
-      ContainerState.created => 'CREATED',
-      ContainerState.removing => 'REMOVING',
-      ContainerState.dead => 'DEAD',
-      ContainerState.unknown => 'UNKNOWN',
-    };
-
-    final chip = DecoratedBox(
-      decoration: ShapeDecoration(
-        color: color.withValues(alpha: 0.18),
-        shape: const StadiumBorder(),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
               ),
             ),
-            if (showMenu) ...[
-              const Gap(6),
-              Icon(AppIcons.moreVertical, size: 14, color: color),
-            ],
-          ],
-        ),
-      ),
-    );
-
-    if (!showMenu || onAction == null || itemsBuilder == null) {
-      return chip;
-    }
-
-    return PopupMenuButton<ContainerAction>(
-      key: menuKey,
-      onSelected: onAction,
-      itemBuilder: itemsBuilder!,
-      child: chip,
-    );
-  }
-}
-
-class _InfoPill extends StatelessWidget {
-  const _InfoPill({
-    required this.icon,
-    required this.label,
-    required this.backgroundColor,
-    required this.foregroundColor,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color backgroundColor;
-  final Color foregroundColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-      color: foregroundColor,
-      fontWeight: FontWeight.w600,
-    );
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 34, maxWidth: 520),
-      child: DecoratedBox(
-        decoration: ShapeDecoration(
-          color: backgroundColor,
-          shape: const StadiumBorder(),
-          shadows: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.08),
-              blurRadius: isDark ? 16 : 12,
-              offset: const Offset(0, 6),
-              spreadRadius: isDark ? -6 : -7,
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: foregroundColor.withValues(alpha: 0.9),
-              ),
-              const Gap(8),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textStyle,
-                ),
-              ),
-            ],
           ),
         ),
       ),
@@ -408,171 +172,73 @@ class _InfoPill extends StatelessWidget {
   }
 }
 
-class _UsageRow extends StatelessWidget {
-  const _UsageRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.progress,
-    required this.accent,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final double? progress;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 16, color: scheme.onSurfaceVariant),
-            const Gap(8),
-            Expanded(
-              child: Text(
-                label,
-                style: textTheme.labelMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            Text(
-              value,
-              style: textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        if (progress != null) ...[
-          const Gap(6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: progress!.clamp(0, 1),
-              minHeight: 6,
-              backgroundColor: scheme.onSurfaceVariant.withValues(alpha: 0.12),
-              valueColor: AlwaysStoppedAnimation(accent),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _IoRow extends StatelessWidget {
-  const _IoRow({required this.stats});
-
-  final ContainerStats? stats;
-
-  @override
-  Widget build(BuildContext context) {
-    final netLabel = stats?.netIo.trim() ?? '';
-    final blockLabel = stats?.blockIo.trim() ?? '';
-
-    if (netLabel.isEmpty && blockLabel.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return AppCardSurface(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      radius: AppTokens.radiusMd,
-      child: Row(
-        children: [
-          Expanded(
-            child: _IoMetric(
-              icon: AppIcons.network,
-              label: 'Net I/O',
-              value: netLabel.isNotEmpty ? netLabel : '-',
-            ),
-          ),
-          const Gap(12),
-          Expanded(
-            child: _IoMetric(
-              icon: AppIcons.hardDrive,
-              label: 'Drive I/O',
-              value: blockLabel.isNotEmpty ? blockLabel : '-',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _IoMetric extends StatelessWidget {
-  const _IoMetric({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 16, color: scheme.onSurfaceVariant),
-            const Gap(6),
-            Text(
-              label,
-              style: textTheme.labelMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        const Gap(4),
-        Text(
-          value,
-          style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-        ),
-      ],
-    );
-  }
-}
-
-Color _stateColor(ContainerState state, ColorScheme scheme) {
-  return switch (state) {
-    ContainerState.running => AppTokens.statusGreen,
-    ContainerState.exited || ContainerState.dead => AppTokens.statusRed,
-    ContainerState.paused ||
-    ContainerState.restarting ||
-    ContainerState.created ||
-    ContainerState.removing => AppTokens.statusOrange,
-    ContainerState.unknown => scheme.onSurfaceVariant,
+/// Status pill/accent for a container.
+///
+/// An exited container with a non-zero exit code is treated as failed.
+ResourceStatusSpec containerStatusSpec(ContainerListItem container) {
+  final state = container.state;
+  final (label, tone, icon) = switch (state) {
+    ContainerState.running => ('Running', PillTone.success, AppIcons.ok),
+    ContainerState.dead => ('Dead', PillTone.alert, AppIcons.canceled),
+    ContainerState.restarting => (
+      'Restarting',
+      PillTone.warning,
+      AppIcons.loading,
+    ),
+    ContainerState.removing => ('Removing', PillTone.warning, AppIcons.waiting),
+    ContainerState.exited =>
+      _exitedWithError(container.status)
+          ? ('Exited', PillTone.alert, AppIcons.error)
+          : ('Exited', PillTone.neutral, AppIcons.stopped),
+    ContainerState.paused => ('Paused', PillTone.neutral, AppIcons.paused),
+    ContainerState.created => ('Created', PillTone.neutral, AppIcons.pending),
+    ContainerState.unknown => ('Unknown', PillTone.neutral, AppIcons.unknown),
   };
+  return ResourceStatusSpec(label: label, icon: icon, tone: tone);
 }
 
-String _formatPorts(List<ContainerPort> ports) {
-  final values =
-      ports
-          .map((port) => port.publicPort ?? port.privatePort)
-          .where((port) => port > 0)
-          .toSet()
-          .toList()
-        ..sort();
+bool _exitedWithError(String? status) {
+  final match = RegExp(r'Exited \((\d+)\)').firstMatch(status ?? '');
+  return match != null && match.group(1) != '0';
+}
 
-  if (values.isEmpty) return '';
-  return values.take(6).join(' • ') + (values.length > 6 ? '…' : '');
+/// Menu groups (Lifecycle, Danger) valid for [state].
+List<DetailActionGroup> containerMenuGroups(
+  ContainerState state,
+  void Function(ContainerAction action) onAction,
+) {
+  VoidCallback call(ContainerAction a) =>
+      () => onAction(a);
+
+  final canStop =
+      state == ContainerState.running ||
+      state == ContainerState.paused ||
+      state == ContainerState.restarting;
+  final canRestart =
+      state == ContainerState.running ||
+      state == ContainerState.paused ||
+      state == ContainerState.restarting ||
+      state == ContainerState.exited ||
+      state == ContainerState.created;
+  final canStart =
+      state == ContainerState.exited ||
+      state == ContainerState.created ||
+      state == ContainerState.dead;
+
+  return resourceMenuGroups(
+    lifecycle: [
+      if (canStart) ResourceMenuItems.start(call(ContainerAction.start)),
+      if (state == ContainerState.paused)
+        ResourceMenuItems.unpause(call(ContainerAction.unpause)),
+      if (state == ContainerState.running)
+        ResourceMenuItems.pause(call(ContainerAction.pause)),
+      if (canRestart) ResourceMenuItems.restart(call(ContainerAction.restart)),
+      if (canStop) ResourceMenuItems.stop(call(ContainerAction.stop)),
+    ],
+    danger: [
+      ResourceMenuItems.destroy(call(ContainerAction.remove), label: 'Remove'),
+    ],
+  );
 }
 
 /// Actions available for a container.

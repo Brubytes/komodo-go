@@ -28,7 +28,7 @@ class ContainersSearchQuery extends _$ContainersSearchQuery {
   set query(String value) => state = value;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class ContainersServerFilter extends _$ContainersServerFilter {
   @override
   String? build() => null;
@@ -38,7 +38,7 @@ class ContainersServerFilter extends _$ContainersServerFilter {
   set serverId(String? value) => state = value;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class ContainersSort extends _$ContainersSort {
   @override
   ContainersSortState build() {

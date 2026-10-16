@@ -44,6 +44,7 @@ abstract class AppIcons {
 
   // Directional
   static const IconData chevron = LucideIcons.chevronRight;
+  static const IconData chevronDown = LucideIcons.chevronDown;
 
   // Status / states
   static const IconData loading = LucideIcons.loader;
@@ -93,4 +94,10 @@ abstract class AppIcons {
   static const IconData widgets = LucideIcons.blocks;
   static const IconData dot = LucideIcons.dot;
   static const IconData expand = LucideIcons.maximize2;
+
+  // Search / filtering
+  static const IconData search = LucideIcons.search;
+  static const IconData filters = LucideIcons.slidersHorizontal;
+  static const IconData bookmark = LucideIcons.bookmark;
+  static const IconData bookmarkAdd = LucideIcons.bookmarkPlus;
 }

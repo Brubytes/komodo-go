@@ -8,11 +8,14 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
@@ -23,7 +26,7 @@ import 'package:komodo_go/features/stacks/presentation/widgets/stack_tag_filter_
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
-import 'package:skeletonizer/skeletonizer.dart';
+import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all stacks.
 class StacksListView extends ConsumerStatefulWidget {
@@ -107,6 +110,42 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
       for (final tag in availableTags) tag.id: tag.name,
     };
 
+    const listId = 'stacks';
+    final prefs = watchResourceViewPrefs(ref, listId);
+    final activeFilterCount = countActiveResourceFilters(
+      query: searchQuery,
+      selectedTags: selectedTags,
+      problemsOnly: prefs.problemsOnly,
+      selectedStates: prefs.states,
+      selectedServers: prefs.servers,
+      extra:
+          (pendingUpdate ? 1 : 0) +
+          (templateFilter == StacksTemplateFilter.exclude ? 0 : 1),
+    );
+    final loadedItems = stacksAsync.maybeWhen(
+      data: (items) => items,
+      orElse: () => <StackListItem>[],
+    );
+    final stateOptions = collectDistinct<StackListItem>(
+      loadedItems,
+      _stateLabel,
+    );
+    final serverOptions = collectDistinct<StackListItem>(
+      loadedItems,
+      (i) => _serverNameOf(i, serverNames),
+    );
+    void clearAllFilters() {
+      _searchController.clear();
+      ref.read(stacksSearchQueryProvider.notifier).query = '';
+      ref.read(stacksTagFilterProvider.notifier).clear();
+      ref.read(stacksTemplateFilterStateProvider.notifier).value =
+          StacksTemplateFilter.exclude;
+      ref.read(stacksPendingUpdateFilterProvider.notifier).enabled = false;
+      clearResourceViewFilters(ref, listId);
+    }
+
+    final panelCollapsed = !_isSearchVisible || !_areFiltersExpanded;
+
     return Scaffold(
       appBar: MainAppBar(
         title: 'Stacks',
@@ -115,9 +154,9 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
         markUseGradient: true,
         centerTitle: true,
         actions: [
-          IconButton(
-            tooltip: _isSearchVisible ? 'Hide search' : 'Search',
-            icon: Icon(_isSearchVisible ? Icons.close : Icons.search),
+          ResourceFilterToggleButton(
+            visible: _isSearchVisible,
+            activeCount: activeFilterCount,
             onPressed: () {
               setState(() => _isSearchVisible = !_isSearchVisible);
               if (_isSearchVisible) {
@@ -182,17 +221,17 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                             const Gap(10),
                             ResourceFilterDisclosure(
                               expanded: _areFiltersExpanded,
-                              activeFilterCount:
-                                  selectedTags.length +
-                                  (pendingUpdate ? 1 : 0) +
-                                  (templateFilter ==
-                                          StacksTemplateFilter.exclude
-                                      ? 0
-                                      : 1),
+                              activeFilterCount: activeFilterCount,
                               onExpansionChanged: (value) => setState(
                                 () => _areFiltersExpanded = value,
                               ),
                               child: _FiltersPanel(
+                                viewSection: ResourceViewFiltersSection(
+                                  listId: listId,
+                                  stateOptions: stateOptions,
+                                  serverOptions: serverOptions,
+                                ),
+
                                 pendingUpdate: pendingUpdate,
                                 templateFilter: templateFilter,
                                 selectedTags: selectedTags,
@@ -230,12 +269,62 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                         )
                       : const SizedBox.shrink(),
                 ),
+                if (activeFilterCount > 0 && panelCollapsed) ...[
+                  const Gap(8),
+                  ResourceActiveFilterChips(
+                    listId: listId,
+                    onClearAll: clearAllFilters,
+                    extraChips: [
+                      if (searchQuery.trim().isNotEmpty)
+                        ActiveFilterChip(
+                          label: 'Search: ${searchQuery.trim()}',
+                          onRemove: () {
+                            _searchController.clear();
+                            ref.read(stacksSearchQueryProvider.notifier).query =
+                                '';
+                          },
+                        ),
+                      for (final tag in selectedTags)
+                        ActiveFilterChip(
+                          label: 'Tag: ${tagNameById[tag] ?? tag}',
+                          onRemove: () => ref
+                              .read(stacksTagFilterProvider.notifier)
+                              .toggle(tag),
+                        ),
+                      if (pendingUpdate)
+                        ActiveFilterChip(
+                          label: 'Pending updates',
+                          onRemove: () =>
+                              ref
+                                      .read(
+                                        stacksPendingUpdateFilterProvider
+                                            .notifier,
+                                      )
+                                      .enabled =
+                                  false,
+                        ),
+                      if (templateFilter != StacksTemplateFilter.exclude)
+                        ActiveFilterChip(
+                          label: templateFilter == StacksTemplateFilter.only
+                              ? 'Only templates'
+                              : 'With templates',
+                          onRemove: () =>
+                              ref
+                                  .read(
+                                    stacksTemplateFilterStateProvider.notifier,
+                                  )
+                                  .value = StacksTemplateFilter
+                                  .exclude,
+                        ),
+                    ],
+                  ),
+                ],
                 const Gap(12),
                 stacksAsync.when(
                   skipLoadingOnRefresh: true,
                   skipLoadingOnReload: true,
                   data: (stacks) {
-                    final filtered = _applyFilters(
+                    final searched = _applyFilters(
                       stacks,
                       query: searchQuery,
                       selectedTags: selectedTags,
@@ -244,15 +333,26 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                       serverNames: serverNames,
                       tagNameById: tagNameById,
                     );
+
+                    final filtered = prefs.process<StackListItem>(
+                      searched,
+                      severityOf: _severityOf,
+                      nameOf: (item) => item.name,
+                      stateLabelOf: _stateLabel,
+                      serverNameOf: (item) => _serverNameOf(item, serverNames),
+                    );
                     if (filtered.isEmpty) {
                       return _EmptyState(
-                        hasFilters: _hasActiveFilters(
-                          query: searchQuery,
-                          selectedTags: selectedTags,
-                          pendingUpdate: pendingUpdate,
-                          templateFilter: templateFilter,
-                        ),
+                        hasFilters:
+                            _hasActiveFilters(
+                              query: searchQuery,
+                              selectedTags: selectedTags,
+                              pendingUpdate: pendingUpdate,
+                              templateFilter: templateFilter,
+                            ) ||
+                            prefs.activeCount > 0,
                         onClearFilters: () {
+                          clearResourceViewFilters(ref, listId);
                           _searchController.clear();
                           ref.read(stacksSearchQueryProvider.notifier).query =
                               '';
@@ -300,6 +400,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                                 context,
                                 ref,
                                 filtered[i].id,
+                                filtered[i].name,
                                 action,
                               ),
                             ),
@@ -336,30 +437,22 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
     BuildContext context,
     WidgetRef ref,
     String stackId,
+    String stackName,
     StackAction action,
   ) async {
     final actions = ref.read(stackActionsProvider.notifier);
-    if (action == StackAction.destroy) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Destroy stack?'),
-          content: const Text(
-            'This will run docker compose down and remove the stack containers. Continue?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Destroy'),
-            ),
-          ],
-        ),
+    if (action == StackAction.destroy || action == StackAction.stop) {
+      final destroy = action == StackAction.destroy;
+      final confirmed = await confirmDestructive(
+        context,
+        title: destroy ? 'Destroy $stackName?' : 'Stop $stackName?',
+        message: destroy
+            ? 'This will run docker compose down and remove the stack '
+                  'containers of "$stackName".'
+            : 'This will stop all containers of "$stackName".',
+        confirmLabel: destroy ? 'Destroy' : 'Stop',
       );
-      if (confirmed != true) return;
+      if (!confirmed) return;
       if (!context.mounted) return;
     }
 
@@ -421,6 +514,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
 
 class _FiltersPanel extends StatelessWidget {
   const _FiltersPanel({
+    required this.viewSection,
     required this.pendingUpdate,
     required this.templateFilter,
     required this.selectedTags,
@@ -432,6 +526,7 @@ class _FiltersPanel extends StatelessWidget {
     required this.onClearTags,
   });
 
+  final Widget viewSection;
   final bool pendingUpdate;
   final StacksTemplateFilter templateFilter;
   final Set<String> selectedTags;
@@ -459,6 +554,7 @@ class _FiltersPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          viewSection,
           _FilterRow(
             icon: AppIcons.updateAvailable,
             label: 'Pending updates',
@@ -683,50 +779,11 @@ class _StacksSkeletonList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Skeletonizer(
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
-        itemBuilder: (_, _) => AppCardSurface(
-          padding: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const CircleAvatar(radius: 16),
-                    const Gap(10),
-                    Expanded(
-                      child: Text('Stack name', style: textTheme.titleSmall),
-                    ),
-                    const Gap(8),
-                    const CircleAvatar(radius: 6),
-                  ],
-                ),
-                const Gap(10),
-                Text('Source • Server', style: textTheme.bodySmall),
-                const Gap(10),
-                const Row(
-                  children: [
-                    Chip(label: Text('Update available')),
-                    Gap(8),
-                    Chip(label: Text('Tag')),
-                  ],
-                ),
-                const Gap(8),
-                Text('Status message', style: textTheme.bodySmall),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return const ResourceCardSkeletonList(
+      title: 'Stack name',
+      subtitle: 'owner/repository · main',
+      metaLeft: 'Server',
+      metaRight: '3 services',
     );
   }
 }
@@ -894,4 +951,35 @@ List<String> _displayTags(
   return [
     for (final tag in tags) tagNameById[tag] ?? tag,
   ];
+}
+
+int _severityOf(StackListItem stack) {
+  final info = stack.info;
+  final base = switch (info.state) {
+    StackState.dead || StackState.unhealthy => ResourceSeverity.attention,
+    StackState.restarting ||
+    StackState.deploying ||
+    StackState.removing => ResourceSeverity.warning,
+    StackState.running => ResourceSeverity.healthy,
+    StackState.paused ||
+    StackState.stopped ||
+    StackState.created ||
+    StackState.down ||
+    StackState.unknown => ResourceSeverity.inactive,
+  };
+  if (base == ResourceSeverity.attention) return base;
+  if (info.state == StackState.running &&
+      (stack.hasPendingUpdate ||
+          info.projectMissing ||
+          info.missingFiles.isNotEmpty)) {
+    return ResourceSeverity.warning;
+  }
+  return base;
+}
+
+String _stateLabel(StackListItem stack) => resourceStateLabel(stack.info.state);
+
+String? _serverNameOf(StackListItem stack, Map<String, String> serverNames) {
+  final name = serverNames[stack.info.serverId] ?? stack.info.serverName;
+  return name.trim().isEmpty ? null : name.trim();
 }

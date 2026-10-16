@@ -34,6 +34,7 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
 
   var _lastDirty = false;
   var _suppressDirtyNotify = false;
+  Set<String> _changedKeys = const {};
 
   late final TextEditingController _serverId;
   late final TextEditingController _builderId;
@@ -139,15 +140,31 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
 
     _suppressDirtyNotify = false;
     _lastDirty = false;
+    _changedKeys = const {};
     widget.onDirtyChanged?.call(false);
   }
 
   void _notifyDirtyIfChanged() {
     if (_suppressDirtyNotify) return;
-    final dirty = buildPartialConfigParams().isNotEmpty;
+    final keys = buildPartialConfigParams().keys.toSet();
+    if (keys.length != _changedKeys.length || !keys.containsAll(_changedKeys)) {
+      setState(() => _changedKeys = keys);
+    }
+    final dirty = keys.isNotEmpty;
     if (dirty == _lastDirty) return;
     _lastDirty = dirty;
     widget.onDirtyChanged?.call(dirty);
+  }
+
+  bool _modified(List<String> keys) => keys.any(_changedKeys.contains);
+
+  String _flagsSummary() {
+    final on = [
+      if (_webhookEnabled) 'Webhook',
+      if (_gitHttps) 'HTTPS',
+      if (_skipSecretInterp) 'Skip secrets',
+    ];
+    return on.isEmpty ? 'All off' : on.join(' · ');
   }
 
   Map<String, dynamic> buildPartialConfigParams() {
@@ -229,8 +246,17 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DetailSubCard(
+          key: const ValueKey('repo_flags_card'),
           title: 'Flags',
           icon: AppIcons.settings,
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _flagsSummary(),
+          modified: _modified(const [
+            'webhook_enabled',
+            'git_https',
+            'skip_secret_interp',
+          ]),
           child: Column(
             children: [
               SwitchListTile.adaptive(
@@ -393,8 +419,13 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
         ),
         const Gap(12),
         DetailSubCard(
+          key: const ValueKey('repo_paths_card'),
           title: 'Paths',
           icon: AppIcons.package,
+          collapsible: true,
+          initiallyExpanded: false,
+          summary: _path.text.trim().isEmpty ? 'Default' : _path.text.trim(),
+          modified: _modified(const ['path']),
           child: Column(
             children: [
               TextFormField(
