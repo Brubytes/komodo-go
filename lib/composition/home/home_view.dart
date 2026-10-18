@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -188,47 +190,74 @@ class _ServerMetricGrid extends StatelessWidget {
         final cellWidth = (width - _spacing * (columns - 1)) / columns;
         final cellHeight = cellWidth / aspectRatio;
 
-        Widget cell(Widget child) =>
-            SizedBox(width: cellWidth, height: cellHeight, child: child);
+        // The aspect ratio is only a minimum: each row grows to its tallest
+        // card so large text or two-line values never overflow.
+        Widget cell(Widget child) => SizedBox(
+          width: cellWidth,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: cellHeight),
+            child: child,
+          ),
+        );
+
+        final cards = [
+          cell(
+            HomeMetricCard(
+              title: 'CPU Avg',
+              value: overview.cpuValue,
+              subtitle: overview.cpuSubtitle,
+              icon: AppIcons.cpu,
+            ),
+          ),
+          cell(
+            HomeMetricCard(
+              title: 'Memory Avg',
+              value: overview.memValue,
+              subtitle: overview.memSubtitle,
+              icon: AppIcons.memory,
+            ),
+          ),
+          cell(
+            HomeMetricCard(
+              title: 'Disk Avg',
+              value: overview.diskValue,
+              subtitle: overview.diskSubtitle,
+              icon: AppIcons.hardDrive,
+            ),
+          ),
+          cell(
+            HomeMetricCard(
+              title: 'Servers',
+              value: overview.serverCount,
+              subtitle: overview.serverSubtitle,
+              icon: AppIcons.server,
+              onTap: onServersTap,
+            ),
+          ),
+        ];
 
         // Fixed non-scrolling layout: no nested scrollable/shrink-wrap pass.
-        return Wrap(
-          spacing: _spacing,
-          runSpacing: _spacing,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            cell(
-              HomeMetricCard(
-                title: 'CPU Avg',
-                value: overview.cpuValue,
-                subtitle: overview.cpuSubtitle,
-                icon: AppIcons.cpu,
+            for (var start = 0; start < cards.length; start += columns) ...[
+              if (start > 0) const Gap(_spacing),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (
+                      var i = start;
+                      i < math.min(start + columns, cards.length);
+                      i++
+                    ) ...[
+                      if (i > start) const Gap(_spacing),
+                      cards[i],
+                    ],
+                  ],
+                ),
               ),
-            ),
-            cell(
-              HomeMetricCard(
-                title: 'Memory Avg',
-                value: overview.memValue,
-                subtitle: overview.memSubtitle,
-                icon: AppIcons.memory,
-              ),
-            ),
-            cell(
-              HomeMetricCard(
-                title: 'Disk Avg',
-                value: overview.diskValue,
-                subtitle: overview.diskSubtitle,
-                icon: AppIcons.hardDrive,
-              ),
-            ),
-            cell(
-              HomeMetricCard(
-                title: 'Servers',
-                value: overview.serverCount,
-                subtitle: overview.serverSubtitle,
-                icon: AppIcons.server,
-                onTap: onServersTap,
-              ),
-            ),
+            ],
           ],
         );
       },
