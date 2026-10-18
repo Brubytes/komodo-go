@@ -18,6 +18,10 @@ export 'package:komodo_go/shared/logs/widgets/log_line_row.dart'
 /// Line-by-line log output that opens at the newest line and follows new
 /// output like `tail -f`. Scrolling up pauses the view; a pill then offers
 /// the new lines and jumps back to the bottom.
+///
+/// Raw text mode swaps the rows for one plain selectable block so ranges of
+/// lines can be copied; it holds new output behind the pill so a selection
+/// is never reset by a refresh.
 class ServerLogViewer extends StatefulWidget {
   const ServerLogViewer({
     required this.controller,
@@ -43,10 +47,13 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
   // The list is reversed, so offset 0 is the newest line.
   final _scroll = ScrollController();
   final _horizontalScroll = ScrollController();
+  final _rawScroll = ScrollController();
 
   String? _shownText;
   int _shownVersion = -1;
   List<LogEntry> _entries = const [];
+  String _rawContent = '';
+  var _shownRaw = false;
   var _following = true;
   var _atTop = false;
 
@@ -79,17 +86,26 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
     _controller.removeListener(_onControllerChanged);
     _scroll.dispose();
     _horizontalScroll.dispose();
+    _rawScroll.dispose();
     super.dispose();
   }
 
   void _onControllerChanged() {
+    final raw = _controller.rawText;
+    if (raw != _shownRaw) {
+      _shownRaw = raw;
+      // Both views open at the newest line, so start out following again.
+      _following = true;
+      _atTop = false;
+      if (!raw && _pending != null) _adopt();
+    }
     final latest = _controller.log?.combined;
     if (latest == null || latest == _shownText) {
       setState(() {});
       return;
     }
     final queryChanged = _controller.logVersion != _shownVersion;
-    if (queryChanged || _following || _shownText == null) {
+    if (queryChanged || (_following && !raw) || _shownText == null) {
       _adopt();
       if (queryChanged) _jumpToBottom(animate: false);
     } else {
@@ -106,6 +122,7 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
     if (text == _shownText) return;
     _shownText = text;
     _entries = parseLogEntries(text ?? '');
+    _rawContent = stripAnsi(text ?? '').replaceAll('\r', '');
   }
 
   void _onScroll() {
@@ -149,7 +166,11 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
 
   void _showLatest() {
     setState(_adopt);
-    _jumpToBottom();
+    if (_controller.rawText) {
+      if (_rawScroll.hasClients) _rawScroll.jumpTo(0);
+    } else {
+      _jumpToBottom();
+    }
   }
 
   static int? _countNewLines(String shown, String latest) {
@@ -182,6 +203,8 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
         _Footer(
           text: _shownText ?? '',
           updatedAt: _controller.updatedAt,
+          rawText: _controller.rawText,
+          onRawTextChanged: (value) => _controller.setRawText(value: value),
           onExpand: widget.onExpand,
         ),
       ],
@@ -216,6 +239,8 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
     // Inverted searches return non-matching lines, so nothing to highlight.
     final terms = _controller.invert ? const <String>[] : _controller.terms;
     final wrap = _controller.wrapLines;
+
+    if (_controller.rawText) return _buildRawBody(styles, wrap: wrap);
 
     return Stack(
       children: [
@@ -297,6 +322,59 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
                   final count => '$count new lines',
                 },
                 emphasized: _pending != null,
+                onPressed: _showLatest,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildRawBody(LogRowStyles styles, {required bool wrap}) {
+    final text = SelectableText(
+      _rawContent,
+      key: const ValueKey('server_log_raw_text'),
+      style: styles.base,
+    );
+    return Stack(
+      children: [
+        Scrollbar(
+          controller: _rawScroll,
+          child: SingleChildScrollView(
+            controller: _rawScroll,
+            // Opens at the newest line, like the formatted view.
+            reverse: true,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: wrap
+                ? text
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: text,
+                  ),
+          ),
+        ),
+        if (_controller.loading)
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: LinearProgressIndicator(minHeight: 2),
+          ),
+        if (_pending != null)
+          Positioned(
+            bottom: 12,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: _JumpButton(
+                key: const ValueKey('server_log_jump_latest'),
+                icon: Icons.arrow_downward,
+                label: switch (_pending) {
+                  -1 => 'New lines',
+                  1 => '1 new line',
+                  final count => '$count new lines',
+                },
+                emphasized: true,
                 onPressed: _showLatest,
               ),
             ),
@@ -410,10 +488,18 @@ class _Message extends StatelessWidget {
 }
 
 class _Footer extends StatelessWidget {
-  const _Footer({required this.text, required this.updatedAt, this.onExpand});
+  const _Footer({
+    required this.text,
+    required this.updatedAt,
+    required this.rawText,
+    required this.onRawTextChanged,
+    this.onExpand,
+  });
 
   final String text;
   final DateTime? updatedAt;
+  final bool rawText;
+  final ValueChanged<bool> onRawTextChanged;
   final VoidCallback? onExpand;
 
   @override
@@ -440,6 +526,14 @@ class _Footer extends StatelessWidget {
               style: style,
               overflow: TextOverflow.ellipsis,
             ),
+          ),
+          IconButton(
+            key: const ValueKey('server_log_raw_toggle'),
+            tooltip: rawText ? 'Formatted view' : 'Raw text (select to copy)',
+            visualDensity: VisualDensity.compact,
+            isSelected: rawText,
+            onPressed: () => onRawTextChanged(!rawText),
+            icon: const Icon(AppIcons.notepadText, size: 18),
           ),
           IconButton(
             key: const ValueKey('server_log_copy'),

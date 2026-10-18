@@ -93,6 +93,9 @@ void main() {
     await search(tester, 'error');
 
     await openFilters(tester);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('server_log_save_filter')),
+    );
     await tester.tap(find.byKey(const ValueKey('server_log_save_filter')));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -115,11 +118,13 @@ void main() {
     expect(requests.last.isSearch, isFalse);
 
     await openFilters(tester);
+    await tester.ensureVisible(find.text('Failures'));
     await tester.tap(find.text('Failures'));
     await tester.pumpAndSettle();
     expect(requests.last.terms, ['error']);
 
     await openFilters(tester);
+    await tester.ensureVisible(find.text('Failures'));
     await tester.drag(find.text('Failures'), const Offset(-600, 0));
     await tester.pumpAndSettle();
     expect(find.text('Failures'), findsNothing);
@@ -224,6 +229,47 @@ void main() {
         find.byKey(const ValueKey('server_log_jump_latest')),
         findsNothing,
       );
+    });
+
+    testWidgets('raw text shows one selectable block and holds new output', (
+      tester,
+    ) async {
+      await pumpViewer(tester);
+      await tester.tap(find.byKey(const ValueKey('server_log_raw_toggle')));
+      await tester.pumpAndSettle();
+
+      final raw = tester.widget<SelectableText>(
+        find.byKey(const ValueKey('server_log_raw_text')),
+      );
+      expect(raw.data, lines.join('\n'));
+      expect(find.byKey(const ValueKey('server_log_lines')), findsNothing);
+
+      lines.add('2026-10-10T09:42:00Z line 80');
+      await controller.load();
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<SelectableText>(
+              find.byKey(const ValueKey('server_log_raw_text')),
+            )
+            .data,
+        isNot(contains('line 80')),
+      );
+      await tester.tap(find.text('1 new line'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<SelectableText>(
+              find.byKey(const ValueKey('server_log_raw_text')),
+            )
+            .data,
+        contains('line 80'),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('server_log_raw_toggle')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('server_log_lines')), findsOneWidget);
+      expect(find.textContaining('line 80', findRichText: true), findsOne);
     });
 
     testWidgets('jumps to the first line', (tester) async {

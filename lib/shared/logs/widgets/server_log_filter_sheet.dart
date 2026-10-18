@@ -101,6 +101,14 @@ class ServerLogFilterSheet extends StatelessWidget {
               onChanged: (value) =>
                   unawaited(controller.setWrapLines(value: value)),
             ),
+            SwitchListTile(
+              key: const ValueKey('server_log_raw'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Raw text'),
+              subtitle: const Text('Plain text you can select across lines'),
+              value: controller.rawText,
+              onChanged: (value) => controller.setRawText(value: value),
+            ),
             const Gap(8),
             _SavedFilters(controller: controller),
             const Gap(20),

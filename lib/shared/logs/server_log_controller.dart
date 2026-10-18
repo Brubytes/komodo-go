@@ -56,6 +56,7 @@ class ServerLogController extends ChangeNotifier {
   LogSearchCombinator _combinator = LogSearchCombinator.and;
   bool _autoRefresh;
   var _wrapLines = true;
+  var _rawText = false;
   var _queryVersion = 0;
   var _logVersion = 0;
 
@@ -70,6 +71,10 @@ class ServerLogController extends ChangeNotifier {
   LogSearchCombinator get combinator => _combinator;
   bool get autoRefresh => _autoRefresh;
   bool get wrapLines => _wrapLines;
+
+  /// Shows the log as one plain selectable text block for copying ranges.
+  /// Session-only, so the formatted view stays the default.
+  bool get rawText => _rawText;
 
   /// Query version the current [log] was loaded for. It changes when the
   /// search or filters change, but not on a plain refresh of the same query.
@@ -199,6 +204,12 @@ class ServerLogController extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(wrapLinesKey, value);
+  }
+
+  void setRawText({required bool value}) {
+    if (value == _rawText) return;
+    _rawText = value;
+    notifyListeners();
   }
 
   Future<void> _restoreWrapLines() async {
