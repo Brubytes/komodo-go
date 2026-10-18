@@ -13,6 +13,7 @@ import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/segmented/app_segmented_control.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
 import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
@@ -87,25 +88,19 @@ class SettingsView extends ConsumerWidget {
                 ),
                 const Gap(AppSpacing.md),
                 Expanded(
-                  child: SegmentedButton<ThemeMode>(
+                  child: AppSegmentedControl<ThemeMode>(
                     key: const ValueKey('settings_theme_selector'),
-                    showSelectedIcon: false,
                     segments: const [
-                      ButtonSegment(
+                      AppSegmentOption(
                         value: ThemeMode.system,
-                        label: Text('System'),
+                        label: 'System',
                       ),
-                      ButtonSegment(
-                        value: ThemeMode.light,
-                        label: Text('Light'),
-                      ),
-                      ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
+                      AppSegmentOption(value: ThemeMode.light, label: 'Light'),
+                      AppSegmentOption(value: ThemeMode.dark, label: 'Dark'),
                     ],
-                    selected: {themeMode},
-                    onSelectionChanged: (selection) => unawaited(
-                      ref
-                          .read(themeModeProvider.notifier)
-                          .setThemeMode(selection.first),
+                    value: themeMode,
+                    onChanged: (mode) => unawaited(
+                      ref.read(themeModeProvider.notifier).setThemeMode(mode),
                     ),
                   ),
                 ),

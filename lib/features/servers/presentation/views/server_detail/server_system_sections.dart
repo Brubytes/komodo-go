@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/segmented/app_segmented_control.dart';
 import 'package:komodo_go/features/servers/data/models/system_information.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 
@@ -125,22 +126,16 @@ class _SystemProcessesContentState extends State<SystemProcessesContent> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: SegmentedButton<_ProcessSort>(
+            child: AppSegmentedControl<_ProcessSort>(
+              expand: false,
               segments: const [
-                ButtonSegment(value: _ProcessSort.cpu, label: Text('CPU')),
-                ButtonSegment(value: _ProcessSort.memory, label: Text('Mem')),
-                ButtonSegment(value: _ProcessSort.read, label: Text('Read')),
-                ButtonSegment(value: _ProcessSort.write, label: Text('Write')),
+                AppSegmentOption(value: _ProcessSort.cpu, label: 'CPU'),
+                AppSegmentOption(value: _ProcessSort.memory, label: 'Mem'),
+                AppSegmentOption(value: _ProcessSort.read, label: 'Read'),
+                AppSegmentOption(value: _ProcessSort.write, label: 'Write'),
               ],
-              selected: {_sort},
-              showSelectedIcon: false,
-              style: const ButtonStyle(
-                padding: WidgetStatePropertyAll(
-                  EdgeInsets.symmetric(horizontal: 8),
-                ),
-              ),
-              onSelectionChanged: (value) =>
-                  setState(() => _sort = value.first),
+              value: _sort,
+              onChanged: (value) => setState(() => _sort = value),
             ),
           ),
           const Gap(10),

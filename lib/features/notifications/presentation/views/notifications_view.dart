@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
+import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/segmented/app_segmented_control.dart';
+import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/views/notifications/notifications_sections.dart';
 
 class NotificationsView extends ConsumerStatefulWidget {
@@ -69,27 +72,36 @@ class _NotificationsViewState extends ConsumerState<NotificationsView>
     });
 
     final alertsUnavailable = alertsAsync.hasError;
+    final unresolvedAlerts = alertsAsync.asData?.value.items
+        .where((a) => !a.resolved)
+        .length;
+    final failedUpdates = ref
+        .watch(updatesProvider)
+        .asData
+        ?.value
+        .items
+        .where((u) => u.status == UpdateStatus.failed)
+        .length;
 
     return Scaffold(
       appBar: MainAppBar(
         title: 'Notifications',
         icon: AppIcons.notifications,
-        bottom: TabBar(
+        showBottomBorder: false,
+        bottom: AppSegmentedTabBar(
           controller: _tabController,
-          tabs: [
-            Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Alerts'),
-                  if (alertsUnavailable) ...[
-                    const SizedBox(width: AppSpacing.xs),
-                    const Icon(AppIcons.warning, size: 14),
-                  ],
-                ],
-              ),
+          segments: [
+            AppSegment(
+              label: 'Alerts',
+              icon: alertsUnavailable ? AppIcons.warning : null,
+              badgeCount: unresolvedAlerts,
+              badgeTone: PillTone.warning,
             ),
-            const Tab(text: 'Updates'),
+            AppSegment(
+              label: 'Updates',
+              badgeCount: failedUpdates,
+              badgeTone: PillTone.warning,
+            ),
           ],
         ),
       ),

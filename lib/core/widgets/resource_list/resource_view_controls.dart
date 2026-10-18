@@ -311,12 +311,7 @@ class ResourceActiveFilterChips extends ConsumerWidget {
         scrollDirection: Axis.horizontal,
         children: [
           for (final chip in chips) ...[
-            InputChip(
-              label: Text(chip.label),
-              visualDensity: VisualDensity.compact,
-              onDeleted: chip.onRemove,
-              deleteButtonTooltipMessage: 'Remove ${chip.label}',
-            ),
+            _ActiveFilterPill(chip: chip),
             const Gap(8),
           ],
           TextButton(
@@ -324,6 +319,61 @@ class ResourceActiveFilterChips extends ConsumerWidget {
             child: const Text('Clear all'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Tonal (selected-style) removable pill for an active filter.
+class _ActiveFilterPill extends StatelessWidget {
+  const _ActiveFilterPill({required this.chip});
+
+  final ActiveFilterChip chip;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Semantics(
+        button: true,
+        label: 'Remove ${chip.label}',
+        excludeSemantics: true,
+        onTap: chip.onRemove,
+        child: Tooltip(
+          message: 'Remove ${chip.label}',
+          child: Material(
+            color: scheme.primary.withValues(alpha: 0.16),
+            shape: const StadiumBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: chip.onRemove,
+              customBorder: const StadiumBorder(),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: kAppFilterChipHeight,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 14, right: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        chip.label,
+                        maxLines: 1,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.close, size: 16, color: scheme.primary),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

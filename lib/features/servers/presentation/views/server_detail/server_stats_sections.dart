@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/utils/byte_format.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/segmented/app_segmented_control.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 
 class StatsHistoryContent extends StatelessWidget {
@@ -89,18 +90,13 @@ class StatsHistoryContent extends StatelessWidget {
         const Gap(6),
         SizedBox(
           width: double.infinity,
-          child: SegmentedButton<ServerStatsGranularity>(
-            showSelectedIcon: false,
+          child: AppSegmentedControl<ServerStatsGranularity>(
             segments: [
               for (final value in ServerStatsGranularity.values)
-                ButtonSegment(value: value, label: Text(value.label)),
+                AppSegmentOption(value: value, label: value.label),
             ],
-            selected: {granularity},
-            onSelectionChanged: (selection) {
-              if (selection.isNotEmpty) {
-                onGranularityChanged(selection.first);
-              }
-            },
+            value: granularity,
+            onChanged: onGranularityChanged,
           ),
         ),
         const Gap(8),

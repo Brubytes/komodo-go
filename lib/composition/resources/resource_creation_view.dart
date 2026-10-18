@@ -8,6 +8,7 @@ import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/segmented/app_segmented_control.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/actions/presentation/views/action_detail_view.dart';
@@ -105,30 +106,30 @@ class _ResourceCreationViewState extends ConsumerState<ResourceCreationView> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          SegmentedButton<ResourceCreationMode>(
+          AppSegmentedControl<ResourceCreationMode>(
             key: const ValueKey('creation_mode'),
             segments: const [
-              ButtonSegment(
+              AppSegmentOption(
                 value: ResourceCreationMode.blank,
-                icon: Icon(Icons.note_add_outlined),
-                label: Text('Empty'),
+                icon: Icons.note_add_outlined,
+                label: 'Empty',
               ),
-              ButtonSegment(
+              AppSegmentOption(
                 value: ResourceCreationMode.template,
-                icon: Icon(Icons.auto_awesome_outlined),
-                label: Text('Template'),
+                icon: Icons.auto_awesome_outlined,
+                label: 'Template',
               ),
-              ButtonSegment(
+              AppSegmentOption(
                 value: ResourceCreationMode.copy,
-                icon: Icon(Icons.copy_outlined),
-                label: Text('Copy'),
+                icon: Icons.copy_outlined,
+                label: 'Copy',
               ),
             ],
-            selected: {_mode},
-            onSelectionChanged: _saving
+            value: _mode,
+            onChanged: _saving
                 ? null
-                : (selection) => setState(() {
-                    _mode = selection.first;
+                : (mode) => setState(() {
+                    _mode = mode;
                     _sourceId = null;
                     _error = null;
                   }),

@@ -43,21 +43,19 @@ class _AlertsTabState extends ConsumerState<AlertsTab> {
     final filters = ref.watch(alertFiltersProvider);
 
     final alertItems = alertsAsync.asData?.value.items;
-    final alertCount = alertItems == null
-        ? null
-        : filters.apply(alertItems).length;
-    final alertSummary = alertCount == null
-        ? null
-        : '$alertCount ${filters.unresolvedOnly ? 'unresolved' : 'alerts'}';
+    final unresolvedCount = alertItems?.where((a) => !a.resolved).length;
+    final criticalCount = alertItems
+        ?.where((a) => a.level == SeverityLevel.critical)
+        .length;
 
     return Column(
       children: [
         _FilterBar(
-          summary: alertSummary,
           chips: [
             AppFilterChip(
               key: const ValueKey('alerts_filter_unresolved'),
               label: 'Unresolved',
+              count: unresolvedCount,
               selected: filters.unresolvedOnly,
               onSelected: (value) =>
                   ref.read(alertFiltersProvider.notifier).filters = filters
@@ -66,6 +64,7 @@ class _AlertsTabState extends ConsumerState<AlertsTab> {
             AppFilterChip(
               key: const ValueKey('alerts_filter_critical'),
               label: 'Critical',
+              count: criticalCount,
               selected: filters.criticalOnly,
               onSelected: (value) =>
                   ref.read(alertFiltersProvider.notifier).filters = filters
@@ -164,43 +163,29 @@ class _AlertsTabState extends ConsumerState<AlertsTab> {
   }
 }
 
-/// Filter row anchored under the tab bar: same surface, hairline divider,
-/// chips on the left and a muted result summary on the right.
+/// Borderless, left-aligned row of tonal filter chips.
 class _FilterBar extends StatelessWidget {
-  const _FilterBar({required this.chips, this.summary});
+  const _FilterBar({required this.chips});
 
   final List<Widget> chips;
-  final String? summary;
 
   @override
   Widget build(BuildContext context) {
+    // Continues the app bar header (which has no border of its own here),
+    // so the hairline sits under the chips and closes the whole header.
     final scheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: scheme.surface,
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: SizedBox(
-        height: 52,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Row(
-            children: [
-              for (var i = 0; i < chips.length; i++) ...[
-                if (i > 0) const SizedBox(width: AppSpacing.sm),
-                chips[i],
-              ],
-              const Spacer(),
-              if (summary != null)
-                Text(
-                  summary!,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-            ],
+        border: Border(
+          bottom: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.35),
           ),
         ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: AppFilterChipBar(verticalPadding: 2, children: chips),
       ),
     );
   }
@@ -252,21 +237,18 @@ class _UpdatesTabState extends ConsumerState<UpdatesTab> {
     final failedOnly = ref.watch(updatesFailedOnlyProvider);
 
     final updateItems = updatesAsync.asData?.value.items;
-    final updateCount = updateItems == null
-        ? null
-        : applyUpdatesFilter(updateItems, failedOnly: failedOnly).length;
-    final updateSummary = updateCount == null
-        ? null
-        : '$updateCount ${failedOnly ? 'failed' : 'updates'}';
+    final failedCount = updateItems
+        ?.where((u) => u.status == UpdateStatus.failed)
+        .length;
 
     return Column(
       children: [
         _FilterBar(
-          summary: updateSummary,
           chips: [
             AppFilterChip(
               key: const ValueKey('updates_filter_failed'),
-              label: 'Failed only',
+              label: 'Failed',
+              count: failedCount,
               selected: failedOnly,
               onSelected: (value) =>
                   ref.read(updatesFailedOnlyProvider.notifier).value = value,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
+import 'package:komodo_go/core/widgets/segmented/app_segmented_control.dart';
 import 'package:komodo_go/shared/logs/server_log.dart';
 import 'package:komodo_go/shared/logs/server_log_controller.dart';
 
@@ -47,36 +48,31 @@ class ServerLogFilterSheet extends StatelessWidget {
             Text('Log filters', style: textTheme.titleLarge),
             const Gap(20),
             const _SectionLabel('Lines'),
-            SegmentedButton<int>(
+            AppSegmentedControl<int>(
               key: const ValueKey('server_log_tail'),
-              showSelectedIcon: false,
-              style: const ButtonStyle(visualDensity: VisualDensity.compact),
               segments: [
                 for (final value in ServerLogController.tails)
-                  ButtonSegment(value: value, label: Text('$value')),
+                  AppSegmentOption(value: value, label: '$value'),
               ],
-              selected: {controller.tail},
-              onSelectionChanged: (value) => controller.setTail(value.first),
+              value: controller.tail,
+              onChanged: controller.setTail,
             ),
             const Gap(20),
             const _SectionLabel('Matching'),
-            SegmentedButton<LogSearchCombinator>(
+            AppSegmentedControl<LogSearchCombinator>(
               key: const ValueKey('server_log_combinator'),
-              showSelectedIcon: false,
-              style: const ButtonStyle(visualDensity: VisualDensity.compact),
               segments: const [
-                ButtonSegment(
+                AppSegmentOption(
                   value: LogSearchCombinator.and,
-                  label: Text('All terms'),
+                  label: 'All terms',
                 ),
-                ButtonSegment(
+                AppSegmentOption(
                   value: LogSearchCombinator.or,
-                  label: Text('Any term'),
+                  label: 'Any term',
                 ),
               ],
-              selected: {controller.combinator},
-              onSelectionChanged: (value) =>
-                  controller.setCombinator(value.first),
+              value: controller.combinator,
+              onChanged: controller.setCombinator,
             ),
             SwitchListTile(
               key: const ValueKey('server_log_invert'),

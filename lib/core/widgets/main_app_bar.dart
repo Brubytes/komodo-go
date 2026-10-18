@@ -25,6 +25,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.bottom,
     this.onTitleLongPress,
+    this.showBottomBorder = true,
     super.key,
   });
 
@@ -40,6 +41,10 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
   final PreferredSizeWidget? bottom;
   final VoidCallback? onTitleLongPress;
+
+  /// Hairline under the bar. Turn off when the content directly below
+  /// continues the header (e.g. a filter row) and draws its own divider.
+  final bool showBottomBorder;
 
   @override
   Size get preferredSize =>
@@ -58,11 +63,13 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
-      shape: Border(
-        bottom: BorderSide(
-          color: scheme.outlineVariant.withValues(alpha: 0.35),
-        ),
-      ),
+      shape: showBottomBorder
+          ? Border(
+              bottom: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.35),
+              ),
+            )
+          : null,
       title: GestureDetector(
         onLongPress: onTitleLongPress,
         behavior: HitTestBehavior.opaque,

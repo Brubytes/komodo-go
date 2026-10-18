@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 
 /// Height shared by all quick-filter chips.
 const double kAppFilterChipHeight = 34;
 
 /// Tappable stadium-shaped quick-filter chip.
 ///
-/// Unselected chips show a subtle outline, selected chips a tonal primary fill
-/// with a check mark. An optional [count] is rendered as a trailing number.
+/// Tonal pills without outline: unselected chips use a neutral container fill,
+/// selected chips a tinted primary fill. An optional [count] is rendered as a trailing number.
 class AppFilterChip extends StatelessWidget {
   const AppFilterChip({
     required this.label,
@@ -30,7 +31,6 @@ class AppFilterChip extends StatelessWidget {
       icon: icon,
       count: count,
       selected: selected,
-      checkWhenSelected: true,
       onTap: onSelected == null ? null : () => onSelected!(!selected),
     );
   }
@@ -108,7 +108,6 @@ class AppFilterMenuChip<T> extends StatelessWidget {
         label: label,
         icon: icon,
         selected: active,
-        checkWhenSelected: false,
         trailing: Icons.expand_more,
         onTap: () => _open(context),
       ),
@@ -154,7 +153,6 @@ class _FilterChipBody extends StatelessWidget {
   const _FilterChipBody({
     required this.label,
     required this.selected,
-    required this.checkWhenSelected,
     required this.onTap,
     this.icon,
     this.count,
@@ -165,7 +163,6 @@ class _FilterChipBody extends StatelessWidget {
   final IconData? icon;
   final int? count;
   final bool selected;
-  final bool checkWhenSelected;
   final IconData? trailing;
   final VoidCallback? onTap;
 
@@ -173,14 +170,12 @@ class _FilterChipBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final duration = AppMotion.durationOf(context, AppMotion.fast);
     final foreground = selected ? scheme.primary : scheme.onSurfaceVariant;
+    final countColor = selected ? scheme.primary : scheme.onSurface;
     final fill = selected
         ? scheme.primary.withValues(alpha: 0.16)
-        : Colors.transparent;
-    final borderColor = selected
-        ? scheme.primary.withValues(alpha: 0.35)
-        : scheme.outlineVariant;
-    final leading = selected && checkWhenSelected ? Icons.check : icon;
+        : scheme.surfaceContainerHigh;
 
     return Semantics(
       button: true,
@@ -188,10 +183,16 @@ class _FilterChipBody extends StatelessWidget {
       label: label,
       excludeSemantics: true,
       onTap: onTap,
-      child: Material(
-        color: fill,
-        shape: StadiumBorder(side: BorderSide(color: borderColor)),
-        clipBehavior: Clip.antiAlias,
+      child: TweenAnimationBuilder<Color?>(
+        tween: ColorTween(end: fill),
+        duration: duration,
+        curve: AppMotion.standard,
+        builder: (context, color, child) => Material(
+          color: color,
+          shape: const StadiumBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: child,
+        ),
         child: InkWell(
           onTap: onTap,
           customBorder: const StadiumBorder(),
@@ -199,30 +200,33 @@ class _FilterChipBody extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: kAppFilterChipHeight),
             child: Padding(
               padding: EdgeInsets.only(
-                left: leading == null ? 14 : 10,
+                left: icon == null ? 14 : 10,
                 right: trailing == null ? 14 : 8,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (leading != null) ...[
-                    Icon(leading, size: 16, color: foreground),
+                  if (icon != null) ...[
+                    Icon(icon, size: 16, color: foreground),
                     const SizedBox(width: 6),
                   ],
-                  Text(
-                    label,
+                  AnimatedDefaultTextStyle(
+                    duration: duration,
+                    curve: AppMotion.standard,
                     maxLines: 1,
-                    style: textTheme.labelLarge?.copyWith(
+                    style: (textTheme.labelLarge ?? const TextStyle()).copyWith(
                       color: foreground,
                       fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                     ),
+                    child: Text(label),
                   ),
                   if (count != null) ...[
                     const SizedBox(width: 6),
-                    Text(
+                    AppAnimatedValue.text(
                       '$count',
                       style: textTheme.labelMedium?.copyWith(
-                        color: foreground.withValues(alpha: 0.8),
+                        color: countColor,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
