@@ -43,6 +43,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
   late final FocusNode _searchFocusNode;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
+  late final _intro = AppListIntro();
   bool _areFiltersExpanded = false;
 
   @override
@@ -190,10 +191,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                   sliver: SliverToBoxAdapter(
                     child: Column(
                       children: [
-                        AnimatedSwitcher(
-                          duration: AppMotion.base,
-                          switchInCurve: AppMotion.enterCurve,
-                          switchOutCurve: AppMotion.exitCurve,
+                        AppSwitcher(
                           child: _isSearchVisible
                               ? Column(
                                   key: const ValueKey(
@@ -420,10 +418,10 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                         separatorBuilder: (_, _) => const Gap(12),
                         itemBuilder: (context, i) {
                           final deployment = filtered[i];
-                          return AppFadeSlide(
-                            delay: AppMotion.stagger(i),
-                            play: i < 10,
-                            child: DeploymentCard(
+                          return _intro.wrap(
+                            i,
+                            id: deployment.id,
+                            DeploymentCard(
                               deployment: deployment,
                               serverName:
                                   serverNames[deployment.info?.serverId],

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/detail/detail_unsaved_changes.dart';
 
 mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
@@ -83,6 +84,7 @@ mixin DetailDirtySnackBarMixin<T extends StatefulWidget> on State<T> {
           onSave: onSave,
         ),
       ),
+      snackBarAnimationStyle: AppMotion.snackBarStyle(context),
     );
 
     _dirtySnackBar = controller;

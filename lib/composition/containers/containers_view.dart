@@ -42,6 +42,7 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
   late final FocusNode _searchFocusNode;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
+  late final _intro = AppListIntro();
 
   @override
   void initState() {
@@ -198,10 +199,7 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                             .read(containersSortProvider.notifier)
                             .toggleDirection(),
                       ),
-                      AnimatedSwitcher(
-                        duration: AppMotion.base,
-                        switchInCurve: AppMotion.enterCurve,
-                        switchOutCurve: AppMotion.exitCurve,
+                      AppSwitcher(
                         child: _isSearchVisible
                             ? Padding(
                                 padding: const EdgeInsets.only(top: 12),
@@ -255,70 +253,80 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                         ),
                       ],
                       const Gap(12),
-                      containersAsync.when(
-                        skipLoadingOnRefresh: true,
-                        skipLoadingOnReload: true,
-                        data: (result) {
-                          final filtered = _applyFilters(
-                            result.items,
-                            serverId: selectedServerId,
-                            query: searchQuery,
-                            sort: sortState,
-                            problemsOnly: prefs.problemsOnly,
-                            states: prefs.states,
-                          );
+                      AppSwitcher(
+                        animateSize: false,
+                        child: containersAsync.when(
+                          skipLoadingOnRefresh: true,
+                          skipLoadingOnReload: true,
+                          data: (result) {
+                            final filtered = _applyFilters(
+                              result.items,
+                              serverId: selectedServerId,
+                              query: searchQuery,
+                              sort: sortState,
+                              problemsOnly: prefs.problemsOnly,
+                              states: prefs.states,
+                            );
 
-                          if (filtered.isEmpty) {
-                            return const _EmptyState();
-                          }
+                            if (filtered.isEmpty) {
+                              return const _EmptyState(
+                                key: ValueKey('containers_empty'),
+                              );
+                            }
 
-                          return Column(
-                            children: [
-                              if (result.errors.isNotEmpty) ...[
-                                _PartialErrorBanner(errors: result.errors),
-                                const Gap(12),
-                              ],
-                              for (var i = 0; i < filtered.length; i++) ...[
-                                AppFadeSlide(
-                                  delay: AppMotion.stagger(i),
-                                  play: i < 10,
-                                  child: ContainerCard(
-                                    item: filtered[i],
-                                    onTap: () {
-                                      final containerKey =
-                                          filtered[i].container.id ??
-                                          filtered[i].container.name;
-                                      unawaited(
-                                        context.push(
-                                          '${AppRoutes.containers}/${filtered[i].serverId}/${Uri.encodeComponent(containerKey)}',
-                                          extra: filtered[i],
+                            return Column(
+                              key: const ValueKey('containers_data'),
+                              children: [
+                                if (result.errors.isNotEmpty) ...[
+                                  _PartialErrorBanner(errors: result.errors),
+                                  const Gap(12),
+                                ],
+                                for (var i = 0; i < filtered.length; i++) ...[
+                                  _intro.wrap(
+                                    i,
+                                    id:
+                                        '${filtered[i].serverId}/'
+                                        '${filtered[i].container.id ?? filtered[i].container.name}',
+                                    ContainerCard(
+                                      item: filtered[i],
+                                      onTap: () {
+                                        final containerKey =
+                                            filtered[i].container.id ??
+                                            filtered[i].container.name;
+                                        unawaited(
+                                          context.push(
+                                            '${AppRoutes.containers}/${filtered[i].serverId}/${Uri.encodeComponent(containerKey)}',
+                                            extra: filtered[i],
+                                          ),
+                                        );
+                                      },
+                                      onAction: (action) => unawaited(
+                                        _handleAction(
+                                          context,
+                                          ref,
+                                          filtered[i],
+                                          action,
                                         ),
-                                      );
-                                    },
-                                    onAction: (action) => unawaited(
-                                      _handleAction(
-                                        context,
-                                        ref,
-                                        filtered[i],
-                                        action,
                                       ),
                                     ),
                                   ),
-                                ),
-                                const Gap(12),
+                                  const Gap(12),
+                                ],
+                                const SizedBox(height: 12),
                               ],
-                              const SizedBox(height: 12),
-                            ],
-                          );
-                        },
-                        loading: () => const Padding(
-                          padding: EdgeInsets.only(top: 16),
-                          child: _ContainersSkeletonBlock(),
-                        ),
-                        error: (error, stack) => ErrorStateView(
-                          title: 'Failed to load containers',
-                          message: error.toString(),
-                          onRetry: () => ref.invalidate(containersProvider),
+                            );
+                          },
+                          loading: () => const Padding(
+                            key: ValueKey('containers_loading'),
+                            padding: EdgeInsets.only(top: 16),
+                            child: _ContainersSkeletonBlock(),
+                          ),
+                          error: (error, stack) => ErrorStateView(
+                            key: const ValueKey('containers_error'),
+                            title: 'Failed to load containers',
+                            message: error.toString(),
+                            onRetry: () => ref.invalidate(containersProvider),
+                          ),
                         ),
                       ),
                     ],
@@ -733,7 +741,7 @@ int _compareMetric(double? a, double? b, bool descending) {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({super.key});
 
   @override
   Widget build(BuildContext context) {

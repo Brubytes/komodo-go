@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/shared/logs/log_line.dart';
@@ -141,11 +142,7 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
   void _jumpToBottom({bool animate = true}) {
     if (!_scroll.hasClients) return;
     if (animate && _scroll.offset < 3000) {
-      _scroll.animateTo(
-        0,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-      );
+      unawaited(AppMotion.animateOrJump(_scroll, 0, context));
     } else {
       _scroll.jumpTo(0);
     }
@@ -295,37 +292,45 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
             top: 0,
             child: LinearProgressIndicator(minHeight: 2),
           ),
-        if (!_following && !_atTop)
-          Positioned(
-            top: 10,
-            right: 10,
-            child: _JumpButton(
-              key: const ValueKey('server_log_jump_top'),
-              icon: Icons.arrow_upward,
-              label: 'Top',
-              onPressed: _jumpToTop,
+        Positioned(
+          top: 10,
+          right: 10,
+          child: AppSwitcher(
+            animateSize: false,
+            child: !_following && !_atTop
+                ? _JumpButton(
+                    key: const ValueKey('server_log_jump_top'),
+                    icon: Icons.arrow_upward,
+                    label: 'Top',
+                    onPressed: _jumpToTop,
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
+        Positioned(
+          bottom: 12,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: AppSwitcher(
+              animateSize: false,
+              child: !_following
+                  ? _JumpButton(
+                      key: const ValueKey('server_log_jump_latest'),
+                      icon: Icons.arrow_downward,
+                      label: switch (_pending) {
+                        null => 'Latest',
+                        -1 => 'New lines',
+                        1 => '1 new line',
+                        final count => '$count new lines',
+                      },
+                      emphasized: _pending != null,
+                      onPressed: _showLatest,
+                    )
+                  : const SizedBox.shrink(),
             ),
           ),
-        if (!_following)
-          Positioned(
-            bottom: 12,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: _JumpButton(
-                key: const ValueKey('server_log_jump_latest'),
-                icon: Icons.arrow_downward,
-                label: switch (_pending) {
-                  null => 'Latest',
-                  -1 => 'New lines',
-                  1 => '1 new line',
-                  final count => '$count new lines',
-                },
-                emphasized: _pending != null,
-                onPressed: _showLatest,
-              ),
-            ),
-          ),
+        ),
       ],
     );
   }
@@ -360,25 +365,29 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
             top: 0,
             child: LinearProgressIndicator(minHeight: 2),
           ),
-        if (_pending != null)
-          Positioned(
-            bottom: 12,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: _JumpButton(
-                key: const ValueKey('server_log_jump_latest'),
-                icon: Icons.arrow_downward,
-                label: switch (_pending) {
-                  -1 => 'New lines',
-                  1 => '1 new line',
-                  final count => '$count new lines',
-                },
-                emphasized: true,
-                onPressed: _showLatest,
-              ),
+        Positioned(
+          bottom: 12,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: AppSwitcher(
+              animateSize: false,
+              child: _pending != null
+                  ? _JumpButton(
+                      key: const ValueKey('server_log_jump_latest'),
+                      icon: Icons.arrow_downward,
+                      label: switch (_pending) {
+                        -1 => 'New lines',
+                        1 => '1 new line',
+                        final count => '$count new lines',
+                      },
+                      emphasized: true,
+                      onPressed: _showLatest,
+                    )
+                  : const SizedBox.shrink(),
             ),
           ),
+        ),
       ],
     );
   }

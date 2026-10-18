@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/features/servers/data/models/system_information.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
@@ -148,6 +149,7 @@ class _SystemProcessesContentState extends State<SystemProcessesContent> {
           else
             for (final process in processes.take(50))
               ExpansionTile(
+                expansionAnimationStyle: AppMotion.expansionStyle(context),
                 key: PageStorageKey<String>(
                   'server_process_${process.pid}',
                 ),

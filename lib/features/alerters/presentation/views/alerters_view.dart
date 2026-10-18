@@ -18,11 +18,18 @@ import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
 import 'package:komodo_go/features/alerters/presentation/providers/alerters_provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-class AlertersView extends ConsumerWidget {
+class AlertersView extends ConsumerStatefulWidget {
   const AlertersView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AlertersView> createState() => _AlertersViewState();
+}
+
+class _AlertersViewState extends ConsumerState<AlertersView> {
+  late final _intro = AppListIntro();
+
+  @override
+  Widget build(BuildContext context) {
     final alertersAsync = ref.watch(alertersProvider);
     final actionsState = ref.watch(alerterActionsProvider);
 
@@ -44,10 +51,10 @@ class AlertersView extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
                   separatorBuilder: (_, _) => const Gap(12),
-                  itemBuilder: (context, index) => AppFadeSlide(
-                    delay: AppMotion.stagger(index),
-                    play: index < 10,
-                    child: _AlerterTile(item: items[index]),
+                  itemBuilder: (context, index) => _intro.wrap(
+                    index,
+                    _AlerterTile(item: items[index]),
+                    id: items[index].id,
                   ),
                 );
               },

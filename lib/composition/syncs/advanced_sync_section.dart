@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
@@ -283,6 +284,7 @@ class _AdvancedSyncSectionState extends ConsumerState<AdvancedSyncSection> {
     }
     await showDialog<void>(
       context: context,
+      animationStyle: AppMotion.dialogStyle(context),
       builder: (context) => AlertDialog(
         title: const Text('Exported TOML'),
         content: SizedBox(
@@ -309,6 +311,7 @@ class _AdvancedSyncSectionState extends ConsumerState<AdvancedSyncSection> {
     final initial = _preview.info.remoteContents.firstOrNull;
     final draft = await showDialog<_SyncFileDraft>(
       context: context,
+      animationStyle: AppMotion.dialogStyle(context),
       builder: (_) => _SyncFileEditorDialog(
         initial: _SyncFileDraft(
           resourcePath:

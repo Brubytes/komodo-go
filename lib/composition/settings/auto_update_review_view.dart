@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -280,6 +281,7 @@ class _AutoUpdateReviewViewState extends ConsumerState<AutoUpdateReviewView> {
   Future<void> _deploySelected() async {
     final confirmed = await showDialog<bool>(
       context: context,
+      animationStyle: AppMotion.dialogStyle(context),
       builder: (context) => AlertDialog(
         title: const Text('Deploy selected updates?'),
         content: Text(

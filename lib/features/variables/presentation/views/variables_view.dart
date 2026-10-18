@@ -18,11 +18,18 @@ import 'package:komodo_go/features/variables/presentation/providers/variables_pr
 import 'package:komodo_go/features/variables/presentation/widgets/variable_editor_sheet.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-class VariablesView extends ConsumerWidget {
+class VariablesView extends ConsumerStatefulWidget {
   const VariablesView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VariablesView> createState() => _VariablesViewState();
+}
+
+class _VariablesViewState extends ConsumerState<VariablesView> {
+  late final _intro = AppListIntro();
+
+  @override
+  Widget build(BuildContext context) {
     final variablesAsync = ref.watch(variablesProvider);
     final actionsState = ref.watch(variableActionsProvider);
 
@@ -73,10 +80,9 @@ class VariablesView extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   itemCount: variables.length,
                   separatorBuilder: (_, _) => const Gap(AppSpacing.md),
-                  itemBuilder: (context, index) => AppFadeSlide(
-                    delay: AppMotion.stagger(index),
-                    play: index < 10,
-                    child: _VariableTile(
+                  itemBuilder: (context, index) => _intro.wrap(
+                    index,
+                    _VariableTile(
                       variable: variables[index],
                       onEdit: () async {
                         final variable = variables[index];
@@ -130,6 +136,7 @@ class VariablesView extends ConsumerWidget {
                         );
                       },
                     ),
+                    id: variables[index].name,
                   ),
                 );
               },

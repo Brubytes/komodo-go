@@ -6,6 +6,7 @@ import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
@@ -35,95 +36,136 @@ class HomeServerStatTile extends StatelessWidget {
 
     return SizedBox(
       width: 220,
-      child: AppCardSurface(
-        padding: EdgeInsets.zero,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: cardRadius,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () {
-              final id = server.id;
-              if (id.isEmpty) return;
-              context.go(
-                '${AppRoutes.servers}/$id?name=${Uri.encodeComponent(server.name)}',
-              );
-            },
+      child: AppPressable(
+        child: AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Material(
+            color: Colors.transparent,
             borderRadius: cardRadius,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                // This tile is rendered inside a fixed-height horizontal list (currently 130).
-                // Use a compact layout to prevent vertical overflow.
-                final isCompact = constraints.maxHeight <= 132;
-                final padding = isCompact ? 10.0 : 14.0;
-                final headerGap = isCompact ? 3.0 : 10.0;
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () {
+                final id = server.id;
+                if (id.isEmpty) return;
+                context.go(
+                  '${AppRoutes.servers}/$id?name=${Uri.encodeComponent(server.name)}',
+                );
+              },
+              borderRadius: cardRadius,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // This tile is rendered inside a fixed-height horizontal list (currently 130).
+                  // Use a compact layout to prevent vertical overflow.
+                  final isCompact = constraints.maxHeight <= 132;
+                  final padding = isCompact ? 10.0 : 14.0;
+                  final headerGap = isCompact ? 3.0 : 10.0;
 
-                return Padding(
-                  padding: EdgeInsets.all(padding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: statusColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const Gap(8),
-                          Expanded(
-                            child: Text(
-                              server.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          Icon(statusIcon, size: 14, color: statusColor),
-                        ],
-                      ),
-                      Gap(headerGap),
-                      if (isLoading)
+                  return Padding(
+                    padding: EdgeInsets.all(padding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Row(
                           children: [
-                            const AppInlineSkeleton(),
-                            const Gap(8),
-                            Text(
-                              'Loading stats',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: statusColor,
+                                shape: BoxShape.circle,
+                              ),
                             ),
+                            const Gap(8),
+                            Expanded(
+                              child: Text(
+                                server.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            Icon(statusIcon, size: 14, color: statusColor),
                           ],
-                        )
-                      else if (isCompact)
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        ),
+                        Gap(headerGap),
+                        if (isLoading)
+                          Row(
                             children: [
-                              _CompactStatLine(
+                              const AppInlineSkeleton(),
+                              const Gap(8),
+                              Text(
+                                'Loading stats',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: scheme.onSurfaceVariant),
+                              ),
+                            ],
+                          )
+                        else if (isCompact)
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _CompactStatLine(
+                                  icon: AppIcons.cpu,
+                                  label: 'CPU',
+                                  primary: _percentLabel(
+                                    statsValue?.cpuPercent,
+                                  ),
+                                  color: scheme.primary,
+                                ),
+                                _CompactStatLine(
+                                  icon: AppIcons.memory,
+                                  label: 'Memory',
+                                  primary: _percentLabel(
+                                    statsValue?.memPercent,
+                                  ),
+                                  secondary: _absoluteLabel(
+                                    statsValue?.memUsedGb,
+                                    statsValue?.memTotalGb,
+                                  ),
+                                  color: scheme.primary,
+                                ),
+                                _CompactStatLine(
+                                  icon: AppIcons.hardDrive,
+                                  label: 'Disk',
+                                  primary: _percentLabel(
+                                    statsValue?.diskPercent,
+                                  ),
+                                  secondary: _absoluteLabel(
+                                    statsValue?.diskUsedGb,
+                                    statsValue?.diskTotalGb,
+                                  ),
+                                  color: scheme.primary,
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Column(
+                            children: [
+                              _StatRow(
                                 icon: AppIcons.cpu,
                                 label: 'CPU',
-                                primary: _percentLabel(statsValue?.cpuPercent),
+                                percent: statsValue?.cpuPercent,
                                 color: scheme.primary,
                               ),
-                              _CompactStatLine(
+                              const Gap(10),
+                              _StatRow(
                                 icon: AppIcons.memory,
                                 label: 'Memory',
-                                primary: _percentLabel(statsValue?.memPercent),
+                                percent: statsValue?.memPercent,
                                 secondary: _absoluteLabel(
                                   statsValue?.memUsedGb,
                                   statsValue?.memTotalGb,
                                 ),
                                 color: scheme.primary,
                               ),
-                              _CompactStatLine(
+                              const Gap(10),
+                              _StatRow(
                                 icon: AppIcons.hardDrive,
                                 label: 'Disk',
-                                primary: _percentLabel(statsValue?.diskPercent),
+                                percent: statsValue?.diskPercent,
                                 secondary: _absoluteLabel(
                                   statsValue?.diskUsedGb,
                                   statsValue?.diskTotalGb,
@@ -132,44 +174,11 @@ class HomeServerStatTile extends StatelessWidget {
                               ),
                             ],
                           ),
-                        )
-                      else
-                        Column(
-                          children: [
-                            _StatRow(
-                              icon: AppIcons.cpu,
-                              label: 'CPU',
-                              percent: statsValue?.cpuPercent,
-                              color: scheme.primary,
-                            ),
-                            const Gap(10),
-                            _StatRow(
-                              icon: AppIcons.memory,
-                              label: 'Memory',
-                              percent: statsValue?.memPercent,
-                              secondary: _absoluteLabel(
-                                statsValue?.memUsedGb,
-                                statsValue?.memTotalGb,
-                              ),
-                              color: scheme.primary,
-                            ),
-                            const Gap(10),
-                            _StatRow(
-                              icon: AppIcons.hardDrive,
-                              label: 'Disk',
-                              percent: statsValue?.diskPercent,
-                              secondary: _absoluteLabel(
-                                statsValue?.diskUsedGb,
-                                statsValue?.diskTotalGb,
-                              ),
-                              color: scheme.primary,
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                );
-              },
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -236,37 +245,43 @@ class HomeAlertPreviewTile extends StatelessWidget {
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 6,
+    return AppPressable(
+      enabled: route != null,
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: cardRadius,
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 6,
+            ),
+            dense: true,
+            visualDensity: const VisualDensity(vertical: -1),
+            minLeadingWidth: 0,
+            horizontalTitleGap: 12,
+            leading: Icon(_alertIcon(alert.level), color: color),
+            title: Text(title),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (primary != null && primary.isNotEmpty) Text(primary),
+                const Gap(2),
+                Text(
+                  _formatTimestamp(alert.timestamp.toLocal()),
+                  style:
+                      Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+            onTap: route == null ? null : () => context.go(route),
           ),
-          dense: true,
-          visualDensity: const VisualDensity(vertical: -1),
-          minLeadingWidth: 0,
-          horizontalTitleGap: 12,
-          leading: Icon(_alertIcon(alert.level), color: color),
-          title: Text(title),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (primary != null && primary.isNotEmpty) Text(primary),
-              const Gap(2),
-              Text(
-                _formatTimestamp(alert.timestamp.toLocal()),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ],
-          ),
-          onTap: route == null ? null : () => context.go(route),
         ),
       ),
     );
@@ -313,75 +328,78 @@ class HomeAlertSummaryCard extends StatelessWidget {
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
+    return AppPressable(
+      enabled: onTap != null,
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
           borderRadius: cardRadius,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: cardRadius,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(AppIcons.warning, color: accent, size: 18),
                   ),
-                  child: Icon(AppIcons.warning, color: accent, size: 18),
-                ),
-                const Gap(10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const Gap(10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Unresolved alerts',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const Gap(4),
+                        Text(
+                          summary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Gap(10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        'Unresolved alerts',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+                      AppAnimatedValue.text(
+                        count.toString(),
+                        style: textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          height: 1,
                         ),
                       ),
-                      const Gap(4),
+                      const Gap(2),
                       Text(
-                        summary,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelMedium?.copyWith(
+                        'open',
+                        style: textTheme.labelSmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
-                ),
-                const Gap(10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      count.toString(),
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                      ),
-                    ),
-                    const Gap(2),
-                    Text(
-                      'open',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -442,7 +460,7 @@ class _StatRow extends StatelessWidget {
                   ),
                   if (showSecondary) ...[
                     const Gap(2),
-                    Text(
+                    AppAnimatedValue.text(
                       secondary!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -457,7 +475,7 @@ class _StatRow extends StatelessWidget {
               ),
             ),
             const Gap(8),
-            Text(
+            AppAnimatedValue.text(
               percentLabel,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: scheme.onSurface,
@@ -557,7 +575,7 @@ class _CompactStatLine extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
+              AppAnimatedValue.text(
                 primary,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -565,7 +583,7 @@ class _CompactStatLine extends StatelessWidget {
               ),
               if (showSecondary) ...[
                 const Gap(1),
-                Text(
+                AppAnimatedValue.text(
                   secondaryValue,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

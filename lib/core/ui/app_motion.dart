@@ -1,111 +1,151 @@
-import 'dart:async';
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
+export 'app_animated_value.dart';
+export 'app_expand.dart';
+export 'app_fade_slide.dart';
+export 'app_list_intro.dart';
+export 'app_pressable.dart';
+export 'app_switcher.dart';
+
+/// Single source of truth for UI motion.
+///
+/// Motion is short, decelerating and spatially honest: things that enter ease
+/// out, things that leave ease in (and are faster than entrances). Nothing
+/// bounces. Under reduced motion (`MediaQuery.disableAnimations`) all
+/// movement, scaling, size and stagger animation is removed; at most a short
+/// opacity fade remains.
+///
+/// Importing this file also exports the shared motion widgets
+/// (`AppFadeSlide`, `AppSwitcher`, `AppExpand`, `AppChevron`, `AppPressable`,
+/// `AppAnimatedValue`, `AppListIntro`).
 abstract final class AppMotion {
   AppMotion._();
 
-  static const Duration fast = Duration(milliseconds: 120);
-  static const Duration base = Duration(milliseconds: 180);
-  static const Duration slow = Duration(milliseconds: 260);
+  // --- Durations -----------------------------------------------------------
 
-  static const Curve enterCurve = Curves.easeOutCubic;
-  static const Curve exitCurve = Curves.easeInCubic;
+  /// Press feedback, icon swaps, chevrons.
+  static const Duration micro = Duration(milliseconds: 100);
 
-  static const double slideOffsetY = 12;
+  /// Fades, value changes, small state flips, exits of switchers.
+  static const Duration fast = Duration(milliseconds: 150);
 
-  static Duration stagger(int index, {int stepMs = 20, int maxMs = 160}) {
+  /// Switchers, expand/collapse, list intros, dialogs in.
+  static const Duration base = Duration(milliseconds: 250);
+
+  /// Tab changes, programmatic scrolls, sheets in, page-level motion.
+  static const Duration slow = Duration(milliseconds: 350);
+
+  /// Period of one skeleton shimmer sweep (ambient, not an interaction).
+  static const Duration shimmer = Duration(milliseconds: 1600);
+
+  // --- Curves --------------------------------------------------------------
+
+  /// On-screen changes (size, scroll, tab).
+  static const Curve standard = Easing.standard;
+
+  /// Things appearing.
+  static const Curve enter = Easing.emphasizedDecelerate;
+
+  /// Things leaving.
+  static const Curve exit = Easing.emphasizedAccelerate;
+
+  /// Large movement (scroll-to-top, header collapse).
+  static const Curve emphasized = Curves.easeInOutCubicEmphasized;
+
+  // --- Distances / scale ---------------------------------------------------
+
+  /// Vertical travel of list/section intros, in logical pixels.
+  static const double slideOffsetY = 8;
+
+  /// Scale of a pressed `AppPressable`.
+  static const double pressScale = 0.97;
+
+  // --- Stagger -------------------------------------------------------------
+
+  /// Maximum number of items that take part in a list intro.
+  static const int introItemLimit = 8;
+
+  /// Delay of the item at [index]: 30ms steps, capped at 150ms.
+  static Duration stagger(int index, {int stepMs = 30, int maxMs = 150}) {
     final ms = (index * stepMs).clamp(0, maxMs);
     return Duration(milliseconds: ms);
   }
-}
 
-class AppFadeSlide extends StatefulWidget {
-  const AppFadeSlide({
-    required this.child,
-    super.key,
-    this.duration = AppMotion.base,
-    this.curve = AppMotion.enterCurve,
-    this.delay = Duration.zero,
-    this.offsetY = AppMotion.slideOffsetY,
-    this.play = true,
-  });
+  // --- Reduced motion ------------------------------------------------------
 
-  final Widget child;
-  final Duration duration;
-  final Curve curve;
-  final Duration delay;
-  final double offsetY;
-  final bool play;
+  /// Whether the platform asks for reduced motion (iOS "Reduce Motion",
+  /// Android "Remove animations").
+  static bool reducedOf(BuildContext context) =>
+      MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
-  @override
-  State<AppFadeSlide> createState() => _AppFadeSlideState();
-}
+  /// [duration], or [Duration.zero] under reduced motion.
+  static Duration durationOf(BuildContext context, Duration duration) =>
+      reducedOf(context) ? Duration.zero : duration;
 
-class _AppFadeSlideState extends State<AppFadeSlide>
-    with SingleTickerProviderStateMixin {
-  // Only created when the widget actually animates, so non-animating cards
-  // (the vast majority in long lists) carry no controller or ticker.
-  AnimationController? _controller;
-  Animation<double>? _animation;
-  Timer? _delayTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.play) _startAnimation();
-  }
-
-  @override
-  void didUpdateWidget(AppFadeSlide oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final controller = _controller;
-    if (controller != null && !widget.play && controller.value != 1) {
-      _delayTimer?.cancel();
-      controller.value = 1;
-    }
-  }
-
-  void _startAnimation() {
-    final controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    );
-    _controller = controller;
-    _animation = CurvedAnimation(parent: controller, curve: widget.curve);
-    if (widget.delay == Duration.zero) {
-      controller.forward();
+  /// Scrolls [controller] to [offset]; jumps instead under reduced motion or
+  /// when the controller is not attached to a scroll view.
+  static Future<void> animateOrJump(
+    ScrollController controller,
+    double offset,
+    BuildContext context, {
+    Duration? duration,
+    Curve? curve,
+  }) async {
+    if (!controller.hasClients) return;
+    if (reducedOf(context)) {
+      controller.jumpTo(offset);
       return;
     }
-    _delayTimer = Timer(widget.delay, () {
-      if (mounted) controller.forward();
-    });
+    await controller.animateTo(
+      offset,
+      duration: duration ?? slow,
+      curve: curve ?? emphasized,
+    );
   }
 
-  @override
-  void dispose() {
-    _delayTimer?.cancel();
-    _controller?.dispose();
-    super.dispose();
+  /// Animation style for modal bottom sheets.
+  static AnimationStyle sheetStyle(BuildContext context) {
+    if (reducedOf(context)) return AnimationStyle.noAnimation;
+    return const AnimationStyle(
+      duration: slow,
+      reverseDuration: base,
+      curve: enter,
+      reverseCurve: exit,
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final animation = _animation;
-    if (animation == null) return widget.child;
+  /// Animation style for dialogs (reduced: short fade only).
+  static AnimationStyle dialogStyle(BuildContext context) {
+    if (reducedOf(context)) {
+      return const AnimationStyle(duration: fast, reverseDuration: fast);
+    }
+    return const AnimationStyle(
+      duration: base,
+      reverseDuration: fast,
+      curve: enter,
+      reverseCurve: exit,
+    );
+  }
 
-    return AnimatedBuilder(
-      animation: animation,
-      child: widget.child,
-      builder: (context, child) {
-        final value = animation.value;
-        final dy = lerpDouble(widget.offsetY, 0, value) ?? 0;
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(offset: Offset(0, dy), child: child),
-        );
-      },
+  /// Animation style for expand/collapse of `ExpansionTile`s.
+  static AnimationStyle expansionStyle(BuildContext context) {
+    if (reducedOf(context)) return AnimationStyle.noAnimation;
+    return const AnimationStyle(
+      duration: base,
+      reverseDuration: base,
+      curve: standard,
+      reverseCurve: standard,
+    );
+  }
+
+  /// Animation style for snack bars, for `showSnackBar(snackBarAnimationStyle:)`.
+  static AnimationStyle snackBarStyle(BuildContext context) {
+    if (reducedOf(context)) return AnimationStyle.noAnimation;
+    return const AnimationStyle(
+      duration: base,
+      reverseDuration: fast,
+      curve: enter,
+      reverseCurve: exit,
     );
   }
 }

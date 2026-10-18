@@ -6,6 +6,7 @@ import 'package:gap/gap.dart';
 import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/detail/detail_action_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
@@ -66,103 +67,106 @@ class ContainerCard extends StatelessWidget {
 
     final radius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppCardSurface(
-      key: ValueKey('container_card_$keyId'),
-      padding: EdgeInsets.zero,
-      child: GestureDetector(
-        onLongPressStart: hasMenu
-            ? (details) {
-                unawaited(HapticFeedback.selectionClick());
-                unawaited(
-                  showDetailActionMenu(
-                    context,
-                    groups: menu,
-                    position: details.globalPosition,
-                  ),
-                );
-              }
-            : null,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: radius,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
+    return AppPressable(
+      enabled: onTap != null,
+      child: AppCardSurface(
+        key: ValueKey('container_card_$keyId'),
+        padding: EdgeInsets.zero,
+        child: GestureDetector(
+          onLongPressStart: hasMenu
+              ? (details) {
+                  unawaited(HapticFeedback.selectionClick());
+                  unawaited(
+                    showDetailActionMenu(
+                      context,
+                      groups: menu,
+                      position: details.globalPosition,
+                    ),
+                  );
+                }
+              : null,
+          child: Material(
+            color: Colors.transparent,
             borderRadius: radius,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ContainerIconTile(tone: status.tone),
-                      const Gap(AppSpacing.md),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.sm),
-                          child: Text(
-                            name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: radius,
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ContainerIconTile(tone: status.tone),
+                        const Gap(AppSpacing.md),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: AppSpacing.sm),
+                            child: Text(
+                              name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const Gap(AppSpacing.md),
-                      ContainerStatusPill(
-                        status: status,
-                        menu: menu,
-                        menuKey: ValueKey('container_card_menu_$keyId'),
-                      ),
-                    ],
-                  ),
-                  const Gap(AppSpacing.md),
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
-                    children: [
-                      if (item.serverName.isNotEmpty)
-                        ContainerInfoChip(
-                          icon: AppIcons.server,
-                          label: item.serverName,
+                        const Gap(AppSpacing.md),
+                        ContainerStatusPill(
+                          status: status,
+                          menu: menu,
+                          menuKey: ValueKey('container_card_menu_$keyId'),
                         ),
-                      if (image.isNotEmpty)
-                        ContainerInfoChip(
-                          icon: AppIcons.package,
-                          label: formatContainerImage(image),
-                          tooltip: image,
-                        ),
-                      if (networks.isNotEmpty)
-                        ContainerInfoChip(
-                          icon: AppIcons.network,
-                          label:
-                              '${networks.take(2).join(', ')}'
-                              '${networks.length > 2 ? '…' : ''}',
-                        ),
-                      for (final p in shownPorts) ContainerInfoChip(label: p),
-                      if (extraPorts > 0)
-                        ContainerInfoChip(label: '+$extraPorts'),
-                    ],
-                  ),
-                  if (showMetrics) ...[
-                    const Gap(AppSpacing.md),
-                    ContainerMetricsGrid(stats: stats),
-                  ] else if (exitInfo != null && exitInfo.isNotEmpty) ...[
-                    const Gap(AppSpacing.sm),
-                    Text(
-                      exitInfo,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      ],
                     ),
+                    const Gap(AppSpacing.md),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        if (item.serverName.isNotEmpty)
+                          ContainerInfoChip(
+                            icon: AppIcons.server,
+                            label: item.serverName,
+                          ),
+                        if (image.isNotEmpty)
+                          ContainerInfoChip(
+                            icon: AppIcons.package,
+                            label: formatContainerImage(image),
+                            tooltip: image,
+                          ),
+                        if (networks.isNotEmpty)
+                          ContainerInfoChip(
+                            icon: AppIcons.network,
+                            label:
+                                '${networks.take(2).join(', ')}'
+                                '${networks.length > 2 ? '…' : ''}',
+                          ),
+                        for (final p in shownPorts) ContainerInfoChip(label: p),
+                        if (extraPorts > 0)
+                          ContainerInfoChip(label: '+$extraPorts'),
+                      ],
+                    ),
+                    if (showMetrics) ...[
+                      const Gap(AppSpacing.md),
+                      ContainerMetricsGrid(stats: stats),
+                    ] else if (exitInfo != null && exitInfo.isNotEmpty) ...[
+                      const Gap(AppSpacing.sm),
+                      Text(
+                        exitInfo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

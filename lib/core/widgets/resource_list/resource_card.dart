@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/detail/detail_action_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -220,44 +221,47 @@ class ResourceCard extends StatelessWidget {
     );
 
     return RepaintBoundary(
-      child: AppCardSurface(
-        padding: EdgeInsets.zero,
-        child: GestureDetector(
-          onLongPressStart: _hasMenu
-              ? (details) {
-                  unawaited(HapticFeedback.selectionClick());
-                  unawaited(
-                    showDetailActionMenu(
-                      context,
-                      groups: _resolveMenu(),
-                      position: details.globalPosition,
-                    ),
-                  );
-                }
-              : null,
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: radius,
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: radius,
-              child: Stack(
-                children: [
-                  SizedBox(width: double.infinity, child: content),
-                  if (showAccent && status != null)
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: _accentWidth,
-                      // Clipped by the card's rounded Material shape.
-                      child: ColoredBox(
-                        key: const ValueKey('resource_card_accent'),
-                        color: status.accentColor(scheme),
+      child: AppPressable(
+        enabled: onTap != null,
+        child: AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: GestureDetector(
+            onLongPressStart: _hasMenu
+                ? (details) {
+                    unawaited(HapticFeedback.selectionClick());
+                    unawaited(
+                      showDetailActionMenu(
+                        context,
+                        groups: _resolveMenu(),
+                        position: details.globalPosition,
                       ),
-                    ),
-                ],
+                    );
+                  }
+                : null,
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: radius,
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: radius,
+                child: Stack(
+                  children: [
+                    SizedBox(width: double.infinity, child: content),
+                    if (showAccent && status != null)
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: _accentWidth,
+                        // Clipped by the card's rounded Material shape.
+                        child: ColoredBox(
+                          key: const ValueKey('resource_card_accent'),
+                          color: status.accentColor(scheme),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

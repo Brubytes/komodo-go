@@ -12,11 +12,18 @@ import 'package:komodo_go/features/builders/presentation/providers/builders_prov
 import 'package:komodo_go/features/builders/presentation/views/builders/builder_tile.dart';
 import 'package:komodo_go/features/builders/presentation/views/builders/builders_view_states.dart';
 
-class BuildersView extends ConsumerWidget {
+class BuildersView extends ConsumerStatefulWidget {
   const BuildersView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BuildersView> createState() => _BuildersViewState();
+}
+
+class _BuildersViewState extends ConsumerState<BuildersView> {
+  late final _intro = AppListIntro();
+
+  @override
+  Widget build(BuildContext context) {
     final buildersAsync = ref.watch(buildersProvider);
     final actionsState = ref.watch(builderActionsProvider);
 
@@ -40,10 +47,10 @@ class BuildersView extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
                   separatorBuilder: (_, _) => const Gap(12),
-                  itemBuilder: (context, index) => AppFadeSlide(
-                    delay: AppMotion.stagger(index),
-                    play: index < 10,
-                    child: BuilderTile(item: items[index]),
+                  itemBuilder: (context, index) => _intro.wrap(
+                    index,
+                    BuilderTile(item: items[index]),
+                    id: items[index].id,
                   ),
                 );
               },

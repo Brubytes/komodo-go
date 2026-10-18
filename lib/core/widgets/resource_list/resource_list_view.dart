@@ -40,9 +40,12 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
   bool _isSearchVisible = false;
   bool _areFiltersExpanded = false;
 
-  /// True until the first list frame was shown; only then do the first few
-  /// cards play their entrance animation (not on rebuilds/polls/scrolling).
-  bool _introPending = true;
+  /// One intro policy: only the first few cards animate on the first list
+  /// frame; later arrivals just fade (never on rebuilds/polls/scrolling).
+  final AppListIntro _intro = AppListIntro();
+
+  /// Kind of the last built list state, to cross-fade only on real transitions.
+  String? _lastKind;
 
   _Derived<T>? _derived;
 
@@ -155,6 +158,14 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
     );
   }
 
+  /// True when the list state kind changed since the last build (so a
+  /// cross-fade is due); false on first build and on refreshes.
+  bool _transition(String kind) {
+    final changed = _lastKind != null && _lastKind != kind;
+    _lastKind = kind;
+    return changed;
+  }
+
   @override
   Widget build(BuildContext context) {
     final config = widget.config;
@@ -263,10 +274,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                   sliver: SliverToBoxAdapter(
                     child: Column(
                       children: [
-                        AnimatedSwitcher(
-                          duration: AppMotion.base,
-                          switchInCurve: AppMotion.enterCurve,
-                          switchOutCurve: AppMotion.exitCurve,
+                        AppSwitcher(
                           child: _isSearchVisible
                               ? Column(
                                   key: const ValueKey(
@@ -407,43 +415,43 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                   data: (items) {
                     final filtered = derived.filtered;
                     if (filtered.isEmpty) {
+                      final fade = _transition('empty');
                       return [
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          sliver: SliverToBoxAdapter(
-                            child: _EmptyState(
-                              icon: config.icon,
-                              resourceName: config.resourceName,
-                              hasFilters:
-                                  hasActiveResourceFilters(
-                                    query: searchQuery,
-                                    selectedTags: selectedTags,
-                                    templateFilter: templateFilter,
-                                  ) ||
-                                  prefs.activeCount > 0,
-                              onClearFilters: clearAllFilters,
-                              tagOptions: availableTags,
-                              onSelectTags: (value) =>
-                                  ref
-                                          .read(
-                                            resourceTagFilterProvider(
-                                              config.kind,
-                                            ).notifier,
-                                          )
-                                          .selected =
-                                      value,
+                        _SliverFadeIn(
+                          key: const ValueKey('resource_list_empty'),
+                          play: fade,
+                          sliver: SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            sliver: SliverToBoxAdapter(
+                              child: _EmptyState(
+                                icon: config.icon,
+                                resourceName: config.resourceName,
+                                hasFilters:
+                                    hasActiveResourceFilters(
+                                      query: searchQuery,
+                                      selectedTags: selectedTags,
+                                      templateFilter: templateFilter,
+                                    ) ||
+                                    prefs.activeCount > 0,
+                                onClearFilters: clearAllFilters,
+                                tagOptions: availableTags,
+                                onSelectTags: (value) =>
+                                    ref
+                                            .read(
+                                              resourceTagFilterProvider(
+                                                config.kind,
+                                              ).notifier,
+                                            )
+                                            .selected =
+                                        value,
+                              ),
                             ),
                           ),
                         ),
                       ];
                     }
 
-                    final animateIntro = _introPending;
-                    if (animateIntro) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _introPending = false;
-                      });
-                    }
+                    _lastKind = 'data';
                     return [
                       SliverPadding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -466,11 +474,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                                   : ObjectKey(card.key),
                               child: Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
-                                child: AppFadeSlide(
-                                  delay: AppMotion.stagger(i),
-                                  play: animateIntro && i < 8,
-                                  child: card,
-                                ),
+                                child: _intro.wrap(i, card, id: card.key),
                               ),
                             );
                           },
@@ -479,26 +483,34 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                     ];
                   },
                   loading: () => [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      sliver: SliverToBoxAdapter(
-                        child: _ResourceSkeletonList(
-                          title: config.skeletonTitle,
-                          subtitle: config.skeletonSubtitle,
-                          chipLeft: config.skeletonChipLeft,
-                          chipRight: config.skeletonChipRight,
+                    _SliverFadeIn(
+                      key: const ValueKey('resource_list_loading'),
+                      play: _transition('loading'),
+                      sliver: SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        sliver: SliverToBoxAdapter(
+                          child: _ResourceSkeletonList(
+                            title: config.skeletonTitle,
+                            subtitle: config.skeletonSubtitle,
+                            chipLeft: config.skeletonChipLeft,
+                            chipRight: config.skeletonChipRight,
+                          ),
                         ),
                       ),
                     ),
                   ],
                   error: (error, stack) => [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      sliver: SliverToBoxAdapter(
-                        child: ErrorStateView.fromError(
-                          title: 'Failed to load ${config.resourceName}',
-                          error: error,
-                          onRetry: () => config.invalidateList(ref),
+                    _SliverFadeIn(
+                      key: const ValueKey('resource_list_error'),
+                      play: _transition('error'),
+                      sliver: SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        sliver: SliverToBoxAdapter(
+                          child: ErrorStateView.fromError(
+                            title: 'Failed to load ${config.resourceName}',
+                            error: error,
+                            onRetry: () => config.invalidateList(ref),
+                          ),
                         ),
                       ),
                     ),
@@ -507,13 +519,58 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
               ],
             ),
           ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: Theme.of(context).colorScheme.scrim.withValues(alpha: .25),
-              child: const Center(child: AppSkeletonCard()),
+          Positioned.fill(
+            child: AppSwitcher(
+              animateSize: false,
+              alignment: Alignment.center,
+              child: actionsState.isLoading
+                  ? ColoredBox(
+                      key: const ValueKey('resource_action_overlay'),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.scrim.withValues(alpha: .25),
+                      child: const Center(child: AppSkeletonCard()),
+                    )
+                  : const SizedBox.shrink(key: ValueKey('no_overlay')),
             ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// Fades [sliver] in on creation when [play] is set (sliver-safe).
+class _SliverFadeIn extends StatefulWidget {
+  const _SliverFadeIn({required this.sliver, required this.play, super.key});
+
+  final Widget sliver;
+  final bool play;
+
+  @override
+  State<_SliverFadeIn> createState() => _SliverFadeInState();
+}
+
+class _SliverFadeInState extends State<_SliverFadeIn> {
+  late bool _visible = !widget.play;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_visible) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _visible = true);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverAnimatedOpacity(
+      opacity: _visible ? 1 : 0,
+      duration: AppMotion.reducedOf(context) ? AppMotion.fast : AppMotion.base,
+      curve: AppMotion.enter,
+      sliver: widget.sliver,
     );
   }
 }

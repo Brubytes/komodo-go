@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:komodo_go/core/theme/status_colors.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 
 enum AppSnackBarTone { neutral, success, warning, error }
 
@@ -115,6 +116,7 @@ class AppSnackBar {
           ),
         ),
       ),
+      snackBarAnimationStyle: AppMotion.snackBarStyle(context),
     );
 
     scheduleDismiss();

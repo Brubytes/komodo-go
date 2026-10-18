@@ -16,11 +16,18 @@ import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dar
 import 'package:komodo_go/features/tags/presentation/widgets/tag_editor_sheet.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-class TagsView extends ConsumerWidget {
+class TagsView extends ConsumerStatefulWidget {
   const TagsView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TagsView> createState() => _TagsViewState();
+}
+
+class _TagsViewState extends ConsumerState<TagsView> {
+  late final _intro = AppListIntro();
+
+  @override
+  Widget build(BuildContext context) {
     final tagsAsync = ref.watch(tagsProvider);
     final actionsState = ref.watch(tagActionsProvider);
 
@@ -67,10 +74,9 @@ class TagsView extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   itemCount: tags.length,
                   separatorBuilder: (_, _) => const Gap(AppSpacing.md),
-                  itemBuilder: (context, index) => AppFadeSlide(
-                    delay: AppMotion.stagger(index),
-                    play: index < 10,
-                    child: _TagTile(
+                  itemBuilder: (context, index) => _intro.wrap(
+                    index,
+                    _TagTile(
                       tag: tags[index],
                       onEdit: () async {
                         final tag = tags[index];
@@ -124,6 +130,7 @@ class TagsView extends ConsumerWidget {
                         );
                       },
                     ),
+                    id: tags[index].id,
                   ),
                 );
               },

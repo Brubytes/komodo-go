@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 
 InputDecoration _decorationWithoutSubText(
   InputDecoration decoration, {
@@ -251,15 +252,18 @@ class KomodoSelectMenuField<T> extends StatelessWidget {
       barrierDismissible: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 140),
+      transitionDuration: AppMotion.durationOf(context, AppMotion.base),
       transitionBuilder: (ctx, anim, secondaryAnim, child) {
-        final curve = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
-        return FadeTransition(
-          opacity: curve,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.98, end: 1).animate(curve),
-            child: child,
-          ),
+        final curve = CurvedAnimation(
+          parent: anim,
+          curve: AppMotion.enter,
+          reverseCurve: AppMotion.exit,
+        );
+        final fade = FadeTransition(opacity: curve, child: child);
+        if (AppMotion.reducedOf(ctx)) return fade;
+        return ScaleTransition(
+          scale: Tween<double>(begin: 0.98, end: 1).animate(curve),
+          child: fade,
         );
       },
       pageBuilder: (dialogContext, animation, secondaryAnimation) {

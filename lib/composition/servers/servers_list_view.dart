@@ -37,6 +37,7 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
   late final FocusNode _searchFocusNode;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
+  late final _intro = AppListIntro();
   bool _areFiltersExpanded = false;
 
   @override
@@ -156,10 +157,7 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            AnimatedSwitcher(
-              duration: AppMotion.base,
-              switchInCurve: AppMotion.enterCurve,
-              switchOutCurve: AppMotion.exitCurve,
+            AppSwitcher(
               child: _isSearchVisible
                   ? Column(
                       key: const ValueKey('resource_search_and_filters'),
@@ -262,78 +260,87 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
               ),
             ],
             const Gap(12),
-            serversAsync.when(
-              skipLoadingOnRefresh: true,
-              skipLoadingOnReload: true,
-              data: (servers) {
-                final searched = _applyFilters(
-                  servers,
-                  query: searchQuery,
-                  selectedTags: selectedTags,
-                  templateFilter: templateFilter,
-                  tagNameById: tagNameById,
-                );
-
-                final filtered = prefs.process<Server>(
-                  searched,
-                  severityOf: _severityOf,
-                  nameOf: (item) => item.name,
-                  stateLabelOf: _stateLabel,
-                );
-                if (filtered.isEmpty) {
-                  return _EmptyState(
-                    hasFilters:
-                        _hasActiveFilters(
-                          query: searchQuery,
-                          selectedTags: selectedTags,
-                          templateFilter: templateFilter,
-                        ) ||
-                        prefs.activeCount > 0,
-                    onClearFilters: () {
-                      clearResourceViewFilters(ref, listId);
-                      _searchController.clear();
-                      ref.read(serversSearchQueryProvider.notifier).query = '';
-                      ref.read(serversTagFilterProvider.notifier).clear();
-                      ref
-                              .read(serversTemplateFilterStateProvider.notifier)
-                              .value =
-                          TemplateFilter.exclude;
-                    },
-                    tagOptions: availableTags,
-                    onSelectTags: (value) =>
-                        ref.read(serversTagFilterProvider.notifier).selected =
-                            value,
+            AppSwitcher(
+              animateSize: false,
+              child: serversAsync.when(
+                skipLoadingOnRefresh: true,
+                skipLoadingOnReload: true,
+                data: (servers) {
+                  final searched = _applyFilters(
+                    servers,
+                    query: searchQuery,
+                    selectedTags: selectedTags,
+                    templateFilter: templateFilter,
+                    tagNameById: tagNameById,
                   );
-                }
 
-                return Column(
-                  children: [
-                    for (var i = 0; i < filtered.length; i++) ...[
-                      AppFadeSlide(
-                        delay: AppMotion.stagger(i),
-                        play: i < 10,
-                        child: ServerCard(
-                          server: filtered[i],
-                          displayTags: _displayTags(
-                            filtered[i].tags,
-                            tagNameById,
-                          ),
-                          onTap: () => context.push(
-                            '${AppRoutes.servers}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
+                  final filtered = prefs.process<Server>(
+                    searched,
+                    severityOf: _severityOf,
+                    nameOf: (item) => item.name,
+                    stateLabelOf: _stateLabel,
+                  );
+                  if (filtered.isEmpty) {
+                    return _EmptyState(
+                      key: const ValueKey('servers_empty'),
+                      hasFilters:
+                          _hasActiveFilters(
+                            query: searchQuery,
+                            selectedTags: selectedTags,
+                            templateFilter: templateFilter,
+                          ) ||
+                          prefs.activeCount > 0,
+                      onClearFilters: () {
+                        clearResourceViewFilters(ref, listId);
+                        _searchController.clear();
+                        ref.read(serversSearchQueryProvider.notifier).query =
+                            '';
+                        ref.read(serversTagFilterProvider.notifier).clear();
+                        ref
+                            .read(serversTemplateFilterStateProvider.notifier)
+                            .value = TemplateFilter
+                            .exclude;
+                      },
+                      tagOptions: availableTags,
+                      onSelectTags: (value) =>
+                          ref.read(serversTagFilterProvider.notifier).selected =
+                              value,
+                    );
+                  }
+
+                  return Column(
+                    key: const ValueKey('servers_data'),
+                    children: [
+                      for (var i = 0; i < filtered.length; i++) ...[
+                        _intro.wrap(
+                          i,
+                          id: filtered[i].id,
+                          ServerCard(
+                            server: filtered[i],
+                            displayTags: _displayTags(
+                              filtered[i].tags,
+                              tagNameById,
+                            ),
+                            onTap: () => context.push(
+                              '${AppRoutes.servers}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
+                            ),
                           ),
                         ),
-                      ),
-                      const Gap(12),
+                        const Gap(12),
+                      ],
+                      const SizedBox(height: 12),
                     ],
-                    const SizedBox(height: 12),
-                  ],
-                );
-              },
-              loading: () => const _ServersSkeletonList(),
-              error: (error, stack) => ErrorStateView(
-                title: 'Failed to load servers',
-                message: error.toString(),
-                onRetry: () => ref.invalidate(serversProvider),
+                  );
+                },
+                loading: () => const _ServersSkeletonList(
+                  key: ValueKey('servers_loading'),
+                ),
+                error: (error, stack) => ErrorStateView(
+                  key: const ValueKey('servers_error'),
+                  title: 'Failed to load servers',
+                  message: error.toString(),
+                  onRetry: () => ref.invalidate(serversProvider),
+                ),
               ),
             ),
           ],
@@ -595,6 +602,7 @@ class _EmptyState extends StatelessWidget {
     required this.onClearFilters,
     required this.tagOptions,
     required this.onSelectTags,
+    super.key,
   });
 
   final bool hasFilters;
@@ -664,7 +672,7 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ServersSkeletonList extends StatelessWidget {
-  const _ServersSkeletonList();
+  const _ServersSkeletonList({super.key});
 
   @override
   Widget build(BuildContext context) {

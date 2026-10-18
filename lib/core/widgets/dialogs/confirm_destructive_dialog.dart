@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 
 /// Shows a confirmation dialog and resolves to `true` when confirmed.
 ///
@@ -13,6 +14,7 @@ Future<bool> confirmDestructive(
 }) async {
   final result = await showDialog<bool>(
     context: context,
+    animationStyle: AppMotion.dialogStyle(context),
     builder: (dialogContext) {
       final scheme = Theme.of(dialogContext).colorScheme;
       return AlertDialog(

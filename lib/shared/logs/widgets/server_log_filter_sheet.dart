@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/shared/logs/server_log.dart';
 import 'package:komodo_go/shared/logs/server_log_controller.dart';
 
@@ -12,6 +13,7 @@ Future<void> showServerLogFilterSheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    sheetAnimationStyle: AppMotion.sheetStyle(context),
     useSafeArea: true,
     useRootNavigator: true,
     showDragHandle: true,
@@ -197,6 +199,7 @@ class _SavedFilters extends StatelessWidget {
     var filterName = '';
     final name = await showDialog<String>(
       context: context,
+      animationStyle: AppMotion.dialogStyle(context),
       builder: (context) => AlertDialog(
         title: const Text('Save log filter'),
         content: TextField(

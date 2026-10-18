@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
@@ -157,6 +158,7 @@ class _ResourceAdvancedMenuButtonState
   Future<void> _delete() async {
     final confirmed = await showDialog<bool>(
       context: context,
+      animationStyle: AppMotion.dialogStyle(context),
       builder: (context) => AlertDialog(
         title: Text('Delete ${widget.metadata.name}?'),
         content: Text(
@@ -239,6 +241,7 @@ class ResourceMetadataEditorSheet extends ConsumerStatefulWidget {
   }) async {
     final result = await showModalBottomSheet<bool>(
       context: context,
+      sheetAnimationStyle: AppMotion.sheetStyle(context),
       useSafeArea: true,
       useRootNavigator: true,
       showDragHandle: true,
@@ -283,8 +286,8 @@ class _ResourceMetadataEditorSheetState
     return FractionallySizedBox(
       heightFactor: 0.9,
       child: AnimatedPadding(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
+        duration: AppMotion.durationOf(context, AppMotion.base),
+        curve: AppMotion.standard,
         padding: EdgeInsets.fromLTRB(
           16,
           4,
@@ -482,6 +485,7 @@ Future<String?> promptResourceName(
 }) {
   return showDialog<String>(
     context: context,
+    animationStyle: AppMotion.dialogStyle(context),
     builder: (context) => _NamePromptDialog(
       title: title,
       actionLabel: actionLabel,

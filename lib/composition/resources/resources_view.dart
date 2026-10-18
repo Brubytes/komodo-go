@@ -29,11 +29,19 @@ import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
 import 'package:komodo_go/shared/resources/providers/resources_target_provider.dart';
 
-class ResourcesView extends ConsumerWidget {
+class ResourcesView extends ConsumerStatefulWidget {
   const ResourcesView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ResourcesView> createState() => _ResourcesViewState();
+}
+
+class _ResourcesViewState extends ConsumerState<ResourcesView> {
+  // Tile intro plays once per screen lifetime.
+  late final _intro = AppListIntro();
+
+  @override
+  Widget build(BuildContext context) {
     ref.listen<ResourceType?>(resourcesTargetProvider, (previous, next) {
       if (next == null) return;
       ref.read(resourcesTargetProvider.notifier).clear();
@@ -188,7 +196,7 @@ class ResourcesView extends ConsumerWidget {
         final tileHeight = tileWidth / quickStatsAspectRatio;
         final children = [
           for (final t in tiles)
-            AppFadeSlide(delay: AppMotion.stagger(animIndex++), child: t),
+            _intro.wrap(animIndex++, t, id: t.key ?? animIndex),
         ];
         return Column(
           children: [
@@ -307,106 +315,108 @@ class _ResourceTile<T> extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final radius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: radius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
+    return AppPressable(
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
           borderRadius: radius,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: radius,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(icon, color: color, size: 22),
                       ),
-                      child: Icon(icon, color: color, size: 22),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      AppIcons.chevron,
-                      size: 20,
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.55),
-                    ),
-                  ],
-                ),
-                asyncValue.when(
-                  data: (items) {
-                    final failing = items.where(isFailing).length;
-                    final String subtitle;
-                    if (failing > 0) {
-                      subtitle = '$failing $failingLabel';
-                    } else if (items.isEmpty) {
-                      subtitle = 'None yet';
-                    } else {
-                      subtitle = 'All healthy';
-                    }
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              items.length.toString(),
-                              style: textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5,
+                      const Spacer(),
+                      Icon(
+                        AppIcons.chevron,
+                        size: 20,
+                        color: scheme.onSurfaceVariant.withValues(alpha: 0.55),
+                      ),
+                    ],
+                  ),
+                  asyncValue.when(
+                    data: (items) {
+                      final failing = items.where(isFailing).length;
+                      final String subtitle;
+                      if (failing > 0) {
+                        subtitle = '$failing $failingLabel';
+                      } else if (items.isEmpty) {
+                        subtitle = 'None yet';
+                      } else {
+                        subtitle = 'All healthy';
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              AppAnimatedValue.text(
+                                items.length.toString(),
+                                style: textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                ),
                               ),
-                            ),
-                            const Gap(8),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: 3),
-                                child: Text(
-                                  title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: scheme.onSurfaceVariant,
-                                    letterSpacing: -0.1,
+                              const Gap(8),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 3),
+                                  child: Text(
+                                    title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: scheme.onSurfaceVariant,
+                                      letterSpacing: -0.1,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const Gap(2),
-                        Text(
-                          subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.labelLarge?.copyWith(
-                            color: failing > 0
-                                ? scheme.error
-                                : scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
+                            ],
                           ),
-                        ),
-                      ],
-                    );
-                  },
-                  loading: () => const SizedBox(
-                    height: 48,
-                    child: Center(child: AppInlineSkeleton(size: 20)),
+                          const Gap(2),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.labelLarge?.copyWith(
+                              color: failing > 0
+                                  ? scheme.error
+                                  : scheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () => const SizedBox(
+                      height: 48,
+                      child: Center(child: AppInlineSkeleton(size: 20)),
+                    ),
+                    error: (_, _) => const SizedBox(
+                      height: 48,
+                      child: Center(child: Icon(AppIcons.formError)),
+                    ),
                   ),
-                  error: (_, _) => const SizedBox(
-                    height: 48,
-                    child: Center(child: Icon(AppIcons.formError)),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

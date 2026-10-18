@@ -9,6 +9,7 @@ import 'package:komodo_go/core/api/custom_header.dart';
 import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/server_url_warning.dart';
@@ -33,6 +34,7 @@ class EditConnectionSheet extends HookConsumerWidget {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
+      sheetAnimationStyle: AppMotion.sheetStyle(context),
       builder: (context) => EditConnectionSheet(connection: connection),
     );
   }

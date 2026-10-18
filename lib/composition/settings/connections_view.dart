@@ -19,11 +19,18 @@ import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dar
 import 'package:komodo_go/features/auth/presentation/widgets/edit_connection_sheet.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-class ConnectionsView extends ConsumerWidget {
+class ConnectionsView extends ConsumerStatefulWidget {
   const ConnectionsView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ConnectionsView> createState() => _ConnectionsViewState();
+}
+
+class _ConnectionsViewState extends ConsumerState<ConnectionsView> {
+  late final _intro = AppListIntro();
+
+  @override
+  Widget build(BuildContext context) {
     final connectionsAsync = ref.watch(connectionsProvider);
     final authAsync = ref.watch(authProvider);
 
@@ -61,10 +68,10 @@ class ConnectionsView extends ConsumerWidget {
 
               final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-              return AppFadeSlide(
-                delay: AppMotion.stagger(index),
-                play: index < 10,
-                child: AppCardSurface(
+              return _intro.wrap(
+                index,
+                id: connection.id,
+                AppCardSurface(
                   padding: EdgeInsets.zero,
                   child: Material(
                     color: Colors.transparent,
@@ -147,6 +154,7 @@ class ConnectionsView extends ConsumerWidget {
     final isDemo = isDemoConnection(connection);
     final confirmed = await showDialog<bool>(
       context: context,
+      animationStyle: AppMotion.dialogStyle(context),
       builder: (context) => AlertDialog(
         title: const Text('Delete connection'),
         content: Text(
@@ -185,6 +193,7 @@ class ConnectionsView extends ConsumerWidget {
     if (!demoAvailable) {
       await showModalBottomSheet<void>(
         context: context,
+        sheetAnimationStyle: AppMotion.sheetStyle(context),
         useSafeArea: true,
         showDragHandle: true,
         builder: (context) => Padding(
@@ -216,6 +225,7 @@ class ConnectionsView extends ConsumerWidget {
 
     final shouldEnable = await showModalBottomSheet<bool>(
       context: context,
+      sheetAnimationStyle: AppMotion.sheetStyle(context),
       useSafeArea: true,
       showDragHandle: true,
       builder: (context) => Padding(

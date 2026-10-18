@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/server_url_warning.dart';
@@ -18,6 +19,7 @@ class AddConnectionSheet extends HookConsumerWidget {
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet<void>(
       context: context,
+      sheetAnimationStyle: AppMotion.sheetStyle(context),
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,

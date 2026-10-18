@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 class DetailSubCard extends StatefulWidget {
@@ -150,14 +151,11 @@ class _DetailSubCardState extends State<DetailSubCard> {
           ),
         ),
         if (collapsible)
-          AnimatedRotation(
-            turns: expanded ? 0.5 : 0,
-            duration: const Duration(milliseconds: 200),
-            child: Icon(
-              AppIcons.chevronDown,
-              size: 20,
-              color: scheme.onSurfaceVariant,
-            ),
+          AppChevron(
+            expanded: expanded,
+            icon: AppIcons.chevronDown,
+            size: 20,
+            color: scheme.onSurfaceVariant,
           ),
       ],
     );
@@ -176,10 +174,7 @@ class _DetailSubCardState extends State<DetailSubCard> {
             )
           else
             header,
-          AnimatedSize(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
+          AppExpand(
             // Keep the body mounted while collapsed so editor state survives.
             child: Visibility(
               visible: expanded,

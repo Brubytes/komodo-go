@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 
 PreferredSizeWidget buildDetailTabBar({
   required BuildContext context,
@@ -12,7 +12,6 @@ PreferredSizeWidget buildDetailTabBar({
   GlobalKey<NestedScrollViewState>? nestedScrollKey,
   double outerScrollTopInset = 12,
   ValueChanged<int>? onTap,
-  bool debugScrollLogging = false,
   double bottomGap = 0,
 }) {
   final scheme = Theme.of(context).colorScheme;
@@ -29,57 +28,20 @@ PreferredSizeWidget buildDetailTabBar({
     resolvedOnTap = (index) {
       onTap?.call(index);
 
-      void log(String message) {
-        if (!debugScrollLogging || !kDebugMode) return;
-        debugPrint('[DetailTabBar] $message');
-      }
-
       void scrollToPinned() {
+        if (!context.mounted) return;
         final nestedState = nestedScrollKey?.currentState;
         if (nestedState != null) {
           final inner = nestedState.innerController;
           if (inner.hasClients) {
             final positions = inner.positions;
             if (positions.isNotEmpty) {
-              final innerMin = positions.first.minScrollExtent;
-              log(
-                'tap=$index innerPixels=${positions.first.pixels.toStringAsFixed(1)} '
-                'innerMin=${positions.first.minScrollExtent.toStringAsFixed(1)} '
-                'innerMax=${positions.first.maxScrollExtent.toStringAsFixed(1)}',
-              );
-              if (nestedState.outerController.hasClients) {
-                final outerPos = nestedState.outerController.position;
-                log(
-                  'outerPixels=${outerPos.pixels.toStringAsFixed(1)} '
-                  'outerMin=${outerPos.minScrollExtent.toStringAsFixed(1)} '
-                  'outerMax=${outerPos.maxScrollExtent.toStringAsFixed(1)}',
-                );
-              }
-              log('animate inner to $innerMin');
               unawaited(
-                inner
-                    .animateTo(
-                      innerMin,
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                    )
-                    .then((_) {
-                      if (!debugScrollLogging || !kDebugMode) return;
-                      if (nestedState.outerController.hasClients) {
-                        final outerPos = nestedState.outerController.position;
-                        log(
-                          'after outerPixels=${outerPos.pixels.toStringAsFixed(1)} '
-                          'outerMax=${outerPos.maxScrollExtent.toStringAsFixed(1)}',
-                        );
-                      }
-                      if (inner.hasClients) {
-                        final innerPos = inner.position;
-                        log(
-                          'after innerPixels=${innerPos.pixels.toStringAsFixed(1)} '
-                          'innerMax=${innerPos.maxScrollExtent.toStringAsFixed(1)}',
-                        );
-                      }
-                    }),
+                AppMotion.animateOrJump(
+                  inner,
+                  positions.first.minScrollExtent,
+                  context,
+                ),
               );
               return;
             }
@@ -97,17 +59,7 @@ PreferredSizeWidget buildDetailTabBar({
         );
         if ((position.pixels - target).abs() < 0.5) return;
 
-        log(
-          'fallback animate outer to $target '
-          '(pixels=${position.pixels.toStringAsFixed(1)} '
-          'min=${position.minScrollExtent.toStringAsFixed(1)} '
-          'max=${position.maxScrollExtent.toStringAsFixed(1)})',
-        );
-        scrollController.animateTo(
-          target,
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-        );
+        unawaited(AppMotion.animateOrJump(scrollController, target, context));
       }
 
       WidgetsBinding.instance.addPostFrameCallback((_) {

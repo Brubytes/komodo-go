@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 
 /// An [ExpansionTile] that cannot collide with ancestor or descendant scroll
 /// positions in [PageStorage].
@@ -55,6 +56,7 @@ class _IsolatedExpansionTileState extends State<IsolatedExpansionTile> {
         onExpansionChanged: widget.onExpansionChanged,
         tilePadding: widget.tilePadding,
         childrenPadding: widget.childrenPadding,
+        expansionAnimationStyle: AppMotion.expansionStyle(context),
         children: [
           PageStorage(
             bucket: _childBucket,

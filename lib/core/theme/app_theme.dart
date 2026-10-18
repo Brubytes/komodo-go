@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:komodo_go/core/theme/app_page_transitions.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 
 /// App theme configuration.
@@ -65,6 +66,12 @@ class AppTheme {
       typography: Typography.material2021(platform: defaultTargetPlatform),
       fontFamily: kIsWeb ? AppTokens.systemFontStack : null,
       scaffoldBackgroundColor: scaffoldSurface,
+      pageTransitionsTheme: PageTransitionsTheme(
+        builders: {
+          for (final platform in TargetPlatform.values)
+            platform: const AppPageTransitionsBuilder(),
+        },
+      ),
       iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
       dividerTheme: DividerThemeData(
         color: colorScheme.outlineVariant,

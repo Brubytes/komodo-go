@@ -20,11 +20,18 @@ import 'package:komodo_go/features/providers/presentation/widgets/docker_registr
 import 'package:komodo_go/features/providers/presentation/widgets/git_provider_editor_sheet.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-class ProvidersView extends ConsumerWidget {
+class ProvidersView extends ConsumerStatefulWidget {
   const ProvidersView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProvidersView> createState() => _ProvidersViewState();
+}
+
+class _ProvidersViewState extends ConsumerState<ProvidersView> {
+  late final _intro = AppListIntro();
+
+  @override
+  Widget build(BuildContext context) {
     final providersAsync = ref.watch(gitProvidersProvider);
     final registriesAsync = ref.watch(dockerRegistryAccountsProvider);
     final gitActionsState = ref.watch(gitProviderActionsProvider);
@@ -69,13 +76,17 @@ class ProvidersView extends ConsumerWidget {
                         )
                       else
                         ..._buildCards(
+                          'git',
                           providers.map(
-                            (provider) => _ProviderTile(
-                              provider: provider,
-                              onEdit: () =>
-                                  _editGitProvider(context, ref, provider),
-                              onDelete: () =>
-                                  _deleteGitProvider(context, ref, provider),
+                            (provider) => (
+                              provider.id,
+                              _ProviderTile(
+                                provider: provider,
+                                onEdit: () =>
+                                    _editGitProvider(context, ref, provider),
+                                onDelete: () =>
+                                    _deleteGitProvider(context, ref, provider),
+                              ),
                             ),
                           ),
                         ),
@@ -86,13 +97,17 @@ class ProvidersView extends ConsumerWidget {
                         const _SectionHint(message: 'No registry accounts yet.')
                       else
                         ..._buildCards(
+                          'registry',
                           registries.map(
-                            (registry) => _RegistryTile(
-                              registry: registry,
-                              onEdit: () =>
-                                  _editRegistry(context, ref, registry),
-                              onDelete: () =>
-                                  _deleteRegistry(context, ref, registry),
+                            (registry) => (
+                              registry.id,
+                              _RegistryTile(
+                                registry: registry,
+                                onEdit: () =>
+                                    _editRegistry(context, ref, registry),
+                                onDelete: () =>
+                                    _deleteRegistry(context, ref, registry),
+                              ),
                             ),
                           ),
                         ),
@@ -126,17 +141,11 @@ class ProvidersView extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildCards(Iterable<Widget> tiles) {
+  List<Widget> _buildCards(String group, Iterable<(String, Widget)> tiles) {
     final items = <Widget>[];
     var index = 0;
-    for (final tile in tiles) {
-      items.add(
-        AppFadeSlide(
-          delay: AppMotion.stagger(index),
-          play: index < 10,
-          child: tile,
-        ),
-      );
+    for (final (id, tile) in tiles) {
+      items.add(_intro.wrap(index, tile, id: '$group/$id'));
       index += 1;
       items.add(const Gap(AppSpacing.md));
     }
@@ -401,6 +410,7 @@ class _ProviderTypeSheet extends StatelessWidget {
       useSafeArea: true,
       useRootNavigator: true,
       showDragHandle: true,
+      sheetAnimationStyle: AppMotion.sheetStyle(context),
       builder: (context) => const _ProviderTypeSheet(),
     );
   }

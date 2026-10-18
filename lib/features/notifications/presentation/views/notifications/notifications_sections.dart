@@ -23,13 +23,22 @@ import 'package:komodo_go/features/notifications/presentation/utils/alert_naviga
 import 'package:komodo_go/features/notifications/presentation/utils/alerts_error_utils.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-class AlertsTab extends ConsumerWidget {
+class AlertsTab extends ConsumerStatefulWidget {
   const AlertsTab({this.onOpenUpdates, super.key});
 
   final VoidCallback? onOpenUpdates;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AlertsTab> createState() => _AlertsTabState();
+}
+
+class _AlertsTabState extends ConsumerState<AlertsTab> {
+  late final _intro = AppListIntro();
+
+  VoidCallback? get onOpenUpdates => widget.onOpenUpdates;
+
+  @override
+  Widget build(BuildContext context) {
     final alertsAsync = ref.watch(alertsProvider);
     final filters = ref.watch(alertFiltersProvider);
 
@@ -124,10 +133,10 @@ class AlertsTab extends ConsumerWidget {
                         );
                       }
 
-                      return AppFadeSlide(
-                        delay: AppMotion.stagger(index),
-                        play: index < 10,
-                        child: AlertTile(alert: items[index]),
+                      return _intro.wrap(
+                        index,
+                        AlertTile(alert: items[index]),
+                        id: items[index].id,
                       );
                     },
                   ),
@@ -227,11 +236,18 @@ class _FilteredEmptyMessage extends StatelessWidget {
   }
 }
 
-class UpdatesTab extends ConsumerWidget {
+class UpdatesTab extends ConsumerStatefulWidget {
   const UpdatesTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<UpdatesTab> createState() => _UpdatesTabState();
+}
+
+class _UpdatesTabState extends ConsumerState<UpdatesTab> {
+  late final _intro = AppListIntro();
+
+  @override
+  Widget build(BuildContext context) {
     final updatesAsync = ref.watch(updatesProvider);
     final failedOnly = ref.watch(updatesFailedOnlyProvider);
 
@@ -320,10 +336,10 @@ class UpdatesTab extends ConsumerWidget {
                         );
                       }
 
-                      return AppFadeSlide(
-                        delay: AppMotion.stagger(index),
-                        play: index < 10,
-                        child: UpdateTile(update: items[index]),
+                      return _intro.wrap(
+                        index,
+                        UpdateTile(update: items[index]),
+                        id: items[index].id,
                       );
                     },
                   ),
@@ -374,64 +390,67 @@ class AlertTile extends ConsumerWidget {
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: ListTile(
-          titleAlignment: ListTileTitleAlignment.top,
-          leading: Icon(_iconForAlert(alert), color: severityColor),
-          title: Text(title),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (primary != null && primary.isNotEmpty) Text(primary),
-              // The target name usually equals the payload's primary name;
-              // only show it when it adds information.
-              if (targetName != null &&
-                  targetName.isNotEmpty &&
-                  targetName != primary) ...[
-                const Gap(AppSpacing.xs),
-                Text(
-                  targetName,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-              const Gap(AppSpacing.xs),
-              Row(
-                children: [
-                  Icon(
-                    AppIcons.clock,
-                    size: 16,
-                    color: scheme.onSurfaceVariant,
-                  ),
+    return AppPressable(
+      enabled: route != null,
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: cardRadius,
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            titleAlignment: ListTileTitleAlignment.top,
+            leading: Icon(_iconForAlert(alert), color: severityColor),
+            title: Text(title),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (primary != null && primary.isNotEmpty) Text(primary),
+                // The target name usually equals the payload's primary name;
+                // only show it when it adds information.
+                if (targetName != null &&
+                    targetName.isNotEmpty &&
+                    targetName != primary) ...[
                   const Gap(AppSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      _formatTimestamp(alert.timestamp.toLocal()),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                  Text(
+                    targetName,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ],
-              ),
-            ],
-          ),
-          trailing: alert.resolved
-              ? const NotificationsStatusChip(
-                  label: 'RESOLVED',
-                  kind: NotificationsStatusChipKind.neutral,
-                )
-              : NotificationsStatusChip(
-                  label: _labelForSeverity(alert.level),
-                  kind: _chipKindForAlertLevel(alert.level),
+                const Gap(AppSpacing.xs),
+                Row(
+                  children: [
+                    Icon(
+                      AppIcons.clock,
+                      size: 16,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const Gap(AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        _formatTimestamp(alert.timestamp.toLocal()),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-          onTap: route == null ? null : () => context.go(route),
+              ],
+            ),
+            trailing: alert.resolved
+                ? const NotificationsStatusChip(
+                    label: 'RESOLVED',
+                    kind: NotificationsStatusChipKind.neutral,
+                  )
+                : NotificationsStatusChip(
+                    label: _labelForSeverity(alert.level),
+                    kind: _chipKindForAlertLevel(alert.level),
+                  ),
+            onTap: route == null ? null : () => context.go(route),
+          ),
         ),
       ),
     );
@@ -490,94 +509,97 @@ class UpdateTile extends ConsumerWidget {
     );
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: route == null ? null : () => context.push(route),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Icon(
-                    _iconForTargetType(target?.type),
-                    color: scheme.primary,
-                    size: 22,
+    return AppPressable(
+      enabled: route != null,
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: cardRadius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: route == null ? null : () => context.push(route),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Icon(
+                      _iconForTargetType(target?.type),
+                      color: scheme.primary,
+                      size: 22,
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      if (!isCurrent)
+                        if (!isCurrent)
+                          Padding(
+                            padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                            child: Text(
+                              targetName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: muted,
+                            ),
+                          ),
                         Padding(
                           padding: const EdgeInsets.only(top: AppSpacing.xxs),
                           child: Text(
-                            targetName,
+                            operator == null
+                                ? startTime
+                                : '$startTime  ·  $operator',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: muted,
                           ),
                         ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppSpacing.xxs),
-                        child: Text(
-                          operator == null
-                              ? startTime
-                              : '$startTime  ·  $operator',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: muted,
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _updateStatusPill(update),
+                      if (resourceRoute != null)
+                        IconButton(
+                          key: ValueKey('update_open_resource_${update.id}'),
+                          tooltip: 'Open resource',
+                          visualDensity: VisualDensity.compact,
+                          style: const ButtonStyle(
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          iconSize: 18,
+                          padding: const EdgeInsets.all(AppSpacing.xs),
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
+                          onPressed: () => context.push(resourceRoute),
+                          icon: const Icon(AppIcons.externalLink),
                         ),
-                      ),
                     ],
                   ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    _updateStatusPill(update),
-                    if (resourceRoute != null)
-                      IconButton(
-                        key: ValueKey('update_open_resource_${update.id}'),
-                        tooltip: 'Open resource',
-                        visualDensity: VisualDensity.compact,
-                        style: const ButtonStyle(
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        iconSize: 18,
-                        padding: const EdgeInsets.all(AppSpacing.xs),
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
-                        ),
-                        onPressed: () => context.push(resourceRoute),
-                        icon: const Icon(AppIcons.externalLink),
-                      ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

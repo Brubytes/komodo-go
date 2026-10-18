@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 
 /// Opens a modal bottom sheet configured for editors: scroll controlled,
@@ -11,6 +12,7 @@ Future<T?> showEditorSheet<T>(
 }) {
   return showModalBottomSheet<T>(
     context: context,
+    sheetAnimationStyle: AppMotion.sheetStyle(context),
     isScrollControlled: true,
     useSafeArea: true,
     useRootNavigator: useRootNavigator,

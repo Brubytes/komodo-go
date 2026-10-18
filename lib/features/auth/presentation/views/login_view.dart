@@ -12,6 +12,7 @@ import 'package:komodo_go/core/providers/connections_provider.dart';
 import 'package:komodo_go/core/providers/demo_mode_provider.dart';
 import 'package:komodo_go/core/providers/onboarding_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/always_paste_context_menu.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
@@ -137,6 +138,7 @@ class LoginView extends HookConsumerWidget {
         context: context,
         useSafeArea: true,
         showDragHandle: true,
+        sheetAnimationStyle: AppMotion.sheetStyle(context),
         builder: (context) => Column(
           mainAxisSize: MainAxisSize.min,
           children: [

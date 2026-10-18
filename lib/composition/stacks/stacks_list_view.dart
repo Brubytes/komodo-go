@@ -42,6 +42,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
   bool _areFiltersExpanded = false;
+  late final _intro = AppListIntro();
 
   @override
   void initState() {
@@ -190,10 +191,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                AnimatedSwitcher(
-                  duration: AppMotion.base,
-                  switchInCurve: AppMotion.enterCurve,
-                  switchOutCurve: AppMotion.exitCurve,
+                AppSwitcher(
                   child: _isSearchVisible
                       ? Column(
                           key: const ValueKey('resource_search_and_filters'),
@@ -320,102 +318,112 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                   ),
                 ],
                 const Gap(12),
-                stacksAsync.when(
-                  skipLoadingOnRefresh: true,
-                  skipLoadingOnReload: true,
-                  data: (stacks) {
-                    final searched = _applyFilters(
-                      stacks,
-                      query: searchQuery,
-                      selectedTags: selectedTags,
-                      pendingUpdate: pendingUpdate,
-                      templateFilter: templateFilter,
-                      serverNames: serverNames,
-                      tagNameById: tagNameById,
-                    );
-
-                    final filtered = prefs.process<StackListItem>(
-                      searched,
-                      severityOf: _severityOf,
-                      nameOf: (item) => item.name,
-                      stateLabelOf: _stateLabel,
-                      serverNameOf: (item) => _serverNameOf(item, serverNames),
-                    );
-                    if (filtered.isEmpty) {
-                      return _EmptyState(
-                        hasFilters:
-                            _hasActiveFilters(
-                              query: searchQuery,
-                              selectedTags: selectedTags,
-                              pendingUpdate: pendingUpdate,
-                              templateFilter: templateFilter,
-                            ) ||
-                            prefs.activeCount > 0,
-                        onClearFilters: () {
-                          clearResourceViewFilters(ref, listId);
-                          _searchController.clear();
-                          ref.read(stacksSearchQueryProvider.notifier).query =
-                              '';
-                          ref.read(stacksTagFilterProvider.notifier).clear();
-                          ref
-                                  .read(
-                                    stacksPendingUpdateFilterProvider.notifier,
-                                  )
-                                  .enabled =
-                              false;
-                          ref
-                                  .read(
-                                    stacksTemplateFilterStateProvider.notifier,
-                                  )
-                                  .value =
-                              StacksTemplateFilter.exclude;
-                        },
-                        tagOptions: availableTags,
-                        onSelectTags: (value) =>
-                            ref
-                                    .read(stacksTagFilterProvider.notifier)
-                                    .selected =
-                                value,
+                AppSwitcher(
+                  animateSize: false,
+                  child: stacksAsync.when(
+                    skipLoadingOnRefresh: true,
+                    skipLoadingOnReload: true,
+                    data: (stacks) {
+                      final searched = _applyFilters(
+                        stacks,
+                        query: searchQuery,
+                        selectedTags: selectedTags,
+                        pendingUpdate: pendingUpdate,
+                        templateFilter: templateFilter,
+                        serverNames: serverNames,
+                        tagNameById: tagNameById,
                       );
-                    }
 
-                    return Column(
-                      children: [
-                        for (var i = 0; i < filtered.length; i++) ...[
-                          AppFadeSlide(
-                            delay: AppMotion.stagger(i),
-                            play: i < 10,
-                            child: StackCard(
-                              stack: filtered[i],
-                              serverName:
-                                  serverNames[filtered[i].info.serverId],
-                              displayTags: _displayTags(
-                                filtered[i].tags,
-                                tagNameById,
-                              ),
-                              onTap: () => context.push(
-                                '${AppRoutes.stacks}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
-                              ),
-                              onAction: (action) => _handleAction(
-                                context,
-                                ref,
-                                filtered[i].id,
-                                filtered[i].name,
-                                action,
+                      final filtered = prefs.process<StackListItem>(
+                        searched,
+                        severityOf: _severityOf,
+                        nameOf: (item) => item.name,
+                        stateLabelOf: _stateLabel,
+                        serverNameOf: (item) =>
+                            _serverNameOf(item, serverNames),
+                      );
+                      if (filtered.isEmpty) {
+                        return _EmptyState(
+                          key: const ValueKey('stacks_empty'),
+                          hasFilters:
+                              _hasActiveFilters(
+                                query: searchQuery,
+                                selectedTags: selectedTags,
+                                pendingUpdate: pendingUpdate,
+                                templateFilter: templateFilter,
+                              ) ||
+                              prefs.activeCount > 0,
+                          onClearFilters: () {
+                            clearResourceViewFilters(ref, listId);
+                            _searchController.clear();
+                            ref.read(stacksSearchQueryProvider.notifier).query =
+                                '';
+                            ref.read(stacksTagFilterProvider.notifier).clear();
+                            ref
+                                    .read(
+                                      stacksPendingUpdateFilterProvider
+                                          .notifier,
+                                    )
+                                    .enabled =
+                                false;
+                            ref
+                                .read(
+                                  stacksTemplateFilterStateProvider.notifier,
+                                )
+                                .value = StacksTemplateFilter
+                                .exclude;
+                          },
+                          tagOptions: availableTags,
+                          onSelectTags: (value) =>
+                              ref
+                                      .read(stacksTagFilterProvider.notifier)
+                                      .selected =
+                                  value,
+                        );
+                      }
+
+                      return Column(
+                        key: const ValueKey('stacks_data'),
+                        children: [
+                          for (var i = 0; i < filtered.length; i++) ...[
+                            _intro.wrap(
+                              i,
+                              id: filtered[i].id,
+                              StackCard(
+                                stack: filtered[i],
+                                serverName:
+                                    serverNames[filtered[i].info.serverId],
+                                displayTags: _displayTags(
+                                  filtered[i].tags,
+                                  tagNameById,
+                                ),
+                                onTap: () => context.push(
+                                  '${AppRoutes.stacks}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
+                                ),
+                                onAction: (action) => _handleAction(
+                                  context,
+                                  ref,
+                                  filtered[i].id,
+                                  filtered[i].name,
+                                  action,
+                                ),
                               ),
                             ),
-                          ),
-                          const Gap(12),
+                            const Gap(12),
+                          ],
+                          const SizedBox(height: 12),
                         ],
-                        const SizedBox(height: 12),
-                      ],
-                    );
-                  },
-                  loading: () => const _StacksSkeletonList(),
-                  error: (error, stack) => ErrorStateView(
-                    title: 'Failed to load stacks',
-                    message: error.toString(),
-                    onRetry: () => ref.invalidate(stacksProvider),
+                      );
+                    },
+                    loading: () => const _StacksSkeletonList(
+                      key: ValueKey('stacks_loading'),
+                    ),
+                    error: (error, stack) => ErrorStateView(
+                      key: const ValueKey('stacks_error'),
+                      title: 'Failed to load stacks',
+                      message: error.toString(),
+                      onRetry: () => ref.invalidate(stacksProvider),
+                    ),
                   ),
                 ),
               ],
@@ -775,7 +783,7 @@ class _SearchField extends StatelessWidget {
 }
 
 class _StacksSkeletonList extends StatelessWidget {
-  const _StacksSkeletonList();
+  const _StacksSkeletonList({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -794,6 +802,7 @@ class _EmptyState extends StatelessWidget {
     required this.onClearFilters,
     required this.tagOptions,
     required this.onSelectTags,
+    super.key,
   });
 
   final bool hasFilters;

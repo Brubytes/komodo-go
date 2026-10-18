@@ -66,16 +66,24 @@ void _goToResources(
 ///
 /// The page itself watches nothing: every section is its own
 /// [ConsumerWidget] and only rebuilds when the data it shows changes.
-class HomeView extends ConsumerWidget {
+class HomeView extends ConsumerStatefulWidget {
   const HomeView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends ConsumerState<HomeView> {
+  // Plays the staggered section intro once per screen lifetime.
+  late final _intro = AppListIntro();
+
+  @override
+  Widget build(BuildContext context) {
     var sectionIndex = 0;
 
     Widget staggeredSection(Widget child) {
-      final delay = AppMotion.stagger(sectionIndex++);
-      return AppFadeSlide(delay: delay, child: child);
+      final index = sectionIndex++;
+      return _intro.wrap(index, child, id: index);
     }
 
     return Scaffold(

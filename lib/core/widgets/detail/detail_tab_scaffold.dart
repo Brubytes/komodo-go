@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/detail/detail_tab_bar.dart';
 
 /// Describes one tab of a [DetailTabScaffold]. Tabs are addressed by [id].
@@ -95,6 +98,7 @@ class DetailTabScaffoldState extends State<DetailTabScaffold>
   final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
   final _outerScrollController = ScrollController();
   late TabController _controller;
+  bool _reduced = false;
 
   /// Id of the currently selected tab.
   String get currentTabId => widget.tabs[_controller.index].id;
@@ -116,7 +120,22 @@ class DetailTabScaffoldState extends State<DetailTabScaffold>
       length: widget.tabs.length,
       vsync: this,
       initialIndex: index,
+      animationDuration: _reduced ? Duration.zero : AppMotion.slow,
     )..addListener(_handleChange);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduced = AppMotion.reducedOf(context);
+    if (reduced == _reduced) return;
+    _reduced = reduced;
+    // animationDuration is final, so swap the controller (keeping the tab).
+    final index = _controller.index;
+    _controller
+      ..removeListener(_handleChange)
+      ..dispose();
+    _controller = _createController(index);
   }
 
   void _handleChange() {
@@ -137,14 +156,14 @@ class DetailTabScaffoldState extends State<DetailTabScaffold>
     if (index < 0) return;
     if (collapseHeader && _outerScrollController.hasClients) {
       final max = _outerScrollController.position.maxScrollExtent;
-      _outerScrollController.animateTo(
-        max,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-      );
+      unawaited(AppMotion.animateOrJump(_outerScrollController, max, context));
     }
     if (animate) {
-      _controller.animateTo(index);
+      _controller.animateTo(
+        index,
+        duration: AppMotion.durationOf(context, AppMotion.slow),
+        curve: AppMotion.emphasized,
+      );
     } else {
       _controller.index = index;
     }

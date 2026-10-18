@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 
 /// A single entry in an action menu.
@@ -145,6 +146,7 @@ Future<void> showDetailActionSheet(
   final title = group.label ?? group.sheetLabel ?? 'Actions';
   return showModalBottomSheet<void>(
     context: context,
+    sheetAnimationStyle: AppMotion.sheetStyle(context),
     useSafeArea: true,
     showDragHandle: true,
     builder: (sheetContext) {
