@@ -34,15 +34,21 @@ void main() {
     },
   });
 
-  UpdateListItem update(String id, Duration ago, {bool success = false}) =>
-      UpdateListItem.fromJson({
-        'id': id,
-        'operation': 'DeployStack',
-        'start_ts': secs(ago),
-        'success': success,
-        'status': 'Complete',
-        'target': {'type': 'Stack', 'id': 's1'},
-      });
+  UpdateListItem update(
+    String id,
+    Duration ago, {
+    bool success = false,
+    String operation = 'DeployStack',
+    String status = 'Complete',
+    String targetId = 's1',
+  }) => UpdateListItem.fromJson({
+    'id': id,
+    'operation': operation,
+    'start_ts': secs(ago),
+    'success': success,
+    'status': status,
+    'target': {'type': 'Stack', 'id': targetId},
+  });
 
   test('is clear when nothing is unhealthy', () {
     final snapshot = buildHomeAttention(
@@ -140,5 +146,83 @@ void main() {
       '/notifications/updates/recent',
     );
     expect(snapshot.items.single.updateTarget, isNotNull);
+  });
+
+  group('failed update clearing', () {
+    int total(
+      List<UpdateListItem> updates, {
+      Set<String> dismissed = const {},
+    }) => buildHomeAttention(
+      now: now,
+      updates: updates,
+      dismissedUpdateIds: dismissed,
+    ).total;
+
+    test('newer success of same target and operation clears it', () {
+      expect(
+        total([
+          update('f', const Duration(hours: 3)),
+          update('ok', const Duration(hours: 1), success: true),
+        ]),
+        0,
+      );
+    });
+
+    test('older success does not clear it', () {
+      expect(
+        total([
+          update('f', const Duration(hours: 1)),
+          update('ok', const Duration(hours: 3), success: true),
+        ]),
+        1,
+      );
+    });
+
+    test('different operation or target does not clear it', () {
+      expect(
+        total([
+          update('f', const Duration(hours: 3)),
+          update(
+            'ok1',
+            const Duration(hours: 1),
+            success: true,
+            operation: 'StartStack',
+          ),
+          update(
+            'ok2',
+            const Duration(hours: 1),
+            success: true,
+            targetId: 's2',
+          ),
+        ]),
+        1,
+      );
+    });
+
+    test('newer in-progress run does not clear it', () {
+      expect(
+        total([
+          update('f', const Duration(hours: 3)),
+          update('run', const Duration(hours: 1), status: 'InProgress'),
+        ]),
+        1,
+      );
+    });
+
+    test('dismissed ids are filtered', () {
+      final updates = [
+        update('a', const Duration(hours: 3)),
+        update('b', const Duration(hours: 2), targetId: 's2'),
+      ];
+      expect(total(updates, dismissed: {'a'}), 1);
+      expect(total(updates, dismissed: {'a', 'b'}), 0);
+      final snapshot = buildHomeAttention(
+        now: now,
+        updates: updates,
+        dismissedUpdateIds: {'a'},
+      );
+      expect(snapshot.items.single.updateId, 'b');
+      expect(snapshot.items.single.isDismissible, isTrue);
+    });
   });
 }

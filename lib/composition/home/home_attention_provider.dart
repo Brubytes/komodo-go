@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/home/dismissed_updates_provider.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
@@ -47,6 +50,7 @@ class HomeAttentionItem {
     this.isCritical = true,
     this.timestamp,
     this.updateTarget,
+    this.updateId,
   });
 
   final HomeAttentionKind kind;
@@ -62,6 +66,12 @@ class HomeAttentionItem {
 
   /// For failed updates, the target whose display name must be resolved.
   final ResourceTarget? updateTarget;
+
+  /// For failed updates, the update id (used to dismiss it).
+  final String? updateId;
+
+  bool get isDismissible =>
+      kind == HomeAttentionKind.failedUpdate && updateId != null;
 }
 
 @immutable
@@ -84,6 +94,21 @@ String? _detailRoute(ResourceTargetType type, String id, String name) =>
       displayName: name,
     );
 
+/// Whether a newer successful run of the same operation on the same target
+/// exists, which makes [failed] obsolete.
+bool _supersededBySuccess(UpdateListItem failed, List<UpdateListItem> all) {
+  final target = failed.target;
+  if (target == null) return false;
+  return all.any(
+    (u) =>
+        u.status == UpdateStatus.success &&
+        u.operation == failed.operation &&
+        u.target?.type == target.type &&
+        u.target?.id == target.id &&
+        u.timestamp.isAfter(failed.timestamp),
+  );
+}
+
 /// Pure aggregation of everything that needs attention.
 HomeAttentionSnapshot buildHomeAttention({
   required DateTime now,
@@ -97,6 +122,7 @@ HomeAttentionSnapshot buildHomeAttention({
   List<ResourceSyncListItem> syncs = const [],
   List<Alert> alerts = const [],
   List<UpdateListItem> updates = const [],
+  Set<String> dismissedUpdateIds = const {},
 }) {
   final items = <HomeAttentionItem>[];
 
@@ -242,6 +268,8 @@ HomeAttentionSnapshot buildHomeAttention({
   for (final update in updates) {
     if (update.status != UpdateStatus.failed) continue;
     if (update.timestamp.isBefore(cutoff)) continue;
+    if (dismissedUpdateIds.contains(update.id)) continue;
+    if (_supersededBySuccess(update, updates)) continue;
     items.add(
       HomeAttentionItem(
         kind: HomeAttentionKind.failedUpdate,
@@ -251,6 +279,7 @@ HomeAttentionSnapshot buildHomeAttention({
         isCritical: false,
         timestamp: update.timestamp,
         updateTarget: update.target,
+        updateId: update.id,
       ),
     );
   }
@@ -291,6 +320,7 @@ final homeAttentionProvider = Provider<AsyncValue<HomeAttentionSnapshot>>((
   final syncs = ref.watch(syncsProvider);
   final alerts = ref.watch(alertsProvider);
   final updates = ref.watch(updatesProvider);
+  final dismissed = ref.watch(dismissedUpdatesProvider).asData?.value ?? {};
 
   final sources = <AsyncValue<dynamic>>[
     servers,
@@ -312,6 +342,23 @@ final homeAttentionProvider = Provider<AsyncValue<HomeAttentionSnapshot>>((
     return const AsyncValue.loading();
   }
 
+  // Forget dismissed IDs that expired or vanished from the updates list.
+  final updateItems = updates.asData?.value.items;
+  if (updateItems != null && dismissed.isNotEmpty) {
+    final cutoff = DateTime.now().subtract(homeAttentionUpdateWindow);
+    final valid = {
+      for (final u in updateItems)
+        if (!u.timestamp.isBefore(cutoff)) u.id,
+    };
+    if (!valid.containsAll(dismissed)) {
+      unawaited(
+        Future.microtask(
+          () => ref.read(dismissedUpdatesProvider.notifier).prune(valid),
+        ),
+      );
+    }
+  }
+
   return AsyncValue.data(
     buildHomeAttention(
       now: DateTime.now(),
@@ -325,6 +372,7 @@ final homeAttentionProvider = Provider<AsyncValue<HomeAttentionSnapshot>>((
       syncs: syncs.asData?.value ?? const [],
       alerts: alerts.asData?.value.items ?? const [],
       updates: updates.asData?.value.items ?? const [],
+      dismissedUpdateIds: dismissed,
     ),
   );
 });

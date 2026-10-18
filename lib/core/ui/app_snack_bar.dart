@@ -18,6 +18,8 @@ class AppSnackBar {
     BuildContext context,
     String message, {
     AppSnackBarTone tone = AppSnackBarTone.neutral,
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
     final scheme = Theme.of(context).colorScheme;
 
@@ -92,6 +94,13 @@ class AppSnackBar {
       SnackBar(
         duration: const Duration(days: 1),
         backgroundColor: backgroundColor,
+        action: actionLabel != null && onAction != null
+            ? SnackBarAction(
+                label: actionLabel,
+                textColor: foregroundColor,
+                onPressed: onAction,
+              )
+            : null,
         content: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onLongPressStart: (_) => pauseDismissTimer(),

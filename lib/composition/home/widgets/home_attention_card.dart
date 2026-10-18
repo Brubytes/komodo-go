@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/home/dismissed_updates_provider.dart';
 import 'package:komodo_go/composition/home/home_attention_provider.dart';
 import 'package:komodo_go/composition/home/widgets/home_sections.dart';
 import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/target_display_name_provider.dart';
 
@@ -159,7 +163,7 @@ class _AttentionRow extends ConsumerWidget {
       title = '${item.title} · $name';
     }
 
-    return InkWell(
+    final row = InkWell(
       key: ValueKey('home_attention_${item.kind.name}_${item.title}'),
       onTap: route == null ? null : () => context.go(route),
       child: Padding(
@@ -198,6 +202,31 @@ class _AttentionRow extends ConsumerWidget {
           ],
         ),
       ),
+    );
+
+    final updateId = item.updateId;
+    if (!item.isDismissible || updateId == null) return row;
+
+    return Dismissible(
+      key: ValueKey('home_attention_dismiss_$updateId'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: scheme.surfaceContainerHighest,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: Icon(AppIcons.close, size: 20, color: scheme.onSurfaceVariant),
+      ),
+      onDismissed: (_) {
+        final notifier = ref.read(dismissedUpdatesProvider.notifier);
+        unawaited(notifier.dismiss(updateId));
+        AppSnackBar.show(
+          context,
+          'Dismissed',
+          actionLabel: 'Undo',
+          onAction: () => unawaited(notifier.restore(updateId)),
+        );
+      },
+      child: row,
     );
   }
 }
