@@ -27,7 +27,7 @@ export default {
   //   'ipad-11'     - iPad Pro 11", iPad Air, iPad mini
   // Android:
   //   'android-phone', 'android-tablet-7', 'android-tablet-10', 'android-wear'
-  devices: ['iphone-6.5'],
+  devices: ['iphone-6.9', 'iphone-6.5', 'ipad-13'],
 
   // Theme customization (injected as CSS variables)
   // Komodo brand colors
@@ -46,11 +46,13 @@ export default {
   //   style: 'auto',
   // },
 
-  // Your screenshots
+  // Your screenshots.
+  // Sources resolve per device type: ./screenshots/iPhone/<file> for iphone-*,
+  // ./screenshots/iPad/<file> for ipad-* (same file names in both folders).
   screenshots: [
     {
       id: '01_home',
-      source: './screenshots/iPhone/dark_01_home_dashboard.png',
+      source: './screenshots/dark_01_home_dashboard.png',
       headline: 'Your Infrastructure',
       subheadline: 'at a glance',
       theme: 'dark',
@@ -58,7 +60,7 @@ export default {
     },
     {
       id: '02_servers',
-      source: './screenshots/iPhone/dark_02_servers_list.png',
+      source: './screenshots/dark_02_servers_list.png',
       headline: 'Monitor',
       subheadline: 'your servers',
       theme: 'dark',
@@ -66,7 +68,7 @@ export default {
     },
     {
       id: '03_server_detail',
-      source: './screenshots/iPhone/dark_03_server_detail.png',
+      source: './screenshots/dark_03_server_detail.png',
       headline: 'Deep Dive',
       subheadline: 'into metrics',
       theme: 'dark',
@@ -74,7 +76,7 @@ export default {
     },
     {
       id: '04_stack_config',
-      source: './screenshots/iPhone/dark_04_stack_config.png',
+      source: './screenshots/dark_04_stack_config.png',
       headline: 'Stack Config',
       subheadline: 'compose made easy',
       theme: 'dark',
@@ -82,7 +84,7 @@ export default {
     },
     {
       id: '05_stack_logs',
-      source: './screenshots/iPhone/dark_05_stack_logs.png',
+      source: './screenshots/dark_05_stack_logs.png',
       headline: 'Stack Logs',
       subheadline: 'real-time insights',
       theme: 'dark',
@@ -90,7 +92,7 @@ export default {
     },
     {
       id: '06_containers',
-      source: './screenshots/iPhone/light_06_containers.png',
+      source: './screenshots/light_06_containers.png',
       headline: 'Manage',
       subheadline: 'containers',
       theme: 'light',
@@ -98,17 +100,17 @@ export default {
     },
     {
       id: '07_resources',
-      source: './screenshots/iPhone/light_07_resources.png',
+      source: './screenshots/light_07_resources.png',
       headline: 'All Resources',
       subheadline: 'one overview',
       theme: 'light',
       layout: 'top',
     },
     {
-      id: '08_settings',
-      source: './screenshots/iPhone/light_08_settings.png',
-      headline: 'Configure',
-      subheadline: 'your way',
+      id: '08_notifications',
+      source: './screenshots/light_08_notifications.png',
+      headline: 'Stay Informed',
+      subheadline: 'alerts & updates',
       theme: 'light',
       layout: 'bottom',
     },
