@@ -1,0 +1,8 @@
+A redesign built around what needs your attention.
+
+• Dashboard highlights failing resources
+• Redesigned detail screens with tabs and quick actions
+• Lists show problems first, with state and server filters
+• New log viewer with live follow and copyable raw text
+• Uses less data and battery
+• Confirmation before destructive actions

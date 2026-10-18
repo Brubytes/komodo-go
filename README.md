@@ -70,6 +70,14 @@ Use the interactive helper from the repository root:
 The helper can also optionally create a GitHub Release for `v*` tags when `gh` is installed and authenticated. If `release-notes/<version>.md` exists, the helper uses those curated notes; otherwise it generates notes from merged changes.
 On non-`main` branches, it can also open a PR to `main` for version-bump commits.
 
+Release notes for each version come from one place and reach GitHub, the App Store, and Google Play:
+
+- `release-notes/<version>.md`: GitHub release body. Codemagic converts it to plain text for TestFlight "What to Test" and App Store "What's New" (max 4,000 characters).
+- `release-notes/<version>.store.txt`: Google Play release notes (max 500 characters).
+- `metadata/version/<version>/en-US.json` (optional): App Store description, keywords, promotional text, and URLs submitted with the release.
+
+`scripts/store_release_notes.py` builds Codemagic's `release_notes.json` from these files during `v*` builds, and `rc-*` builds fail early if they're missing or too long. Check locally with `python3 scripts/store_release_notes.py check <version>`. `v*` iOS builds are submitted for App Store review with a manual release.
+
 ## Demo mode
 
 The app always exposes a demo connection backed by an in-process fake backend.
