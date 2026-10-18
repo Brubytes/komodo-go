@@ -223,9 +223,6 @@ class ResourcesView extends ConsumerWidget {
         const Gap(20),
         const _SectionHeader(title: 'Build & Automate'),
         grid(buildTiles),
-        const Gap(20),
-        const _SectionHeader(title: 'Configuration'),
-        const _ConfigurationCard(),
       ],
     );
 
@@ -413,85 +410,6 @@ class _ResourceTile<T> extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ConfigurationCard extends StatelessWidget {
-  const _ConfigurationCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final rows = <(Key, IconData, String, String)>[
-      (
-        const ValueKey('resources_config_auto_updates'),
-        Icons.system_update_alt,
-        'Auto-update review',
-        AppRoutes.autoUpdateReview,
-      ),
-      (
-        const ValueKey('resources_config_variables'),
-        AppIcons.key,
-        'Variables',
-        AppRoutes.komodoVariables,
-      ),
-      (
-        const ValueKey('resources_config_tags'),
-        AppIcons.tag,
-        'Tags',
-        AppRoutes.komodoTags,
-      ),
-      (
-        const ValueKey('resources_config_providers'),
-        AppIcons.repos,
-        'Providers',
-        AppRoutes.komodoProviders,
-      ),
-      (
-        const ValueKey('resources_config_builders'),
-        AppIcons.factory,
-        'Builders',
-        AppRoutes.komodoBuilders,
-      ),
-      (
-        const ValueKey('resources_config_alerters'),
-        AppIcons.notifications,
-        'Alerters',
-        AppRoutes.komodoAlerters,
-      ),
-    ];
-    final scheme = Theme.of(context).colorScheme;
-
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0)
-              Divider(
-                height: 1,
-                indent: 56,
-                color: scheme.outlineVariant.withValues(alpha: 0.5),
-              ),
-            ListTile(
-              key: rows[i].$1,
-              leading: Icon(rows[i].$2, color: scheme.primary, size: 22),
-              title: Text(
-                rows[i].$3,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              trailing: Icon(
-                AppIcons.chevron,
-                size: 20,
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.55),
-              ),
-              onTap: () => unawaited(context.push(rows[i].$4)),
-            ),
-          ],
-        ],
       ),
     );
   }

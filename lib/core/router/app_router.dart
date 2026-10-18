@@ -79,23 +79,14 @@ abstract class AppRoutes {
   static const actions = '$resources/actions';
 
   static const connections = '$settings/connections';
-  static const komodoVariables = '$resources/variables';
-  static const komodoTags = '$resources/tags';
-  static const komodoProviders = '$resources/providers';
-  static const komodoBuilders = '$resources/builders';
-  static const komodoAlerters = '$resources/alerters';
-  static const autoUpdateReview = '$resources/auto-updates';
+  static const komodoVariables = '$settings/komodo/variables';
+  static const komodoTags = '$settings/komodo/tags';
+  static const komodoProviders = '$settings/komodo/providers';
+  static const komodoBuilders = '$settings/komodo/builders';
+  static const komodoAlerters = '$settings/komodo/alerters';
+  static const autoUpdateReview = '$settings/komodo/auto-updates';
   static const komodoAlerterDetail = '$komodoAlerters/:id';
   static const credits = '$settings/credits';
-
-  /// Legacy path (configuration screens used to live in Settings).
-  static const legacySettingsKomodo = '$settings/komodo';
-}
-
-String _withQuery(String location, Uri uri) {
-  final query = uri.query;
-  if (query.isEmpty) return location;
-  return '$location?$query';
 }
 
 /// Decides where to send the user based on the current auth state.
@@ -160,47 +151,6 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.login,
         builder: (context, state) => const LoginView(),
-      ),
-
-      // Configuration screens moved from Settings to Resources.
-      GoRoute(
-        path: '${AppRoutes.legacySettingsKomodo}/auto-updates',
-        redirect: (context, state) =>
-            _withQuery(AppRoutes.autoUpdateReview, state.uri),
-      ),
-      GoRoute(
-        path: '${AppRoutes.legacySettingsKomodo}/variables',
-        redirect: (context, state) =>
-            _withQuery(AppRoutes.komodoVariables, state.uri),
-      ),
-      GoRoute(
-        path: '${AppRoutes.legacySettingsKomodo}/tags',
-        redirect: (context, state) =>
-            _withQuery(AppRoutes.komodoTags, state.uri),
-      ),
-      GoRoute(
-        path: '${AppRoutes.legacySettingsKomodo}/providers',
-        redirect: (context, state) =>
-            _withQuery(AppRoutes.komodoProviders, state.uri),
-      ),
-      GoRoute(
-        path: '${AppRoutes.legacySettingsKomodo}/builders',
-        redirect: (context, state) =>
-            _withQuery(AppRoutes.komodoBuilders, state.uri),
-      ),
-      GoRoute(
-        path: '${AppRoutes.legacySettingsKomodo}/alerters',
-        redirect: (context, state) =>
-            _withQuery(AppRoutes.komodoAlerters, state.uri),
-        routes: [
-          GoRoute(
-            path: ':id',
-            redirect: (context, state) => _withQuery(
-              '${AppRoutes.komodoAlerters}/${state.pathParameters['id']!}',
-              state.uri,
-            ),
-          ),
-        ],
       ),
 
       // Bottom navigation with stateful branch navigators.
@@ -433,48 +383,6 @@ GoRouter appRouter(Ref ref) {
                       ),
                     ],
                   ),
-                  GoRoute(
-                    path: 'auto-updates',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const AutoUpdateReviewView()),
-                  ),
-                  GoRoute(
-                    path: 'variables',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const VariablesView()),
-                  ),
-                  GoRoute(
-                    path: 'tags',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const TagsView()),
-                  ),
-                  GoRoute(
-                    path: 'providers',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const ProvidersView()),
-                  ),
-                  GoRoute(
-                    path: 'builders',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const BuildersView()),
-                  ),
-                  GoRoute(
-                    path: 'alerters',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const AlertersView()),
-                    routes: [
-                      GoRoute(
-                        path: ':id',
-                        pageBuilder: (context, state) {
-                          final id = state.pathParameters['id']!;
-                          return _appStackPage(
-                            state,
-                            AlerterDetailView(alerterIdOrName: id),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ],
@@ -559,6 +467,48 @@ GoRouter appRouter(Ref ref) {
                     path: 'connections',
                     pageBuilder: (context, state) =>
                         _appStackPage(state, const ConnectionsView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/auto-updates',
+                    pageBuilder: (context, state) =>
+                        _appStackPage(state, const AutoUpdateReviewView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/variables',
+                    pageBuilder: (context, state) =>
+                        _appStackPage(state, const VariablesView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/tags',
+                    pageBuilder: (context, state) =>
+                        _appStackPage(state, const TagsView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/providers',
+                    pageBuilder: (context, state) =>
+                        _appStackPage(state, const ProvidersView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/builders',
+                    pageBuilder: (context, state) =>
+                        _appStackPage(state, const BuildersView()),
+                  ),
+                  GoRoute(
+                    path: 'komodo/alerters',
+                    pageBuilder: (context, state) =>
+                        _appStackPage(state, const AlertersView()),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        pageBuilder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          return _appStackPage(
+                            state,
+                            AlerterDetailView(alerterIdOrName: id),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'credits',
