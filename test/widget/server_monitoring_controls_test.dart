@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:komodo_go/core/widgets/segmented/app_segmented_control.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 import 'package:komodo_go/features/servers/presentation/views/server_detail/server_detail_sections.dart';
 
@@ -22,10 +23,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Auto'), findsOneWidget);
-    final control = tester.widget<SegmentedButton<ServerStatsGranularity>>(
-      find.byType(SegmentedButton<ServerStatsGranularity>),
+    final control = tester.widget<AppSegmentedControl<ServerStatsGranularity>>(
+      find.byType(AppSegmentedControl<ServerStatsGranularity>),
     );
-    expect(control.selected, {ServerStatsGranularity.fiveMinutes});
+    expect(control.value, ServerStatsGranularity.fiveMinutes);
     expect(tester.takeException(), isNull);
   });
 
@@ -108,7 +109,7 @@ void main() {
     final memoryLabelSize = tester.getSize(find.text('Mem'));
     final readLabelSize = tester.getSize(find.text('Read'));
     final selector = find.byWidgetPredicate(
-      (widget) => widget is SegmentedButton,
+      (widget) => widget is AppSegmentedControl<dynamic>,
     );
     expect(memoryLabelSize.height, closeTo(readLabelSize.height, 0.1));
     expect(

@@ -1,15 +1,14 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/deployments/deployment_detail_sections.dart';
 import 'package:komodo_go/composition/stacks/stack_config_editor.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/core/widgets/segmented/app_segmented_control.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
 import 'package:komodo_go/features/actions/presentation/providers/actions_provider.dart';
 import 'package:komodo_go/features/actions/presentation/views/action_detail_view.dart';
@@ -42,14 +41,14 @@ class ResourceCreationView extends ConsumerStatefulWidget {
 
 class _ResourceCreationViewState extends ConsumerState<ResourceCreationView> {
   final _nameController = TextEditingController();
-  final _stagesController = TextEditingController(text: '[]');
   final _stackKey = GlobalKey<StackConfigEditorContentState>();
   final _deploymentKey = GlobalKey<DeploymentConfigEditorContentState>();
   final _serverKey = GlobalKey<ServerConfigEditorContentState>();
   final _actionKey = GlobalKey<ActionConfigEditorContentState>();
   final _procedureKey = GlobalKey<ProcedureConfigEditorContentState>();
 
-  ResourceCreationMode _mode = ResourceCreationMode.template;
+  ResourceCreationMode _mode = ResourceCreationMode.blank;
+  var _advancedExpanded = false;
   String? _sourceId;
   String? _error;
   var _saving = false;
@@ -57,7 +56,6 @@ class _ResourceCreationViewState extends ConsumerState<ResourceCreationView> {
   @override
   void dispose() {
     _nameController.dispose();
-    _stagesController.dispose();
     super.dispose();
   }
 
@@ -72,6 +70,8 @@ class _ResourceCreationViewState extends ConsumerState<ResourceCreationView> {
       _sourceId = null;
     }
 
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: MainAppBar(
         title: 'Create ${widget.kind.singularLabel}',
@@ -80,108 +80,144 @@ class _ResourceCreationViewState extends ConsumerState<ResourceCreationView> {
         markUseGradient: true,
         centerTitle: true,
       ),
-      body: SafeArea(
-        child: ListView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.all(16),
-          children: [
-            SegmentedButton<ResourceCreationMode>(
-              key: const ValueKey('creation_mode'),
-              segments: const [
-                ButtonSegment(
-                  value: ResourceCreationMode.template,
-                  icon: Icon(Icons.auto_awesome_outlined),
-                  label: Text('Template'),
-                ),
-                ButtonSegment(
-                  value: ResourceCreationMode.copy,
-                  icon: Icon(Icons.copy_outlined),
-                  label: Text('Copy'),
-                ),
-                ButtonSegment(
-                  value: ResourceCreationMode.blank,
-                  icon: Icon(Icons.edit_note_outlined),
-                  label: Text('Full form'),
-                ),
-              ],
-              selected: {_mode},
-              onSelectionChanged: _saving
-                  ? null
-                  : (selection) => setState(() {
-                      _mode = selection.first;
-                      _sourceId = null;
-                      _error = null;
-                    }),
+      body: ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        children: [
+          TextField(
+            key: const ValueKey('resource_name'),
+            autocorrect: false,
+            enableSuggestions: false,
+            smartQuotesType: SmartQuotesType.disabled,
+            smartDashesType: SmartDashesType.disabled,
+            controller: _nameController,
+            enabled: !_saving,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              hintText: 'Unique resource name',
             ),
-            const Gap(16),
-            TextField(
-              key: const ValueKey('resource_name'),
-              autocorrect: false,
-              enableSuggestions: false,
-              smartQuotesType: SmartQuotesType.disabled,
-              smartDashesType: SmartDashesType.disabled,
-              controller: _nameController,
-              enabled: !_saving,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                hintText: 'Unique resource name',
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'Start from',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          AppSegmentedControl<ResourceCreationMode>(
+            key: const ValueKey('creation_mode'),
+            segments: const [
+              AppSegmentOption(
+                value: ResourceCreationMode.blank,
+                icon: Icons.note_add_outlined,
+                label: 'Empty',
               ),
-            ),
-            const Gap(16),
-            if (_mode != ResourceCreationMode.blank)
-              DropdownButtonFormField<String>(
-                key: const ValueKey('creation_source'),
-                initialValue: _sourceId,
-                decoration: InputDecoration(
-                  labelText: _mode == ResourceCreationMode.template
-                      ? 'Template'
-                      : 'Resource to copy',
-                  helperText: filteredSources.isEmpty
-                      ? _mode == ResourceCreationMode.template
-                            ? 'No templates are available.'
-                            : 'No resources are available.'
-                      : null,
-                ),
-                items: [
-                  for (final source in filteredSources)
-                    DropdownMenuItem(
-                      value: source.id,
-                      child: Text(source.name),
-                    ),
-                ],
-                onChanged: _saving
-                    ? null
-                    : (value) => setState(() => _sourceId = value),
-              )
-            else
-              _buildFullForm(),
-            if (_error != null) ...[
-              const Gap(16),
-              Text(
-                _error!,
-                key: const ValueKey('creation_error'),
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              AppSegmentOption(
+                value: ResourceCreationMode.template,
+                icon: Icons.auto_awesome_outlined,
+                label: 'Template',
+              ),
+              AppSegmentOption(
+                value: ResourceCreationMode.copy,
+                icon: Icons.copy_outlined,
+                label: 'Copy',
               ),
             ],
-            const Gap(20),
-            FilledButton.icon(
-              key: const ValueKey('create_resource'),
-              onPressed: _saving ? null : _create,
-              icon: _saving
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.add),
-              label: Text(_saving ? 'Creating…' : 'Create resource'),
+            value: _mode,
+            onChanged: _saving
+                ? null
+                : (mode) => setState(() {
+                    _mode = mode;
+                    _sourceId = null;
+                    _error = null;
+                  }),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          if (_mode != ResourceCreationMode.blank)
+            DropdownButtonFormField<String>(
+              key: const ValueKey('creation_source'),
+              initialValue: _sourceId,
+              decoration: InputDecoration(
+                labelText: _mode == ResourceCreationMode.template
+                    ? 'Template'
+                    : 'Resource to copy',
+                helperText: filteredSources.isEmpty
+                    ? _mode == ResourceCreationMode.template
+                          ? 'No templates are available.'
+                          : 'No resources are available.'
+                    : null,
+              ),
+              items: [
+                for (final source in filteredSources)
+                  DropdownMenuItem(value: source.id, child: Text(source.name)),
+              ],
+              onChanged: _saving
+                  ? null
+                  : (value) => setState(() => _sourceId = value),
+            )
+          else if (_hasFullForm)
+            Theme(
+              data: Theme.of(
+                context,
+              ).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                key: const ValueKey('configure_now'),
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                initiallyExpanded: _advancedExpanded,
+                onExpansionChanged: (v) =>
+                    setState(() => _advancedExpanded = v),
+                title: const Text('Configure now (advanced)'),
+                subtitle: const Text(
+                  'Optional. You can also configure everything after creating.',
+                ),
+                children: [_buildFullForm()],
+              ),
             ),
-            const Gap(32),
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              _error!,
+              key: const ValueKey('creation_error'),
+              style: TextStyle(color: scheme.error),
+            ),
           ],
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          child: FilledButton.icon(
+            key: const ValueKey('create_resource'),
+            onPressed: _saving ? null : _create,
+            icon: _saving
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add),
+            label: Text(_saving ? 'Creating…' : 'Create resource'),
+          ),
         ),
       ),
     );
   }
+
+  bool get _hasFullForm => switch (widget.kind) {
+    ResourceKind.stacks ||
+    ResourceKind.deployments ||
+    ResourceKind.servers ||
+    ResourceKind.actions ||
+    ResourceKind.procedures => true,
+    _ => false,
+  };
 
   List<_CreationSource> _watchSources() => switch (widget.kind) {
     ResourceKind.stacks =>
@@ -287,27 +323,9 @@ class _ResourceCreationViewState extends ConsumerState<ResourceCreationView> {
         key: _actionKey,
         initialConfig: const ActionConfig(),
       ),
-      ResourceKind.procedures => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ProcedureConfigEditorContent(
-            key: _procedureKey,
-            initialConfig: const ProcedureConfig(),
-          ),
-          const Gap(16),
-          TextField(
-            key: const ValueKey('procedure_stages'),
-            controller: _stagesController,
-            minLines: 5,
-            maxLines: 12,
-            decoration: const InputDecoration(
-              labelText: 'Stages (JSON)',
-              helperText:
-                  'Define the complete stages array. Leave [] for no stages.',
-              alignLabelWithHint: true,
-            ),
-          ),
-        ],
+      ResourceKind.procedures => ProcedureConfigEditorContent(
+        key: _procedureKey,
+        initialConfig: const ProcedureConfig(),
       ),
       _ => const SizedBox.shrink(),
     };
@@ -330,19 +348,7 @@ class _ResourceCreationViewState extends ConsumerState<ResourceCreationView> {
       case ResourceKind.actions:
         return _actionKey.currentState?.buildPartialConfigParams();
       case ResourceKind.procedures:
-        final config = _procedureKey.currentState?.buildPartialConfigParams();
-        if (config == null) return null;
-        try {
-          final stages = jsonDecode(_stagesController.text);
-          if (stages is! List) {
-            _error = 'Stages must be a JSON array.';
-            return null;
-          }
-          return <String, dynamic>{...config, 'stages': stages};
-        } on FormatException catch (error) {
-          _error = 'Invalid stages JSON: ${error.message}';
-          return null;
-        }
+        return _procedureKey.currentState?.buildPartialConfigParams();
       case ResourceKind.builds:
       case ResourceKind.repos:
       case ResourceKind.syncs:
@@ -364,10 +370,14 @@ class _ResourceCreationViewState extends ConsumerState<ResourceCreationView> {
       setState(() => _error = 'Select a source resource.');
       return;
     }
-    final config = _mode == ResourceCreationMode.blank ? _buildConfig() : null;
-    if (_mode == ResourceCreationMode.blank && config == null) {
-      setState(() => _error ??= 'The config editor is not ready.');
-      return;
+    final useConfig = _mode == ResourceCreationMode.blank;
+    Map<String, dynamic>? config;
+    if (useConfig) {
+      config = _advancedExpanded ? _buildConfig() : <String, dynamic>{};
+      if (config == null) {
+        setState(() => _error ??= 'The config editor is not ready.');
+        return;
+      }
     }
     final repository = ref.read(resourceManagementRepositoryProvider);
     if (repository == null) {

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
-import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/detail/detail_action_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
-import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
-import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
-
+import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 
 /// Card widget displaying stack information.
@@ -27,360 +25,109 @@ class StackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = stack.info.state;
-    final repo = stack.info.repo;
-    final branch = stack.info.branch;
-    final status = _statusLabel(stack.info.status ?? '');
-    final sourceLabel = _sourceLabel(stack);
-    final sourceIcon = _sourceIcon(stack);
     final serverLabel = (serverName ?? stack.info.serverId).trim();
-    final hasPendingUpdate = stack.hasPendingUpdate;
-    final tagPills = _buildTagPills(displayTags);
+    final serviceCount = stack.info.services.length;
+    final onAction = this.onAction;
 
-    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
-
-    return AppCardSurface(
+    return ResourceCard(
       key: ValueKey('stack_card_${stack.id}'),
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: cardRadius,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 96),
-            child: SizedBox(
-              width: double.infinity,
-              child: Stack(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          stack.name,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        if (repo.isNotEmpty) ...[
-                          const Gap(4),
-                          Text(
-                            branch.isNotEmpty ? '$repo · $branch' : repo,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.7),
-                                ),
-                          ),
-                        ],
-                        if (sourceLabel.isNotEmpty ||
-                            serverLabel.isNotEmpty) ...[
-                          const Gap(10),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 8,
-                            children: [
-                              if (sourceLabel.isNotEmpty)
-                                _IconLabel(
-                                  icon: sourceIcon,
-                                  label: sourceLabel,
-                                ),
-                              if (serverLabel.isNotEmpty)
-                                _IconLabel(
-                                  icon: AppIcons.server,
-                                  label: serverLabel,
-                                ),
-                            ],
-                          ),
-                        ],
-                        if (hasPendingUpdate ||
-                            stack.template ||
-                            tagPills.isNotEmpty) ...[
-                          const Gap(10),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              if (stack.template)
-                                const TextPill(label: 'Template'),
-                              if (hasPendingUpdate)
-                                const TextPill(
-                                  label: 'Update available',
-                                  icon: AppIcons.updateAvailable,
-                                  tone: PillTone.warning,
-                                ),
-                              ...tagPills,
-                            ],
-                          ),
-                        ],
-                        if (status.isNotEmpty) ...[
-                          const Gap(8),
-                          Text(
-                            status,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.withValues(
-                                        alpha: 0.5,
-                                      ),
-                                ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 12,
-                    child: _StatusBadge(state: state, compact: true),
-                  ),
-                  if (onAction != null)
-                    Positioned(
-                      right: 6,
-                      top: 0,
-                      bottom: 0,
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: PopupMenuButton<StackAction>(
-                          key: ValueKey('stack_card_menu_${stack.id}'),
-                          icon: const Icon(AppIcons.moreVertical),
-                          onSelected: onAction,
-                          itemBuilder: (context) =>
-                              _buildMenuItems(context, state, stack.id),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+      menuKey: ValueKey('stack_card_menu_${stack.id}'),
+      title: stack.name,
+      subtitle: _subtitle(stack),
+      status: stackStatusSpec(stack),
+      meta: [
+        if (serverLabel.isNotEmpty)
+          ResourceIconLabel(icon: AppIcons.server, label: serverLabel),
+        if (serviceCount > 0)
+          ResourceIconLabel(
+            icon: AppIcons.stacks,
+            label: '$serviceCount service${serviceCount == 1 ? '' : 's'}',
           ),
-        ),
-      ),
-    );
-  }
-
-  List<PopupMenuEntry<StackAction>> _buildMenuItems(
-    BuildContext context,
-    StackState state,
-    String stackId,
-  ) {
-    final scheme = Theme.of(context).colorScheme;
-    return [
-      komodoPopupMenuItem(
-        key: ValueKey('stack_card_check_updates_$stackId'),
-        value: StackAction.checkUpdates,
-        icon: Icons.refresh_outlined,
-        label: 'Check images now',
-        iconColor: scheme.primary,
-      ),
-      komodoPopupMenuItem(
-        key: ValueKey('stack_card_deploy_if_changed_$stackId'),
-        value: StackAction.deployIfChanged,
-        icon: Icons.difference_outlined,
-        label: 'Deploy if changed',
-        iconColor: scheme.primary,
-      ),
-      komodoPopupMenuItem(
-        key: ValueKey('stack_card_redeploy_$stackId'),
-        value: StackAction.redeploy,
-        icon: AppIcons.deployments,
-        label: 'Redeploy',
-        iconColor: scheme.primary,
-      ),
-      komodoPopupMenuItem(
-        key: ValueKey('stack_card_pull_$stackId'),
-        value: StackAction.pullImages,
-        icon: AppIcons.download,
-        label: 'Pull images',
-        iconColor: scheme.primary,
-      ),
-      if (state.isRunning)
-        komodoPopupMenuItem(
-          key: ValueKey('stack_card_restart_$stackId'),
-          value: StackAction.restart,
-          icon: AppIcons.refresh,
-          label: 'Restart',
-          iconColor: scheme.primary,
-        ),
-      if (state.isRunning)
-        komodoPopupMenuItem(
-          key: ValueKey('stack_card_pause_$stackId'),
-          value: StackAction.pause,
-          icon: AppIcons.pause,
-          label: 'Pause',
-          iconColor: scheme.tertiary,
-        ),
-      komodoPopupMenuDivider(),
-      if (!state.isRunning)
-        komodoPopupMenuItem(
-          key: ValueKey('stack_card_start_$stackId'),
-          value: StackAction.start,
-          icon: AppIcons.play,
-          label: 'Start',
-          iconColor: scheme.secondary,
-        ),
-      if (state.isRunning)
-        komodoPopupMenuItem(
-          key: ValueKey('stack_card_stop_$stackId'),
-          value: StackAction.stop,
-          icon: AppIcons.stop,
-          label: 'Stop',
-          iconColor: scheme.tertiary,
-        ),
-      komodoPopupMenuItem(
-        key: ValueKey('stack_card_destroy_$stackId'),
-        value: StackAction.destroy,
-        icon: AppIcons.delete,
-        label: 'Destroy',
-        destructive: true,
-      ),
-    ];
-  }
-
-  String _statusLabel(String status) {
-    final normalized = _stripHashes(status.trim());
-    if (normalized.isEmpty) return '';
-    if (_containerCountPattern.hasMatch(normalized.toLowerCase())) {
-      return '';
-    }
-    return normalized;
-  }
-
-  String _sourceLabel(StackListItem stack) {
-    if (stack.sourceLabel == 'Git') {
-      if (stack.info.linkedRepo.trim().isNotEmpty) {
-        return stack.info.linkedRepo.trim();
-      }
-      if (stack.info.repo.trim().isNotEmpty) {
-        return stack.info.repo.trim();
-      }
-      if (stack.info.gitProvider.trim().isNotEmpty) {
-        return stack.info.gitProvider.trim();
-      }
-    }
-    return stack.sourceLabel;
-  }
-
-  IconData _sourceIcon(StackListItem stack) {
-    if (stack.info.fileContents) return AppIcons.notepadText;
-    if (stack.info.filesOnHost) return AppIcons.server;
-    if (stack.info.linkedRepo.isNotEmpty || stack.info.repo.isNotEmpty) {
-      return AppIcons.repos;
-    }
-    return AppIcons.package;
-  }
-
-  List<Widget> _buildTagPills(List<String> tags) {
-    if (tags.isEmpty) return [];
-    final capped = tags.take(3).toList();
-    final remaining = tags.length - capped.length;
-    return [
-      for (final tag in capped) TextPill(label: tag),
-      if (remaining > 0) ValuePill(label: 'More', value: '+$remaining'),
-    ];
-  }
-}
-
-final _containerCountPattern = RegExp(
-  r'^(running|stopped|paused|deploying|restarting|removing|down|dead|unhealthy|exited)\s*\(\d+\)$',
-);
-
-final _hashPattern = RegExp(
-  r'\b(?:sha256:)?[a-f0-9]{7,64}\b',
-  caseSensitive: false,
-);
-
-String _stripHashes(String value) {
-  final cleaned = value.replaceAll(_hashPattern, '').replaceAll('  ', ' ');
-  return cleaned.trim();
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.state, this.compact = false});
-
-  final StackState state;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final (color, icon) = switch (state) {
-      StackState.deploying => (Colors.blue, AppIcons.loading),
-      StackState.running => (Colors.green, AppIcons.ok),
-      StackState.paused => (Colors.grey, AppIcons.paused),
-      StackState.stopped => (Colors.red, AppIcons.stopped),
-      StackState.created => (Colors.grey, AppIcons.pending),
-      StackState.restarting => (Colors.blue, AppIcons.loading),
-      StackState.removing => (Colors.grey, AppIcons.waiting),
-      StackState.unhealthy => (Colors.red, AppIcons.error),
-      StackState.down => (Colors.grey, AppIcons.pending),
-      StackState.dead => (Colors.red, AppIcons.canceled),
-      StackState.unknown => (Colors.orange, AppIcons.unknown),
-    };
-
-    final padding = compact
-        ? const EdgeInsets.symmetric(horizontal: 5, vertical: 1)
-        : const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
-    final iconSize = compact ? 11.0 : 14.0;
-    final fontSize = compact ? 10.0 : 12.0;
-
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: iconSize, color: color),
-          Gap(compact ? 2 : 4),
-          Text(
-            state.displayName,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w500,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _IconLabel extends StatelessWidget {
-  const _IconLabel({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: scheme.onSurfaceVariant),
-        const Gap(6),
-        Text(
-          label,
-          style: textTheme.bodySmall?.copyWith(
-            color: scheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
       ],
+      pills: [
+        if (stack.template) const TextPill(label: 'Template'),
+        ...resourceTagPills(displayTags),
+      ],
+      menuBuilder: onAction == null
+          ? null
+          : () => stackMenuGroups(stack.info.state, onAction),
+      onTap: onTap,
     );
   }
+}
+
+/// Status pill/accent for a stack. A running stack with pending image updates
+/// surfaces the update as the (warning) status.
+ResourceStatusSpec stackStatusSpec(StackListItem stack) {
+  final state = stack.info.state;
+  if (state == StackState.running && stack.hasPendingUpdate) {
+    return const ResourceStatusSpec(
+      label: 'Update available',
+      icon: AppIcons.updateAvailable,
+      tone: PillTone.warning,
+    );
+  }
+  final (tone, icon) = switch (state) {
+    StackState.running => (PillTone.success, AppIcons.ok),
+    StackState.deploying => (PillTone.warning, AppIcons.loading),
+    StackState.restarting => (PillTone.warning, AppIcons.loading),
+    StackState.removing => (PillTone.warning, AppIcons.waiting),
+    StackState.unhealthy => (PillTone.alert, AppIcons.error),
+    StackState.dead => (PillTone.alert, AppIcons.canceled),
+    StackState.paused => (PillTone.neutral, AppIcons.paused),
+    StackState.stopped => (PillTone.neutral, AppIcons.stopped),
+    StackState.created => (PillTone.neutral, AppIcons.pending),
+    StackState.down => (PillTone.neutral, AppIcons.pending),
+    StackState.unknown => (PillTone.neutral, AppIcons.unknown),
+  };
+  return ResourceStatusSpec(label: state.displayName, icon: icon, tone: tone);
+}
+
+/// Menu groups (Lifecycle, Maintenance, Danger) valid for [state].
+List<DetailActionGroup> stackMenuGroups(
+  StackState state,
+  void Function(StackAction action) onAction,
+) {
+  VoidCallback call(StackAction a) =>
+      () => onAction(a);
+
+  final transient =
+      state == StackState.deploying ||
+      state == StackState.restarting ||
+      state == StackState.removing;
+  final running = state == StackState.running;
+  final unhealthy = state == StackState.unhealthy;
+
+  return resourceMenuGroups(
+    lifecycle: [
+      if (!transient && !running && !unhealthy)
+        ResourceMenuItems.start(call(StackAction.start)),
+      if (running || unhealthy)
+        ResourceMenuItems.restart(call(StackAction.restart)),
+      if (running) ResourceMenuItems.pause(call(StackAction.pause)),
+      if (running || unhealthy) ResourceMenuItems.stop(call(StackAction.stop)),
+    ],
+    maintenance: [
+      ResourceMenuItems.pullImages(call(StackAction.pullImages)),
+      ResourceMenuItems.checkUpdates(call(StackAction.checkUpdates)),
+      ResourceMenuItems.deployIfChanged(call(StackAction.deployIfChanged)),
+      ResourceMenuItems.redeploy(call(StackAction.redeploy)),
+    ],
+    danger: [ResourceMenuItems.destroy(call(StackAction.destroy))],
+  );
+}
+
+String _subtitle(StackListItem stack) {
+  if (stack.sourceLabel == 'Git') {
+    final repo = stack.info.linkedRepo.trim().isNotEmpty
+        ? stack.info.linkedRepo.trim()
+        : stack.info.repo.trim();
+    final branch = stack.info.branch.trim();
+    if (repo.isNotEmpty) return branch.isNotEmpty ? '$repo · $branch' : repo;
+    final provider = stack.info.gitProvider.trim();
+    if (provider.isNotEmpty) return provider;
+  }
+  return stack.sourceLabel;
 }
 
 /// Actions available for a stack.

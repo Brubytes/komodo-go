@@ -4,12 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
-import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
-import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 import 'package:komodo_go/features/notifications/presentation/utils/alert_navigation_utils.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
@@ -27,7 +27,7 @@ class HomeServerStatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final statusColor = _serverStatusColor(server.state);
+    final statusColor = _serverStatusColor(server.state, scheme);
     final statusIcon = _serverStatusIcon(server.state);
     final statsValue = stats.asData?.value;
     final isLoading = stats.isLoading && statsValue == null;
@@ -36,141 +36,149 @@ class HomeServerStatTile extends StatelessWidget {
 
     return SizedBox(
       width: 220,
-      child: AppCardSurface(
-        padding: EdgeInsets.zero,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: cardRadius,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () {
-              final id = server.id;
-              if (id.isEmpty) return;
-              context.go(
-                '${AppRoutes.servers}/$id?name=${Uri.encodeComponent(server.name)}',
-              );
-            },
+      child: AppPressable(
+        child: AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Material(
+            color: Colors.transparent,
             borderRadius: cardRadius,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                // This tile is rendered inside a fixed-height horizontal list (currently 130).
-                // Use a compact layout to prevent vertical overflow.
-                final isCompact = constraints.maxHeight <= 132;
-                final padding = isCompact ? 10.0 : 14.0;
-                final headerGap = isCompact ? 3.0 : 10.0;
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () {
+                final id = server.id;
+                if (id.isEmpty) return;
+                context.go(
+                  '${AppRoutes.servers}/$id?name=${Uri.encodeComponent(server.name)}',
+                );
+              },
+              borderRadius: cardRadius,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // This tile is rendered inside a fixed-height horizontal list (currently 130).
+                  // Use a compact layout to prevent vertical overflow.
+                  final isCompact = constraints.maxHeight <= 132;
+                  final padding = isCompact ? 10.0 : 14.0;
+                  final headerGap = isCompact ? 3.0 : 10.0;
 
-                return Padding(
-                  padding: EdgeInsets.all(padding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: statusColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const Gap(8),
-                          Expanded(
-                            child: Text(
-                              server.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          Icon(statusIcon, size: 14, color: statusColor),
-                        ],
-                      ),
-                      Gap(headerGap),
-                      if (isLoading)
+                  return Padding(
+                    padding: EdgeInsets.all(padding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Row(
                           children: [
-                            const AppInlineSkeleton(),
-                            const Gap(8),
-                            Text(
-                              'Loading stats',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: statusColor,
+                                shape: BoxShape.circle,
+                              ),
                             ),
+                            const Gap(8),
+                            Expanded(
+                              child: Text(
+                                server.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            Icon(statusIcon, size: 14, color: statusColor),
                           ],
-                        )
-                      else if (isCompact)
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        ),
+                        Gap(headerGap),
+                        if (isLoading)
+                          Row(
                             children: [
-                              _CompactStatLine(
+                              const AppInlineSkeleton(),
+                              const Gap(8),
+                              Text(
+                                'Loading stats',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: scheme.onSurfaceVariant),
+                              ),
+                            ],
+                          )
+                        else if (isCompact)
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _CompactStatLine(
+                                  icon: AppIcons.cpu,
+                                  label: 'CPU',
+                                  primary: _percentLabel(
+                                    statsValue?.cpuPercent,
+                                  ),
+                                  color: scheme.primary,
+                                ),
+                                _CompactStatLine(
+                                  icon: AppIcons.memory,
+                                  label: 'Memory',
+                                  primary: _percentLabel(
+                                    statsValue?.memPercent,
+                                  ),
+                                  secondary: _absoluteLabel(
+                                    statsValue?.memUsedGb,
+                                    statsValue?.memTotalGb,
+                                  ),
+                                  color: scheme.primary,
+                                ),
+                                _CompactStatLine(
+                                  icon: AppIcons.hardDrive,
+                                  label: 'Disk',
+                                  primary: _percentLabel(
+                                    statsValue?.diskPercent,
+                                  ),
+                                  secondary: _absoluteLabel(
+                                    statsValue?.diskUsedGb,
+                                    statsValue?.diskTotalGb,
+                                  ),
+                                  color: scheme.primary,
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Column(
+                            children: [
+                              _StatRow(
                                 icon: AppIcons.cpu,
                                 label: 'CPU',
-                                primary: _percentLabel(statsValue?.cpuPercent),
-                                color: AppTokens.statusGreen,
+                                percent: statsValue?.cpuPercent,
+                                color: scheme.primary,
                               ),
-                              _CompactStatLine(
+                              const Gap(10),
+                              _StatRow(
                                 icon: AppIcons.memory,
                                 label: 'Memory',
-                                primary: _percentLabel(statsValue?.memPercent),
+                                percent: statsValue?.memPercent,
                                 secondary: _absoluteLabel(
                                   statsValue?.memUsedGb,
                                   statsValue?.memTotalGb,
                                 ),
-                                color: AppTokens.statusOrange,
+                                color: scheme.primary,
                               ),
-                              _CompactStatLine(
+                              const Gap(10),
+                              _StatRow(
                                 icon: AppIcons.hardDrive,
                                 label: 'Disk',
-                                primary: _percentLabel(statsValue?.diskPercent),
+                                percent: statsValue?.diskPercent,
                                 secondary: _absoluteLabel(
                                   statsValue?.diskUsedGb,
                                   statsValue?.diskTotalGb,
                                 ),
-                                color: AppTokens.statusRed,
+                                color: scheme.primary,
                               ),
                             ],
                           ),
-                        )
-                      else
-                        Column(
-                          children: [
-                            _StatRow(
-                              icon: AppIcons.cpu,
-                              label: 'CPU',
-                              percent: statsValue?.cpuPercent,
-                              color: AppTokens.statusGreen,
-                            ),
-                            const Gap(10),
-                            _StatRow(
-                              icon: AppIcons.memory,
-                              label: 'Memory',
-                              percent: statsValue?.memPercent,
-                              secondary: _absoluteLabel(
-                                statsValue?.memUsedGb,
-                                statsValue?.memTotalGb,
-                              ),
-                              color: AppTokens.statusOrange,
-                            ),
-                            const Gap(10),
-                            _StatRow(
-                              icon: AppIcons.hardDrive,
-                              label: 'Disk',
-                              percent: statsValue?.diskPercent,
-                              secondary: _absoluteLabel(
-                                statsValue?.diskUsedGb,
-                                statsValue?.diskTotalGb,
-                              ),
-                              color: AppTokens.statusRed,
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                );
-              },
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -203,12 +211,12 @@ class HomeServerStatTile extends StatelessWidget {
     return fixed.endsWith('.0') ? fixed.substring(0, fixed.length - 2) : fixed;
   }
 
-  Color _serverStatusColor(ServerState state) {
+  Color _serverStatusColor(ServerState state, ColorScheme scheme) {
     return switch (state) {
-      ServerState.ok => AppTokens.statusGreen,
-      ServerState.notOk => AppTokens.statusRed,
-      ServerState.disabled => Colors.grey,
-      ServerState.unknown => AppTokens.statusOrange,
+      ServerState.ok => scheme.statusSuccess,
+      ServerState.notOk => scheme.error,
+      ServerState.disabled => scheme.onSurfaceVariant,
+      ServerState.unknown => scheme.onSurfaceVariant,
     };
   }
 
@@ -237,37 +245,43 @@ class HomeAlertPreviewTile extends StatelessWidget {
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 6,
+    return AppPressable(
+      enabled: route != null,
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: cardRadius,
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 6,
+            ),
+            dense: true,
+            visualDensity: const VisualDensity(vertical: -1),
+            minLeadingWidth: 0,
+            horizontalTitleGap: 12,
+            leading: Icon(_alertIcon(alert.level), color: color),
+            title: Text(title),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (primary != null && primary.isNotEmpty) Text(primary),
+                const Gap(2),
+                Text(
+                  _formatTimestamp(alert.timestamp.toLocal()),
+                  style:
+                      Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+            onTap: route == null ? null : () => context.go(route),
           ),
-          dense: true,
-          visualDensity: const VisualDensity(vertical: -1),
-          minLeadingWidth: 0,
-          horizontalTitleGap: 12,
-          leading: Icon(_alertIcon(alert.level), color: color),
-          title: Text(title),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (primary != null && primary.isNotEmpty) Text(primary),
-              const Gap(2),
-              Text(
-                _formatTimestamp(alert.timestamp.toLocal()),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ],
-          ),
-          onTap: route == null ? null : () => context.go(route),
         ),
       ),
     );
@@ -285,8 +299,8 @@ class HomeAlertPreviewTile extends StatelessWidget {
   Color _alertColor(SeverityLevel level, ColorScheme scheme) {
     return switch (level) {
       SeverityLevel.critical => scheme.error,
-      SeverityLevel.warning => AppTokens.statusOrange,
-      SeverityLevel.ok => scheme.primary,
+      SeverityLevel.warning => scheme.statusWarning,
+      SeverityLevel.ok => scheme.statusSuccess,
       SeverityLevel.unknown => scheme.onSurfaceVariant,
     };
   }
@@ -314,181 +328,80 @@ class HomeAlertSummaryCard extends StatelessWidget {
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
+    return AppPressable(
+      enabled: onTap != null,
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
           borderRadius: cardRadius,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: cardRadius,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(AppIcons.warning, color: accent, size: 18),
                   ),
-                  child: Icon(AppIcons.warning, color: accent, size: 18),
-                ),
-                const Gap(10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const Gap(10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Unresolved alerts',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const Gap(4),
+                        Text(
+                          summary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Gap(10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        'Unresolved alerts',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+                      AppAnimatedValue.text(
+                        count.toString(),
+                        style: textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          height: 1,
                         ),
                       ),
-                      const Gap(4),
+                      const Gap(2),
                       Text(
-                        summary,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelMedium?.copyWith(
+                        'open',
+                        style: textTheme.labelSmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
-                ),
-                const Gap(10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      count.toString(),
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                      ),
-                    ),
-                    const Gap(2),
-                    Text(
-                      'open',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class HomeUpdatePreviewTile extends StatelessWidget {
-  const HomeUpdatePreviewTile({required this.update, super.key});
-
-  final UpdateListItem update;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final statusColor = _statusColor(update.status, scheme);
-    final route = routeForUpdate(update);
-    final label = update.operation.isNotEmpty
-        ? _humanizeVariant(update.operation)
-        : 'Update';
-    final targetName = update.target?.displayName ?? 'Unknown target';
-
-    final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
-
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: ListTile(
-          leading: Icon(
-            _iconForTargetType(update.target?.type),
-            color: statusColor,
-          ),
-          title: Text(label),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                targetName,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-              const Gap(4),
-              Text(
-                _formatTimestamp(update.timestamp.toLocal()),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ],
-          ),
-          trailing: _StatusChip(
-            label: _statusLabel(update.status, update.success),
-            color: statusColor,
-          ),
-          onTap: route == null ? null : () => context.go(route),
-        ),
-      ),
-    );
-  }
-
-  Color _statusColor(UpdateStatus status, ColorScheme scheme) {
-    return switch (status) {
-      UpdateStatus.success => AppTokens.statusGreen,
-      UpdateStatus.failed => scheme.error,
-      UpdateStatus.running || UpdateStatus.queued => AppTokens.statusOrange,
-      UpdateStatus.canceled => scheme.onSurfaceVariant,
-      UpdateStatus.unknown => scheme.primary,
-    };
-  }
-
-  String _statusLabel(UpdateStatus status, bool success) {
-    return switch (status) {
-      UpdateStatus.running => 'RUNNING',
-      UpdateStatus.queued => 'QUEUED',
-      UpdateStatus.success => 'SUCCESS',
-      UpdateStatus.failed => 'FAILED',
-      UpdateStatus.canceled => 'CANCELED',
-      UpdateStatus.unknown => success ? 'SUCCESS' : 'UNKNOWN',
-    };
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -547,7 +460,7 @@ class _StatRow extends StatelessWidget {
                   ),
                   if (showSecondary) ...[
                     const Gap(2),
-                    Text(
+                    AppAnimatedValue.text(
                       secondary!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -562,7 +475,7 @@ class _StatRow extends StatelessWidget {
               ),
             ),
             const Gap(8),
-            Text(
+            AppAnimatedValue.text(
               percentLabel,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: scheme.onSurface,
@@ -662,7 +575,7 @@ class _CompactStatLine extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
+              AppAnimatedValue.text(
                 primary,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -670,7 +583,7 @@ class _CompactStatLine extends StatelessWidget {
               ),
               if (showSecondary) ...[
                 const Gap(1),
-                Text(
+                AppAnimatedValue.text(
                   secondaryValue,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -683,32 +596,6 @@ class _CompactStatLine extends StatelessWidget {
       ),
     );
   }
-}
-
-IconData _iconForTargetType(ResourceTargetType? type) {
-  return switch (type) {
-    ResourceTargetType.system => AppIcons.settings,
-    ResourceTargetType.server => AppIcons.server,
-    ResourceTargetType.stack => AppIcons.stacks,
-    ResourceTargetType.deployment => AppIcons.deployments,
-    ResourceTargetType.build => AppIcons.builds,
-    ResourceTargetType.repo => AppIcons.repos,
-    ResourceTargetType.procedure => AppIcons.procedures,
-    ResourceTargetType.action => AppIcons.actions,
-    ResourceTargetType.resourceSync => AppIcons.syncs,
-    ResourceTargetType.builder => AppIcons.factory,
-    ResourceTargetType.alerter => AppIcons.notifications,
-    ResourceTargetType.unknown || null => AppIcons.widgets,
-  };
-}
-
-String _humanizeVariant(String value) {
-  final withSpaces = value.replaceAllMapped(
-    RegExp('(?<=[a-z0-9])(?=[A-Z])'),
-    (_) => ' ',
-  );
-  if (withSpaces.isEmpty) return value;
-  return withSpaces[0].toUpperCase() + withSpaces.substring(1);
 }
 
 String _formatTimestamp(DateTime dateTime) {

@@ -146,22 +146,8 @@ class ContainerRepository {
     required String containerIdOrName,
   }) async {
     return apiCall(() async {
-      final response = await _client.read(
-        RpcRequest(
-          type: 'GetResourceMatchingContainer',
-          params: {
-            'server': serverIdOrName,
-            'container': containerIdOrName,
-          },
-        ),
-      );
-      final resource = (response as Map<String, dynamic>)['resource'];
-      if (resource is Map<String, dynamic>) {
-        final type = resource['type'] as String? ?? '';
-        if (type == 'Stack' || type == 'Deployment') {
-          return ContainerAssociatedResource.fromJson(resource);
-        }
-      }
+      final matched = await _matchResource(serverIdOrName, containerIdOrName);
+      if (matched != null) return matched;
 
       final inspectionResponse = await _client.read(
         RpcRequest(
@@ -175,6 +161,15 @@ class ContainerRepository {
       final inspection = ContainerInspection.fromJson(
         inspectionResponse as Map<String, dynamic>,
       );
+
+      // Core matches deployments by container name only, so a lookup by
+      // Docker container id misses them. Retry with the inspected name.
+      final containerName = inspection.containerName;
+      if (containerName != null && containerName != containerIdOrName) {
+        final byName = await _matchResource(serverIdOrName, containerName);
+        if (byName != null) return byName;
+      }
+
       final stackName = inspection.managedStackName;
       if (stackName == null) return null;
       return ContainerAssociatedResource(
@@ -182,6 +177,26 @@ class ContainerRepository {
         id: stackName,
       );
     });
+  }
+
+  Future<ContainerAssociatedResource?> _matchResource(
+    String serverIdOrName,
+    String container,
+  ) async {
+    final response = await _client.read(
+      RpcRequest(
+        type: 'GetResourceMatchingContainer',
+        params: {'server': serverIdOrName, 'container': container},
+      ),
+    );
+    final resource = (response as Map<String, dynamic>)['resource'];
+    if (resource is Map<String, dynamic>) {
+      final type = resource['type'] as String? ?? '';
+      if (type == 'Stack' || type == 'Deployment') {
+        return ContainerAssociatedResource.fromJson(resource);
+      }
+    }
+    return null;
   }
 
   Future<Either<Failure, void>> startContainer({

@@ -1,17 +1,26 @@
 import 'package:flutter/widgets.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:komodo_go/core/network/network_status.dart';
 import 'package:komodo_go/core/router/route_observer.dart';
 
 abstract class PollingRouteAwareState<T extends ConsumerStatefulWidget>
-    extends ConsumerState<T> with RouteAware, WidgetsBindingObserver {
+    extends ConsumerState<T>
+    with RouteAware, WidgetsBindingObserver {
   bool isRouteVisible = true;
   AppLifecycleState lifecycleState = AppLifecycleState.resumed;
+
+  /// Throttles timer ticks on metered connections (see [shouldRunPollTick]).
+  final PollGate pollGate = PollGate();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Re-sync timers when the device goes offline or comes back.
+    ref.listenManual<NetworkStatus>(networkStatusProvider, (previous, next) {
+      if (previous?.isOffline != next.isOffline) onVisibilityChanged();
+    });
   }
 
   @override
@@ -76,6 +85,12 @@ abstract class PollingRouteAwareState<T extends ConsumerStatefulWidget>
     return enabled &&
         isActiveTab &&
         isRouteVisible &&
-        lifecycleState == AppLifecycleState.resumed;
+        lifecycleState == AppLifecycleState.resumed &&
+        !ref.read(networkStatusProvider).isOffline;
   }
+
+  /// Call from each periodic timer tick: false while offline, and on
+  /// cellular only every third tick runs (3x the effective interval).
+  bool shouldRunPollTick() =>
+      pollGate.shouldRun(ref.read(networkStatusProvider));
 }

@@ -35,7 +35,7 @@ class UpdatesState {
 class Updates extends _$Updates {
   @override
   Future<UpdatesState> build() async {
-    ref.watch(resourceActivityProvider);
+    ref.watch(resourceAnyActivityProvider);
     final repository = ref.watch(notificationsRepositoryProvider);
     if (repository == null) {
       return const UpdatesState(items: <UpdateListItem>[], nextPage: null);

@@ -52,7 +52,10 @@ List<ResourceOption> resourceOptionsFromLists({
       final name = getName(item).trim();
       if (id.isEmpty || name.isEmpty) continue;
       options.add(
-        ResourceOption(ref: ResourceRef(kind: kind, id: id), name: name),
+        ResourceOption(
+          ref: ResourceRef(kind: kind, id: id),
+          name: name,
+        ),
       );
     }
   }
@@ -126,7 +129,9 @@ List<ResourceOption> resourceOptionsFromLists({
   return options;
 }
 
-final resourceOptionsProvider = Provider<AsyncValue<List<ResourceOption>>>((ref) {
+final resourceOptionsProvider = Provider<AsyncValue<List<ResourceOption>>>((
+  ref,
+) {
   final serversAsync = ref.watch(serversProvider);
   final stacksAsync = ref.watch(stacksProvider);
   final deploymentsAsync = ref.watch(deploymentsProvider);
@@ -175,14 +180,16 @@ final resourceOptionsProvider = Provider<AsyncValue<List<ResourceOption>>>((ref)
 
   if (hasLoading) {
     return const AsyncValue<List<ResourceOption>>.loading()
-        // ignore: invalid_use_of_internal_member, preserves previous option data during loading
-        .copyWithPrevious(AsyncValue.data(options));
+    // ignore: invalid_use_of_internal_member, preserves previous option data during loading
+    .copyWithPrevious(AsyncValue.data(options));
   }
   return AsyncValue.data(options);
 });
 
 final resourceNameLookupProvider = Provider<Map<String, String>>((ref) {
-  final options = ref.watch(resourceOptionsProvider).maybeWhen(
+  final options = ref
+      .watch(resourceOptionsProvider)
+      .maybeWhen(
         data: (value) => value,
         orElse: () => const <ResourceOption>[],
       );

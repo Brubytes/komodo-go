@@ -2,8 +2,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/onboarding/onboarding_storage.dart';
 import 'package:komodo_go/core/providers/shared_preferences_provider.dart';
 
-final onboardingProvider =
-    AsyncNotifierProvider<OnboardingNotifier, bool>(OnboardingNotifier.new);
+final onboardingProvider = AsyncNotifierProvider<OnboardingNotifier, bool>(
+  OnboardingNotifier.new,
+);
 
 class OnboardingNotifier extends AsyncNotifier<bool> {
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/shared/resources/data/resource_batch_repository.dart';
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
@@ -14,6 +15,7 @@ Future<void> showResourceBatchSheet(
 }) async {
   await showModalBottomSheet<void>(
     context: context,
+    sheetAnimationStyle: AppMotion.sheetStyle(context),
     isScrollControlled: true,
     useSafeArea: true,
     builder: (_) => _ResourceBatchSheet(

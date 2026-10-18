@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -48,7 +50,12 @@ class _AutoUpdateReviewViewState extends ConsumerState<AutoUpdateReviewView> {
       body: RefreshIndicator(
         onRefresh: _loadCandidates,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.lg,
+            28,
+          ),
           children: [
             AppCardSurface(
               child: Column(
@@ -60,13 +67,13 @@ class _AutoUpdateReviewViewState extends ConsumerState<AutoUpdateReviewView> {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const Gap(6),
+                  const Gap(AppSpacing.xs),
                   const Text(
                     'Check every Stack and Deployment configured for image '
                     'polling. Auto-deploy is suppressed until you review the '
                     'candidates below.',
                   ),
-                  const Gap(14),
+                  const Gap(AppSpacing.md),
                   FilledButton.icon(
                     key: const ValueKey('global_check_now'),
                     onPressed: busy ? null : _runGlobalCheck,
@@ -83,7 +90,7 @@ class _AutoUpdateReviewViewState extends ConsumerState<AutoUpdateReviewView> {
                 ],
               ),
             ),
-            const Gap(16),
+            const Gap(AppSpacing.lg),
             if (_error != null)
               AppCardSurface(
                 child: Text(
@@ -94,7 +101,7 @@ class _AutoUpdateReviewViewState extends ConsumerState<AutoUpdateReviewView> {
             else if (_loading)
               const Center(
                 child: Padding(
-                  padding: EdgeInsets.all(32),
+                  padding: EdgeInsets.all(AppSpacing.xxl),
                   child: CircularProgressIndicator(),
                 ),
               )
@@ -135,7 +142,7 @@ class _AutoUpdateReviewViewState extends ConsumerState<AutoUpdateReviewView> {
                   ),
                 ],
               ),
-              const Gap(8),
+              const Gap(AppSpacing.sm),
               for (final candidate in _candidates) ...[
                 AppCardSurface(
                   padding: EdgeInsets.zero,
@@ -156,7 +163,7 @@ class _AutoUpdateReviewViewState extends ConsumerState<AutoUpdateReviewView> {
                     subtitle: Text(candidate.summary),
                   ),
                 ),
-                const Gap(10),
+                const Gap(AppSpacing.sm),
               ],
               FilledButton.icon(
                 key: const ValueKey('deploy_selected_updates'),
@@ -274,6 +281,7 @@ class _AutoUpdateReviewViewState extends ConsumerState<AutoUpdateReviewView> {
   Future<void> _deploySelected() async {
     final confirmed = await showDialog<bool>(
       context: context,
+      animationStyle: AppMotion.dialogStyle(context),
       builder: (context) => AlertDialog(
         title: const Text('Deploy selected updates?'),
         content: Text(

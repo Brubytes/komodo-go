@@ -64,16 +64,19 @@ void main() {
 
     expect(find.text('Template'), findsWidgets);
     expect(find.text('Copy'), findsOneWidget);
-    expect(find.text('Full form'), findsOneWidget);
-    expect(find.text('No templates are available.'), findsOneWidget);
+    expect(find.text('Configure now (advanced)'), findsOneWidget);
+    expect(find.text('Address'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('create_resource')));
     await tester.pump();
     expect(find.text('Enter a resource name.'), findsOneWidget);
 
-    await tester.tap(find.text('Full form'));
+    await tester.tap(find.text('Configure now (advanced)'));
     await tester.pumpAndSettle();
     expect(find.text('Address'), findsWidgets);
+    await tester.tap(find.text('Template'));
+    await tester.pumpAndSettle();
+    expect(find.text('No templates are available.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

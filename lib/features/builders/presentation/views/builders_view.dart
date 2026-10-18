@@ -7,17 +7,23 @@ import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
-import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
 import 'package:komodo_go/features/builders/presentation/views/builders/builder_tile.dart';
 import 'package:komodo_go/features/builders/presentation/views/builders/builders_view_states.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 
-class BuildersView extends ConsumerWidget {
+class BuildersView extends ConsumerStatefulWidget {
   const BuildersView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BuildersView> createState() => _BuildersViewState();
+}
+
+class _BuildersViewState extends ConsumerState<BuildersView> {
+  late final _intro = AppListIntro();
+
+  @override
+  Widget build(BuildContext context) {
     final buildersAsync = ref.watch(buildersProvider);
     final actionsState = ref.watch(builderActionsProvider);
 
@@ -41,10 +47,10 @@ class BuildersView extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
                   separatorBuilder: (_, _) => const Gap(12),
-                  itemBuilder: (context, index) => AppFadeSlide(
-                    delay: AppMotion.stagger(index),
-                    play: index < 10,
-                    child: BuilderTile(item: items[index]),
+                  itemBuilder: (context, index) => _intro.wrap(
+                    index,
+                    BuilderTile(item: items[index]),
+                    id: items[index].id,
                   ),
                 );
               },
@@ -74,45 +80,13 @@ class _BuildersSkeletonList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Skeletonizer(
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
-        itemBuilder: (_, _) => AppCardSurface(
-          padding: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const CircleAvatar(radius: 16),
-                    const Gap(10),
-                    Expanded(
-                      child: Text('Builder name', style: textTheme.titleSmall),
-                    ),
-                    const Gap(8),
-                    const CircleAvatar(radius: 6),
-                  ],
-                ),
-                const Gap(10),
-                Text('Host • Version • Status', style: textTheme.bodySmall),
-                const Gap(10),
-                const Row(
-                  children: [
-                    Chip(label: Text('Online')),
-                    Gap(8),
-                    Chip(label: Text('Slots 4')),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+    return const SingleChildScrollView(
+      physics: NeverScrollableScrollPhysics(),
+      child: ResourceCardSkeletonList(
+        title: 'Builder name',
+        subtitle: 'Server',
+        metaLeft: 'Builder type',
+        metaRight: 'Instance type',
       ),
     );
   }

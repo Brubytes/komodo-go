@@ -9,7 +9,8 @@ sealed class ActionListItem with _$ActionListItem {
   const factory ActionListItem({
     required String id,
     required String name,
-    required ActionListItemInfo info, @Default(false) bool template,
+    required ActionListItemInfo info,
+    @Default(false) bool template,
     @Default([]) List<String> tags,
   }) = _ActionListItem;
 
@@ -39,7 +40,8 @@ sealed class KomodoAction with _$KomodoAction {
   const factory KomodoAction({
     @JsonKey(readValue: _readId) required String id,
     required String name,
-    required ActionConfig config, @Default('') String description,
+    required ActionConfig config,
+    @Default('') String description,
     @Default(false) bool template,
     @Default([]) List<String> tags,
   }) = _KomodoAction;

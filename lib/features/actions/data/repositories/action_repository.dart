@@ -61,18 +61,21 @@ class ActionRepository {
   }
 
   /// Runs the target action.
-  Future<Either<Failure, void>> runAction(
+  ///
+  /// Resolves to the id of the started update when the API returns one
+  /// (empty string otherwise).
+  Future<Either<Failure, String>> runAction(
     String actionIdOrName, {
     Map<String, dynamic>? args,
   }) async {
     return apiCall(() async {
-      await _client.execute(
+      final response = await _client.execute(
         RpcRequest(
           type: 'RunAction',
           params: {'action': actionIdOrName, 'args': args},
         ),
       );
-      return;
+      return _updateId(response) ?? '';
     });
   }
 
@@ -140,4 +143,11 @@ ActionRepository? actionRepository(Ref ref) {
     return null;
   }
   return ActionRepository(client);
+}
+
+String? _updateId(Object? response) {
+  if (response is! Map) return null;
+  final raw = response['id'] ?? response['_id'];
+  final id = raw is Map ? raw[r'$oid'] : raw;
+  return id is String && id.isNotEmpty ? id : null;
 }

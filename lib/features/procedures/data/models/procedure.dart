@@ -9,7 +9,8 @@ sealed class ProcedureListItem with _$ProcedureListItem {
   const factory ProcedureListItem({
     required String id,
     required String name,
-    required ProcedureListItemInfo info, @Default(false) bool template,
+    required ProcedureListItemInfo info,
+    @Default(false) bool template,
     @Default([]) List<String> tags,
   }) = _ProcedureListItem;
 
@@ -40,7 +41,8 @@ sealed class KomodoProcedure with _$KomodoProcedure {
   const factory KomodoProcedure({
     @JsonKey(readValue: _readId) required String id,
     required String name,
-    required ProcedureConfig config, @Default('') String description,
+    required ProcedureConfig config,
+    @Default('') String description,
     @Default(false) bool template,
     @Default([]) List<String> tags,
   }) = _KomodoProcedure;

@@ -1,8 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
+import 'package:komodo_go/core/network/app_lifecycle_provider.dart';
+import 'package:komodo_go/core/network/network_status.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/data/repositories/stack_repository.dart';
 import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
@@ -15,7 +18,7 @@ part 'stacks_provider.g.dart';
 class Stacks extends _$Stacks {
   @override
   Future<List<StackListItem>> build() async {
-    ref.watch(resourceActivityProvider);
+    ref.watch(resourceScopeActivityProvider(ActivityScope.stacks));
     final repository = ref.watch(stackRepositoryProvider);
     if (repository == null) {
       return [];
@@ -35,15 +38,42 @@ class Stacks extends _$Stacks {
         )
         .toList();
     if (transitioning.isNotEmpty) {
-      final timer = Timer(const Duration(seconds: 5), () {
+      bool canPoll() =>
+          ref.read(appLifecycleProvider) == AppLifecycleState.resumed &&
+          !ref.read(networkStatusProvider).isOffline;
+
+      void refreshTransitioning() {
         for (final stack in transitioning) {
           ref
             ..invalidate(stackDetailProvider(stack.id))
             ..invalidate(stackServicesProvider(stack.id));
         }
         ref.invalidateSelf();
-      });
-      ref.onDispose(timer.cancel);
+      }
+
+      // Pause while backgrounded/offline instead of rescheduling forever;
+      // resume (or reconnect) kicks the refresh off again.
+      ref
+        ..listen(appLifecycleProvider, (previous, next) {
+          if (next == AppLifecycleState.resumed && canPoll()) {
+            refreshTransitioning();
+          }
+        })
+        ..listen(networkStatusProvider, (previous, next) {
+          if (previous?.isOffline == true && !next.isOffline && canPoll()) {
+            refreshTransitioning();
+          }
+        });
+
+      final interval = ref
+          .read(networkStatusProvider)
+          .scaleInterval(const Duration(seconds: 5));
+      if (interval != null) {
+        final timer = Timer(interval, () {
+          if (canPoll()) refreshTransitioning();
+        });
+        ref.onDispose(timer.cancel);
+      }
     }
     return stacks;
   }
@@ -62,7 +92,7 @@ class Stacks extends _$Stacks {
 /// Provides details for a specific stack.
 @riverpod
 Future<KomodoStack?> stackDetail(Ref ref, String stackIdOrName) async {
-  ref.watch(resourceActivityProvider);
+  ref.watch(resourceScopeActivityProvider(ActivityScope.stacks));
   final repository = ref.watch(stackRepositoryProvider);
   if (repository == null) {
     return null;
@@ -76,7 +106,7 @@ Future<KomodoStack?> stackDetail(Ref ref, String stackIdOrName) async {
 /// Provides services (containers) for a specific stack.
 @riverpod
 Future<List<StackService>> stackServices(Ref ref, String stackIdOrName) async {
-  ref.watch(resourceActivityProvider);
+  ref.watch(resourceScopeActivityProvider(ActivityScope.stacks));
   final repository = ref.watch(stackRepositoryProvider);
   if (repository == null) {
     return [];
@@ -179,7 +209,11 @@ class StackActions extends _$StackActions {
       (_) {
         state = const AsyncValue.data(null);
         ref.invalidate(stacksProvider);
-        ref.read(resourceActivityProvider.notifier).markChanged();
+        ref
+            .read(resourceActivityProvider.notifier)
+            .markChanged(
+              scopes: {ActivityScope.stacks, ActivityScope.containers},
+            );
         return true;
       },
     );
@@ -208,7 +242,11 @@ class StackActions extends _$StackActions {
       (value) {
         state = const AsyncValue.data(null);
         ref.invalidate(stacksProvider);
-        ref.read(resourceActivityProvider.notifier).markChanged();
+        ref
+            .read(resourceActivityProvider.notifier)
+            .markChanged(
+              scopes: {ActivityScope.stacks, ActivityScope.containers},
+            );
         return value;
       },
     );
