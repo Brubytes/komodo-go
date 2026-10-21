@@ -1,51 +1,51 @@
 appId: com.brubytes.komodoGo
 ---
-# Dark mode screenshots
-# Demo mode is enabled via --dart-define=KOMODO_DEMO_MODE=true during build
+# Dark mode screenshots (01-05)
+# Demo mode is enabled via --dart-define=KOMODO_DEMO_MODE=true during build.
+# The app opens on the connection picker first; select the bundled demo
+# connection (no-op if the app already auto-connected).
 - launchApp
 - waitForAnimationToEnd
-
-# Wait for demo data to load (auto-login in demo mode)
+- tapOn:
+    text: "(?s).*Komodo Demo.*"
+    optional: true
 - extendedWaitUntil:
-    visible:
-      text: "Home"
-    timeout: 15000
-
-# Screenshot 1: Home Dashboard (dark)
-- tapOn: "Home"
+    visible: "Home"
+    timeout: 20000
 - waitForAnimationToEnd
+
+# Screenshot 1: Home dashboard ("Needs attention" card)
 - takeScreenshot: 01_home_dashboard
 
-# Screenshot 2: Servers List (dark)
+# Screenshot 2: Servers list
 - tapOn: "Resources"
 - waitForAnimationToEnd
 - tapOn: "(?s).*Servers.*"
 - waitForAnimationToEnd
 - takeScreenshot: 02_servers_list
 
-# Screenshot 3: Server Detail (dark)
+# Screenshot 3: Server detail
+- scrollUntilVisible:
+    element: "(?s).*Primary Node.*"
+    direction: DOWN
 - tapOn: "(?s).*Primary Node.*"
 - waitForAnimationToEnd
 - takeScreenshot: 03_server_detail
 
-# Go back to Resources for Stack screenshots
+# Back to the Resources root (re-tapping the active tab pops to its root)
 - tapOn: "Resources"
 - waitForAnimationToEnd
-
-# Navigate to Stacks
 - tapOn: "(?s).*Stacks.*"
 - waitForAnimationToEnd
-
-# Tap on Demo Stack card
 - tapOn: "(?s).*Demo Stack.*"
 - waitForAnimationToEnd
 
-# Screenshot 4: Stack Config (dark) - Tap Config to scroll to compose view
+# Screenshot 4: Stack config (compose)
 - tapOn: "(?s).*Config.*"
 - waitForAnimationToEnd
 - takeScreenshot: 04_stack_config
 
-# Screenshot 5: Stack Logs (dark)
+# Screenshot 5: Stack logs
 - tapOn: "(?s).*Logs.*"
 - waitForAnimationToEnd
 - takeScreenshot: 05_stack_logs

@@ -1,39 +1,59 @@
 #!/bin/bash
-# Run Maestro screenshots for Komodo Go on iPhone simulator
+# Run Maestro screenshots for Komodo Go on an iOS simulator (iPhone or iPad)
 # Usage:
-#   ./run_screenshots.sh              # Mixed mode (first 5 dark, rest light)
-#   ./run_screenshots.sh mixed        # Mixed mode (first 5 dark, rest light)
+#   ./run_screenshots.sh              # Mixed mode (01-05 dark, 06-08 light)
+#   ./run_screenshots.sh mixed        # Mixed mode (01-05 dark, 06-08 light)
 #   ./run_screenshots.sh light        # Light mode only
 #   ./run_screenshots.sh dark         # Dark mode only
 #   ./run_screenshots.sh all          # Run both light and dark mode
 #
 # Options:
 #   --build                           # Force rebuild the app before running
+#   --device "<simulator name>"       # Simulator to use (or env DEVICE_NAME).
+#                                     # Default: iPhone 14 Plus (6.5", 1284x2778)
+#   --output <dir>                    # Output dir (or env OUTPUT_DIR).
+#                                     # Default: .maestro/screenshots
+#
+# Examples (App Store sizes):
+#   ./run_screenshots.sh --build --device "iPhone 18 Pro Max" --output .maestro/screenshots/iPhone   # 6.9" 1320x2868
+#   ./run_screenshots.sh --device "iPad Pro 13-inch (M5)" --output .maestro/screenshots/iPad         # 13" 2064x2752
+#
+# Env:
+#   MAESTRO_CMD_PREFIX                # Optional wrapper placed in front of the maestro command
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-OUTPUT_DIR="$SCRIPT_DIR/screenshots"
+OUTPUT_DIR="${OUTPUT_DIR:-$SCRIPT_DIR/screenshots}"
 APP_ID="com.brubytes.komodoGo"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# iPhone 14 Plus for 6.5" App Store screenshots (1284x2778) unless overridden
+DEVICE_NAME="${DEVICE_NAME:-iPhone 14 Plus}"
 
 # Parse arguments
 FORCE_BUILD=false
 MODE_FILTER="mixed"
 
-for arg in "$@"; do
-    case $arg in
+while [ $# -gt 0 ]; do
+    case $1 in
         --build)
             FORCE_BUILD=true
             ;;
+        --device)
+            DEVICE_NAME="$2"
+            shift
+            ;;
+        --output)
+            OUTPUT_DIR="$2"
+            case "$OUTPUT_DIR" in /*) ;; *) OUTPUT_DIR="$PWD/$OUTPUT_DIR" ;; esac
+            shift
+            ;;
         mixed|light|dark|all)
-            MODE_FILTER="$arg"
+            MODE_FILTER="$1"
             ;;
     esac
+    shift
 done
-
-# iPhone 14 Plus for 6.5" App Store screenshots (1284x2778)
-DEVICE_NAME="iPhone 14 Plus"
 
 mkdir -p "$OUTPUT_DIR"
 rm -f "$OUTPUT_DIR"/*.png
@@ -57,7 +77,7 @@ collect_screenshots() {
                 local base="${BASH_REMATCH[1]}_${BASH_REMATCH[2]}"
                 local name_prefix="$PREFIX"
                 if [ "$PREFIX" = "mixed" ]; then
-                    if [ "$index" -le 05 ]; then
+                    if [ "$((10#$index))" -le 5 ]; then
                         name_prefix="dark"
                     else
                         name_prefix="light"
@@ -78,7 +98,7 @@ collect_screenshots() {
             local base="${BASH_REMATCH[1]}_${BASH_REMATCH[2]}"
             local name_prefix="$PREFIX"
             if [ "$PREFIX" = "mixed" ]; then
-                if [ "$index" -le 03 ]; then
+                if [ "$((10#$index))" -le 5 ]; then
                     name_prefix="dark"
                 else
                     name_prefix="light"
@@ -134,10 +154,17 @@ echo "UDID: $DEVICE_UDID"
 echo "Output: $OUTPUT_DIR"
 echo "========================================"
 
-# Boot device if not booted
+# Boot device if not booted (remember so we only shut down what we booted)
 echo "Booting simulator..."
-xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
-sleep 3
+WAS_BOOTED=false
+if xcrun simctl list devices | grep "$DEVICE_UDID" | grep -q "(Booted)"; then
+    WAS_BOOTED=true
+fi
+xcrun simctl bootstatus "$DEVICE_UDID" -b >/dev/null 2>&1 || true
+
+# Clean, App Store friendly status bar (9:41, full battery/signal)
+xcrun simctl status_bar "$DEVICE_UDID" override --time 9:41 \
+    --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 2>/dev/null || true
 
 # Find and install app
 echo "Looking for app bundle..."
@@ -184,7 +211,7 @@ run_flow() {
 
     # Run Maestro
     cd "$SCRIPT_DIR"
-    maestro --device "$DEVICE_UDID" test "$FLOW_FILE" || true
+    ${MAESTRO_CMD_PREFIX:-} maestro --platform ios --device "$DEVICE_UDID" test "$FLOW_FILE" || true
 
     # Collect screenshots
     collect_screenshots "$PREFIX"
@@ -206,6 +233,10 @@ fi
 
 # Reset to light mode
 xcrun simctl ui "$DEVICE_UDID" appearance light
+xcrun simctl status_bar "$DEVICE_UDID" clear 2>/dev/null || true
+if [ "$WAS_BOOTED" = false ]; then
+    xcrun simctl shutdown "$DEVICE_UDID" 2>/dev/null || true
+fi
 
 echo ""
 echo "========================================"

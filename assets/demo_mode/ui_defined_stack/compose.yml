@@ -1,10 +1,24 @@
 services:
   web:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
     ports:
       - "8080:80"
+    depends_on:
+      - api
+
+  api:
+    image: ghcr.io/komodo/api:1.2.3
     environment:
-      - DEMO_MODE=true
+      - DATABASE_URL=postgres://postgres:5432/komodo
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  worker:
+    image: ghcr.io/komodo/worker:2.0.1
+    environment:
+      - QUEUES=default,mailers
     depends_on:
       - redis
 
@@ -14,5 +28,11 @@ services:
     volumes:
       - redis-data:/data
 
+  postgres:
+    image: postgres:16-alpine
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
 volumes:
   redis-data:
+  pg-data:
