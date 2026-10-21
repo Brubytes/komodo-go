@@ -34,6 +34,7 @@ import 'package:komodo_go/features/auth/presentation/views/login_view.dart';
 import 'package:komodo_go/features/builders/presentation/views/builders_view.dart';
 import 'package:komodo_go/features/builds/presentation/views/builds_list_view.dart';
 import 'package:komodo_go/features/containers/presentation/views/container_detail_view.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/views/notifications_view.dart';
 import 'package:komodo_go/features/notifications/presentation/views/update_detail_view.dart';
 import 'package:komodo_go/features/procedures/presentation/views/procedures_list_view.dart';
@@ -86,23 +87,6 @@ abstract class AppRoutes {
   static const autoUpdateReview = '$settings/komodo/auto-updates';
   static const komodoAlerterDetail = '$komodoAlerters/:id';
   static const credits = '$settings/credits';
-
-  /// Legacy paths.
-  static const legacyConnections = '/connections';
-  static const legacyServers = '/servers';
-  static const legacyDeployments = '/deployments';
-  static const legacyStacks = '/stacks';
-  static const legacyRepos = '/repos';
-  static const legacySyncs = '/syncs';
-  static const legacyBuilds = '/builds';
-  static const legacyProcedures = '/procedures';
-  static const legacyActions = '/actions';
-}
-
-String _withQuery(String location, Uri uri) {
-  final query = uri.query;
-  if (query.isEmpty) return location;
-  return '$location?$query';
 }
 
 /// Decides where to send the user based on the current auth state.
@@ -167,110 +151,6 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.login,
         builder: (context, state) => const LoginView(),
-      ),
-
-      // Legacy redirects (pre-stateful-shell paths).
-      GoRoute(
-        path: AppRoutes.legacyConnections,
-        redirect: (context, state) =>
-            _withQuery(AppRoutes.connections, state.uri),
-      ),
-      GoRoute(
-        path: AppRoutes.legacyServers,
-        redirect: (context, state) => _withQuery(AppRoutes.servers, state.uri),
-        routes: [
-          GoRoute(
-            path: ':id',
-            redirect: (context, state) => _withQuery(
-              '${AppRoutes.servers}/${state.pathParameters['id']!}',
-              state.uri,
-            ),
-          ),
-        ],
-      ),
-      GoRoute(
-        path: AppRoutes.legacyDeployments,
-        redirect: (context, state) =>
-            _withQuery(AppRoutes.deployments, state.uri),
-      ),
-      GoRoute(
-        path: AppRoutes.legacyStacks,
-        redirect: (context, state) => _withQuery(AppRoutes.stacks, state.uri),
-        routes: [
-          GoRoute(
-            path: ':id',
-            redirect: (context, state) => _withQuery(
-              '${AppRoutes.stacks}/${state.pathParameters['id']!}',
-              state.uri,
-            ),
-          ),
-        ],
-      ),
-      GoRoute(
-        path: AppRoutes.legacyRepos,
-        redirect: (context, state) => _withQuery(AppRoutes.repos, state.uri),
-        routes: [
-          GoRoute(
-            path: ':id',
-            redirect: (context, state) => _withQuery(
-              '${AppRoutes.repos}/${state.pathParameters['id']!}',
-              state.uri,
-            ),
-          ),
-        ],
-      ),
-      GoRoute(
-        path: AppRoutes.legacySyncs,
-        redirect: (context, state) => _withQuery(AppRoutes.syncs, state.uri),
-        routes: [
-          GoRoute(
-            path: ':id',
-            redirect: (context, state) => _withQuery(
-              '${AppRoutes.syncs}/${state.pathParameters['id']!}',
-              state.uri,
-            ),
-          ),
-        ],
-      ),
-      GoRoute(
-        path: AppRoutes.legacyBuilds,
-        redirect: (context, state) => _withQuery(AppRoutes.builds, state.uri),
-        routes: [
-          GoRoute(
-            path: ':id',
-            redirect: (context, state) => _withQuery(
-              '${AppRoutes.builds}/${state.pathParameters['id']!}',
-              state.uri,
-            ),
-          ),
-        ],
-      ),
-      GoRoute(
-        path: AppRoutes.legacyProcedures,
-        redirect: (context, state) =>
-            _withQuery(AppRoutes.procedures, state.uri),
-        routes: [
-          GoRoute(
-            path: ':id',
-            redirect: (context, state) => _withQuery(
-              '${AppRoutes.procedures}/${state.pathParameters['id']!}',
-              state.uri,
-            ),
-          ),
-        ],
-      ),
-      GoRoute(
-        path: AppRoutes.legacyActions,
-        redirect: (context, state) => _withQuery(AppRoutes.actions, state.uri),
-        routes: [
-          GoRoute(
-            path: ':id',
-            redirect: (context, state) => _withQuery(
-              '${AppRoutes.actions}/${state.pathParameters['id']!}',
-              state.uri,
-            ),
-          ),
-        ],
       ),
 
       // Bottom navigation with stateful branch navigators.
@@ -662,37 +542,46 @@ class MainShell extends ConsumerWidget {
       });
     }
 
+    // Reuses the alerts the dashboard already loads; no extra polling.
+    final unresolvedAlerts = ref.watch(
+      alertsProvider.select(
+        (alerts) =>
+            alerts.asData?.value.items.where((a) => !a.resolved).length ?? 0,
+      ),
+    );
+
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: AdaptiveBottomNavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onTap: (index) => _onItemTapped(ref, index),
-        items: const [
-          AdaptiveNavigationItem(
+        items: [
+          const AdaptiveNavigationItem(
             key: ValueKey('bottom_nav_home'),
             icon: Icon(AppIcons.home),
             activeIcon: Icon(AppIcons.home),
             label: 'Home',
           ),
-          AdaptiveNavigationItem(
+          const AdaptiveNavigationItem(
             key: ValueKey('bottom_nav_resources'),
             icon: Icon(AppIcons.resources),
             activeIcon: Icon(AppIcons.resources),
             label: 'Resources',
           ),
-          AdaptiveNavigationItem(
+          const AdaptiveNavigationItem(
             key: ValueKey('bottom_nav_containers'),
             icon: Icon(AppIcons.containers),
             activeIcon: Icon(AppIcons.containers),
             label: 'Containers',
           ),
           AdaptiveNavigationItem(
-            key: ValueKey('bottom_nav_notifications'),
-            icon: Icon(AppIcons.notifications),
-            activeIcon: Icon(AppIcons.notificationsActive),
+            key: const ValueKey('bottom_nav_notifications'),
+            icon: const Icon(AppIcons.notifications),
+            activeIcon: const Icon(AppIcons.notificationsActive),
             label: 'Notifications',
+            badgeCount: unresolvedAlerts,
           ),
-          AdaptiveNavigationItem(
+          const AdaptiveNavigationItem(
             key: ValueKey('bottom_nav_settings'),
             icon: Icon(AppIcons.settings),
             activeIcon: Icon(AppIcons.settings),

@@ -5,150 +5,338 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
+import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/notification_filters_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/target_display_name_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/utils/alert_navigation_utils.dart';
 import 'package:komodo_go/features/notifications/presentation/utils/alerts_error_utils.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-class AlertsTab extends ConsumerWidget {
+class AlertsTab extends ConsumerStatefulWidget {
   const AlertsTab({this.onOpenUpdates, super.key});
 
   final VoidCallback? onOpenUpdates;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AlertsTab> createState() => _AlertsTabState();
+}
+
+class _AlertsTabState extends ConsumerState<AlertsTab> {
+  late final _intro = AppListIntro();
+
+  VoidCallback? get onOpenUpdates => widget.onOpenUpdates;
+
+  @override
+  Widget build(BuildContext context) {
     final alertsAsync = ref.watch(alertsProvider);
+    final filters = ref.watch(alertFiltersProvider);
 
-    return RefreshIndicator(
-      onRefresh: () => ref.read(alertsProvider.notifier).refresh(),
-      child: alertsAsync.when(
-        data: (state) {
-          if (state.items.isEmpty) {
-            return const NotificationsEmptyState(
-              icon: AppIcons.warning,
-              title: 'No alerts',
-              description: 'You’re all caught up.',
-            );
-          }
+    final alertItems = alertsAsync.asData?.value.items;
+    final unresolvedCount = alertItems?.where((a) => !a.resolved).length;
+    final criticalCount = alertItems
+        ?.where((a) => a.level == SeverityLevel.critical)
+        .length;
 
-          return NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification.metrics.pixels >=
-                  notification.metrics.maxScrollExtent - 200) {
-                unawaited(ref.read(alertsProvider.notifier).fetchNextPage());
-              }
-              return false;
-            },
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.items.length + (state.nextPage == null ? 0 : 1),
-              separatorBuilder: (_, _) => const Gap(12),
-              itemBuilder: (context, index) {
-                final isFooter = index >= state.items.length;
-                if (isFooter) {
-                  return PaginationFooter(
-                    isLoading: state.isLoadingMore,
-                    onLoadMore: () => unawaited(
-                      ref.read(alertsProvider.notifier).fetchNextPage(),
-                    ),
+    return Column(
+      children: [
+        _FilterBar(
+          chips: [
+            AppFilterChip(
+              key: const ValueKey('alerts_filter_unresolved'),
+              label: 'Unresolved',
+              count: unresolvedCount,
+              selected: filters.unresolvedOnly,
+              onSelected: (value) =>
+                  ref.read(alertFiltersProvider.notifier).filters = filters
+                      .copyWith(unresolvedOnly: value),
+            ),
+            AppFilterChip(
+              key: const ValueKey('alerts_filter_critical'),
+              label: 'Critical',
+              count: criticalCount,
+              selected: filters.criticalOnly,
+              onSelected: (value) =>
+                  ref.read(alertFiltersProvider.notifier).filters = filters
+                      .copyWith(criticalOnly: value),
+            ),
+          ],
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => ref.read(alertsProvider.notifier).refresh(),
+            child: alertsAsync.when(
+              data: (state) {
+                if (state.items.isEmpty) {
+                  return const NotificationsEmptyState(
+                    icon: AppIcons.warning,
+                    title: 'No alerts',
+                    description: 'You’re all caught up.',
                   );
                 }
 
-                final alert = state.items[index];
-                return AppFadeSlide(
-                  delay: AppMotion.stagger(index),
-                  play: index < 10,
-                  child: AlertTile(alert: alert),
+                final items = filters.apply(state.items);
+                final isEmpty = items.isEmpty;
+                final hasMore = state.nextPage != null;
+
+                return NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.metrics.pixels >=
+                        notification.metrics.maxScrollExtent - 200) {
+                      unawaited(
+                        ref.read(alertsProvider.notifier).fetchNextPage(),
+                      );
+                    }
+                    return false;
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                    ),
+                    itemCount: (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
+                    separatorBuilder: (_, _) => const Gap(AppSpacing.md),
+                    itemBuilder: (context, index) {
+                      if (isEmpty && index == 0) {
+                        return _FilteredEmptyMessage(
+                          message: filters.criticalOnly
+                              ? 'No matching alerts'
+                              : 'No unresolved alerts',
+                          showAllLabel: 'Show all alerts',
+                          onShowAll: () =>
+                              ref.read(alertFiltersProvider.notifier).filters =
+                                  const AlertFilters(),
+                        );
+                      }
+                      final isFooter = isEmpty
+                          ? index > 0
+                          : index >= items.length;
+                      if (isFooter) {
+                        return PaginationFooter(
+                          isLoading: state.isLoadingMore,
+                          onLoadMore: () => unawaited(
+                            ref.read(alertsProvider.notifier).fetchNextPage(),
+                          ),
+                        );
+                      }
+
+                      return _intro.wrap(
+                        index,
+                        AlertTile(alert: items[index]),
+                        id: items[index].id,
+                      );
+                    },
+                  ),
+                );
+              },
+              loading: () => const _AlertsSkeletonList(),
+              error: (error, stack) {
+                final title = alertsUnavailableTitle(error);
+                final message = alertsUnavailableMessage(error);
+                return NotificationsErrorState(
+                  title: title,
+                  message: message,
+                  onRetry: () => ref.invalidate(alertsProvider),
+                  secondaryActionLabel: onOpenUpdates == null
+                      ? null
+                      : 'Open updates',
+                  onSecondaryAction: onOpenUpdates,
                 );
               },
             ),
-          );
-        },
-        loading: () => const _AlertsSkeletonList(),
-        error: (error, stack) {
-          final title = alertsUnavailableTitle(error);
-          final message = alertsUnavailableMessage(error);
-          return NotificationsErrorState(
-            title: title,
-            message: message,
-            onRetry: () => ref.invalidate(alertsProvider),
-            secondaryActionLabel: onOpenUpdates == null ? null : 'Open updates',
-            onSecondaryAction: onOpenUpdates,
-          );
-        },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Borderless, left-aligned row of tonal filter chips.
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({required this.chips});
+
+  final List<Widget> chips;
+
+  @override
+  Widget build(BuildContext context) {
+    // Continues the app bar header (which has no border of its own here),
+    // so the hairline sits under the chips and closes the whole header.
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.35),
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: AppFilterChipBar(verticalPadding: 2, children: chips),
       ),
     );
   }
 }
 
-class UpdatesTab extends ConsumerWidget {
+class _FilteredEmptyMessage extends StatelessWidget {
+  const _FilteredEmptyMessage({
+    required this.message,
+    required this.showAllLabel,
+    required this.onShowAll,
+  });
+
+  final String message;
+  final String showAllLabel;
+  final VoidCallback onShowAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+      child: Column(
+        children: [
+          Text(
+            message,
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          const Gap(AppSpacing.sm),
+          TextButton(onPressed: onShowAll, child: Text(showAllLabel)),
+        ],
+      ),
+    );
+  }
+}
+
+class UpdatesTab extends ConsumerStatefulWidget {
   const UpdatesTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<UpdatesTab> createState() => _UpdatesTabState();
+}
+
+class _UpdatesTabState extends ConsumerState<UpdatesTab> {
+  late final _intro = AppListIntro();
+
+  @override
+  Widget build(BuildContext context) {
     final updatesAsync = ref.watch(updatesProvider);
+    final failedOnly = ref.watch(updatesFailedOnlyProvider);
 
-    return RefreshIndicator(
-      onRefresh: () => ref.read(updatesProvider.notifier).refresh(),
-      child: updatesAsync.when(
-        data: (state) {
-          if (state.items.isEmpty) {
-            return const NotificationsEmptyState(
-              icon: AppIcons.updateAvailable,
-              title: 'No updates',
-              description: 'No recent activity yet.',
-            );
-          }
+    final updateItems = updatesAsync.asData?.value.items;
+    final failedCount = updateItems
+        ?.where((u) => u.status == UpdateStatus.failed)
+        .length;
 
-          return NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification.metrics.pixels >=
-                  notification.metrics.maxScrollExtent - 200) {
-                unawaited(ref.read(updatesProvider.notifier).fetchNextPage());
-              }
-              return false;
-            },
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.items.length + (state.nextPage == null ? 0 : 1),
-              separatorBuilder: (_, _) => const Gap(12),
-              itemBuilder: (context, index) {
-                final isFooter = index >= state.items.length;
-                if (isFooter) {
-                  return PaginationFooter(
-                    isLoading: state.isLoadingMore,
-                    onLoadMore: () => unawaited(
-                      ref.read(updatesProvider.notifier).fetchNextPage(),
-                    ),
+    return Column(
+      children: [
+        _FilterBar(
+          chips: [
+            AppFilterChip(
+              key: const ValueKey('updates_filter_failed'),
+              label: 'Failed',
+              count: failedCount,
+              selected: failedOnly,
+              onSelected: (value) =>
+                  ref.read(updatesFailedOnlyProvider.notifier).value = value,
+            ),
+          ],
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => ref.read(updatesProvider.notifier).refresh(),
+            child: updatesAsync.when(
+              data: (state) {
+                if (state.items.isEmpty) {
+                  return const NotificationsEmptyState(
+                    icon: AppIcons.updateAvailable,
+                    title: 'No updates',
+                    description: 'No recent activity yet.',
                   );
                 }
 
-                final update = state.items[index];
-                return AppFadeSlide(
-                  delay: AppMotion.stagger(index),
-                  play: index < 10,
-                  child: UpdateTile(update: update),
+                final items = applyUpdatesFilter(
+                  state.items,
+                  failedOnly: failedOnly,
+                );
+                final isEmpty = items.isEmpty;
+                final hasMore = state.nextPage != null;
+
+                return NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.metrics.pixels >=
+                        notification.metrics.maxScrollExtent - 200) {
+                      unawaited(
+                        ref.read(updatesProvider.notifier).fetchNextPage(),
+                      );
+                    }
+                    return false;
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                    ),
+                    itemCount: (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
+                    separatorBuilder: (_, _) => const Gap(AppSpacing.md),
+                    itemBuilder: (context, index) {
+                      if (isEmpty && index == 0) {
+                        return _FilteredEmptyMessage(
+                          message: 'No failed updates',
+                          showAllLabel: 'Show all updates',
+                          onShowAll: () =>
+                              ref
+                                      .read(updatesFailedOnlyProvider.notifier)
+                                      .value =
+                                  false,
+                        );
+                      }
+                      final isFooter = isEmpty
+                          ? index > 0
+                          : index >= items.length;
+                      if (isFooter) {
+                        return PaginationFooter(
+                          isLoading: state.isLoadingMore,
+                          onLoadMore: () => unawaited(
+                            ref.read(updatesProvider.notifier).fetchNextPage(),
+                          ),
+                        );
+                      }
+
+                      return _intro.wrap(
+                        index,
+                        UpdateTile(update: items[index]),
+                        id: items[index].id,
+                      );
+                    },
+                  ),
                 );
               },
+              loading: () => const _UpdatesSkeletonList(),
+              error: (error, stack) => NotificationsErrorState(
+                title: 'Failed to load updates',
+                message: error.toString(),
+                onRetry: () => ref.invalidate(updatesProvider),
+              ),
             ),
-          );
-        },
-        loading: () => const _UpdatesSkeletonList(),
-        error: (error, stack) => NotificationsErrorState(
-          title: 'Failed to load updates',
-          message: error.toString(),
-          onRetry: () => ref.invalidate(updatesProvider),
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -177,66 +365,74 @@ class AlertTile extends ConsumerWidget {
 
     final severityColor = switch (alert.level) {
       SeverityLevel.critical => scheme.error,
-      SeverityLevel.warning => scheme.tertiary,
-      SeverityLevel.ok => scheme.primary,
+      SeverityLevel.warning => scheme.statusWarning,
+      SeverityLevel.ok => scheme.statusSuccess,
       SeverityLevel.unknown => scheme.onSurfaceVariant,
     };
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: ListTile(
-          leading: Icon(_iconForAlert(alert), color: severityColor),
-          title: Text(title),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (primary != null && primary.isNotEmpty) Text(primary),
-              if (targetName != null && targetName.isNotEmpty) ...[
-                const Gap(4),
-                Text(
-                  targetName,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-              const Gap(4),
-              Row(
-                children: [
-                  Icon(
-                    AppIcons.clock,
-                    size: 16,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  const Gap(6),
-                  Expanded(
-                    child: Text(
-                      _formatTimestamp(alert.timestamp.toLocal()),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+    return AppPressable(
+      enabled: route != null,
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: cardRadius,
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            titleAlignment: ListTileTitleAlignment.top,
+            leading: Icon(_iconForAlert(alert), color: severityColor),
+            title: Text(title),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (primary != null && primary.isNotEmpty) Text(primary),
+                // The target name usually equals the payload's primary name;
+                // only show it when it adds information.
+                if (targetName != null &&
+                    targetName.isNotEmpty &&
+                    targetName != primary) ...[
+                  const Gap(AppSpacing.xs),
+                  Text(
+                    targetName,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ],
-              ),
-            ],
-          ),
-          trailing: alert.resolved
-              ? const NotificationsStatusChip(
-                  label: 'RESOLVED',
-                  kind: NotificationsStatusChipKind.neutral,
-                )
-              : NotificationsStatusChip(
-                  label: _labelForSeverity(alert.level),
-                  kind: _chipKindForAlertLevel(alert.level),
+                const Gap(AppSpacing.xs),
+                Row(
+                  children: [
+                    Icon(
+                      AppIcons.clock,
+                      size: 16,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const Gap(AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        _formatTimestamp(alert.timestamp.toLocal()),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-          onTap: route == null ? null : () => context.go(route),
+              ],
+            ),
+            trailing: alert.resolved
+                ? const NotificationsStatusChip(
+                    label: 'RESOLVED',
+                    kind: NotificationsStatusChipKind.neutral,
+                  )
+                : NotificationsStatusChip(
+                    label: _labelForSeverity(alert.level),
+                    kind: _chipKindForAlertLevel(alert.level),
+                  ),
+            onTap: route == null ? null : () => context.go(route),
+          ),
         ),
       ),
     );
@@ -244,13 +440,23 @@ class AlertTile extends ConsumerWidget {
 }
 
 class UpdateTile extends ConsumerWidget {
-  const UpdateTile({required this.update, super.key});
+  const UpdateTile({
+    required this.update,
+    super.key,
+    this.currentTargetId,
+  });
 
   final UpdateListItem update;
+
+  /// Id of the resource whose detail screen embeds this tile. When the
+  /// update targets it, the target name and the "Open resource" action are
+  /// omitted (they would only link back to the current page).
+  final String? currentTargetId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final route = routeForUpdate(update);
 
     final title = update.operation.isNotEmpty
@@ -259,6 +465,10 @@ class UpdateTile extends ConsumerWidget {
     final target = update.target;
     final operator = _bestOperatorLabel(update);
     final startTime = _formatDateTime(update.timestamp.toLocal());
+    final isCurrent =
+        currentTargetId != null &&
+        target != null &&
+        target.id == currentTargetId;
     final targetName = target == null
         ? 'Unknown target'
         : ref
@@ -268,75 +478,112 @@ class UpdateTile extends ConsumerWidget {
                 orElse: () => target.displayName,
               );
 
+    final resourceRoute =
+        isCurrent ||
+            target == null ||
+            target.type == ResourceTargetType.system ||
+            target.type == ResourceTargetType.unknown
+        ? null
+        : routeForTarget(target, displayName: targetName);
+
+    final muted = textTheme.bodySmall?.copyWith(
+      color: scheme.onSurfaceVariant,
+    );
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: ListTile(
-          leading: Icon(
-            _iconForTargetType(target?.type),
-            color: scheme.primary,
-          ),
-          title: Row(
-            children: [
-              Expanded(child: Text(title)),
-              NotificationsStatusChip(
-                label: _labelForUpdateStatus(update),
-                kind: _kindForUpdate(update),
+    return AppPressable(
+      enabled: route != null,
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: cardRadius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: route == null ? null : () => context.push(route),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
               ),
-            ],
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Gap(4),
-              Text(
-                targetName,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-              const Gap(4),
-              Row(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (operator != null) ...[
-                    Icon(
-                      AppIcons.user,
-                      size: 16,
-                      color: scheme.onSurfaceVariant,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Icon(
+                      _iconForTargetType(target?.type),
+                      color: scheme.primary,
+                      size: 22,
                     ),
-                    const Gap(6),
-                    Expanded(
-                      child: Text(
-                        operator,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    const Gap(12),
-                  ],
-                  Icon(
-                    AppIcons.clock,
-                    size: 16,
-                    color: scheme.onSurfaceVariant,
                   ),
-                  const Gap(6),
-                  Text(
-                    startTime,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (!isCurrent)
+                          Padding(
+                            padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                            child: Text(
+                              targetName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: muted,
+                            ),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                          child: Text(
+                            operator == null
+                                ? startTime
+                                : '$startTime  ·  $operator',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: muted,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _updateStatusPill(update),
+                      if (resourceRoute != null)
+                        IconButton(
+                          key: ValueKey('update_open_resource_${update.id}'),
+                          tooltip: 'Open resource',
+                          visualDensity: VisualDensity.compact,
+                          style: const ButtonStyle(
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          iconSize: 18,
+                          padding: const EdgeInsets.all(AppSpacing.xs),
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
+                          onPressed: () => context.push(resourceRoute),
+                          icon: const Icon(AppIcons.externalLink),
+                        ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-          onTap: route == null ? null : () => context.push(route),
         ),
       ),
     );
@@ -357,7 +604,7 @@ class PaginationFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
         child: Center(child: AppInlineSkeleton(size: 20)),
       );
     }
@@ -394,11 +641,11 @@ class NotificationsEmptyState extends StatelessWidget {
         size: 64,
         color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
       ),
-      const Gap(16),
+      const Gap(AppSpacing.lg),
       Center(
         child: Text(title, style: Theme.of(context).textTheme.titleMedium),
       ),
-      const Gap(8),
+      const Gap(AppSpacing.sm),
       Center(
         child: Text(
           description,
@@ -412,10 +659,13 @@ class NotificationsEmptyState extends StatelessWidget {
       ),
     ];
     if (scrollable) {
-      return ListView(padding: const EdgeInsets.all(24), children: children);
+      return ListView(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        children: children,
+      );
     }
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(mainAxisSize: MainAxisSize.min, children: children),
     );
   }
@@ -430,9 +680,9 @@ class _AlertsSkeletonList extends StatelessWidget {
 
     return Skeletonizer(
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
+        separatorBuilder: (_, _) => const Gap(AppSpacing.md),
         itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
@@ -441,20 +691,20 @@ class _AlertsSkeletonList extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const CircleAvatar(radius: 16),
-                const Gap(12),
+                const Gap(AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Alert title', style: textTheme.titleSmall),
-                      const Gap(6),
+                      const Gap(AppSpacing.xs),
                       Text('Primary detail', style: textTheme.bodySmall),
-                      const Gap(6),
+                      const Gap(AppSpacing.xs),
                       Text('Target • Time', style: textTheme.bodySmall),
                     ],
                   ),
                 ),
-                const Gap(8),
+                const Gap(AppSpacing.sm),
                 const Chip(label: Text('OPEN')),
               ],
             ),
@@ -474,9 +724,9 @@ class _UpdatesSkeletonList extends StatelessWidget {
 
     return Skeletonizer(
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
+        separatorBuilder: (_, _) => const Gap(AppSpacing.md),
         itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
@@ -485,20 +735,20 @@ class _UpdatesSkeletonList extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const CircleAvatar(radius: 16),
-                const Gap(12),
+                const Gap(AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Update title', style: textTheme.titleSmall),
-                      const Gap(6),
+                      const Gap(AppSpacing.xs),
                       Text('Detail line', style: textTheme.bodySmall),
-                      const Gap(6),
+                      const Gap(AppSpacing.xs),
                       Text('Resource • Time', style: textTheme.bodySmall),
                     ],
                   ),
                 ),
-                const Gap(8),
+                const Gap(AppSpacing.sm),
                 const Chip(label: Text('NEW')),
               ],
             ),
@@ -538,11 +788,11 @@ class NotificationsErrorState extends StatelessWidget {
         size: 64,
         color: Theme.of(context).colorScheme.error,
       ),
-      const Gap(16),
+      const Gap(AppSpacing.lg),
       Center(
         child: Text(title, style: Theme.of(context).textTheme.titleMedium),
       ),
-      const Gap(8),
+      const Gap(AppSpacing.sm),
       Center(
         child: Text(
           message,
@@ -554,7 +804,7 @@ class NotificationsErrorState extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
       ),
-      const Gap(24),
+      const Gap(AppSpacing.xl),
       Wrap(
         alignment: WrapAlignment.center,
         spacing: 12,
@@ -573,16 +823,19 @@ class NotificationsErrorState extends StatelessWidget {
       ),
     ];
     if (scrollable) {
-      return ListView(padding: const EdgeInsets.all(24), children: children);
+      return ListView(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        children: children,
+      );
     }
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(mainAxisSize: MainAxisSize.min, children: children),
     );
   }
 }
 
-enum NotificationsStatusChipKind { success, warning, error, neutral }
+enum NotificationsStatusChipKind { success, warning, error, neutral, working }
 
 class NotificationsStatusChip extends StatelessWidget {
   const NotificationsStatusChip({
@@ -600,16 +853,20 @@ class NotificationsStatusChip extends StatelessWidget {
 
     final (bg, fg) = switch (kind) {
       NotificationsStatusChipKind.success => (
-        AppTokens.statusGreen.withValues(alpha: 0.16),
-        AppTokens.statusGreen,
+        scheme.statusSuccessContainer,
+        scheme.statusSuccess,
       ),
       NotificationsStatusChipKind.warning => (
-        AppTokens.statusOrange.withValues(alpha: 0.18),
-        AppTokens.statusOrange,
+        scheme.statusWarningContainer,
+        scheme.statusWarning,
       ),
       NotificationsStatusChipKind.error => (
-        AppTokens.statusRed.withValues(alpha: 0.16),
-        AppTokens.statusRed,
+        scheme.errorContainer,
+        scheme.onErrorContainer,
+      ),
+      NotificationsStatusChipKind.working => (
+        scheme.primaryContainer,
+        scheme.onPrimaryContainer,
       ),
       NotificationsStatusChipKind.neutral => (
         scheme.surfaceContainerHighest,
@@ -618,7 +875,10 @@ class NotificationsStatusChip extends StatelessWidget {
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
@@ -705,29 +965,19 @@ String _labelForSeverity(SeverityLevel level) {
   };
 }
 
-String _labelForUpdateStatus(UpdateListItem update) {
-  return switch (update.status) {
-    UpdateStatus.running => 'RUNNING',
-    UpdateStatus.queued => 'QUEUED',
-    UpdateStatus.success => 'SUCCESS',
-    UpdateStatus.failed => 'FAILED',
-    UpdateStatus.canceled => 'CANCELED',
-    UpdateStatus.unknown => update.success ? 'SUCCESS' : 'UNKNOWN',
-  };
-}
-
-NotificationsStatusChipKind _kindForUpdate(UpdateListItem update) {
-  return switch (update.status) {
-    UpdateStatus.success => NotificationsStatusChipKind.success,
-    UpdateStatus.failed => NotificationsStatusChipKind.error,
-    UpdateStatus.running ||
-    UpdateStatus.queued => NotificationsStatusChipKind.warning,
-    UpdateStatus.canceled => NotificationsStatusChipKind.neutral,
+StatusPill _updateStatusPill(UpdateListItem update) {
+  final (label, icon, tone) = switch (update.status) {
+    UpdateStatus.running => ('Running', AppIcons.loading, PillTone.warning),
+    UpdateStatus.queued => ('Queued', AppIcons.waiting, PillTone.neutral),
+    UpdateStatus.success => ('Success', AppIcons.ok, PillTone.success),
+    UpdateStatus.failed => ('Failed', AppIcons.error, PillTone.alert),
+    UpdateStatus.canceled => ('Canceled', AppIcons.canceled, PillTone.neutral),
     UpdateStatus.unknown =>
       update.success
-          ? NotificationsStatusChipKind.success
-          : NotificationsStatusChipKind.neutral,
+          ? ('Success', AppIcons.ok, PillTone.success)
+          : ('Unknown', AppIcons.unknown, PillTone.neutral),
   };
+  return StatusPill(label: label, icon: icon, tone: tone);
 }
 
 NotificationsStatusChipKind _chipKindForAlertLevel(SeverityLevel level) {

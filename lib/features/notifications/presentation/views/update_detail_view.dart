@@ -3,9 +3,11 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
@@ -24,12 +26,15 @@ class UpdateDetailView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final updateAsync = ref.watch(updateDetailProvider(updateId));
     return Scaffold(
-      appBar: const MainAppBar(
+      appBar: MainAppBar(
         title: 'Update details',
         icon: AppIcons.history,
         markColor: AppTokens.resourceStacks,
         markUseGradient: true,
         centerTitle: true,
+        status: updateAsync.asData?.value == null
+            ? null
+            : _updateAppBarStatus(updateAsync.asData!.value!),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -41,10 +46,15 @@ class UpdateDetailView extends ConsumerWidget {
               ? _scrollableMessage('Update not found')
               : _UpdateDetailContent(update: update),
           loading: () => const AppSkeletonList(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 24),
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.xl,
+            ),
           ),
           error: (error, _) => ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
               ErrorStateView(
                 title: 'Failed to load update',
@@ -60,12 +70,10 @@ class UpdateDetailView extends ConsumerWidget {
 
   Widget _scrollableMessage(String message) {
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
         const Gap(72),
-        const Icon(AppIcons.history, size: 56),
-        const Gap(16),
-        Center(child: Text(message)),
+        EmptyStateView(icon: AppIcons.history, title: message),
       ],
     );
   }
@@ -93,48 +101,44 @@ class _UpdateDetailContent extends ConsumerWidget {
 
     return ListView(
       key: const ValueKey('update_detail_content'),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.xl,
+      ),
       children: [
-        DetailHeroPanel(
-          metrics: [
-            DetailMetricTileData(
-              icon: _statusIcon(update.status),
-              label: 'Status',
-              value: _statusLabel(update.status, update.success),
-              tone: _statusTone(update.status, update.success),
-            ),
-            DetailMetricTileData(
+        DetailResourceHeader(
+          banner: update.status == UpdateStatus.failed
+              ? const DetailAttentionBanner(
+                  icon: AppIcons.error,
+                  message: 'This update failed',
+                  tone: PillTone.alert,
+                )
+              : null,
+          facts: [
+            DetailFact(
               icon: _targetIcon(target?.type),
               label: 'Target',
               value: targetName,
-              tone: DetailMetricTone.neutral,
+              onTap: targetRoute == null
+                  ? null
+                  : () => context.push(targetRoute),
             ),
-            DetailMetricTileData(
+            if (update.operatorName.trim().isNotEmpty)
+              DetailFact(
+                icon: AppIcons.user,
+                label: 'Operator',
+                value: update.operatorName,
+              ),
+            DetailFact(
               icon: AppIcons.clock,
               label: 'Started',
               value: _formatDateTime(update.startedAt),
-              tone: DetailMetricTone.neutral,
-            ),
-            DetailMetricTileData(
-              icon: AppIcons.activity,
-              label: 'Duration',
-              value: _formatDuration(update.duration),
-              tone: DetailMetricTone.neutral,
             ),
           ],
-          footer: targetRoute == null
-              ? null
-              : Align(
-                  alignment: Alignment.centerLeft,
-                  child: FilledButton.tonalIcon(
-                    key: const ValueKey('open_update_target'),
-                    onPressed: () => context.push(targetRoute),
-                    icon: const Icon(AppIcons.externalLink),
-                    label: const Text('Open resource'),
-                  ),
-                ),
         ),
-        const Gap(16),
+        const Gap(AppSpacing.lg),
         DetailSection(
           title: 'Summary',
           icon: AppIcons.info,
@@ -172,7 +176,7 @@ class _UpdateDetailContent extends ConsumerWidget {
             ],
           ),
         ),
-        const Gap(16),
+        const Gap(AppSpacing.lg),
         DetailSection(
           title: 'Execution logs',
           icon: AppIcons.logs,
@@ -186,13 +190,14 @@ class _UpdateDetailContent extends ConsumerWidget {
                       index++
                     ) ...[
                       _UpdateLogCard(log: update.logs[index], index: index),
-                      if (index < update.logs.length - 1) const Gap(12),
+                      if (index < update.logs.length - 1)
+                        const Gap(AppSpacing.md),
                     ],
                   ],
                 ),
         ),
         if (update.otherData.trim().isNotEmpty) ...[
-          const Gap(16),
+          const Gap(AppSpacing.lg),
           DetailSection(
             title: 'Additional data',
             icon: AppIcons.notepadText,
@@ -201,7 +206,7 @@ class _UpdateDetailContent extends ConsumerWidget {
         ],
         if (update.previousToml.trim().isNotEmpty ||
             update.currentToml.trim().isNotEmpty) ...[
-          const Gap(16),
+          const Gap(AppSpacing.lg),
           DetailSection(
             title: 'Configuration change',
             icon: AppIcons.code,
@@ -215,7 +220,7 @@ class _UpdateDetailContent extends ConsumerWidget {
                   ),
                 if (update.previousToml.trim().isNotEmpty &&
                     update.currentToml.trim().isNotEmpty)
-                  const Gap(12),
+                  const Gap(AppSpacing.md),
                 if (update.currentToml.trim().isNotEmpty)
                   DetailSubCard(
                     title: 'Current TOML',
@@ -244,7 +249,7 @@ class _UpdateLogCard extends StatelessWidget {
       title: title,
       icon: log.success ? AppIcons.ok : AppIcons.error,
       tintColor: log.success
-          ? Theme.of(context).colorScheme.secondary
+          ? Theme.of(context).colorScheme.statusSuccess
           : Theme.of(context).colorScheme.error,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -259,22 +264,22 @@ class _UpdateLogCard extends StatelessWidget {
           ),
           if (log.command.trim().isNotEmpty) ...[
             const Text('Command'),
-            const Gap(6),
+            const Gap(AppSpacing.xs),
             DetailCodeBlock(code: log.command, maxHeight: 160),
           ],
           if (log.stdout.trim().isNotEmpty) ...[
-            const Gap(12),
+            const Gap(AppSpacing.md),
             const Text('Standard output'),
-            const Gap(6),
+            const Gap(AppSpacing.xs),
             DetailCodeBlock(code: log.stdout),
           ],
           if (log.stderr.trim().isNotEmpty) ...[
-            const Gap(12),
+            const Gap(AppSpacing.md),
             Text(
               'Standard error',
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-            const Gap(6),
+            const Gap(AppSpacing.xs),
             DetailCodeBlock(code: log.stderr),
           ],
         ],
@@ -302,25 +307,22 @@ String _statusLabel(UpdateStatus status, bool success) {
   };
 }
 
-IconData _statusIcon(UpdateStatus status) {
-  return switch (status) {
-    UpdateStatus.queued => AppIcons.waiting,
-    UpdateStatus.running => AppIcons.loading,
-    UpdateStatus.success => AppIcons.ok,
-    UpdateStatus.failed => AppIcons.error,
-    UpdateStatus.canceled => AppIcons.canceled,
-    UpdateStatus.unknown => AppIcons.unknown,
-  };
+MainAppBarStatus _updateAppBarStatus(UpdateDetail update) {
+  final duration = update.duration;
+  final label = _statusLabel(update.status, update.success);
+  return MainAppBarStatus(
+    label: duration == null ? label : '$label · ${_formatDuration(duration)}',
+    tone: _statusTone(update.status, update.success),
+  );
 }
 
-DetailMetricTone _statusTone(UpdateStatus status, bool success) {
+PillTone _statusTone(UpdateStatus status, bool success) {
   return switch (status) {
-    UpdateStatus.success => DetailMetricTone.success,
-    UpdateStatus.failed => DetailMetricTone.alert,
-    UpdateStatus.queued || UpdateStatus.running => DetailMetricTone.tertiary,
-    UpdateStatus.canceled => DetailMetricTone.neutral,
-    UpdateStatus.unknown =>
-      success ? DetailMetricTone.success : DetailMetricTone.neutral,
+    UpdateStatus.success => PillTone.success,
+    UpdateStatus.failed => PillTone.alert,
+    UpdateStatus.queued || UpdateStatus.running => PillTone.warning,
+    UpdateStatus.canceled => PillTone.neutral,
+    UpdateStatus.unknown => success ? PillTone.success : PillTone.neutral,
   };
 }
 

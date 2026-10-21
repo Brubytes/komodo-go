@@ -55,19 +55,19 @@ void main() {
     await tester.tap(find.text('Delete').first);
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('tag_delete_dialog_t1')), findsOneWidget);
+    expect(find.text('Delete tag'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('tag_delete_cancel_t1')));
+    await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('tag_delete_dialog_t1')), findsNothing);
+    expect(find.text('Delete tag'), findsNothing);
     verifyNever(() => repository.deleteTag(id: 't1'));
 
     await tester.tap(find.byKey(const ValueKey('tag_tile_menu_t1')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('tag_delete_confirm_t1')));
+    await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.text('Delete')));
     await tester.pumpAndSettle();
 
     verify(() => repository.deleteTag(id: 't1')).called(1);

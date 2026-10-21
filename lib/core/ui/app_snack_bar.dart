@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:komodo_go/core/theme/status_colors.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 
 enum AppSnackBarTone { neutral, success, warning, error }
 
@@ -17,6 +19,8 @@ class AppSnackBar {
     BuildContext context,
     String message, {
     AppSnackBarTone tone = AppSnackBarTone.neutral,
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
     final scheme = Theme.of(context).colorScheme;
 
@@ -28,11 +32,11 @@ class AppSnackBar {
         backgroundColor = scheme.inverseSurface;
         foregroundColor = scheme.onInverseSurface;
       case AppSnackBarTone.success:
-        backgroundColor = scheme.secondaryContainer;
-        foregroundColor = scheme.onSecondaryContainer;
+        backgroundColor = scheme.statusSuccessContainer;
+        foregroundColor = scheme.statusSuccess;
       case AppSnackBarTone.warning:
-        backgroundColor = scheme.tertiaryContainer;
-        foregroundColor = scheme.onTertiaryContainer;
+        backgroundColor = scheme.statusWarningContainer;
+        foregroundColor = scheme.statusWarning;
       case AppSnackBarTone.error:
         backgroundColor = scheme.errorContainer;
         foregroundColor = scheme.onErrorContainer;
@@ -91,6 +95,13 @@ class AppSnackBar {
       SnackBar(
         duration: const Duration(days: 1),
         backgroundColor: backgroundColor,
+        action: actionLabel != null && onAction != null
+            ? SnackBarAction(
+                label: actionLabel,
+                textColor: foregroundColor,
+                onPressed: onAction,
+              )
+            : null,
         content: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onLongPressStart: (_) => pauseDismissTimer(),
@@ -105,6 +116,7 @@ class AppSnackBar {
           ),
         ),
       ),
+      snackBarAnimationStyle: AppMotion.snackBarStyle(context),
     );
 
     scheduleDismiss();

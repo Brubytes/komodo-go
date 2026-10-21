@@ -52,11 +52,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('update_detail_content')), findsOneWidget);
-    expect(find.text('Failed'), findsOneWidget);
+    expect(find.textContaining('Failed'), findsWidgets);
     expect(find.text('Deploy Stack'), findsOneWidget);
-    expect(find.text('jan'), findsOneWidget);
+    expect(find.text('jan'), findsWidgets);
     expect(find.text('2.3.1'), findsOneWidget);
-    expect(find.text('Open resource'), findsOneWidget);
+    expect(find.text('Target'), findsOneWidget);
 
     await tester.dragUntilVisible(
       find.text('docker compose up -d'),

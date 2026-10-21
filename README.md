@@ -70,6 +70,14 @@ Use the interactive helper from the repository root:
 The helper can also optionally create a GitHub Release for `v*` tags when `gh` is installed and authenticated. If `release-notes/<version>.md` exists, the helper uses those curated notes; otherwise it generates notes from merged changes.
 On non-`main` branches, it can also open a PR to `main` for version-bump commits.
 
+Release notes for each version come from one place and reach GitHub, the App Store, and Google Play:
+
+- `release-notes/<version>.md`: GitHub release body. Codemagic converts it to plain text for TestFlight "What to Test" and App Store "What's New" (max 4,000 characters).
+- `release-notes/<version>.store.txt`: Google Play release notes (max 500 characters).
+- `metadata/version/<version>/en-US.json` (optional): App Store description, keywords, promotional text, and URLs submitted with the release.
+
+`scripts/store_release_notes.py` builds Codemagic's `release_notes.json` from these files during `v*` builds, and `rc-*` builds fail early if they're missing or too long. Check locally with `python3 scripts/store_release_notes.py check <version>`. `v*` iOS builds are submitted for App Store review with a manual release.
+
 ## Demo mode
 
 The app always exposes a demo connection backed by an in-process fake backend.
@@ -112,37 +120,65 @@ The project includes a Maestro flow for capturing iOS screenshots and a storepix
 
 ### Generate raw screenshots (Maestro)
 
-Run the mixed flow (dark for 1-3, light for 4-6):
+The flows (`.maestro/screenshots*.yaml`) run against a demo build (`--dart-define=KOMODO_DEMO_MODE=true`, mock backend, no real server needed). The default `mixed` mode captures shots 01-05 in dark mode and 06-08 in light mode:
+
+| # | Screen | Mode |
+|---|--------|------|
+| 01 | Home dashboard ("Needs attention") | dark |
+| 02 | Servers list | dark |
+| 03 | Server detail | dark |
+| 04 | Stack config (compose) | dark |
+| 05 | Stack logs | dark |
+| 06 | Containers | light |
+| 07 | Resources overview | light |
+| 08 | Notifications | light |
 
 ```bash
-.maestro/run_screenshots.sh mixed
+# Modes: mixed (default) | light | dark | all
+.maestro/run_screenshots.sh --build mixed
 ```
 
-Outputs are saved to:
+Options: `--build` (always rebuild the simulator app), `--device "<simulator name>"` (or env `DEVICE_NAME`, default `iPhone 14 Plus`), `--output <dir>` (or env `OUTPUT_DIR`, default `.maestro/screenshots`). Simulators booted by the script are shut down again afterwards. Pick one of `xcrun simctl list devices available`; the capture size is the simulator's native resolution.
 
-- [`.maestro/screenshots/`](.maestro/screenshots/)
+Capture the App Store sizes (iPhone 6.9" = 1320x2868, iPad 13" = 2064x2752):
+
+```bash
+.maestro/run_screenshots.sh --build --device "iPhone 18 Pro Max" --output .maestro/screenshots/iPhone
+.maestro/run_screenshots.sh --device "iPad Pro 13-inch (M5)" --output .maestro/screenshots/iPad
+```
+
+Notes:
+
+- Use an iPad Pro 13" simulator for 2064x2752. The iPad Air 13" is 2048x2732 and fails storepix validation.
+- If Maestro hangs at startup, something on your machine is listening on a local port that Maestro's Android (adb) discovery probes. Check with `lsof -iTCP -sTCP:LISTEN -P`, or wrap Maestro with a sandbox profile that denies that port via `MAESTRO_CMD_PREFIX="sandbox-exec -f deny.sb"`.
+- The raw PNGs are git-ignored. Review every PNG before framing (no spinners, errors or debug banner).
 
 ### Prepare Storepix inputs
 
-Copy the Maestro outputs into Storepix inputs:
+Copy the raw captures into the per-device Storepix input folders (same file names in both):
 
 ```bash
-cp .maestro/screenshots/*.png storepix/screenshots/iPhone/
+cp .maestro/screenshots/iPhone/*.png storepix/screenshots/iPhone/
+cp .maestro/screenshots/iPad/*.png   storepix/screenshots/iPad/
 ```
+
+Storepix picks `storepix/screenshots/iPhone/` for `iphone-*` devices and `storepix/screenshots/iPad/` for `ipad-*` devices (the config references `./screenshots/<file>.png`).
 
 ### Generate App Store assets (storepix)
 
-Run from the project root:
+Run from the project root. The config generates `iphone-6.9` (1320x2868), `iphone-6.5` (1284x2778) and `ipad-13` (2064x2752). The 6.5" size is scaled from the 6.9" captures, which storepix rejects by default, so skip its exact-size validation:
 
 ```bash
-storepix generate
+storepix generate --skip-validation
 ```
 
-Outputs are saved to:
+Outputs are saved to `storepix/output/<device>/` (git-ignored):
 
-- [`storepix/output/iphone-6.5/`](storepix/output/iphone-6.5/)
+- `storepix/output/iphone-6.9/`
+- `storepix/output/iphone-6.5/`
+- `storepix/output/ipad-13/`
 
-or elsewhere depending on your storepix configuration.
+Apple requires 6.9" (or 6.5") iPhone and 13" iPad screenshots; PNGs must have no alpha channel (`sips -g hasAlpha <file>` should print `no`). Captions are defined in `storepix/storepix.config.js`.
 
 ### Generate Google Play feature graphic (storepix)
 

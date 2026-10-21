@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:komodo_go/core/widgets/detail/isolated_expansion_tile.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 
 /// Compact filter summary that expands to reveal the full resource filters.
@@ -19,14 +20,14 @@ class ResourceFilterDisclosure extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final summary = activeFilterCount == 0
-        ? 'Template and tag options'
+        ? 'Sort, state, template and tag options'
         : '$activeFilterCount active';
     return AppCardSurface(
       padding: EdgeInsets.zero,
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          key: const ValueKey('resource_filter_disclosure'),
+        child: IsolatedExpansionTile(
+          tileKey: const ValueKey('resource_filter_disclosure'),
           initiallyExpanded: expanded,
           onExpansionChanged: onExpansionChanged,
           leading: const Icon(Icons.tune_outlined),

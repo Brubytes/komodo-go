@@ -12,7 +12,7 @@ part 'builds_provider.g.dart';
 class Builds extends _$Builds {
   @override
   Future<List<BuildListItem>> build() async {
-    ref.watch(resourceActivityProvider);
+    ref.watch(resourceScopeActivityProvider(ActivityScope.builds));
     final repository = ref.watch(buildRepositoryProvider);
     if (repository == null) {
       return [];
@@ -37,7 +37,7 @@ class Builds extends _$Builds {
 /// Provides details for a specific build.
 @riverpod
 Future<KomodoBuild?> buildDetail(Ref ref, String buildIdOrName) async {
-  ref.watch(resourceActivityProvider);
+  ref.watch(resourceScopeActivityProvider(ActivityScope.builds));
   final repository = ref.watch(buildRepositoryProvider);
   if (repository == null) {
     return null;
@@ -62,7 +62,8 @@ class BuildActions extends _$BuildActions
   void invalidateList() => ref.invalidate(buildsProvider);
 
   @override
-  void markResourceActivity() => ref.markResourceActivity();
+  void markResourceActivity() =>
+      ref.markResourceActivity({ActivityScope.builds});
 
   @override
   bool get isMounted => ref.mounted;

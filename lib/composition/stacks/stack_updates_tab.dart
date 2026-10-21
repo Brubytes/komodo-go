@@ -82,7 +82,7 @@ class StackUpdatesTab extends ConsumerWidget {
                     }
 
                     final update = state.items[itemIndex];
-                    return UpdateTile(update: update);
+                    return UpdateTile(update: update, currentTargetId: stackId);
                   }, childCount: sliverChildCount),
                 ),
               ),

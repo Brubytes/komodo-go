@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
+import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
 
@@ -53,7 +56,7 @@ class _AdvancedSyncSectionState extends ConsumerState<AdvancedSyncSection> {
     ];
     return DetailSection(
       title: 'Proposed sync plan',
-      icon: Icons.account_tree_outlined,
+      icon: AppIcons.syncs,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -74,12 +77,6 @@ class _AdvancedSyncSectionState extends ConsumerState<AdvancedSyncSection> {
             runSpacing: 8,
             children: [
               OutlinedButton.icon(
-                key: const ValueKey('refresh_sync_plan'),
-                onPressed: _refreshPlan,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Refresh plan'),
-              ),
-              OutlinedButton.icon(
                 key: const ValueKey('edit_sync_file'),
                 onPressed: _editFile,
                 icon: const Icon(Icons.edit_note_outlined),
@@ -96,7 +93,10 @@ class _AdvancedSyncSectionState extends ConsumerState<AdvancedSyncSection> {
           ),
           const Gap(14),
           if (diffs.isEmpty)
-            const Text('No resource changes are currently pending.')
+            const EmptyStateView.inline(
+              icon: AppIcons.ok,
+              title: 'No resource changes pending',
+            )
           else ...[
             Row(
               children: [
@@ -284,6 +284,7 @@ class _AdvancedSyncSectionState extends ConsumerState<AdvancedSyncSection> {
     }
     await showDialog<void>(
       context: context,
+      animationStyle: AppMotion.dialogStyle(context),
       builder: (context) => AlertDialog(
         title: const Text('Exported TOML'),
         content: SizedBox(
@@ -310,6 +311,7 @@ class _AdvancedSyncSectionState extends ConsumerState<AdvancedSyncSection> {
     final initial = _preview.info.remoteContents.firstOrNull;
     final draft = await showDialog<_SyncFileDraft>(
       context: context,
+      animationStyle: AppMotion.dialogStyle(context),
       builder: (_) => _SyncFileEditorDialog(
         initial: _SyncFileDraft(
           resourcePath:
@@ -343,25 +345,13 @@ class _AdvancedSyncSectionState extends ConsumerState<AdvancedSyncSection> {
     required String title,
     required String message,
     required String confirmLabel,
-  }) async =>
-      await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(confirmLabel),
-            ),
-          ],
-        ),
-      ) ??
-      false;
+  }) => confirmDestructive(
+    context,
+    title: title,
+    message: message,
+    confirmLabel: confirmLabel,
+    destructive: false,
+  );
 
   void _show(String message, {bool error = false}) {
     AppSnackBar.show(
@@ -387,8 +377,8 @@ class _DiffTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = diff.data;
     return Card(
-      child: ExpansionTile(
-        key: ValueKey('sync_diff_${diff.target.type}_${diff.name}'),
+      child: IsolatedExpansionTile(
+        tileKey: ValueKey('sync_diff_${diff.target.type}_${diff.name}'),
         leading: Checkbox(
           value: selected,
           onChanged: (value) => onChanged(value ?? false),

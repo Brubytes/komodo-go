@@ -2,11 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+
+/// Status line shown under a detail page title: a colored dot plus label,
+/// e.g. "Running · 2 services" or "Ok · built 5m ago".
+class MainAppBarStatus {
+  const MainAppBarStatus({required this.label, this.tone = PillTone.neutral});
+
+  final String label;
+  final PillTone tone;
+}
 
 class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   const MainAppBar({
     required this.title,
     this.subtitle,
+    this.status,
     this.icon,
     this.markColor,
     this.markUseGradient,
@@ -14,11 +25,15 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.bottom,
     this.onTitleLongPress,
+    this.showBottomBorder = true,
     super.key,
   });
 
   final String title;
   final String? subtitle;
+
+  /// Takes precedence over [subtitle] when set.
+  final MainAppBarStatus? status;
   final IconData? icon;
   final Color? markColor;
   final bool? markUseGradient;
@@ -26,6 +41,10 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
   final PreferredSizeWidget? bottom;
   final VoidCallback? onTitleLongPress;
+
+  /// Hairline under the bar. Turn off when the content directly below
+  /// continues the header (e.g. a filter row) and draws its own divider.
+  final bool showBottomBorder;
 
   @override
   Size get preferredSize =>
@@ -44,17 +63,20 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
-      shape: Border(
-        bottom: BorderSide(
-          color: scheme.outlineVariant.withValues(alpha: 0.35),
-        ),
-      ),
+      shape: showBottomBorder
+          ? Border(
+              bottom: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.35),
+              ),
+            )
+          : null,
       title: GestureDetector(
         onLongPress: onTitleLongPress,
         behavior: HitTestBehavior.opaque,
         child: MainAppBarTitle(
           title: title,
           subtitle: subtitle,
+          status: status,
           icon: icon,
           markColor: markColor,
           markUseGradient: markUseGradient,
@@ -71,6 +93,7 @@ class MainAppBarTitle extends StatelessWidget {
   const MainAppBarTitle({
     required this.title,
     this.subtitle,
+    this.status,
     this.icon,
     this.markColor,
     this.markUseGradient,
@@ -80,6 +103,7 @@ class MainAppBarTitle extends StatelessWidget {
 
   final String title;
   final String? subtitle;
+  final MainAppBarStatus? status;
   final IconData? icon;
   final Color? markColor;
   final bool? markUseGradient;
@@ -102,7 +126,9 @@ class MainAppBarTitle extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: titleStyle, overflow: TextOverflow.ellipsis),
-        if (subtitle != null && subtitle!.trim().isNotEmpty)
+        if (status != null && status!.label.trim().isNotEmpty)
+          _StatusLine(status: status!, style: subtitleStyle)
+        else if (subtitle != null && subtitle!.trim().isNotEmpty)
           Text(
             subtitle!,
             style: subtitleStyle,
@@ -122,14 +148,53 @@ class MainAppBarTitle extends StatelessWidget {
         ),
         const Gap(12),
         if (centered)
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.sizeOf(context).width * 0.6,
+          // Flexible lets the title shrink when leading/actions leave less
+          // room than the 60% cap, so long names ellipsize instead of
+          // overflowing the toolbar.
+          Flexible(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.6,
+              ),
+              child: titleBlock,
             ),
-            child: titleBlock,
           )
         else
           Flexible(child: titleBlock),
+      ],
+    );
+  }
+}
+
+class _StatusLine extends StatelessWidget {
+  const _StatusLine({required this.status, required this.style});
+
+  final MainAppBarStatus status;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = pillToneForeground(
+      Theme.of(context).colorScheme,
+      status.tone,
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const Gap(6),
+        Flexible(
+          child: Text(
+            status.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: style?.copyWith(color: color, fontWeight: FontWeight.w600),
+          ),
+        ),
       ],
     );
   }

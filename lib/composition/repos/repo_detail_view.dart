@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/repos/repo_detail_sections.dart';
-import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/composition/resources/resource_manage_actions.dart';
+import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/router/resource_routes.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/utils/relative_time.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
-import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
 import 'package:komodo_go/features/providers/data/models/git_provider_account.dart';
@@ -38,27 +43,21 @@ class RepoDetailView extends ConsumerStatefulWidget {
 }
 
 class _RepoDetailViewState extends ConsumerState<RepoDetailView>
-    with
-        SingleTickerProviderStateMixin,
-        DetailDirtySnackBarMixin<RepoDetailView> {
-  late final TabController _tabController;
-  final _outerScrollController = ScrollController();
-  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
+    with DetailDirtySnackBarMixin<RepoDetailView> {
   final _configEditorKey = GlobalKey<RepoConfigEditorContentState>();
 
   var _configSaveInFlight = false;
+  var _dirty = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _outerScrollController.dispose();
-    super.dispose();
+  void _onDirtyChanged(bool dirty, KomodoRepo repo) {
+    _dirty = dirty;
+    syncDirtySnackBar(
+      dirty: dirty,
+      onDiscard: () => _discardConfig(repo),
+      onSave: () => _saveConfig(repo: repo),
+      saving: _configSaveInFlight,
+      saveEnabled: !_configSaveInFlight,
+    );
   }
 
   @override
@@ -66,11 +65,19 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
     final repoAsync = ref.watch(repoDetailProvider(widget.repoId));
     final actionsState = ref.watch(repoActionsProvider);
     final serversListAsync = ref.watch(serversProvider);
+    final reposAsync = ref.watch(reposProvider);
     final buildersListAsync = ref.watch(buildersProvider);
     final gitProvidersAsync = ref.watch(gitProvidersProvider);
 
     final scheme = Theme.of(context).colorScheme;
     final repo = repoAsync.asData?.value;
+    RepoListItem? listItem;
+    for (final item in reposAsync.asData?.value ?? const <RepoListItem>[]) {
+      if (item.id == widget.repoId) {
+        listItem = item;
+        break;
+      }
+    }
 
     String? serverNameForId(String serverId) {
       final servers = serversListAsync.asData?.value;
@@ -87,117 +94,162 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
     final gitProviders =
         gitProvidersAsync.asData?.value ?? const <GitProviderAccount>[];
 
-    return Scaffold(
-      appBar: MainAppBar(
-        title: widget.repoName,
-        icon: AppIcons.repos,
-        markColor: AppTokens.resourceRepos,
-        markUseGradient: true,
-        centerTitle: true,
-        actions: [
-          PopupMenuButton<RepoAction>(
-            icon: const Icon(AppIcons.moreVertical),
-            onSelected: (action) =>
-                _handleAction(context, ref, widget.repoId, action),
-            itemBuilder: (context) => [
-              komodoPopupMenuItem(
-                value: RepoAction.clone,
-                icon: AppIcons.download,
-                label: 'Clone',
-                iconColor: scheme.primary,
-              ),
-              komodoPopupMenuItem(
-                value: RepoAction.pull,
-                icon: AppIcons.refresh,
-                label: 'Pull',
-                iconColor: scheme.secondary,
-              ),
-              komodoPopupMenuItem(
-                value: RepoAction.build,
-                icon: AppIcons.builds,
-                label: 'Build',
-                iconColor: scheme.tertiary,
-              ),
-            ],
-          ),
-          if (repo != null)
-            ResourceAdvancedMenuButton(
-              metadata: ResourceMetadata(
-                kind: ResourceKind.repos,
-                id: repo.id,
-                name: repo.name,
-                description: repo.description,
-                template: repo.template,
-                tags: repo.tags,
-              ),
-              onMutated: () {
-                ref
-                  ..invalidate(reposProvider)
-                  ..invalidate(repoDetailProvider(widget.repoId));
-              },
-            ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          NestedScrollView(
-            key: _nestedScrollKey,
-            controller: _outerScrollController,
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
+    final notCloned =
+        listItem != null &&
+        (listItem.info.clonedHash ?? '').isEmpty &&
+        listItem.info.lastPulledAt == 0;
+    final hasBuilder = (repo?.config.builderId ?? '').isNotEmpty;
+
+    void retry() {
+      ref.invalidate(repoDetailProvider(widget.repoId));
+    }
+
+    return UnsavedChangesGuard(
+      dirty: _dirty,
+      onDiscarded: hideDirtySnackBar,
+      child: Scaffold(
+        appBar: MainAppBar(
+          title: widget.repoName,
+          icon: AppIcons.repos,
+          markColor: AppTokens.resourceRepos,
+          markUseGradient: true,
+          centerTitle: true,
+          status: repoAppBarStatus(listItem: listItem, repo: repo),
+        ),
+        body: Stack(
+          children: [
+            DetailTabScaffold(
+              headerSlivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    child: repoAsync.when(
-                      data: (repo) => repo != null
-                          ? _RepoHeroPanel(
-                              repo: repo,
-                              serverName: serverNameForId(repo.config.serverId),
-                            )
-                          : const _MessageSurface(message: 'Repo not found'),
-                      loading: () => const _LoadingSurface(),
-                      error: (error, _) =>
-                          _MessageSurface(message: 'Error: $error'),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        repoAsync.when(
+                          data: (repo) => repo != null
+                              ? _RepoHeader(
+                                  repo: repo,
+                                  listItem: listItem,
+                                  serverName: serverNameForId(
+                                    repo.config.serverId,
+                                  ),
+                                  onServerTap: repo.config.serverId.isEmpty
+                                      ? null
+                                      : () => context.push(
+                                          resourceDetailRoute(
+                                            AppRoutes.servers,
+                                            repo.config.serverId,
+                                            name: serverNameForId(
+                                              repo.config.serverId,
+                                            ),
+                                          ),
+                                        ),
+                                  onPull: () => _handleAction(
+                                    context,
+                                    ref,
+                                    widget.repoId,
+                                    RepoAction.pull,
+                                  ),
+                                )
+                              : const _MessageSurface(
+                                  message: 'Repo not found',
+                                ),
+                          loading: () => const _LoadingSurface(),
+                          error: (error, _) =>
+                              _ErrorSurface(error: error, onRetry: retry),
+                        ),
+                        const Gap(AppSpacing.md),
+                        DetailActionBar(
+                          primary: notCloned
+                              ? DetailActionButton(
+                                  label: 'Clone',
+                                  icon: AppIcons.download,
+                                  onPressed: () => _handleAction(
+                                    context,
+                                    ref,
+                                    widget.repoId,
+                                    RepoAction.clone,
+                                  ),
+                                )
+                              : DetailActionButton(
+                                  label: 'Pull',
+                                  icon: AppIcons.refresh,
+                                  onPressed: () => _handleAction(
+                                    context,
+                                    ref,
+                                    widget.repoId,
+                                    RepoAction.pull,
+                                  ),
+                                ),
+                          secondary: hasBuilder
+                              ? DetailActionButton(
+                                  label: 'Build',
+                                  icon: AppIcons.builds,
+                                  onPressed: () => _handleAction(
+                                    context,
+                                    ref,
+                                    widget.repoId,
+                                    RepoAction.build,
+                                  ),
+                                )
+                              : null,
+                          moreGroups: [
+                            if (!notCloned && repo != null)
+                              DetailActionGroup(
+                                label: 'Repo',
+                                items: [
+                                  DetailActionItem(
+                                    label: 'Clone again',
+                                    icon: AppIcons.download,
+                                    onSelected: () => _handleAction(
+                                      context,
+                                      ref,
+                                      widget.repoId,
+                                      RepoAction.clone,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            if (repo != null)
+                              buildResourceManageGroup(
+                                context: context,
+                                ref: ref,
+                                metadata: ResourceMetadata(
+                                  kind: ResourceKind.repos,
+                                  id: repo.id,
+                                  name: repo.name,
+                                  description: repo.description,
+                                  template: repo.template,
+                                  tags: repo.tags,
+                                ),
+                                onMutated: () {
+                                  ref
+                                    ..invalidate(reposProvider)
+                                    ..invalidate(
+                                      repoDetailProvider(widget.repoId),
+                                    );
+                                },
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                SliverOverlapAbsorber(
-                  handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
-                    context,
-                  ),
-                  sliver: SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _PinnedTabBarHeaderDelegate(
-                      backgroundColor: scheme.surface,
-                      tabBar: buildDetailTabBar(
-                        context: context,
-                        controller: _tabController,
-                        outerScrollController: _outerScrollController,
-                        nestedScrollKey: _nestedScrollKey,
-                        tabs: const [
-                          Tab(
-                            icon: Icon(AppIcons.bolt),
-                            text: 'Config',
-                          ),
-                          Tab(
-                            icon: Icon(AppIcons.builds),
-                            text: 'Build Status',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ];
-            },
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                _KeepAlive(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(repoDetailProvider(widget.repoId));
-                    },
+              ],
+              tabs: [
+                DetailTabSpec(
+                  id: 'config',
+                  label: 'Config',
+                  icon: AppIcons.bolt,
+                  body: RefreshIndicator(
+                    onRefresh: () async => retry(),
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey('repo_${widget.repoId}_config'),
                       child: repoAsync.when(
@@ -208,30 +260,25 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                                 servers: servers,
                                 builders: builders,
                                 gitProviders: gitProviders,
-                                onDirtyChanged: (dirty) {
-                                  syncDirtySnackBar(
-                                    dirty: dirty,
-                                    onDiscard: () => _discardConfig(repo),
-                                    onSave: () => _saveConfig(repo: repo),
-                                    saveEnabled: !_configSaveInFlight,
-                                  );
-                                },
+                                onDirtyChanged: (dirty) =>
+                                    _onDirtyChanged(dirty, repo),
                               )
                             : const _MessageSurface(
                                 message: 'Repo not found',
                               ),
                         loading: () => const _LoadingSurface(),
                         error: (error, _) =>
-                            _MessageSurface(message: 'Error: $error'),
+                            _ErrorSurface(error: error, onRetry: retry),
                       ),
                     ),
                   ),
                 ),
-                _KeepAlive(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(repoDetailProvider(widget.repoId));
-                    },
+                DetailTabSpec(
+                  id: 'builds',
+                  label: 'Builds',
+                  icon: AppIcons.builds,
+                  body: RefreshIndicator(
+                    onRefresh: () async => retry(),
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey(
                         'repo_${widget.repoId}_build_status',
@@ -244,20 +291,20 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                               ),
                         loading: () => const _LoadingSurface(),
                         error: (error, _) =>
-                            _MessageSurface(message: 'Error: $error'),
+                            _ErrorSurface(error: error, onRetry: retry),
                       ),
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: scheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
-        ],
+            if (actionsState.isLoading)
+              ColoredBox(
+                color: scheme.scrim.withValues(alpha: 0.25),
+                child: const Center(child: AppSkeletonCard()),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -288,6 +335,13 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
 
     final actions = ref.read(repoActionsProvider.notifier);
     setState(() => _configSaveInFlight = true);
+    syncDirtySnackBar(
+      dirty: true,
+      onDiscard: () => _discardConfig(repo),
+      onSave: () => _saveConfig(repo: repo),
+      saving: true,
+      saveEnabled: false,
+    );
     final updated = await actions.updateRepoConfig(
       repoId: repo.id,
       partialConfig: partialConfig,
@@ -302,6 +356,7 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
         ..invalidate(reposProvider);
 
       _configEditorKey.currentState?.resetTo(updated.config);
+      _dirty = false;
       hideDirtySnackBar();
       AppSnackBar.show(context, 'Repo updated', tone: AppSnackBarTone.success);
       return;
@@ -358,90 +413,107 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
   }
 }
 
-class _RepoHeroPanel extends StatelessWidget {
-  const _RepoHeroPanel({required this.repo, required this.serverName});
+/// App bar status line for a repo: state plus how long ago it was pulled.
+MainAppBarStatus? repoAppBarStatus({
+  required RepoListItem? listItem,
+  required KomodoRepo? repo,
+}) {
+  if (listItem == null) return null;
+  final pulledAt = repo?.info.lastPulledAt ?? listItem.info.lastPulledAt;
+  final ago = pulledAt > 0 ? ' · pulled ${formatTimeAgo(pulledAt)}' : '';
+  return switch (listItem.info.state) {
+    RepoState.ok => MainAppBarStatus(label: 'Ok$ago', tone: PillTone.success),
+    RepoState.failed => MainAppBarStatus(
+      label: 'Failed$ago',
+      tone: PillTone.alert,
+    ),
+    RepoState.cloning => const MainAppBarStatus(
+      label: 'Cloning',
+      tone: PillTone.warning,
+    ),
+    RepoState.pulling => const MainAppBarStatus(
+      label: 'Pulling',
+      tone: PillTone.warning,
+    ),
+    RepoState.building => const MainAppBarStatus(
+      label: 'Building',
+      tone: PillTone.warning,
+    ),
+    RepoState.unknown => const MainAppBarStatus(label: 'Unknown'),
+  };
+}
+
+class _RepoHeader extends StatelessWidget {
+  const _RepoHeader({
+    required this.repo,
+    required this.listItem,
+    required this.serverName,
+    this.onServerTap,
+    this.onPull,
+  });
 
   final KomodoRepo repo;
+  final RepoListItem? listItem;
   final String? serverName;
+  final VoidCallback? onServerTap;
+  final VoidCallback? onPull;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final config = repo.config;
-    final info = repo.info;
+    final latest = repo.info.latestHash;
+    final current = listItem?.info.clonedHash ?? repo.info.builtHash;
+    final state = listItem?.info.state;
+    final outOfDate = latest != null && current != null && latest != current;
+    final busy =
+        state == RepoState.cloning ||
+        state == RepoState.pulling ||
+        state == RepoState.building;
 
-    final latest = info.latestHash;
-    final built = info.builtHash;
-    final upToDate = latest != null && built == latest;
-    final description = repo.description.trim();
-    final serverLabel = serverName ?? config.serverId;
-    final repoLabel = config.repo.isNotEmpty ? config.repo : '—';
-    final branchLabel = config.branch.isNotEmpty ? config.branch : '—';
-    final metrics = <DetailMetricTileData>[
-      DetailMetricTileData(
-        icon: AppIcons.repos,
-        label: 'Repo',
-        value: repoLabel,
-        tone: DetailMetricTone.neutral,
-      ),
-      DetailMetricTileData(
-        icon: AppIcons.repos,
-        label: 'Branch',
-        value: branchLabel,
-        tone: DetailMetricTone.neutral,
-      ),
-      if (config.serverId.isNotEmpty)
-        DetailMetricTileData(
-          icon: AppIcons.server,
-          label: 'Server',
-          value: serverLabel,
-          tone: DetailMetricTone.neutral,
-        ),
-      DetailMetricTileData(
-        icon: config.webhookEnabled ? AppIcons.ok : AppIcons.pause,
-        label: 'Webhook',
-        value: config.webhookEnabled ? 'Enabled' : 'Disabled',
-        tone: config.webhookEnabled
-            ? DetailMetricTone.success
-            : DetailMetricTone.neutral,
-      ),
-      DetailMetricTileData(
-        icon: upToDate ? AppIcons.ok : AppIcons.warning,
-        label: 'Git',
-        value: upToDate ? 'Up to date' : 'Out of date',
-        tone: upToDate ? DetailMetricTone.success : DetailMetricTone.tertiary,
-      ),
-    ];
+    final DetailAttentionBanner? banner;
+    if (state == RepoState.failed) {
+      banner = DetailAttentionBanner(
+        icon: AppIcons.error,
+        tone: PillTone.alert,
+        message: 'Last operation failed',
+        actionLabel: onPull == null ? null : 'Pull',
+        onAction: onPull,
+      );
+    } else if (outOfDate && !busy) {
+      banner = DetailAttentionBanner(
+        icon: AppIcons.warning,
+        message: 'Repo is out of date',
+        actionLabel: onPull == null ? null : 'Pull',
+        onAction: onPull,
+      );
+    } else {
+      banner = null;
+    }
 
-    return DetailHeroPanel(
-      tintColor: scheme.primary,
-      metrics: metrics,
-      footer: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (repo.tags.isNotEmpty)
-            DetailPillList(
-              items: repo.tags,
-              showEmptyLabel: false,
-            ),
-          if (description.isNotEmpty) ...[
-            if (repo.tags.isNotEmpty) const Gap(12),
-            Text(
-              'Description',
-              style: textTheme.labelMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Gap(6),
-            Text(
-              description,
-              style: textTheme.bodyMedium,
-            ),
-          ],
-        ],
-      ),
+    return DetailResourceHeader(
+      banner: banner,
+      facts: [
+        if (config.repo.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.repos,
+            label: 'Repo',
+            value: config.branch.isEmpty
+                ? config.repo
+                : '${config.repo} · ${config.branch}',
+            fullValue: config.branch.isEmpty
+                ? config.repo
+                : '${config.repo} (${config.branch})',
+          ),
+        if (config.serverId.isNotEmpty)
+          DetailFact(
+            icon: AppIcons.server,
+            label: 'Server',
+            value: serverName ?? config.serverId,
+            onTap: onServerTap,
+          ),
+      ],
+      tags: repo.tags,
+      description: repo.description,
     );
   }
 }
@@ -545,68 +617,6 @@ class _RepoBuildContent extends StatelessWidget {
   }
 }
 
-class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _PinnedTabBarHeaderDelegate({
-    required this.tabBar,
-    required this.backgroundColor,
-  });
-
-  final PreferredSizeWidget tabBar;
-  final Color backgroundColor;
-
-  @override
-  double get minExtent => tabBar.preferredSize.height + 1;
-
-  @override
-  double get maxExtent => tabBar.preferredSize.height + 1;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
-          ),
-        ),
-      ),
-      child: Align(alignment: Alignment.centerLeft, child: tabBar),
-    );
-  }
-
-  @override
-  bool shouldRebuild(_PinnedTabBarHeaderDelegate oldDelegate) =>
-      tabBar != oldDelegate.tabBar ||
-      backgroundColor != oldDelegate.backgroundColor;
-}
-
-class _KeepAlive extends StatefulWidget {
-  const _KeepAlive({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_KeepAlive> createState() => _KeepAliveState();
-}
-
-class _KeepAliveState extends State<_KeepAlive>
-    with AutomaticKeepAliveClientMixin<_KeepAlive> {
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return widget.child;
-  }
-
-  @override
-  bool get wantKeepAlive => true;
-}
-
 class _LoadingSurface extends StatelessWidget {
   const _LoadingSurface();
 
@@ -623,6 +633,29 @@ class _MessageSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DetailSurface(child: Text(message));
+    return DetailSurface(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: EmptyStateView.inline(icon: AppIcons.info, title: message),
+      ),
+    );
+  }
+}
+
+class _ErrorSurface extends StatelessWidget {
+  const _ErrorSurface({required this.error, required this.onRetry});
+
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return DetailSurface(
+      child: ErrorStateView.fromError(
+        title: 'Could not load repo',
+        error: error,
+        onRetry: onRetry,
+      ),
+    );
   }
 }

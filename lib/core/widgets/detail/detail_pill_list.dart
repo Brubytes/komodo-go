@@ -39,7 +39,10 @@ class DetailPillList extends StatelessWidget {
       return Wrap(
         spacing: spacing,
         runSpacing: runSpacing,
-        children: [...leading, TextPill(label: emptyLabel, tone: tone)],
+        children: [
+          ...leading,
+          TextPill(label: emptyLabel, tone: tone),
+        ],
       );
     }
 
@@ -52,8 +55,7 @@ class DetailPillList extends StatelessWidget {
       children: [
         ...leading,
         for (final item in capped) TextPill(label: item, tone: tone),
-        if (remaining > 0)
-          ValuePill(label: moreLabel, value: '+$remaining'),
+        if (remaining > 0) ValuePill(label: moreLabel, value: '+$remaining'),
       ],
     );
   }

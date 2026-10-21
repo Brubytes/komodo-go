@@ -2,20 +2,23 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/builds/build_detail_sections.dart';
 import 'package:komodo_go/composition/deployments/deployment_detail_sections.dart';
-import 'package:komodo_go/composition/resources/resource_advanced_menu.dart';
+import 'package:komodo_go/composition/resources/resource_manage_actions.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
+import 'package:komodo_go/core/router/resource_routes.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
-import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/data/repositories/deployment_repository.dart';
@@ -45,56 +48,38 @@ class DeploymentDetailView extends ConsumerStatefulWidget {
 
 class _DeploymentDetailViewState
     extends PollingRouteAwareState<DeploymentDetailView>
-    with
-        SingleTickerProviderStateMixin,
-        DetailDirtySnackBarMixin<DeploymentDetailView> {
-  static const int _tabLogs = 1;
+    with DetailDirtySnackBarMixin<DeploymentDetailView> {
+  static const _tabConfig = 'config';
+  static const _tabLogs = 'logs';
+  static const _tabBuild = 'build';
 
-  late final TabController _tabController;
-  final _outerScrollController = ScrollController();
-  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
-  Timer? _logRefreshTimer;
-  var _autoRefreshLogs = true;
-
+  final _tabsKey = GlobalKey<DetailTabScaffoldState>();
   final _configEditorKey = GlobalKey<DeploymentConfigEditorContentState>();
-  var _configSaveInFlight = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(_onInnerTabChanged);
-  }
+  Timer? _buildRefreshTimer;
+  String _activeTabId = _tabConfig;
+  var _autoRefreshLogs = true;
+  var _configSaveInFlight = false;
+  var _dirty = false;
 
   @override
   void dispose() {
-    _logRefreshTimer?.cancel();
-    _logRefreshTimer = null;
-    _tabController
-      ..removeListener(_onInnerTabChanged)
-      ..dispose();
-    _outerScrollController.dispose();
+    _buildRefreshTimer?.cancel();
+    _buildRefreshTimer = null;
     super.dispose();
   }
 
   @override
   void onVisibilityChanged() {
     if (!mounted) return;
-    _syncLogPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
+    _syncBuildPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
     super.onVisibilityChanged();
   }
 
-  void _onInnerTabChanged() {
-    if (!mounted) return;
-    _syncLogPolling(isShellTabActive: ref.read(mainShellIndexProvider) == 1);
-  }
-
-  void _startLogPolling() {
-    _logRefreshTimer?.cancel();
-    _logRefreshTimer = null;
-    if (!_autoRefreshLogs) return;
-
-    _logRefreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
+  void _startBuildPolling() {
+    _buildRefreshTimer?.cancel();
+    _buildRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!shouldRunPollTick()) return;
       final current = ref
           .read(deploymentDetailProvider(widget.deploymentId))
           .asData
@@ -105,27 +90,40 @@ class _DeploymentDetailViewState
     });
   }
 
-  void _stopLogPolling() {
-    _logRefreshTimer?.cancel();
-    _logRefreshTimer = null;
+  void _stopBuildPolling() {
+    _buildRefreshTimer?.cancel();
+    _buildRefreshTimer = null;
   }
 
-  void _syncLogPolling({required bool isShellTabActive}) {
-    final isLogsTabActive = _tabController.index == _tabLogs;
-    final isActiveTab = isShellTabActive && isLogsTabActive;
-    if (shouldPoll(isActiveTab: isActiveTab, enabled: _autoRefreshLogs)) {
-      _startLogPolling();
+  void _syncBuildPolling({required bool isShellTabActive}) {
+    final active = isShellTabActive && _activeTabId == _tabBuild;
+    if (shouldPoll(isActiveTab: active, enabled: _autoRefreshLogs)) {
+      if (_buildRefreshTimer == null) _startBuildPolling();
     } else {
-      _stopLogPolling();
+      _stopBuildPolling();
+    }
+  }
+
+  void _onDirtyChanged(Deployment deployment, {required bool dirty}) {
+    final before = _dirty;
+    _dirty = dirty;
+    syncDirtySnackBar(
+      dirty: dirty,
+      onDiscard: () => _discardConfig(deployment),
+      onSave: () => _saveConfig(deployment: deployment),
+      saveEnabled: !_configSaveInFlight,
+    );
+    if (before != dirty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Use ref.listen to sync polling when shell tab changes, instead of
-    // addPostFrameCallback on every build.
     ref.listen<int>(mainShellIndexProvider, (previous, next) {
-      _syncLogPolling(isShellTabActive: next == 1);
+      _syncBuildPolling(isShellTabActive: next == 1);
     });
 
     final deploymentId = widget.deploymentId;
@@ -135,6 +133,11 @@ class _DeploymentDetailViewState
     final registryAccountsAsync = ref.watch(dockerRegistryAccountsProvider);
     final scheme = Theme.of(context).colorScheme;
     final deployment = deploymentAsync.asData?.value;
+    final isShellActive = ref.watch(mainShellIndexProvider) == 1;
+    final logsPolling = shouldPoll(
+      isActiveTab: isShellActive && _activeTabId == _tabLogs,
+      enabled: _autoRefreshLogs,
+    );
 
     String? serverNameForId(String serverId) {
       final servers = serversListAsync.asData?.value;
@@ -145,53 +148,49 @@ class _DeploymentDetailViewState
       return null;
     }
 
-    return Scaffold(
-      appBar: MainAppBar(
-        title: widget.deploymentName,
-        icon: AppIcons.deployments,
-        markColor: AppTokens.resourceDeployments,
-        markUseGradient: true,
-        centerTitle: true,
-        actions: [
-          PopupMenuButton<DeploymentAction>(
-            icon: const Icon(AppIcons.moreVertical),
-            onSelected: (action) =>
-                _handleAction(context, deploymentId, action),
-            itemBuilder: (context) {
-              final deployment = deploymentAsync.asData?.value;
-              final state = deployment?.info?.state ?? DeploymentState.unknown;
-              final hasImage = deployment?.imageLabel.isNotEmpty ?? false;
-              return _buildMenuItems(scheme, state, hasImage: hasImage);
-            },
-          ),
-          if (deployment != null)
-            ResourceAdvancedMenuButton(
-              metadata: ResourceMetadata(
-                kind: ResourceKind.deployments,
-                id: deployment.id,
-                name: deployment.name,
-                description: deployment.description ?? '',
-                template: deployment.template,
-                tags: deployment.tags,
-              ),
-              onMutated: () {
-                ref
-                  ..invalidate(deploymentsProvider)
-                  ..invalidate(deploymentDetailProvider(deploymentId));
+    final buildsList = ref.watch(buildsProvider).asData?.value;
+    String? buildNameForId(String buildId) {
+      if (buildsList == null || buildId.isEmpty) return null;
+      for (final b in buildsList) {
+        if (b.id == buildId) return b.name;
+      }
+      return null;
+    }
+
+    final hasBuild = (deployment?.info?.buildId?.trim() ?? '').isNotEmpty;
+
+    return UnsavedChangesGuard(
+      dirty: _dirty,
+      onDiscarded: hideDirtySnackBar,
+      child: Scaffold(
+        appBar: MainAppBar(
+          title: widget.deploymentName,
+          icon: AppIcons.deployments,
+          markColor: AppTokens.resourceDeployments,
+          markUseGradient: true,
+          centerTitle: true,
+          status: deployment == null
+              ? null
+              : deploymentAppBarStatus(deployment),
+        ),
+        body: Stack(
+          children: [
+            DetailTabScaffold(
+              key: _tabsKey,
+              initialTabId: _tabConfig,
+              onTabChanged: (id) {
+                setState(() => _activeTabId = id);
+                _syncBuildPolling(isShellTabActive: isShellActive);
               },
-            ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          NestedScrollView(
-            key: _nestedScrollKey,
-            controller: _outerScrollController,
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
+              headerSlivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                    ),
                     child: deploymentAsync.when(
                       data: (deployment) {
                         if (deployment == null) {
@@ -200,18 +199,62 @@ class _DeploymentDetailViewState
                           );
                         }
 
+                        final serverId =
+                            deployment.config?.serverId ??
+                            deployment.info?.serverId ??
+                            '';
+                        final buildId = deployment.info?.buildId?.trim() ?? '';
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            DeploymentHeroPanel(
+                            DeploymentHeader(
                               deployment: deployment,
-                              serverName: serverNameForId(
-                                deployment.config?.serverId ??
-                                    deployment.info?.serverId ??
-                                    '',
+                              serverName: serverNameForId(serverId),
+                              buildName: buildNameForId(buildId),
+                              onAction: _handleAction,
+                              onServerTap: serverId.isEmpty
+                                  ? null
+                                  : () => context.push(
+                                      resourceDetailRoute(
+                                        AppRoutes.servers,
+                                        serverId,
+                                        name: serverNameForId(serverId),
+                                      ),
+                                    ),
+                              onBuildTap: buildId.isEmpty
+                                  ? null
+                                  : () => context.push(
+                                      resourceDetailRoute(
+                                        AppRoutes.builds,
+                                        buildId,
+                                        name: buildNameForId(buildId),
+                                      ),
+                                    ),
+                            ),
+                            const Gap(AppSpacing.md),
+                            DeploymentActionBar(
+                              deployment: deployment,
+                              onAction: _handleAction,
+                              manageGroup: buildResourceManageGroup(
+                                context: context,
+                                ref: ref,
+                                metadata: ResourceMetadata(
+                                  kind: ResourceKind.deployments,
+                                  id: deployment.id,
+                                  name: deployment.name,
+                                  description: deployment.description ?? '',
+                                  template: deployment.template,
+                                  tags: deployment.tags,
+                                ),
+                                onMutated: () {
+                                  ref
+                                    ..invalidate(deploymentsProvider)
+                                    ..invalidate(
+                                      deploymentDetailProvider(deploymentId),
+                                    );
+                                },
                               ),
                             ),
-                            const Gap(12),
                           ],
                         );
                       },
@@ -221,34 +264,13 @@ class _DeploymentDetailViewState
                     ),
                   ),
                 ),
-                SliverOverlapAbsorber(
-                  handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
-                    context,
-                  ),
-                  sliver: SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _PinnedTabBarHeaderDelegate(
-                      backgroundColor: scheme.surface,
-                      tabBar: buildDetailTabBar(
-                        context: context,
-                        controller: _tabController,
-                        outerScrollController: _outerScrollController,
-                        nestedScrollKey: _nestedScrollKey,
-                        tabs: const [
-                          Tab(icon: Icon(AppIcons.bolt), text: 'Config'),
-                          Tab(icon: Icon(AppIcons.logs), text: 'Logs'),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ];
-            },
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                _KeepAlive(
-                  child: RefreshIndicator(
+              ],
+              tabs: [
+                DetailTabSpec(
+                  id: _tabConfig,
+                  label: 'Config',
+                  icon: AppIcons.bolt,
+                  body: RefreshIndicator(
                     onRefresh: () async {
                       ref.invalidate(deploymentDetailProvider(deploymentId));
                     },
@@ -275,16 +297,10 @@ class _DeploymentDetailViewState
                                   registryAccounts:
                                       registryAccountsAsync.asData?.value ??
                                       const [],
-                                  onDirtyChanged: (dirty) {
-                                    syncDirtySnackBar(
-                                      dirty: dirty,
-                                      onDiscard: () =>
-                                          _discardConfig(deployment),
-                                      onSave: () =>
-                                          _saveConfig(deployment: deployment),
-                                      saveEnabled: !_configSaveInFlight,
-                                    );
-                                  },
+                                  onDirtyChanged: (dirty) => _onDirtyChanged(
+                                    deployment,
+                                    dirty: dirty,
+                                  ),
                                 )
                               : DeploymentConfigContent(
                                   deployment: deployment,
@@ -303,140 +319,115 @@ class _DeploymentDetailViewState
                     ),
                   ),
                 ),
-                _KeepAlive(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      final deployment = deploymentAsync.asData?.value;
-                      final buildId = deployment?.info?.buildId?.trim() ?? '';
-                      ref.invalidate(deploymentDetailProvider(deploymentId));
-                      if (buildId.isNotEmpty) {
-                        ref.invalidate(buildDetailProvider(buildId));
-                      }
-                    },
-                    child: DetailTabScrollView.list(
-                      scrollKey: PageStorageKey(
-                        'deployment_${widget.deploymentId}_logs',
+                DetailTabSpec(
+                  id: _tabLogs,
+                  label: 'Logs',
+                  icon: AppIcons.logs,
+                  body: DetailTabFillBody(
+                    child: ServerLogExplorer(
+                      key: ValueKey(
+                        'deployment_log_explorer_${widget.deploymentId}',
                       ),
-                      maxContentWidth: 1100,
-                      children: [
-                        DetailLogAutoRefreshControl(
-                          enabled: _autoRefreshLogs,
-                          onChanged: (value) {
-                            setState(() => _autoRefreshLogs = value);
-                            _syncLogPolling(
-                              isShellTabActive:
-                                  ref.read(mainShellIndexProvider) == 1,
-                            );
-                          },
-                        ),
-                        const Gap(12),
-                        ServerLogExplorer(
-                          key: ValueKey(
-                            'deployment_log_explorer_${widget.deploymentId}',
-                          ),
-                          autoRefresh: _autoRefreshLogs,
-                          loader: (request) async {
-                            final repository = ref.read(
-                              deploymentRepositoryProvider,
-                            );
-                            if (repository == null) {
-                              throw StateError('No active Komodo connection.');
-                            }
-                            final result = request.isSearch
-                                ? await repository.searchServerLog(
-                                    deploymentIdOrName: widget.deploymentId,
-                                    terms: request.terms,
-                                    combinator: request.combinator,
-                                    invert: request.invert,
-                                    timestamps: request.timestamps,
-                                  )
-                                : await repository.loadServerLog(
-                                    deploymentIdOrName: widget.deploymentId,
-                                    tail: request.tail,
-                                    timestamps: request.timestamps,
-                                  );
-                            return result.fold(
-                              (failure) => throw StateError(
-                                failure.displayMessage,
-                              ),
-                              (log) => log,
-                            );
-                          },
-                        ),
-                        const Gap(12),
-                        deploymentAsync.when(
-                          data: (deployment) {
-                            final buildId =
-                                deployment?.info?.buildId?.trim() ?? '';
-                            if (buildId.isEmpty) {
-                              return const DeploymentMessageSurface(
-                                message:
-                                    'No build output available for this deployment',
+                      fillHeight: true,
+                      autoRefresh: logsPolling,
+                      onAutoRefreshChanged: (value) {
+                        setState(() => _autoRefreshLogs = value);
+                        _syncBuildPolling(isShellTabActive: isShellActive);
+                      },
+                      loader: (request) async {
+                        final repository = ref.read(
+                          deploymentRepositoryProvider,
+                        );
+                        if (repository == null) {
+                          throw StateError('No active Komodo connection.');
+                        }
+                        final result = request.isSearch
+                            ? await repository.searchServerLog(
+                                deploymentIdOrName: widget.deploymentId,
+                                terms: request.terms,
+                                combinator: request.combinator,
+                                invert: request.invert,
+                                timestamps: request.timestamps,
+                              )
+                            : await repository.loadServerLog(
+                                deploymentIdOrName: widget.deploymentId,
+                                tail: request.tail,
+                                timestamps: request.timestamps,
                               );
-                            }
-
-                            final buildAsync = ref.watch(
-                              buildDetailProvider(buildId),
-                            );
-                            return buildAsync.when(
-                              data: (build) {
-                                if (build == null) {
-                                  return const DeploymentMessageSurface(
-                                    message: 'Build not found',
-                                  );
-                                }
-
-                                final hasAnyLogs =
-                                    (build.info.remoteError
-                                            ?.trim()
-                                            .isNotEmpty ??
-                                        false) ||
-                                    (build.info.remoteContents
-                                            ?.trim()
-                                            .isNotEmpty ??
-                                        false) ||
-                                    (build.info.builtContents
-                                            ?.trim()
-                                            .isNotEmpty ??
-                                        false);
-
-                                if (!hasAnyLogs) {
-                                  return const DeploymentMessageSurface(
-                                    message: 'No log output',
-                                  );
-                                }
-
-                                return DetailSection(
-                                  title: 'Logs',
-                                  icon: AppIcons.package,
-                                  child: BuildLogsContent(buildResource: build),
-                                );
-                              },
-                              loading: () => const DeploymentLoadingSurface(),
-                              error: (error, _) => DeploymentMessageSurface(
-                                message: 'Logs unavailable: $error',
-                              ),
-                            );
-                          },
-                          loading: () => const DeploymentLoadingSurface(),
-                          error: (error, _) => DeploymentMessageSurface(
-                            message: 'Logs unavailable: $error',
-                          ),
-                        ),
-                      ],
+                        return result.fold(
+                          (failure) => throw StateError(failure.displayMessage),
+                          (log) => log,
+                        );
+                      },
                     ),
                   ),
                 ),
+                if (hasBuild)
+                  DetailTabSpec(
+                    id: _tabBuild,
+                    label: 'Build',
+                    icon: AppIcons.builds,
+                    body: RefreshIndicator(
+                      onRefresh: () async {
+                        final buildId = deployment?.info?.buildId?.trim() ?? '';
+                        if (buildId.isNotEmpty) {
+                          ref.invalidate(buildDetailProvider(buildId));
+                        }
+                      },
+                      child: DetailTabScrollView.box(
+                        scrollKey: PageStorageKey(
+                          'deployment_${widget.deploymentId}_build',
+                        ),
+                        child: _buildOutput(deployment),
+                      ),
+                    ),
+                  ),
               ],
             ),
-          ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: scheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
-        ],
+            if (actionsState.isLoading)
+              ColoredBox(
+                color: scheme.scrim.withValues(alpha: 0.25),
+                child: const Center(child: AppSkeletonCard()),
+              ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildOutput(Deployment? deployment) {
+    final buildId = deployment?.info?.buildId?.trim() ?? '';
+    if (buildId.isEmpty) {
+      return const DeploymentMessageSurface(
+        message: 'No build output available for this deployment',
+      );
+    }
+
+    final buildAsync = ref.watch(buildDetailProvider(buildId));
+    return buildAsync.when(
+      data: (build) {
+        if (build == null) {
+          return const DeploymentMessageSurface(message: 'Build not found');
+        }
+
+        final hasAnyLogs =
+            (build.info.remoteError?.trim().isNotEmpty ?? false) ||
+            (build.info.remoteContents?.trim().isNotEmpty ?? false) ||
+            (build.info.builtContents?.trim().isNotEmpty ?? false);
+
+        if (!hasAnyLogs) {
+          return const DeploymentMessageSurface(message: 'No log output');
+        }
+
+        return DetailSection(
+          title: 'Build output',
+          icon: AppIcons.package,
+          child: BuildLogsContent(buildResource: build),
+        );
+      },
+      loading: () => const DeploymentLoadingSurface(),
+      error: (error, _) =>
+          DeploymentMessageSurface(message: 'Logs unavailable: $error'),
     );
   }
 
@@ -516,140 +507,14 @@ class _DeploymentDetailViewState
     );
   }
 
-  List<PopupMenuEntry<DeploymentAction>> _buildMenuItems(
-    ColorScheme scheme,
-    DeploymentState state, {
-    required bool hasImage,
-  }) {
-    final items = <PopupMenuEntry<DeploymentAction>>[];
-
-    if (hasImage) {
-      items.add(
-        komodoPopupMenuItem(
-          value: DeploymentAction.checkUpdates,
-          icon: Icons.refresh_outlined,
-          label: 'Check image now',
-          iconColor: scheme.primary,
-        ),
-      );
-    }
-
-    final deployLabel =
-        (state == DeploymentState.notDeployed ||
-            state == DeploymentState.unknown)
-        ? 'Deploy'
-        : 'Redeploy';
-
-    items.add(
-      komodoPopupMenuItem(
-        value: DeploymentAction.deploy,
-        icon: AppIcons.deployments,
-        label: deployLabel,
-        iconColor: scheme.primary,
-      ),
-    );
-
-    if (hasImage) {
-      items.add(
-        komodoPopupMenuItem(
-          value: DeploymentAction.pullImages,
-          icon: AppIcons.download,
-          label: 'Pull image',
-          iconColor: scheme.primary,
-        ),
-      );
-    }
-
-    final showStart =
-        state == DeploymentState.created || state == DeploymentState.exited;
-    final showStop = state.isRunning;
-    final showRestart = state.isRunning || state.isPaused;
-    final showPause = state.isRunning;
-    final showUnpause = state.isPaused;
-
-    final hasLifecycle =
-        showStart || showStop || showRestart || showPause || showUnpause;
-    if (hasLifecycle) {
-      items.add(komodoPopupMenuDivider());
-      if (showStart) {
-        items.add(
-          komodoPopupMenuItem(
-            value: DeploymentAction.start,
-            icon: AppIcons.play,
-            label: 'Start',
-            iconColor: scheme.secondary,
-          ),
-        );
-      }
-      if (showStop) {
-        items.add(
-          komodoPopupMenuItem(
-            value: DeploymentAction.stop,
-            icon: AppIcons.stop,
-            label: 'Stop',
-            iconColor: scheme.tertiary,
-          ),
-        );
-      }
-      if (showRestart) {
-        items.add(
-          komodoPopupMenuItem(
-            value: DeploymentAction.restart,
-            icon: AppIcons.refresh,
-            label: 'Restart',
-            iconColor: scheme.primary,
-          ),
-        );
-      }
-      if (showPause) {
-        items.add(
-          komodoPopupMenuItem(
-            value: DeploymentAction.pause,
-            icon: AppIcons.pause,
-            label: 'Pause',
-            iconColor: scheme.tertiary,
-          ),
-        );
-      }
-      if (showUnpause) {
-        items.add(
-          komodoPopupMenuItem(
-            value: DeploymentAction.unpause,
-            icon: AppIcons.play,
-            label: 'Unpause',
-            iconColor: scheme.primary,
-          ),
-        );
-      }
-    }
-
-    final showDestroy = state != DeploymentState.notDeployed;
-    if (showDestroy) {
-      items
-        ..add(komodoPopupMenuDivider())
-        ..add(
-          komodoPopupMenuItem(
-            value: DeploymentAction.destroy,
-            icon: AppIcons.delete,
-            label: 'Destroy',
-            destructive: true,
-          ),
-        );
-    }
-
-    return items;
-  }
-
-  Future<void> _handleAction(
-    BuildContext context,
-    String deploymentId,
-    DeploymentAction action,
-  ) async {
+  Future<void> _handleAction(DeploymentAction action) async {
+    final deploymentId = widget.deploymentId;
+    final name = widget.deploymentName;
     final actions = ref.read(deploymentActionsProvider.notifier);
 
     if (action == DeploymentAction.checkUpdates) {
       final available = await actions.checkForUpdate(deploymentId);
-      if (!mounted || !context.mounted) return;
+      if (!mounted) return;
       ref
         ..invalidate(deploymentDetailProvider(deploymentId))
         ..invalidate(deploymentsProvider);
@@ -669,31 +534,24 @@ class _DeploymentDetailViewState
       return;
     }
 
-    if (action == DeploymentAction.destroy) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          key: ValueKey('deployment_destroy_dialog_$deploymentId'),
-          title: const Text('Destroy deployment?'),
-          content: const Text(
-            'This will stop and remove the container. Continue?',
-          ),
-          actions: [
-            TextButton(
-              key: ValueKey('deployment_destroy_cancel_$deploymentId'),
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              key: ValueKey('deployment_destroy_confirm_$deploymentId'),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Destroy'),
-            ),
-          ],
-        ),
+    if (action == DeploymentAction.stop) {
+      final confirmed = await confirmDestructive(
+        context,
+        title: 'Stop $name?',
+        message: 'This stops the container of "$name". Continue?',
+        confirmLabel: 'Stop',
       );
-      if (confirmed != true) return;
-      if (!mounted) return;
+      if (!confirmed || !mounted) return;
+    }
+
+    if (action == DeploymentAction.destroy) {
+      final confirmed = await confirmDestructive(
+        context,
+        title: 'Destroy $name?',
+        message: 'This stops and removes the container of "$name". Continue?',
+        confirmLabel: 'Destroy',
+      );
+      if (!confirmed || !mounted) return;
     }
 
     final success = await switch (action) {
@@ -714,70 +572,12 @@ class _DeploymentDetailViewState
       ref.invalidate(deploymentDetailProvider(deploymentId));
     }
 
-    if (context.mounted) {
-      AppSnackBar.show(
-        context,
-        success
-            ? 'Action submitted. Check updates for the result.'
-            : 'Action failed. Please try again.',
-        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
-      );
-    }
-  }
-}
-
-class _PinnedTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _PinnedTabBarHeaderDelegate({
-    required this.tabBar,
-    required this.backgroundColor,
-  });
-
-  final PreferredSizeWidget tabBar;
-  final Color backgroundColor;
-
-  @override
-  double get minExtent => tabBar.preferredSize.height;
-
-  @override
-  double get maxExtent => tabBar.preferredSize.height;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Material(
-      color: backgroundColor,
-      elevation: overlapsContent ? 1 : 0,
-      child: tabBar,
+    AppSnackBar.show(
+      context,
+      success
+          ? 'Action submitted. Check updates for the result.'
+          : 'Action failed. Please try again.',
+      tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
     );
-  }
-
-  @override
-  bool shouldRebuild(covariant _PinnedTabBarHeaderDelegate oldDelegate) {
-    return oldDelegate.tabBar != tabBar ||
-        oldDelegate.backgroundColor != backgroundColor;
-  }
-}
-
-class _KeepAlive extends StatefulWidget {
-  const _KeepAlive({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_KeepAlive> createState() => _KeepAliveState();
-}
-
-class _KeepAliveState extends State<_KeepAlive>
-    with AutomaticKeepAliveClientMixin<_KeepAlive> {
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return widget.child;
   }
 }

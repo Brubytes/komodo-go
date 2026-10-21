@@ -8,19 +8,25 @@ import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
+import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
-import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
+import 'package:komodo_go/features/containers/data/models/container.dart';
 import 'package:komodo_go/features/containers/presentation/providers/containers_filters_provider.dart';
 import 'package:komodo_go/features/containers/presentation/widgets/container_card.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
-import 'package:skeletonizer/skeletonizer.dart';
+import 'package:komodo_go/shared/resources/providers/resource_view_prefs_provider.dart';
+import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 class ContainersView extends ConsumerStatefulWidget {
   const ContainersView({super.key});
@@ -30,11 +36,13 @@ class ContainersView extends ConsumerStatefulWidget {
 }
 
 class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
+  static const _pollInterval = Duration(seconds: 10);
   Timer? _refreshTimer;
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
+  late final _intro = AppListIntro();
 
   @override
   void initState() {
@@ -76,10 +84,11 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
 
   void _startRefreshTimer() {
     if (_refreshTimer != null) return;
-    _refreshTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
-      ref.invalidate(containersProvider);
+    _refreshTimer = Timer.periodic(_pollInterval, (_) {
+      if (!shouldRunPollTick()) return;
+      unawaited(ref.read(containersProvider.notifier).pollRefresh());
     });
-    ref.invalidate(containersProvider);
+    unawaited(ref.read(containersProvider.notifier).pollRefresh());
   }
 
   void _stopRefreshTimer() {
@@ -104,6 +113,25 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
     final searchQuery = ref.watch(containersSearchQueryProvider);
     final sortState = ref.watch(containersSortProvider);
     final isActiveTab = ref.watch(mainShellIndexProvider) == 2;
+    const listId = 'containers';
+    final prefs = watchResourceViewPrefs(ref, listId);
+    final activeFilterCount =
+        (searchQuery.trim().isEmpty ? 0 : 1) +
+        (selectedServerId == null ? 0 : 1) +
+        prefs.activeCount;
+    final stateOptions = collectDistinct<ContainerOverviewItem>(
+      containersAsync.maybeWhen(
+        data: (result) => result.items,
+        orElse: () => const <ContainerOverviewItem>[],
+      ),
+      (item) => resourceStateLabel(item.container.state),
+    );
+    void clearAllFilters() {
+      _searchController.clear();
+      ref.read(containersSearchQueryProvider.notifier).query = '';
+      ref.read(containersServerFilterProvider.notifier).serverId = null;
+      clearResourceViewFilters(ref, listId);
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -115,9 +143,9 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
         title: 'Containers',
         icon: AppIcons.containers,
         actions: [
-          IconButton(
-            tooltip: _isSearchVisible ? 'Hide search' : 'Search',
-            icon: Icon(_isSearchVisible ? Icons.close : Icons.search),
+          ResourceFilterToggleButton(
+            visible: _isSearchVisible,
+            activeCount: activeFilterCount,
             onPressed: () {
               setState(() => _isSearchVisible = !_isSearchVisible);
               if (_isSearchVisible) {
@@ -131,140 +159,201 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
           ),
         ],
       ),
-      body: Stack(
+      body: Column(
         children: [
-          RefreshIndicator(
-            onRefresh: () => ref.read(containersProvider.notifier).refresh(),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
+          Expanded(
+            child: Stack(
               children: [
-                _FiltersRow(
-                  serversAsync: serversAsync,
-                  selectedServerId: selectedServerId,
-                  onServerChanged: (value) =>
-                      ref
-                              .read(containersServerFilterProvider.notifier)
-                              .serverId =
-                          value,
-                ),
-                const Gap(12),
-                _SortRow(
-                  sortState: sortState,
-                  onFieldChanged: (value) =>
-                      ref.read(containersSortProvider.notifier).field = value,
-                  onToggleDirection: () => ref
-                      .read(containersSortProvider.notifier)
-                      .toggleDirection(),
-                ),
-                AnimatedSwitcher(
-                  duration: AppMotion.base,
-                  switchInCurve: AppMotion.enterCurve,
-                  switchOutCurve: AppMotion.exitCurve,
-                  child: _isSearchVisible
-                      ? Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: _SearchField(
-                            focusNode: _searchFocusNode,
-                            controller: _searchController,
-                            onChanged: (value) =>
+                RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(containersProvider.notifier).refresh(),
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _FiltersRow(
+                        servers: serversAsync.maybeWhen(
+                          data: (servers) => servers,
+                          orElse: () => const <Server>[],
+                        ),
+                        selectedServerId: selectedServerId,
+                        onServerChanged: (value) =>
+                            ref
+                                    .read(
+                                      containersServerFilterProvider.notifier,
+                                    )
+                                    .serverId =
+                                value,
+                        stateOptions: stateOptions,
+                        problemsOnly: prefs.problemsOnly,
+                        selectedStates: prefs.states,
+                        onFilterChanged: (value) =>
+                            _setQuickFilter(value, listId),
+                      ),
+                      const Gap(AppSpacing.md),
+                      _SortRow(
+                        sortState: sortState,
+                        onFieldChanged: (value) =>
+                            ref.read(containersSortProvider.notifier).field =
+                                value,
+                        onToggleDirection: () => ref
+                            .read(containersSortProvider.notifier)
+                            .toggleDirection(),
+                      ),
+                      AppSwitcher(
+                        child: _isSearchVisible
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: _SearchField(
+                                  focusNode: _searchFocusNode,
+                                  controller: _searchController,
+                                  onChanged: (value) =>
+                                      ref
+                                              .read(
+                                                containersSearchQueryProvider
+                                                    .notifier,
+                                              )
+                                              .query =
+                                          value,
+                                  onClear: () {
+                                    _searchController.clear();
+                                    ref
+                                            .read(
+                                              containersSearchQueryProvider
+                                                  .notifier,
+                                            )
+                                            .query =
+                                        '';
+                                  },
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      if (!_isSearchVisible &&
+                          searchQuery.trim().isNotEmpty) ...[
+                        const Gap(8),
+                        ResourceActiveFilterChips(
+                          listId: listId,
+                          includeQuickFilters: false,
+                          onClearAll: clearAllFilters,
+                          extraChips: [
+                            ActiveFilterChip(
+                              label: 'Search: ${searchQuery.trim()}',
+                              onRemove: () {
+                                _searchController.clear();
                                 ref
                                         .read(
                                           containersSearchQueryProvider
                                               .notifier,
                                         )
                                         .query =
-                                    value,
-                            onClear: () {
-                              _searchController.clear();
-                              ref
-                                      .read(
-                                        containersSearchQueryProvider.notifier,
-                                      )
-                                      .query =
-                                  '';
-                            },
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                const Gap(12),
-                containersAsync.when(
-                  skipLoadingOnRefresh: true,
-                  skipLoadingOnReload: true,
-                  data: (result) {
-                    final filtered = _applyFilters(
-                      result.items,
-                      serverId: selectedServerId,
-                      query: searchQuery,
-                      sort: sortState,
-                    );
-
-                    if (filtered.isEmpty) {
-                      return const _EmptyState();
-                    }
-
-                    return Column(
-                      children: [
-                        if (result.errors.isNotEmpty) ...[
-                          _PartialErrorBanner(errors: result.errors),
-                          const Gap(12),
-                        ],
-                        for (var i = 0; i < filtered.length; i++) ...[
-                          AppFadeSlide(
-                            delay: AppMotion.stagger(i),
-                            play: i < 10,
-                            child: ContainerCard(
-                              item: filtered[i],
-                              onTap: () {
-                                final containerKey =
-                                    filtered[i].container.id ??
-                                    filtered[i].container.name;
-                                unawaited(
-                                  context.push(
-                                    '${AppRoutes.containers}/${filtered[i].serverId}/${Uri.encodeComponent(containerKey)}',
-                                    extra: filtered[i],
-                                  ),
-                                );
+                                    '';
                               },
-                              onAction: (action) => unawaited(
-                                _handleAction(
-                                  context,
-                                  ref,
-                                  filtered[i],
-                                  action,
-                                ),
-                              ),
                             ),
-                          ),
-                          const Gap(12),
-                        ],
-                        const SizedBox(height: 12),
+                          ],
+                        ),
                       ],
-                    );
-                  },
-                  loading: () => const Padding(
-                    padding: EdgeInsets.only(top: 16),
-                    child: _ContainersSkeletonBlock(),
-                  ),
-                  error: (error, stack) => ErrorStateView(
-                    title: 'Failed to load containers',
-                    message: error.toString(),
-                    onRetry: () => ref.invalidate(containersProvider),
+                      const Gap(12),
+                      AppSwitcher(
+                        animateSize: false,
+                        child: containersAsync.when(
+                          skipLoadingOnRefresh: true,
+                          skipLoadingOnReload: true,
+                          data: (result) {
+                            final filtered = _applyFilters(
+                              result.items,
+                              serverId: selectedServerId,
+                              query: searchQuery,
+                              sort: sortState,
+                              problemsOnly: prefs.problemsOnly,
+                              states: prefs.states,
+                            );
+
+                            if (filtered.isEmpty) {
+                              return const _EmptyState(
+                                key: ValueKey('containers_empty'),
+                              );
+                            }
+
+                            return Column(
+                              key: const ValueKey('containers_data'),
+                              children: [
+                                if (result.errors.isNotEmpty) ...[
+                                  _PartialErrorBanner(errors: result.errors),
+                                  const Gap(12),
+                                ],
+                                for (var i = 0; i < filtered.length; i++) ...[
+                                  _intro.wrap(
+                                    i,
+                                    id:
+                                        '${filtered[i].serverId}/'
+                                        '${filtered[i].container.id ?? filtered[i].container.name}',
+                                    ContainerCard(
+                                      item: filtered[i],
+                                      onTap: () {
+                                        final containerKey =
+                                            filtered[i].container.id ??
+                                            filtered[i].container.name;
+                                        unawaited(
+                                          context.push(
+                                            '${AppRoutes.containers}/${filtered[i].serverId}/${Uri.encodeComponent(containerKey)}',
+                                            extra: filtered[i],
+                                          ),
+                                        );
+                                      },
+                                      onAction: (action) => unawaited(
+                                        _handleAction(
+                                          context,
+                                          ref,
+                                          filtered[i],
+                                          action,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const Gap(12),
+                                ],
+                                const SizedBox(height: 12),
+                              ],
+                            );
+                          },
+                          loading: () => const Padding(
+                            key: ValueKey('containers_loading'),
+                            padding: EdgeInsets.only(top: 16),
+                            child: _ContainersSkeletonBlock(),
+                          ),
+                          error: (error, stack) => ErrorStateView(
+                            key: const ValueKey('containers_error'),
+                            title: 'Failed to load containers',
+                            message: error.toString(),
+                            onRetry: () => ref.invalidate(containersProvider),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                if (actionsState.isLoading)
+                  ColoredBox(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.scrim.withValues(alpha: 0.25),
+                    child: const Center(child: AppSkeletonCard()),
+                  ),
               ],
             ),
           ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: Theme.of(
-                context,
-              ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
         ],
       ),
     );
+  }
+
+  void _setQuickFilter(String value, String listId) {
+    final problems = ref.read(resourceProblemsOnlyProvider(listId).notifier);
+    final states = ref.read(resourceStateFilterProvider(listId).notifier);
+    problems.enabled = value == _filterProblems;
+    states.selected = value == _filterAll || value == _filterProblems
+        ? <String>{}
+        : {value};
   }
 
   Future<void> _handleAction(
@@ -287,28 +376,20 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
     }
 
     final actions = ref.read(containerActionsProvider.notifier);
-    if (action == ContainerAction.remove) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Remove container?'),
-          content: Text(
-            'This permanently removes ${item.container.name}. '
-            'A managed Stack or Deployment may recreate it.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Remove'),
-            ),
-          ],
-        ),
+    if (action == ContainerAction.remove || action == ContainerAction.stop) {
+      final remove = action == ContainerAction.remove;
+      final confirmed = await confirmDestructive(
+        context,
+        title: remove
+            ? 'Remove ${item.container.name}?'
+            : 'Stop ${item.container.name}?',
+        message: remove
+            ? 'This permanently removes "${item.container.name}". '
+                  'A managed Stack or Deployment may recreate it.'
+            : 'This will stop "${item.container.name}".',
+        confirmLabel: remove ? 'Remove' : 'Stop',
       );
-      if (confirmed != true || !context.mounted) return;
+      if (!confirmed || !context.mounted) return;
     }
     final success = await switch (action) {
       ContainerAction.start => actions.start(
@@ -349,43 +430,80 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
   }
 }
 
+const _filterAll = '__all__';
+const _filterProblems = '__problems__';
+
+/// Top row: Server dropdown (left half) and quick Filter dropdown (right half).
 class _FiltersRow extends StatelessWidget {
   const _FiltersRow({
-    required this.serversAsync,
+    required this.servers,
     required this.selectedServerId,
     required this.onServerChanged,
+    required this.stateOptions,
+    required this.problemsOnly,
+    required this.selectedStates,
+    required this.onFilterChanged,
   });
 
-  final AsyncValue<List<Server>> serversAsync;
+  final List<Server> servers;
   final String? selectedServerId;
   final ValueChanged<String?> onServerChanged;
+  final List<String> stateOptions;
+  final bool problemsOnly;
+  final Set<String> selectedStates;
+  final ValueChanged<String> onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
-    final serverField = serversAsync.maybeWhen(
-      data: (servers) => KomodoSelectMenuFormField<String?>(
-        initialValue: selectedServerId,
-        decoration: const InputDecoration(
-          labelText: 'Server',
-          prefixIcon: Icon(AppIcons.server),
-        ),
-        items: [
-          const KomodoSelectMenuItem(value: null, label: 'All servers'),
-          for (final server in servers)
-            KomodoSelectMenuItem(value: server.id, label: server.name),
-        ],
-        onChanged: onServerChanged,
-      ),
-      orElse: () => KomodoSelectMenuFormField<String?>(
-        decoration: const InputDecoration(
-          labelText: 'Server',
-          prefixIcon: Icon(AppIcons.server),
-        ),
-        items: const [KomodoSelectMenuItem(value: null, label: 'All servers')],
-      ),
-    );
+    final states = {...stateOptions, ...selectedStates}.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final filterValue = problemsOnly
+        ? _filterProblems
+        : (selectedStates.isEmpty ? _filterAll : selectedStates.first);
 
-    return serverField;
+    return Row(
+      children: [
+        Expanded(
+          child: KomodoSelectMenuField<String?>(
+            key: const ValueKey('containers_server_filter'),
+            value: selectedServerId,
+            decoration: const InputDecoration(
+              labelText: 'Server',
+              prefixIcon: Icon(AppIcons.server),
+            ),
+            items: [
+              const KomodoSelectMenuItem(value: null, label: 'All servers'),
+              for (final server in servers)
+                KomodoSelectMenuItem(value: server.id, label: server.name),
+            ],
+            onChanged: onServerChanged,
+          ),
+        ),
+        const Gap(AppSpacing.sm),
+        Expanded(
+          child: KomodoSelectMenuField<String>(
+            key: const ValueKey('containers_state_filter'),
+            value: filterValue,
+            decoration: const InputDecoration(
+              labelText: 'Filter',
+              prefixIcon: Icon(Icons.filter_list_rounded),
+            ),
+            items: [
+              const KomodoSelectMenuItem(value: _filterAll, label: 'All'),
+              const KomodoSelectMenuItem(
+                value: _filterProblems,
+                label: 'Problems only',
+              ),
+              for (final state in states)
+                KomodoSelectMenuItem(value: state, label: state),
+            ],
+            onChanged: (value) {
+              if (value != null) onFilterChanged(value);
+            },
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -448,8 +566,9 @@ class _SortRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: KomodoSelectMenuFormField<ContainersSortField>(
-            initialValue: sortState.field,
+          child: KomodoSelectMenuField<ContainersSortField>(
+            key: const ValueKey('containers_sort_field'),
+            value: sortState.field,
             decoration: const InputDecoration(
               labelText: 'Sort by',
               prefixIcon: Icon(Icons.sort),
@@ -486,11 +605,12 @@ class _SortRow extends StatelessWidget {
             },
           ),
         ),
-        const Gap(8),
+        const Gap(AppSpacing.sm),
         Material(
           color: theme.cardTheme.color ?? scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           child: IconButton(
+            key: const ValueKey('containers_sort_direction'),
             tooltip: directionLabel,
             icon: Icon(directionIcon),
             onPressed: onToggleDirection,
@@ -506,11 +626,21 @@ List<ContainerOverviewItem> _applyFilters(
   required String? serverId,
   required String query,
   required ContainersSortState sort,
+  bool problemsOnly = false,
+  Set<String> states = const {},
 }) {
   final normalizedQuery = query.trim().toLowerCase();
 
   final filtered = items.where((item) {
     if (serverId != null && item.serverId != serverId) return false;
+    if (problemsOnly &&
+        containerSeverity(item.container) > ResourceSeverity.maxProblem) {
+      return false;
+    }
+    if (states.isNotEmpty &&
+        !states.contains(resourceStateLabel(item.container.state))) {
+      return false;
+    }
     if (normalizedQuery.isEmpty) return true;
 
     final name = item.container.name.toLowerCase();
@@ -611,7 +741,7 @@ int _compareMetric(double? a, double? b, bool descending) {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -652,52 +782,43 @@ class _ContainersSkeletonBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Skeletonizer(
-      child: Column(
-        children: List.generate(
-          3,
-          (index) => Padding(
-            padding: EdgeInsets.only(bottom: index == 2 ? 0 : 12),
-            child: AppCardSurface(
-              padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const CircleAvatar(radius: 16),
-                        const Gap(10),
-                        Expanded(
-                          child: Text(
-                            'Container name',
-                            style: textTheme.titleSmall,
-                          ),
-                        ),
-                        const Gap(8),
-                        const CircleAvatar(radius: 6),
-                      ],
-                    ),
-                    const Gap(10),
-                    Text('Image • Status • Server', style: textTheme.bodySmall),
-                    const Gap(10),
-                    const Row(
-                      children: [
-                        Chip(label: Text('Running')),
-                        Gap(8),
-                        Chip(label: Text('CPU 12%')),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+    return const ResourceCardSkeletonList(
+      title: 'Container name',
+      metaLeft: 'Server',
+      metaRight: 'image:latest',
+      count: 3,
+      padding: EdgeInsets.zero,
+      bottom: Row(
+        children: [
+          ResourceIconLabel(icon: AppIcons.cpu, label: 'CPU 0.5%'),
+          SizedBox(width: AppSpacing.md),
+          ResourceIconLabel(icon: AppIcons.memory, label: 'Mem 128MiB / 1GiB'),
+        ],
       ),
     );
   }
+}
+
+/// Severity bucket of a container, see [ResourceSeverity].
+///
+/// An exited container with a non-zero exit code needs attention.
+int containerSeverity(ContainerListItem container) {
+  return switch (container.state) {
+    ContainerState.dead => ResourceSeverity.attention,
+    ContainerState.exited =>
+      _exitedWithError(container.status)
+          ? ResourceSeverity.attention
+          : ResourceSeverity.inactive,
+    ContainerState.restarting ||
+    ContainerState.removing => ResourceSeverity.warning,
+    ContainerState.running => ResourceSeverity.healthy,
+    ContainerState.created ||
+    ContainerState.paused ||
+    ContainerState.unknown => ResourceSeverity.inactive,
+  };
+}
+
+bool _exitedWithError(String? status) {
+  final match = RegExp(r'Exited \((\d+)\)').firstMatch(status ?? '');
+  return match != null && match.group(1) != '0';
 }

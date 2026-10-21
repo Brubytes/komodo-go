@@ -23,13 +23,6 @@ abstract final class AppTokens {
   static const Color resourceProcedures = Colors.indigo;
   static const Color resourceActions = Colors.cyan;
 
-  /// Status colors used for alerts/updates chips.
-  ///
-  /// These mirror Komodo web’s status palette.
-  static const Color statusGreen = Color(0xFF4ADE80); // 74 222 128
-  static const Color statusOrange = Color(0xFFFACC15); // 250 204 21
-  static const Color statusRed = Color(0xFFF87171); // 248 113 113
-
   static const String systemFontStack =
       '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif';
 
@@ -39,4 +32,17 @@ abstract final class AppTokens {
     horizontal: 16,
     vertical: 16,
   );
+}
+
+/// Shared spacing scale. Prefer these over magic numbers in new widgets.
+abstract final class AppSpacing {
+  AppSpacing._();
+
+  static const double xxs = 2;
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double xl = 24;
+  static const double xxl = 32;
 }

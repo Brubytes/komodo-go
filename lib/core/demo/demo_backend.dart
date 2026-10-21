@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -13,6 +14,7 @@ final List<Map<String, dynamic>> _servers = [
     address: '10.0.0.10',
     region: 'us-east-1',
     state: 'Ok',
+    description: 'Production application host',
   ),
   _serverItem(
     id: 'server-2',
@@ -20,6 +22,7 @@ final List<Map<String, dynamic>> _servers = [
     address: '10.0.0.22',
     region: 'eu-west-1',
     state: 'Ok',
+    description: 'Edge proxy and cache',
   ),
   _serverItem(
     id: 'server-3',
@@ -27,13 +30,39 @@ final List<Map<String, dynamic>> _servers = [
     address: '10.0.1.12',
     region: 'us-west-2',
     state: 'NotOk',
+    description: 'Pre-production environment',
   ),
   _serverItem(
     id: 'server-4',
     name: 'DR Node',
     address: '10.0.2.5',
     region: 'ap-southeast-1',
-    state: 'Disabled',
+    state: 'Ok',
+    description: 'Disaster recovery replica',
+  ),
+  _serverItem(
+    id: 'server-5',
+    name: 'Build Node',
+    address: '10.0.0.31',
+    region: 'us-east-2',
+    state: 'Ok',
+    description: 'CI image builds',
+  ),
+  _serverItem(
+    id: 'server-6',
+    name: 'Monitoring Node',
+    address: '10.0.3.8',
+    region: 'eu-central-1',
+    state: 'Ok',
+    description: 'Metrics, logs and uptime checks',
+  ),
+  _serverItem(
+    id: 'server-7',
+    name: 'Homelab NAS',
+    address: '192.168.1.50',
+    region: 'home',
+    state: 'Ok',
+    description: 'Media and backups at home',
   ),
 ];
 
@@ -58,7 +87,7 @@ final List<Map<String, dynamic>> _deployments = [
     id: 'deployment-3',
     name: 'Worker',
     description: 'Background jobs',
-    state: 'Paused',
+    state: 'Running',
     image: 'ghcr.io/komodo/worker:2.0.1',
     serverId: 'server-2',
   ),
@@ -82,7 +111,7 @@ final List<Map<String, dynamic>> _deployments = [
     id: 'deployment-6',
     name: 'Metrics',
     description: 'Observability stack',
-    state: 'Restarting',
+    state: 'Running',
     image: 'grafana/grafana:10.2.2',
     serverId: 'server-2',
   ),
@@ -111,6 +140,7 @@ final List<Map<String, dynamic>> _stacks = [
     fileContents: true,
     gitProvider: '',
     linkedRepo: '',
+    serviceCount: 5,
   ),
   _stackListItem(
     id: 'stack-1',
@@ -119,6 +149,7 @@ final List<Map<String, dynamic>> _stacks = [
     repo: 'komodo/production-stack',
     branch: 'main',
     state: 'Running',
+    serviceCount: 4,
   ),
   _stackListItem(
     id: 'stack-2',
@@ -134,7 +165,7 @@ final List<Map<String, dynamic>> _stacks = [
     serverId: 'server-2',
     repo: 'komodo/edge-stack',
     branch: 'main',
-    state: 'Paused',
+    state: 'Running',
   ),
   _stackListItem(
     id: 'stack-4',
@@ -172,7 +203,7 @@ final List<Map<String, dynamic>> _repos = [
     builderId: 'builder-1',
     repo: 'komodo/ops-config',
     branch: 'main',
-    state: 'Failed',
+    state: 'Ok',
   ),
   _repoListItem(
     id: 'repo-4',
@@ -232,7 +263,7 @@ final List<Map<String, dynamic>> _syncs = [
     name: 'Edge Config',
     repo: 'komodo/edge-stack',
     branch: 'main',
-    state: 'Failed',
+    state: 'Ok',
   ),
   _syncListItem(
     id: 'sync-4',
@@ -260,58 +291,195 @@ final List<Map<String, dynamic>> _procedures = [
     id: 'procedure-3',
     name: 'Incident Drill',
     stages: 2,
-    state: 'Failed',
+    state: 'Ok',
   ),
 ];
 
 final List<Map<String, dynamic>> _actions = [
   _actionListItem(id: 'action-1', name: 'Restart Web', state: 'Ok'),
   _actionListItem(id: 'action-2', name: 'Flush Cache', state: 'Running'),
-  _actionListItem(id: 'action-3', name: 'Rollback Release', state: 'Failed'),
+  _actionListItem(id: 'action-3', name: 'Rollback Release', state: 'Ok'),
 ];
 
 final List<Map<String, dynamic>> _containers = [
   _containerListItem(
     serverId: 'server-1',
-    name: 'frontend',
-    image: 'nginx:latest',
-    status: 'Up 2 hours',
+    name: 'komodo-web-1',
+    image: 'nginx:1.27-alpine',
+    status: 'Up 3 days',
     state: 'Running',
+    cpu: '0.4%',
+    mem: '0.2%',
+    memUsage: '24MiB / 32GiB',
+    net: '48MB / 212MB',
   ),
   _containerListItem(
     serverId: 'server-1',
-    name: 'api',
+    name: 'komodo-api-1',
     image: 'ghcr.io/komodo/api:1.2.3',
-    status: 'Up 2 hours',
+    status: 'Up 3 days',
     state: 'Running',
+    cpu: '3.8%',
+    mem: '1.6%',
+    memUsage: '512MiB / 32GiB',
+    net: '212MB / 96MB',
+    port: (3000, 3000),
   ),
   _containerListItem(
-    serverId: 'server-2',
-    name: 'worker',
+    serverId: 'server-1',
+    name: 'komodo-worker-1',
     image: 'ghcr.io/komodo/worker:2.0.1',
-    status: 'Up 10 minutes',
-    state: 'Paused',
+    status: 'Up 3 days',
+    state: 'Running',
+    cpu: '1.9%',
+    mem: '1.1%',
+    memUsage: '352MiB / 32GiB',
+    net: '18MB / 11MB',
+    port: null,
+  ),
+  _containerListItem(
+    serverId: 'server-1',
+    name: 'postgres',
+    image: 'postgres:16-alpine',
+    status: 'Up 12 days',
+    state: 'Running',
+    cpu: '2.2%',
+    mem: '3.4%',
+    memUsage: '1.1GiB / 32GiB',
+    net: '96MB / 188MB',
+    port: (5432, 5432),
+  ),
+  _containerListItem(
+    serverId: 'server-1',
+    name: 'redis',
+    image: 'redis:7-alpine',
+    status: 'Up 12 days',
+    state: 'Running',
+    cpu: '0.6%',
+    mem: '0.3%',
+    memUsage: '96MiB / 32GiB',
+    net: '64MB / 58MB',
+    port: (6379, 6379),
+  ),
+  _containerListItem(
+    serverId: 'server-1',
+    name: 'traefik',
+    image: 'traefik:v3.1',
+    status: 'Up 12 days',
+    state: 'Running',
+    cpu: '1.2%',
+    mem: '0.4%',
+    memUsage: '128MiB / 32GiB',
+    net: '1.4GB / 1.1GB',
+    port: (443, 443),
   ),
   _containerListItem(
     serverId: 'server-2',
-    name: 'metrics',
+    name: 'edge-traefik',
+    image: 'traefik:v3.1',
+    status: 'Up 8 days',
+    state: 'Running',
+    cpu: '2.7%',
+    mem: '1.2%',
+    memUsage: '96MiB / 8GiB',
+    net: '3.2GB / 2.9GB',
+    port: (443, 443),
+  ),
+  _containerListItem(
+    serverId: 'server-2',
+    name: 'edge-cache',
+    image: 'redis:7-alpine',
+    status: 'Up 8 days',
+    state: 'Running',
+    cpu: '0.9%',
+    mem: '2.0%',
+    memUsage: '160MiB / 8GiB',
+    net: '780MB / 760MB',
+    port: (6379, 6379),
+  ),
+  _containerListItem(
+    serverId: 'server-5',
+    name: 'buildkit',
+    image: 'moby/buildkit:v0.15.1',
+    status: 'Up 5 hours',
+    state: 'Running',
+    cpu: '41.3%',
+    mem: '18.7%',
+    memUsage: '3.0GiB / 16GiB',
+    net: '2.1GB / 640MB',
+    port: null,
+  ),
+  _containerListItem(
+    serverId: 'server-5',
+    name: 'registry',
+    image: 'registry:2.8',
+    status: 'Up 5 days',
+    state: 'Running',
+    cpu: '0.3%',
+    mem: '0.5%',
+    memUsage: '82MiB / 16GiB',
+    net: '5.4GB / 4.8GB',
+    port: (5000, 5000),
+  ),
+  _containerListItem(
+    serverId: 'server-6',
+    name: 'prometheus',
+    image: 'prom/prometheus:v2.54.1',
+    status: 'Up 9 days',
+    state: 'Running',
+    cpu: '5.6%',
+    mem: '24.8%',
+    memUsage: '2.0GiB / 8GiB',
+    net: '8.2GB / 1.3GB',
+    port: (9090, 9090),
+  ),
+  _containerListItem(
+    serverId: 'server-6',
+    name: 'grafana',
     image: 'grafana/grafana:10.2.2',
-    status: 'Restarting (3)',
-    state: 'Restarting',
+    status: 'Up 9 days',
+    state: 'Running',
+    cpu: '1.1%',
+    mem: '3.9%',
+    memUsage: '312MiB / 8GiB',
+    net: '410MB / 920MB',
+    port: (3000, 3000),
   ),
   _containerListItem(
-    serverId: 'server-3',
-    name: 'billing',
-    image: 'ghcr.io/komodo/billing:2.3.0',
-    status: 'Exited (1) 2 hours ago',
-    state: 'Exited',
+    serverId: 'server-6',
+    name: 'uptime-kuma',
+    image: 'louislam/uptime-kuma:1.23',
+    status: 'Up 9 days',
+    state: 'Running',
+    cpu: '0.8%',
+    mem: '2.6%',
+    memUsage: '208MiB / 8GiB',
+    net: '1.2GB / 340MB',
+    port: (3001, 3001),
   ),
   _containerListItem(
-    serverId: 'server-4',
-    name: 'docs',
-    image: 'nginx:alpine',
-    status: 'Created',
-    state: 'Created',
+    serverId: 'server-7',
+    name: 'jellyfin',
+    image: 'jellyfin/jellyfin:10.9.11',
+    status: 'Up 21 days',
+    state: 'Running',
+    cpu: '4.4%',
+    mem: '5.1%',
+    memUsage: '832MiB / 16GiB',
+    net: '38GB / 2.2GB',
+    port: (8096, 8096),
+  ),
+  _containerListItem(
+    serverId: 'server-7',
+    name: 'vaultwarden',
+    image: 'vaultwarden/server:1.32.0',
+    status: 'Up 21 days',
+    state: 'Running',
+    cpu: '0.1%',
+    mem: '0.4%',
+    memUsage: '64MiB / 16GiB',
+    net: '22MB / 31MB',
+    port: (80, 8222),
   ),
 ];
 
@@ -523,13 +691,13 @@ final List<Map<String, dynamic>> _alerts = [
     level: 'Warning',
     timestamp: DateTime.now().millisecondsSinceEpoch - 900000,
     resolved: false,
-    target: _targetVariant('Server', 'server-2'),
+    target: _targetVariant('Server', 'server-3'),
     variant: 'ServerUnreachable',
-    data: <String, dynamic>{'server_name': 'Edge Node'},
+    data: <String, dynamic>{'server_name': 'Staging Node'},
   ),
   _alertItem(
     id: 'alert-2',
-    level: 'Critical',
+    level: 'Ok',
     timestamp: DateTime.now().millisecondsSinceEpoch - 5400000,
     resolved: true,
     resolvedTs: DateTime.now().millisecondsSinceEpoch - 3600000,
@@ -559,8 +727,9 @@ final List<Map<String, dynamic>> _alerts = [
   _alertItem(
     id: 'alert-5',
     level: 'Warning',
-    timestamp: DateTime.now().millisecondsSinceEpoch - 1200000,
-    resolved: false,
+    timestamp: DateTime.now().millisecondsSinceEpoch - 4200000,
+    resolved: true,
+    resolvedTs: DateTime.now().millisecondsSinceEpoch - 3900000,
     target: _targetVariant('Deployment', 'deployment-6'),
     variant: 'DeploymentRestarting',
     data: <String, dynamic>{'name': 'Metrics'},
@@ -578,8 +747,9 @@ final List<Map<String, dynamic>> _alerts = [
   _alertItem(
     id: 'alert-7',
     level: 'Warning',
-    timestamp: DateTime.now().millisecondsSinceEpoch - 720000,
-    resolved: false,
+    timestamp: DateTime.now().millisecondsSinceEpoch - 10800000,
+    resolved: true,
+    resolvedTs: DateTime.now().millisecondsSinceEpoch - 10200000,
     target: _targetVariant('Repo', 'repo-3'),
     variant: 'RepoPullFailed',
     data: <String, dynamic>{'name': 'Ops Config'},
@@ -625,10 +795,10 @@ final List<Map<String, dynamic>> _updates = [
     id: 'update-3',
     operation: 'SyncResources',
     startTs: DateTime.now().millisecondsSinceEpoch - 2400000,
-    success: false,
+    success: true,
     username: 'demo',
     operatorName: 'Demo User',
-    status: 'Failed',
+    status: 'Success',
     version: const <String, dynamic>{'major': 1, 'minor': 2, 'patch': 8},
     otherData: 'sync=Edge Config',
     target: _targetVariant('ResourceSync', 'sync-3'),
@@ -672,7 +842,7 @@ final List<Map<String, dynamic>> _updates = [
   _updateItem(
     id: 'update-7',
     operation: 'BuildImage',
-    startTs: DateTime.now().millisecondsSinceEpoch - 420000,
+    startTs: DateTime.now().millisecondsSinceEpoch - 90000000,
     success: false,
     username: 'demo',
     operatorName: 'Demo User',
@@ -830,9 +1000,11 @@ class DemoBackend {
       case 'GetServer':
         return _serverDetail(id: params['server']?.toString());
       case 'GetSystemStats':
-        return _systemStats();
+        return _systemStats(params['server']?.toString());
+      case 'GetHistoricalServerStats':
+        return _historicalServerStats(params);
       case 'GetSystemInformation':
-        return _systemInformation();
+        return _systemInformation(params['server']?.toString());
 
       case 'ListDeployments':
         return _filterUpdateAvailable(_deployments, params);
@@ -881,7 +1053,15 @@ class DemoBackend {
 
       case 'ListContainers':
       case 'ListDockerContainers':
-        return List<Map<String, dynamic>>.from(_containers);
+        final serverParam = params['server']?.toString();
+        final server = serverParam == null
+            ? null
+            : _serverById(serverParam) ?? _serverByName(serverParam);
+        return [
+          for (final container in _containers)
+            if (server == null || container['server_id'] == server['id'])
+              container,
+        ];
       case 'GetContainerLog':
       case 'SearchContainerLog':
         return _containerLog();
@@ -1179,11 +1359,12 @@ Map<String, dynamic> _serverItem({
   required String address,
   required String region,
   required String state,
+  String description = 'Demo server running Komodo',
 }) {
   return <String, dynamic>{
     'id': id,
     'name': name,
-    'description': 'Demo server running Komodo',
+    'description': description,
     'tags': <String>[],
     'template': false,
     'info': <String, dynamic>{
@@ -1292,6 +1473,22 @@ Map<String, dynamic> _deploymentDetail({required String? id}) {
   };
 }
 
+const List<String> _demoStackServiceNames = [
+  'web',
+  'api',
+  'worker',
+  'redis',
+  'postgres',
+];
+
+const Map<String, String> _demoStackServiceImages = {
+  'web': 'nginx:1.27-alpine',
+  'api': 'ghcr.io/komodo/api:1.2.3',
+  'worker': 'ghcr.io/komodo/worker:2.0.1',
+  'redis': 'redis:7-alpine',
+  'postgres': 'postgres:16-alpine',
+};
+
 Map<String, dynamic> _stackListItem({
   required String id,
   required String name,
@@ -1303,6 +1500,7 @@ Map<String, dynamic> _stackListItem({
   bool filesOnHost = false,
   String gitProvider = 'GitHub',
   String? linkedRepo,
+  int serviceCount = 2,
 }) {
   return <String, dynamic>{
     'id': id,
@@ -1321,11 +1519,12 @@ Map<String, dynamic> _stackListItem({
       'linked_repo': linkedRepo ?? repo,
       'repo_link': repo.isEmpty ? '' : 'https://github.com/$repo',
       'services': [
-        <String, dynamic>{
-          'service': 'web',
-          'image': 'nginx:latest',
-          'update_available': false,
-        },
+        for (final service in _demoStackServiceNames.take(serviceCount))
+          <String, dynamic>{
+            'service': service,
+            'image': _demoStackServiceImages[service],
+            'update_available': false,
+          },
       ],
       'missing_files': <String>[],
       'deployed_hash': null,
@@ -1394,54 +1593,111 @@ Map<String, dynamic> _stackDetail({required String? id}) {
 }
 
 List<Map<String, dynamic>> _stackServices() {
+  const updateAvailable = {'api'};
+  const uptime = {
+    'web': 'Up 3 days',
+    'api': 'Up 3 days',
+    'worker': 'Up 3 days',
+    'redis': 'Up 12 days',
+    'postgres': 'Up 12 days',
+  };
+  var index = 0;
   return [
-    <String, dynamic>{
-      'service': 'web',
-      'image': 'nginx:latest',
-      'update_available': false,
-      'container': <String, dynamic>{
-        'name': 'web-1',
-        'state': 'running',
-        'status': 'Up 2 hours',
-        'image': 'nginx:latest',
-        'id': 'container-1',
+    for (final service in _demoStackServiceNames)
+      <String, dynamic>{
+        'service': service,
+        'image': _demoStackServiceImages[service],
+        'update_available': updateAvailable.contains(service),
+        'container': <String, dynamic>{
+          'name': 'komodo-$service-1',
+          'state': 'running',
+          'status': uptime[service],
+          'image': _demoStackServiceImages[service],
+          'id': 'container-stack-${index++}',
+        },
       },
-    },
-    <String, dynamic>{
-      'service': 'api',
-      'image': 'ghcr.io/komodo/api:1.2.3',
-      'update_available': true,
-      'container': <String, dynamic>{
-        'name': 'api-1',
-        'state': 'running',
-        'status': 'Up 2 hours',
-        'image': 'ghcr.io/komodo/api:1.2.3',
-        'id': 'container-2',
-      },
-    },
   ];
 }
 
 Map<String, dynamic> _stackLog() {
+  final now = DateTime.now().toUtc();
+  String ts(int secondsAgo) => now
+      .subtract(Duration(seconds: secondsAgo))
+      .toIso8601String()
+      .substring(11, 19);
+  final lines = <String>[
+    '[+] Running 8/8',
+    ' ✔ Network komodo_default       Created',
+    ' ✔ Volume "komodo_pg-data"      Created',
+    ' ✔ Volume "komodo_redis-data"   Created',
+    ' ✔ Container komodo-postgres-1  Healthy',
+    ' ✔ Container komodo-redis-1     Healthy',
+    ' ✔ Container komodo-api-1       Started',
+    ' ✔ Container komodo-worker-1    Started',
+    ' ✔ Container komodo-web-1       Started',
+    'postgres-1  | LOG:  database system is ready to accept connections',
+    'redis-1     | Ready to accept connections tcp',
+    'api-1       | ${ts(118)} INFO  Starting komodo-api v1.2.3',
+    'api-1       | ${ts(118)} INFO  Connected to postgres://postgres:5432/komodo',
+    'api-1       | ${ts(117)} INFO  Applying migration 0012_add_alert_index',
+    'api-1       | ${ts(117)} INFO  Applying migration 0013_updates_status',
+    'api-1       | ${ts(117)} INFO  Applying migration 0014_server_regions',
+    'api-1       | ${ts(117)} INFO  Applied 14 migrations (0 pending)',
+    'api-1       | ${ts(117)} INFO  Warming cache (servers, stacks, alerts)',
+    'api-1       | ${ts(117)} INFO  Listening on 0.0.0.0:3000',
+    'worker-1    | ${ts(116)} INFO  Worker v2.0.1 booted (concurrency=4)',
+    'worker-1    | ${ts(116)} INFO  Subscribed to queues: default, mailers',
+    'web-1       | /docker-entrypoint.sh: Configuration complete; ready for start up',
+    for (var i = 0; i < 6; i++)
+      'api-1       | ${ts(112 - i * 2)} INFO  GET ${const [
+        '/healthz',
+        '/v1/servers',
+        '/v1/stacks',
+      ][i % 3]} 200 ${2 + i * 3}ms',
+    'worker-1    | ${ts(108)} INFO  job=PruneImages id=19ae done in 1.1s',
+    'worker-1    | ${ts(104)} INFO  job=SyncMetrics id=77c1 done in 204ms',
+    'web-1       | 172.18.0.1 "GET /servers HTTP/1.1" 200 4377',
+    'web-1       | 172.18.0.1 "GET /assets/app.js HTTP/1.1" 200 88214',
+    'api-1       | ${ts(98)} INFO  GET /healthz 200 2ms',
+    'web-1       | 172.18.0.1 "GET / HTTP/1.1" 200 1842 "Mozilla/5.0"',
+    'web-1       | 172.18.0.1 "GET /assets/app.css HTTP/1.1" 200 20418',
+    'api-1       | ${ts(86)} INFO  GET /v1/servers 200 14ms',
+    'api-1       | ${ts(85)} INFO  GET /v1/stacks 200 18ms',
+    'worker-1    | ${ts(80)} INFO  job=SendDigest id=8f2c done in 412ms',
+    'api-1       | ${ts(71)} INFO  POST /v1/deployments 201 63ms',
+    'web-1       | 172.18.0.1 "GET /dashboard HTTP/1.1" 200 5120',
+    'api-1       | ${ts(64)} INFO  GET /healthz 200 1ms',
+    'api-1       | ${ts(58)} INFO  GET /v1/alerts?resolved=false 200 9ms',
+    'worker-1    | ${ts(52)} INFO  job=PruneImages id=a41b done in 1.3s',
+    'api-1       | ${ts(47)} WARN  slow query (212ms): SELECT * FROM updates',
+    'api-1       | ${ts(45)} INFO  GET /v1/updates 200 24ms',
+    'web-1       | 172.18.0.1 "GET /notifications HTTP/1.1" 200 3902',
+    'worker-1    | ${ts(44)} INFO  job=SendDigest id=e5b2 done in 389ms',
+    'api-1       | ${ts(42)} INFO  GET /healthz 200 1ms',
+    'web-1       | 172.18.0.1 "GET /assets/logo.svg HTTP/1.1" 200 4120',
+    'api-1       | ${ts(41)} INFO  GET /v1/stacks/demo 200 12ms',
+    'web-1       | 172.18.0.1 "GET /api/stats HTTP/1.1" 200 733',
+    'api-1       | ${ts(39)} INFO  GET /v1/servers/primary 200 11ms',
+    'redis-1     | 1 changes in 3600 seconds. Saving...',
+    'redis-1     | Background saving started by pid 29',
+    'redis-1     | DB saved on disk',
+    'api-1       | ${ts(31)} INFO  GET /healthz 200 1ms',
+    'web-1       | 172.18.0.1 "GET /favicon.ico HTTP/1.1" 200 1150',
+    'api-1       | ${ts(24)} INFO  POST /v1/auth/refresh 200 7ms',
+    'worker-1    | ${ts(19)} INFO  job=SyncMetrics id=c9d0 done in 238ms',
+    'api-1       | ${ts(12)} INFO  GET /v1/containers 200 21ms',
+    'web-1       | 172.18.0.1 "GET /containers HTTP/1.1" 200 4861',
+    'api-1       | ${ts(6)} INFO  GET /healthz 200 1ms',
+    'postgres-1  | LOG:  checkpoint complete: wrote 42 buffers (0.3%)',
+    'api-1       | ${ts(2)} INFO  GET /v1/updates 200 16ms',
+  ];
   return <String, dynamic>{
     'stage': 'deploy',
     'command': 'docker compose up -d',
-    'stdout': [
-      'Pulling web (nginx:latest)...',
-      'Pulling api (ghcr.io/komodo/api:1.2.3)...',
-      'Pulling worker (ghcr.io/komodo/worker:2.0.1)...',
-      'Creating network "komodo_default" with the default driver',
-      'Creating komodo-web-1 ... done',
-      'Creating komodo-api-1 ... done',
-      'Creating komodo-worker-1 ... done',
-      'Waiting for healthchecks (api, worker)',
-      '✔ api healthy',
-      '✔ worker healthy',
-      'Services started',
-    ].join('\n'),
+    'stdout': lines.join('\n'),
     'stderr': '',
     'success': true,
-    'start_ts': DateTime.now().millisecondsSinceEpoch - 5000,
+    'start_ts': DateTime.now().millisecondsSinceEpoch - 120000,
     'end_ts': DateTime.now().millisecondsSinceEpoch - 1000,
   };
 }
@@ -2188,6 +2444,11 @@ Map<String, dynamic> _containerListItem({
   required String image,
   required String status,
   required String state,
+  String cpu = '2.4%',
+  String mem = '1.8%',
+  String memUsage = '128MiB / 8GiB',
+  String net = '1.2MB / 980kB',
+  (int, int)? port = (80, 8080),
 }) {
   return <String, dynamic>{
     'server_id': serverId,
@@ -2198,18 +2459,19 @@ Map<String, dynamic> _containerListItem({
     'state': state,
     'networks': <String>['bridge'],
     'ports': [
-      <String, dynamic>{
-        'ip': '0.0.0.0',
-        'private_port': 80,
-        'public_port': 8080,
-        'type': 'tcp',
-      },
+      if (port != null)
+        <String, dynamic>{
+          'ip': '0.0.0.0',
+          'private_port': port.$1,
+          'public_port': port.$2,
+          'type': 'tcp',
+        },
     ],
     'stats': <String, dynamic>{
-      'cpu_perc': '2.4%',
-      'mem_perc': '1.8%',
-      'mem_usage': '128MiB / 8GiB',
-      'net_io': '1.2MB / 980kB',
+      'cpu_perc': cpu,
+      'mem_perc': mem,
+      'mem_usage': memUsage,
+      'net_io': net,
       'block_io': '0B / 0B',
       'pids': '12',
     },
@@ -2217,10 +2479,28 @@ Map<String, dynamic> _containerListItem({
 }
 
 Map<String, dynamic> _containerLog() {
+  final now = DateTime.now().toUtc();
+  String ts(int secondsAgo) => now
+      .subtract(Duration(seconds: secondsAgo))
+      .toIso8601String()
+      .substring(11, 19);
+  final lines = <String>[
+    '${ts(240)} INFO  Starting service v1.2.3',
+    '${ts(240)} INFO  Connected to database',
+    '${ts(239)} INFO  Listening on 0.0.0.0:3000',
+    for (var i = 0; i < 24; i++)
+      '${ts(220 - i * 9)} INFO  GET ${const [
+        '/healthz',
+        '/v1/servers',
+        '/v1/stacks',
+        '/v1/alerts',
+      ][i % 4]} 200 ${3 + (i * 7) % 19}ms',
+    '${ts(12)} INFO  Ready to accept connections',
+  ];
   return <String, dynamic>{
     'stage': 'logs',
     'command': 'docker logs',
-    'stdout': 'Service started\nReady to accept connections',
+    'stdout': lines.join('\n'),
     'stderr': '',
     'success': true,
     'start_ts': DateTime.now().millisecondsSinceEpoch - 3000,
@@ -2257,36 +2537,197 @@ Map<String, dynamic> _variable({
   };
 }
 
-Map<String, dynamic> _systemStats() {
+class _DemoServerProfile {
+  const _DemoServerProfile({
+    required this.cpu,
+    required this.memUsedGb,
+    required this.memTotalGb,
+    required this.disks,
+    required this.cores,
+    required this.host,
+    required this.cpuBrand,
+    required this.load,
+  });
+
+  final double cpu;
+  final double memUsedGb;
+  final double memTotalGb;
+  final List<(String mount, double used, double total)> disks;
+  final int cores;
+  final String host;
+  final String cpuBrand;
+  final double load;
+}
+
+const Map<String, _DemoServerProfile> _serverProfiles = {
+  'server-1': _DemoServerProfile(
+    cpu: 24.6,
+    memUsedGb: 11.8,
+    memTotalGb: 32,
+    disks: [('/', 94, 256), ('/data', 410, 1000)],
+    cores: 16,
+    host: 'primary-01',
+    cpuBrand: 'AMD EPYC 7443P',
+    load: 1.12,
+  ),
+  'server-2': _DemoServerProfile(
+    cpu: 17.3,
+    memUsedGb: 3.1,
+    memTotalGb: 8,
+    disks: [('/', 22, 80)],
+    cores: 4,
+    host: 'edge-eu-01',
+    cpuBrand: 'Intel Xeon E-2288G',
+    load: 0.64,
+  ),
+  'server-3': _DemoServerProfile(
+    cpu: 0,
+    memUsedGb: 0,
+    memTotalGb: 8,
+    disks: [('/', 18, 80)],
+    cores: 4,
+    host: 'staging-01',
+    cpuBrand: 'Intel Xeon E-2288G',
+    load: 0,
+  ),
+  'server-4': _DemoServerProfile(
+    cpu: 7.9,
+    memUsedGb: 4.6,
+    memTotalGb: 16,
+    disks: [('/', 61, 256)],
+    cores: 8,
+    host: 'dr-apse-01',
+    cpuBrand: 'AMD EPYC 7313',
+    load: 0.31,
+  ),
+  'server-5': _DemoServerProfile(
+    cpu: 46.8,
+    memUsedGb: 9.4,
+    memTotalGb: 16,
+    disks: [('/', 118, 200)],
+    cores: 8,
+    host: 'build-01',
+    cpuBrand: 'AMD EPYC 7313',
+    load: 3.72,
+  ),
+  'server-6': _DemoServerProfile(
+    cpu: 12.1,
+    memUsedGb: 4.4,
+    memTotalGb: 8,
+    disks: [('/', 47, 120), ('/var/lib/prometheus', 138, 400)],
+    cores: 4,
+    host: 'monitor-01',
+    cpuBrand: 'Intel Xeon E-2288G',
+    load: 0.48,
+  ),
+  'server-7': _DemoServerProfile(
+    cpu: 8.4,
+    memUsedGb: 5.7,
+    memTotalGb: 16,
+    disks: [('/', 28, 120), ('/mnt/tank', 2300, 4000)],
+    cores: 6,
+    host: 'nas',
+    cpuBrand: 'Intel N100',
+    load: 0.42,
+  ),
+};
+
+_DemoServerProfile _profileFor(String? serverIdOrName) {
+  final server = serverIdOrName == null
+      ? null
+      : _serverById(serverIdOrName) ?? _serverByName(serverIdOrName);
+  return _serverProfiles[server?['id']] ?? _serverProfiles['server-1']!;
+}
+
+Map<String, dynamic> _systemStats([String? serverIdOrName]) {
+  final profile = _profileFor(serverIdOrName);
+  final now = DateTime.now().millisecondsSinceEpoch;
   return <String, dynamic>{
-    'cpu_perc': 12.5,
-    'load_average': <String, dynamic>{'one': 0.4, 'five': 0.6, 'fifteen': 0.5},
-    'mem_free_gb': 6.2,
-    'mem_used_gb': 1.8,
-    'mem_total_gb': 8.0,
+    'cpu_perc': profile.cpu,
+    'load_average': <String, dynamic>{
+      'one': profile.load,
+      'five': profile.load * 0.9,
+      'fifteen': profile.load * 0.8,
+    },
+    'mem_free_gb': profile.memTotalGb - profile.memUsedGb,
+    'mem_used_gb': profile.memUsedGb,
+    'mem_total_gb': profile.memTotalGb,
     'disks': [
-      <String, dynamic>{
-        'mount': '/',
-        'file_system': 'apfs',
-        'used_gb': 32.0,
-        'total_gb': 128.0,
-      },
+      for (final (mount, used, total) in profile.disks)
+        <String, dynamic>{
+          'mount': mount,
+          'file_system': 'ext4',
+          'used_gb': used,
+          'total_gb': total,
+        },
     ],
     'network_ingress_bytes': 123456.0,
     'network_egress_bytes': 654321.0,
-    'refresh_ts': DateTime.now().millisecondsSinceEpoch,
-    'refresh_list_ts': DateTime.now().millisecondsSinceEpoch,
+    'refresh_ts': now,
+    'refresh_list_ts': now,
   };
 }
 
-Map<String, dynamic> _systemInformation() {
+Map<String, dynamic> _historicalServerStats(Map<String, dynamic> params) {
+  if (_readPage(params['page']) > 0) {
+    return <String, dynamic>{'stats': <Object>[], 'next_page': null};
+  }
+  final profile = _profileFor(params['server']?.toString());
+  final stepSeconds = switch (params['granularity']?.toString()) {
+    '5-min' => 300,
+    '1-hr' => 3600,
+    _ => 60,
+  };
+  const samples = 60;
+  final now = DateTime.now().millisecondsSinceEpoch;
+  final totalDisk = profile.disks.fold<double>(0, (sum, d) => sum + d.$3);
+  final usedDisk = profile.disks.fold<double>(0, (sum, d) => sum + d.$2);
+  var ingress = 8.0e9;
+  var egress = 5.0e9;
+  final stats = <Map<String, dynamic>>[];
+  for (var i = 0; i < samples; i++) {
+    final age = samples - 1 - i;
+    // Deterministic wobble so the charts look alive but are stable.
+    final wave = math.sin(i / 4.5) * 0.35 + math.sin(i / 1.7) * 0.15;
+    final cpu = (profile.cpu * (1 + wave)).clamp(0.5, 97.0);
+    final mem = (profile.memUsedGb * (1 + wave * 0.12)).clamp(
+      0.1,
+      profile.memTotalGb,
+    );
+    ingress += stepSeconds * (180000 + 90000 * (1 + wave));
+    egress += stepSeconds * (95000 + 60000 * (1 - wave));
+    stats.add(<String, dynamic>{
+      'ts': now - age * stepSeconds * 1000,
+      'cpu_perc': cpu,
+      'mem_used_gb': mem,
+      'mem_total_gb': profile.memTotalGb,
+      'disk_used_gb': usedDisk + i * 0.02,
+      'disk_total_gb': totalDisk,
+      'disks': [
+        for (final (mount, used, total) in profile.disks)
+          <String, dynamic>{
+            'mount': mount,
+            'file_system': 'ext4',
+            'used_gb': used + i * 0.02,
+            'total_gb': total,
+          },
+      ],
+      'network_ingress_bytes': ingress,
+      'network_egress_bytes': egress,
+    });
+  }
+  return <String, dynamic>{'stats': stats, 'next_page': null};
+}
+
+Map<String, dynamic> _systemInformation([String? serverIdOrName]) {
+  final profile = _profileFor(serverIdOrName);
   return <String, dynamic>{
-    'name': 'Demo Server',
-    'os': 'Linux',
-    'kernel': '6.5.0',
-    'core_count': 8,
-    'host_name': 'demo-node',
-    'cpu_brand': 'Apple M3',
+    'name': profile.host,
+    'os': 'Ubuntu 24.04 LTS',
+    'kernel': '6.8.0-45-generic',
+    'core_count': profile.cores,
+    'host_name': profile.host,
+    'cpu_brand': profile.cpuBrand,
     'terminals_disabled': false,
     'container_exec_disabled': false,
   };

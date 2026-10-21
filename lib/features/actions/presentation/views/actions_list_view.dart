@@ -13,6 +13,7 @@ import 'package:komodo_go/features/actions/presentation/widgets/action_card.dart
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
+import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all actions.
 class ActionsListView extends StatelessWidget {
@@ -48,6 +49,10 @@ final _actionsListConfig = ResourceListConfig<ActionListItem>(
   ],
   batchItemOf: (item) => ResourceBatchItem(id: item.id, name: item.name),
   onCreate: (context) => context.push('${AppRoutes.actions}/new'),
+  nameOf: (item) => item.name,
+  severityOf: _severityOf,
+  stateLabelOf: (item) => resourceStateLabel(item.info.state),
+  updatedAtOf: (item) => item.info.lastRunAt ?? 0,
   cardBuilder: (context, ref, item, displayTags) => ActionCard(
     action: item,
     displayTags: displayTags,
@@ -74,3 +79,10 @@ Future<void> _runAction(
     );
   }
 }
+
+int _severityOf(ActionListItem item) => switch (item.info.state) {
+  ActionState.failed => ResourceSeverity.attention,
+  ActionState.running => ResourceSeverity.warning,
+  ActionState.ok => ResourceSeverity.healthy,
+  ActionState.unknown => ResourceSeverity.inactive,
+};

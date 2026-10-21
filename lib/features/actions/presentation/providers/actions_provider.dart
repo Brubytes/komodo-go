@@ -12,7 +12,7 @@ part 'actions_provider.g.dart';
 class Actions extends _$Actions {
   @override
   Future<List<ActionListItem>> build() async {
-    ref.watch(resourceActivityProvider);
+    ref.watch(resourceScopeActivityProvider(ActivityScope.actions));
     final repository = ref.watch(actionRepositoryProvider);
     if (repository == null) {
       return [];
@@ -37,7 +37,7 @@ class Actions extends _$Actions {
 /// Provides details for a specific action.
 @riverpod
 Future<KomodoAction?> actionDetail(Ref ref, String actionIdOrName) async {
-  ref.watch(resourceActivityProvider);
+  ref.watch(resourceScopeActivityProvider(ActivityScope.actions));
   final repository = ref.watch(actionRepositoryProvider);
   if (repository == null) {
     return null;
@@ -62,13 +62,23 @@ class ActionActions extends _$ActionActions
   void invalidateList() => ref.invalidate(actionsProvider);
 
   @override
-  void markResourceActivity() => ref.markResourceActivity();
+  void markResourceActivity() =>
+      ref.markResourceActivity({ActivityScope.actions});
 
   @override
   bool get isMounted => ref.mounted;
 
-  Future<bool> run(String actionIdOrName, {Map<String, dynamic>? args}) =>
-      executeAction((repo) => repo.runAction(actionIdOrName, args: args));
+  Future<bool> run(String actionIdOrName, {Map<String, dynamic>? args}) async =>
+      await runWithUpdate(actionIdOrName, args: args) != null;
+
+  /// Runs the action and returns the started update id (empty when the API
+  /// did not return one), or null on failure.
+  Future<String?> runWithUpdate(
+    String actionIdOrName, {
+    Map<String, dynamic>? args,
+  }) => executeRequest(
+    (repo) => repo.runAction(actionIdOrName, args: args),
+  );
 
   Future<bool> cancel(String actionIdOrName, {String? updateId}) =>
       executeAction(

@@ -13,6 +13,7 @@ import 'package:komodo_go/features/procedures/presentation/widgets/procedure_car
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
+import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all procedures.
 class ProceduresListView extends StatelessWidget {
@@ -51,6 +52,10 @@ final _proceduresListConfig = ResourceListConfig<ProcedureListItem>(
   ],
   batchItemOf: (item) => ResourceBatchItem(id: item.id, name: item.name),
   onCreate: (context) => context.push('${AppRoutes.procedures}/new'),
+  nameOf: (item) => item.name,
+  severityOf: _severityOf,
+  stateLabelOf: (item) => resourceStateLabel(item.info.state),
+  updatedAtOf: (item) => item.info.lastRunAt ?? 0,
   cardBuilder: (context, ref, item, displayTags) => ProcedureCard(
     procedure: item,
     displayTags: displayTags,
@@ -77,3 +82,10 @@ Future<void> _runProcedure(
     );
   }
 }
+
+int _severityOf(ProcedureListItem item) => switch (item.info.state) {
+  ProcedureState.failed => ResourceSeverity.attention,
+  ProcedureState.running => ResourceSeverity.warning,
+  ProcedureState.ok => ResourceSeverity.healthy,
+  ProcedureState.unknown => ResourceSeverity.inactive,
+};

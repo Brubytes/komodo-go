@@ -10,6 +10,8 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
+import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_popup_menu.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -17,11 +19,18 @@ import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dar
 import 'package:komodo_go/features/auth/presentation/widgets/edit_connection_sheet.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-class ConnectionsView extends ConsumerWidget {
+class ConnectionsView extends ConsumerStatefulWidget {
   const ConnectionsView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ConnectionsView> createState() => _ConnectionsViewState();
+}
+
+class _ConnectionsViewState extends ConsumerState<ConnectionsView> {
+  late final _intro = AppListIntro();
+
+  @override
+  Widget build(BuildContext context) {
     final connectionsAsync = ref.watch(connectionsProvider);
     final authAsync = ref.watch(authProvider);
 
@@ -45,29 +54,24 @@ class ConnectionsView extends ConsumerWidget {
           final activeId = connectionsState.activeConnectionId;
 
           if (connections.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  'No saved connections yet.',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-              ),
+            return const EmptyStateView(
+              icon: AppIcons.server,
+              title: 'No saved connections yet.',
             );
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             itemBuilder: (context, index) {
               final connection = connections[index];
               final isActive = connection.id == activeId;
 
               final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-              return AppFadeSlide(
-                delay: AppMotion.stagger(index),
-                play: index < 10,
-                child: AppCardSurface(
+              return _intro.wrap(
+                index,
+                id: connection.id,
+                AppCardSurface(
                   padding: EdgeInsets.zero,
                   child: Material(
                     color: Colors.transparent,
@@ -128,16 +132,15 @@ class ConnectionsView extends ConsumerWidget {
                 ),
               );
             },
-            separatorBuilder: (_, _) => const Gap(8),
+            separatorBuilder: (_, _) => const Gap(AppSpacing.sm),
             itemCount: connections.length,
           );
         },
         loading: () => const _ConnectionsSkeletonList(),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text('Failed to load connections: $error'),
-          ),
+        error: (error, _) => ErrorStateView.fromError(
+          title: 'Failed to load connections',
+          error: error,
+          onRetry: () => ref.invalidate(connectionsProvider),
         ),
       ),
     );
@@ -151,6 +154,7 @@ class ConnectionsView extends ConsumerWidget {
     final isDemo = isDemoConnection(connection);
     final confirmed = await showDialog<bool>(
       context: context,
+      animationStyle: AppMotion.dialogStyle(context),
       builder: (context) => AlertDialog(
         title: const Text('Delete connection'),
         content: Text(
@@ -189,21 +193,29 @@ class ConnectionsView extends ConsumerWidget {
     if (!demoAvailable) {
       await showModalBottomSheet<void>(
         context: context,
+        sheetAnimationStyle: AppMotion.sheetStyle(context),
         useSafeArea: true,
         showDragHandle: true,
-        builder: (context) => const Padding(
-          padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
+        builder: (context) => Padding(
+          padding: const EdgeInsets.fromLTRB(
+            20,
+            AppSpacing.md,
+            20,
+            AppSpacing.xl,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Demo mode unavailable',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              Gap(8),
-              Text('Demo mode is not available in this build.'),
-              Gap(12),
+              const Gap(AppSpacing.sm),
+              const Text('Demo mode is not available in this build.'),
+              const Gap(AppSpacing.md),
             ],
           ),
         ),
@@ -213,24 +225,32 @@ class ConnectionsView extends ConsumerWidget {
 
     final shouldEnable = await showModalBottomSheet<bool>(
       context: context,
+      sheetAnimationStyle: AppMotion.sheetStyle(context),
       useSafeArea: true,
       showDragHandle: true,
       builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        padding: const EdgeInsets.fromLTRB(
+          20,
+          AppSpacing.md,
+          20,
+          AppSpacing.xl,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Enable demo mode?',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            const Gap(8),
+            const Gap(AppSpacing.sm),
             const Text(
               'Enabling demo mode adds a local demo instance to your connections. '
               'You can disable it again by deleting the demo connection from this list.',
             ),
-            const Gap(16),
+            const Gap(AppSpacing.lg),
             Row(
               children: [
                 TextButton(
@@ -266,9 +286,9 @@ class _ConnectionsSkeletonList extends StatelessWidget {
 
     return Skeletonizer(
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         itemCount: 4,
-        separatorBuilder: (_, _) => const Gap(8),
+        separatorBuilder: (_, _) => const Gap(AppSpacing.sm),
         itemBuilder: (_, _) => AppCardSurface(
           padding: EdgeInsets.zero,
           child: Padding(
@@ -276,18 +296,18 @@ class _ConnectionsSkeletonList extends StatelessWidget {
             child: Row(
               children: [
                 const CircleAvatar(radius: 16),
-                const Gap(10),
+                const Gap(AppSpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Connection name', style: textTheme.titleSmall),
-                      const Gap(6),
+                      const Gap(AppSpacing.xs),
                       Text('Base URL • User', style: textTheme.bodySmall),
                     ],
                   ),
                 ),
-                const Gap(8),
+                const Gap(AppSpacing.sm),
                 const Chip(label: Text('Active')),
               ],
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 
 LinearGradient appCardGradient({required Color tint, required Color base}) {
   return LinearGradient(
@@ -23,6 +24,7 @@ class AppCardSurface extends StatelessWidget {
     this.enableShadow = true,
     this.enableGradientInDark = false,
     this.tintColor,
+    this.onTap,
   });
 
   final Widget child;
@@ -30,6 +32,10 @@ class AppCardSurface extends StatelessWidget {
   final double radius;
   final bool showBorder;
   final bool enableShadow;
+
+  /// Optional tap handler. When set, the surface shows ink feedback and a
+  /// subtle press scale.
+  final VoidCallback? onTap;
   final bool enableGradientInDark;
   final Color? tintColor;
 
@@ -46,19 +52,22 @@ class AppCardSurface extends StatelessWidget {
       alpha: isDark ? 0.35 : 0.55,
     );
 
-    final shadows = enableShadow
+    // Large blurred shadows are expensive to paint and nearly invisible on
+    // dark surfaces, so they are only drawn in light mode.
+    final shadows = enableShadow && !isDark
         ? [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.10),
-              blurRadius: isDark ? 24 : 18,
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 18,
               offset: const Offset(0, 10),
-              spreadRadius: isDark ? -6 : -8,
+              spreadRadius: -8,
             ),
           ]
         : const <BoxShadow>[];
 
-    return Container(
-      padding: padding,
+    final tappable = onTap != null;
+    final surface = Container(
+      padding: tappable ? null : padding,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(radius),
@@ -68,7 +77,17 @@ class AppCardSurface extends StatelessWidget {
             ? appCardGradient(tint: tint, base: color)
             : null,
       ),
-      child: Material(type: MaterialType.transparency, child: child),
+      child: Material(
+        type: MaterialType.transparency,
+        child: tappable
+            ? InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(radius),
+                child: Padding(padding: padding, child: child),
+              )
+            : child,
+      ),
     );
+    return tappable ? AppPressable(child: surface) : surface;
   }
 }

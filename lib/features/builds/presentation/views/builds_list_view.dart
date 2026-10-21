@@ -6,6 +6,7 @@ import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_list_view.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
@@ -13,6 +14,7 @@ import 'package:komodo_go/features/builds/presentation/widgets/build_card.dart';
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
+import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all builds.
 class BuildsListView extends StatelessWidget {
@@ -43,6 +45,10 @@ final _buildsListConfig = ResourceListConfig<BuildListItem>(
   isTemplate: (item) => item.template,
   tagsOf: (item) => item.tags,
   searchFieldsOf: (item) => [item.name],
+  nameOf: (item) => item.name,
+  severityOf: _severityOf,
+  stateLabelOf: (item) => resourceStateLabel(item.info.state),
+  updatedAtOf: (item) => item.info.lastBuiltAt,
   batchItemOf: (item) => ResourceBatchItem(id: item.id, name: item.name),
   cardBuilder: (context, ref, item, displayTags) => BuildCard(
     buildItem: item,
@@ -60,6 +66,15 @@ Future<void> _handleAction(
   String buildId,
   BuildAction action,
 ) async {
+  if (action == BuildAction.cancel) {
+    final ok = await confirmDestructive(
+      context,
+      title: 'Cancel build?',
+      message: 'The running build will be cancelled.',
+      confirmLabel: 'Cancel build',
+    );
+    if (!ok || !context.mounted) return;
+  }
   final actions = ref.read(buildActionsProvider.notifier);
   final success = await switch (action) {
     BuildAction.run => actions.run(buildId),
@@ -76,3 +91,10 @@ Future<void> _handleAction(
     );
   }
 }
+
+int _severityOf(BuildListItem item) => switch (item.info.state) {
+  BuildState.failed => ResourceSeverity.attention,
+  BuildState.building => ResourceSeverity.warning,
+  BuildState.ok => ResourceSeverity.healthy,
+  BuildState.unknown => ResourceSeverity.inactive,
+};

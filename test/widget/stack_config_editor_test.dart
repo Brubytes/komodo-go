@@ -49,10 +49,16 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final warnings = find.textContaining('Current value not found');
+        final warnings = find.textContaining(
+          'Current value not found',
+          skipOffstage: false,
+        );
         expect(warnings, missing ? findsNWidgets(2) : findsNothing);
         expect(
-          find.text('Current registry account is not in the account list.'),
+          find.text(
+            'Current registry account is not in the account list.',
+            skipOffstage: false,
+          ),
           missing ? findsOneWidget : findsNothing,
         );
       },
