@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/settings/settings_view.dart';
 import 'package:komodo_go/core/connections/connection_profile.dart';
+import 'package:komodo_go/core/platform/vertical_bar_info.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/split_aware_page.dart';
 import 'package:komodo_go/core/storage/secure_storage_service.dart';
@@ -123,7 +124,11 @@ GoRouter _router() => GoRouter(
   ],
 );
 
-Future<GoRouter> _pump(WidgetTester tester, Size size) async {
+Future<GoRouter> _pump(
+  WidgetTester tester,
+  Size size, {
+  VerticalBarInfo? bar,
+}) async {
   final router = _router();
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -131,7 +136,25 @@ Future<GoRouter> _pump(WidgetTester tester, Size size) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [alertsProvider.overrideWith(_StubAlerts.new)],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(
+        routerConfig: router,
+        // Mirrors the root of KomodoApp.
+        builder: (context, child) => VerticalBarScope(
+          info: bar,
+          child: Builder(
+            builder: (context) {
+              final strip = verticalBarSides(context);
+              return SafeArea(
+                top: false,
+                bottom: false,
+                left: !strip.left,
+                right: !strip.right,
+                child: child!,
+              );
+            },
+          ),
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -354,6 +377,72 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  group('vertical bar strip', () {
+    const bar = VerticalBarInfo(
+      edge: VerticalBarEdge.trailing,
+      occludedRegions: [Rect.fromLTWH(867, 0, 84, 100)],
+    );
+
+    void inset(WidgetTester tester) {
+      tester.view.padding = const FakeViewPadding(right: 84, bottom: 34);
+      tester.view.viewPadding = const FakeViewPadding(right: 84, bottom: 34);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+    }
+
+    testWidgets('rail moves into the trailing strip below the camera', (
+      tester,
+    ) async {
+      inset(tester);
+      await _pump(tester, inner, bar: bar);
+      final rail = find.byType(NavigationRail);
+      expect(tester.getTopLeft(rail).dx, 867);
+      expect(tester.getSize(rail).width, 84);
+      expect(tester.getTopLeft(find.text('home page')).dx, lessThan(867));
+      expect(
+        tester.getTopLeft(find.byType(NavigationRail)).dy,
+        greaterThanOrEqualTo(100),
+      );
+      // First destination starts below the occluded region.
+      final first = tester.getTopLeft(
+        find.byKey(const ValueKey('bottom_nav_home')).first,
+      );
+      expect(first.dy, greaterThanOrEqualTo(100));
+      // Nothing is left of the content and selection still works.
+      await tester.tap(
+        find.byKey(const ValueKey('bottom_nav_resources')).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('item 1'), findsOneWidget);
+      expect(tester.getTopLeft(find.text('item 1')).dx, lessThan(300));
+    });
+
+    testWidgets('without info the rail stays on the left', (tester) async {
+      inset(tester);
+      await _pump(tester, inner);
+      expect(tester.getTopLeft(find.byType(NavigationRail)).dx, 0);
+    });
+
+    testWidgets('state survives fold with a strip', (tester) async {
+      inset(tester);
+      await _pump(tester, inner, bar: bar);
+      await tester.tap(
+        find.byKey(const ValueKey('bottom_nav_resources')).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('item 1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('count 0'));
+      await tester.pump();
+      await _resize(tester, outer);
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.text('count 1'), findsOneWidget);
+      await _resize(tester, inner);
+      expect(tester.getTopLeft(find.byType(NavigationRail)).dx, 867);
+      expect(find.text('count 1'), findsOneWidget);
+    });
+  });
 }
 
 class _TestAuth extends Auth {

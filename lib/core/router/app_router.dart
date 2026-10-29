@@ -21,6 +21,7 @@ import 'package:komodo_go/composition/settings/settings_view.dart';
 import 'package:komodo_go/composition/stacks/stack_detail_view.dart';
 import 'package:komodo_go/composition/stacks/stacks_list_view.dart';
 import 'package:komodo_go/composition/syncs/sync_detail_view.dart';
+import 'package:komodo_go/core/platform/vertical_bar_info.dart';
 import 'package:komodo_go/core/router/route_observer.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/router/split_aware_page.dart';
@@ -271,13 +272,15 @@ GoRouter appRouter(Ref ref) {
       // Startup splash while auth state is being restored/validated
       GoRoute(
         path: AppRoutes.splash,
-        builder: (context, state) => const AuthLoadingView(),
+        builder: (context, state) =>
+            const VerticalBarSafeArea(child: AuthLoadingView()),
       ),
 
       // Login
       GoRoute(
         path: AppRoutes.login,
-        builder: (context, state) => const LoginView(),
+        builder: (context, state) =>
+            const VerticalBarSafeArea(child: LoginView()),
       ),
 
       // Bottom navigation with stateful branch navigators.
@@ -647,29 +650,73 @@ class _MainShellState extends ConsumerState<MainShell> {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final useRail = !WindowSizeClass.fromWidth(width).isCompact;
-        final content = KeyedSubtree(key: _shellKey, child: _shell);
+        // The system may reserve a vertical bar strip (foldable iPhone inner
+        // display). The app root leaves that inset to us: with a rail it is
+        // the rail's home, otherwise it is padded here.
+        final media = MediaQuery.of(context);
+        final strip = verticalBarSides(context);
+        final stripOnRight = strip.right;
+        final stripInset = stripOnRight
+            ? media.padding.right
+            : media.padding.left;
+        final railInStrip =
+            useRail && (strip.left || strip.right) && stripInset > 0;
+        final info = VerticalBarScope.maybeOf(context);
+        final stripTopGap = railInStrip
+            ? ((info?.occludedBottomInStrip(
+                            windowWidth: media.size.width,
+                            stripWidth: stripInset,
+                            onRight: stripOnRight,
+                          ) ??
+                          0) +
+                      8)
+                  .clamp(media.padding.top + 8, double.infinity)
+            : 0.0;
 
-        return Scaffold(
-          body: useRail
-              ? Row(
-                  children: [
-                    AdaptiveNavigationRail(
-                      selectedIndex: currentIndex,
-                      onTap: _onItemTapped,
-                      items: items,
-                      extended: width >= kExtendedRailMinWidth,
-                    ),
-                    Expanded(child: content),
-                  ],
-                )
-              : content,
-          bottomNavigationBar: useRail
-              ? null
-              : AdaptiveBottomNavigationBar(
-                  selectedIndex: currentIndex,
-                  onTap: _onItemTapped,
-                  items: items,
-                ),
+        // The strip is the rail's; screens must not pad for it again.
+        final content = MediaQuery.removePadding(
+          context: context,
+          removeLeft: railInStrip && !stripOnRight,
+          removeRight: railInStrip && stripOnRight,
+          child: KeyedSubtree(key: _shellKey, child: _shell),
+        );
+
+        Widget rail({double? stripWidth}) => AdaptiveNavigationRail(
+          selectedIndex: currentIndex,
+          onTap: _onItemTapped,
+          items: items,
+          extended: stripWidth == null && width >= kExtendedRailMinWidth,
+          stripWidth: stripWidth,
+          stripTopGap: stripTopGap,
+          stripOnRight: stripOnRight,
+        );
+
+        return SafeArea(
+          top: false,
+          bottom: false,
+          left: strip.left && !railInStrip,
+          right: strip.right && !railInStrip,
+          child: Scaffold(
+            body: useRail
+                ? Row(
+                    children: [
+                      if (!railInStrip) rail(),
+                      if (railInStrip && !stripOnRight)
+                        rail(stripWidth: stripInset),
+                      Expanded(child: content),
+                      if (railInStrip && stripOnRight)
+                        rail(stripWidth: stripInset),
+                    ],
+                  )
+                : content,
+            bottomNavigationBar: useRail
+                ? null
+                : AdaptiveBottomNavigationBar(
+                    selectedIndex: currentIndex,
+                    onTap: _onItemTapped,
+                    items: items,
+                  ),
+          ),
         );
       },
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/platform/vertical_bar_info.dart';
 import 'package:komodo_go/core/providers/theme_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_theme.dart';
@@ -26,12 +27,23 @@ class KomodoApp extends ConsumerWidget {
         data: _skeletonConfig(context),
         // Respect horizontal system insets once for the whole app (e.g. the
         // 84pt status/camera strip on the foldable iPhone's inner display).
-        child: ColoredBox(
-          color: Theme.of(context).colorScheme.surface,
-          child: SafeArea(
-            top: false,
-            bottom: false,
-            child: child ?? const SizedBox.shrink(),
+        child: VerticalBarHost(
+          child: Builder(
+            builder: (context) {
+              // On the side where the system reserves a vertical bar strip
+              // the shell owns the inset (it puts the navigation there).
+              final strip = verticalBarSides(context);
+              return ColoredBox(
+                color: Theme.of(context).colorScheme.surface,
+                child: SafeArea(
+                  top: false,
+                  bottom: false,
+                  left: !strip.left,
+                  right: !strip.right,
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              );
+            },
           ),
         ),
       ),
