@@ -7,11 +7,15 @@ import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/segmented/app_segmented_control.dart';
 import 'package:komodo_go/features/notifications/data/models/update_list_item.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/notifications_tab_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/views/notifications/notifications_sections.dart';
 
 class NotificationsView extends ConsumerStatefulWidget {
-  const NotificationsView({super.key});
+  const NotificationsView({this.selectedUpdateId, super.key});
+
+  /// Update open in the detail pane; also opens the Updates tab initially.
+  final String? selectedUpdateId;
 
   @override
   ConsumerState<NotificationsView> createState() => _NotificationsViewState();
@@ -27,9 +31,19 @@ class _NotificationsViewState extends ConsumerState<NotificationsView>
     super.initState();
     _tabController = TabController(
       length: 2,
+      initialIndex: widget.selectedUpdateId == null
+          ? ref.read(notificationsTabIndexProvider)
+          : 1,
       vsync: this,
       animationDuration: AppMotion.slow,
-    );
+    )..addListener(_publishTab);
+  }
+
+  void _publishTab() {
+    if (_tabController.indexIsChanging) return;
+    final index = _tabController.index;
+    if (ref.read(notificationsTabIndexProvider) == index) return;
+    ref.read(notificationsTabIndexProvider.notifier).index = index;
   }
 
   @override
@@ -109,7 +123,7 @@ class _NotificationsViewState extends ConsumerState<NotificationsView>
         controller: _tabController,
         children: [
           AlertsTab(onOpenUpdates: _goToUpdates),
-          const UpdatesTab(),
+          UpdatesTab(selectedUpdateId: widget.selectedUpdateId),
         ],
       ),
     );

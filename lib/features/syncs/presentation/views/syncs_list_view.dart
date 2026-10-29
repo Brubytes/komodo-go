@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/resources/resource_tag_options_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_list_view.dart';
 import 'package:komodo_go/features/syncs/data/models/sync.dart';
 import 'package:komodo_go/features/syncs/presentation/providers/syncs_provider.dart';
@@ -16,11 +16,17 @@ import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all syncs.
 class SyncsListView extends StatelessWidget {
-  const SyncsListView({super.key});
+  const SyncsListView({this.selectedId, super.key});
+
+  /// Id of the item open in the detail pane, highlighted in the list.
+  final String? selectedId;
 
   @override
   Widget build(BuildContext context) {
-    return ResourceListView<ResourceSyncListItem>(config: _syncsListConfig);
+    return ResourceListView<ResourceSyncListItem>(
+      config: _syncsListConfig,
+      selectedId: selectedId,
+    );
   }
 }
 
@@ -52,13 +58,14 @@ final _syncsListConfig = ResourceListConfig<ResourceSyncListItem>(
     item.info.state.name,
   ],
   nameOf: (item) => item.name,
+  idOf: (item) => item.id,
   severityOf: _severityOf,
   stateLabelOf: (item) => resourceStateLabel(item.info.state),
   updatedAtOf: (item) => item.info.lastSyncTs,
   cardBuilder: (context, ref, item, displayTags) => SyncCard(
     sync: item,
     displayTags: displayTags,
-    onTap: () => context.push(
+    onTap: () => context.openDetail(
       '${AppRoutes.syncs}/${item.id}?name=${Uri.encodeComponent(item.name)}',
     ),
     onRun: () => _runSync(context, ref, item.id),

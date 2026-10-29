@@ -9,6 +9,7 @@ import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
 import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/filters/template_filter.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
@@ -24,9 +25,17 @@ import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// Generic list screen for Komodo resources.
 class ResourceListView<T> extends ConsumerStatefulWidget {
-  const ResourceListView({required this.config, super.key});
+  const ResourceListView({
+    required this.config,
+    this.selectedId,
+    super.key,
+  });
 
   final ResourceListConfig<T> config;
+
+  /// Id of the item open in the detail pane; highlighted when [config] knows
+  /// how to read ids.
+  final String? selectedId;
 
   @override
   ConsumerState<ResourceListView<T>> createState() =>
@@ -36,6 +45,7 @@ class ResourceListView<T> extends ConsumerStatefulWidget {
 class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
+  late final ScrollController _scrollController;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
   bool _areFiltersExpanded = false;
@@ -56,6 +66,9 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
       text: ref.read(resourceSearchQueryProvider(widget.config.kind)),
     );
     _searchFocusNode = FocusNode();
+    _scrollController = ListScrollMemory.controllerFor(
+      'resources_${widget.config.kind.name}',
+    );
     _searchQuerySubscription = ref.listenManual<String>(
       resourceSearchQueryProvider(widget.config.kind),
       (previous, next) {
@@ -75,6 +88,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
     _searchQuerySubscription?.close();
     _searchQuerySubscription = null;
     _searchFocusNode.dispose();
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -267,6 +281,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
           RefreshIndicator(
             onRefresh: () => config.refreshList(ref),
             child: CustomScrollView(
+              controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverPadding(
@@ -468,13 +483,24 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                                 tagNameById,
                               ),
                             );
+                            final idOf = config.idOf;
                             return KeyedSubtree(
                               key: card.key == null
                                   ? null
                                   : ObjectKey(card.key),
                               child: Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
-                                child: _intro.wrap(i, card, id: card.key),
+                                child: _intro.wrap(
+                                  i,
+                                  SelectionHighlight(
+                                    selected:
+                                        widget.selectedId != null &&
+                                        idOf != null &&
+                                        idOf(item) == widget.selectedId,
+                                    child: card,
+                                  ),
+                                  id: card.key,
+                                ),
                               ),
                             );
                           },

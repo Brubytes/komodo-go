@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/resources/resource_tag_options_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_list_view.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
@@ -17,11 +17,17 @@ import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all repos.
 class ReposListView extends StatelessWidget {
-  const ReposListView({super.key});
+  const ReposListView({this.selectedId, super.key});
+
+  /// Id of the item open in the detail pane, highlighted in the list.
+  final String? selectedId;
 
   @override
   Widget build(BuildContext context) {
-    return ResourceListView<RepoListItem>(config: _reposListConfig);
+    return ResourceListView<RepoListItem>(
+      config: _reposListConfig,
+      selectedId: selectedId,
+    );
   }
 }
 
@@ -52,6 +58,7 @@ final _reposListConfig = ResourceListConfig<RepoListItem>(
     item.info.state.displayName,
   ],
   nameOf: (item) => item.name,
+  idOf: (item) => item.id,
   severityOf: _severityOf,
   stateLabelOf: (item) => resourceStateLabel(item.info.state),
   updatedAtOf: (item) => item.info.lastPulledAt,
@@ -59,7 +66,7 @@ final _reposListConfig = ResourceListConfig<RepoListItem>(
   cardBuilder: (context, ref, item, displayTags) => RepoCard(
     repo: item,
     displayTags: displayTags,
-    onTap: () => context.push(
+    onTap: () => context.openDetail(
       '${AppRoutes.repos}/${item.id}?name=${Uri.encodeComponent(item.name)}',
     ),
     onAction: (action) => _handleAction(context, ref, item.id, action),

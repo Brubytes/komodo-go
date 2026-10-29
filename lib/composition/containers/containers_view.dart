@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
@@ -14,6 +13,7 @@ import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
@@ -29,7 +29,10 @@ import 'package:komodo_go/shared/resources/providers/resource_view_prefs_provide
 import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 class ContainersView extends ConsumerStatefulWidget {
-  const ContainersView({super.key});
+  const ContainersView({this.selectedId, super.key});
+
+  /// `serverId/container` of the container open in the detail pane.
+  final String? selectedId;
 
   @override
   ConsumerState<ContainersView> createState() => _ContainersViewState();
@@ -40,6 +43,7 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
   Timer? _refreshTimer;
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
+  late final ScrollController _scrollController;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
   late final _intro = AppListIntro();
@@ -51,6 +55,7 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
       text: ref.read(containersSearchQueryProvider),
     );
     _searchFocusNode = FocusNode();
+    _scrollController = ListScrollMemory.controllerFor('containers');
     _searchQuerySubscription = ref.listenManual<String>(
       containersSearchQueryProvider,
       (previous, next) {
@@ -71,6 +76,7 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
     _searchQuerySubscription?.close();
     _searchQuerySubscription = null;
     _searchFocusNode.dispose();
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -168,6 +174,7 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                   onRefresh: () =>
                       ref.read(containersProvider.notifier).refresh(),
                   child: ListView(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(16),
                     children: [
                       _FiltersRow(
@@ -287,25 +294,28 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                                     id:
                                         '${filtered[i].serverId}/'
                                         '${filtered[i].container.id ?? filtered[i].container.name}',
-                                    ContainerCard(
-                                      item: filtered[i],
-                                      onTap: () {
-                                        final containerKey =
-                                            filtered[i].container.id ??
-                                            filtered[i].container.name;
-                                        unawaited(
-                                          context.push(
+                                    SelectionHighlight(
+                                      selected:
+                                          widget.selectedId ==
+                                          '${filtered[i].serverId}/${filtered[i].container.id ?? filtered[i].container.name}',
+                                      child: ContainerCard(
+                                        item: filtered[i],
+                                        onTap: () {
+                                          final containerKey =
+                                              filtered[i].container.id ??
+                                              filtered[i].container.name;
+                                          context.openDetail(
                                             '${AppRoutes.containers}/${filtered[i].serverId}/${Uri.encodeComponent(containerKey)}',
                                             extra: filtered[i],
+                                          );
+                                        },
+                                        onAction: (action) => unawaited(
+                                          _handleAction(
+                                            context,
+                                            ref,
+                                            filtered[i],
+                                            action,
                                           ),
-                                        );
-                                      },
-                                      onAction: (action) => unawaited(
-                                        _handleAction(
-                                          context,
-                                          ref,
-                                          filtered[i],
-                                          action,
                                         ),
                                       ),
                                     ),

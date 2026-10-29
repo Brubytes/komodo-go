@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
@@ -10,6 +9,7 @@ import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
@@ -30,7 +30,10 @@ import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all stacks.
 class StacksListView extends ConsumerStatefulWidget {
-  const StacksListView({super.key});
+  const StacksListView({this.selectedId, super.key});
+
+  /// Id of the item open in the detail pane, highlighted in the list.
+  final String? selectedId;
 
   @override
   ConsumerState<StacksListView> createState() => _StacksListViewState();
@@ -39,6 +42,7 @@ class StacksListView extends ConsumerStatefulWidget {
 class _StacksListViewState extends ConsumerState<StacksListView> {
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
+  late final ScrollController _scrollController;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
   bool _areFiltersExpanded = false;
@@ -51,6 +55,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
       text: ref.read(stacksSearchQueryProvider),
     );
     _searchFocusNode = FocusNode();
+    _scrollController = ListScrollMemory.controllerFor('resources_stacks');
     _searchQuerySubscription = ref.listenManual<String>(
       stacksSearchQueryProvider,
       (previous, next) {
@@ -70,6 +75,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
     _searchQuerySubscription?.close();
     _searchQuerySubscription = null;
     _searchFocusNode.dispose();
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -178,7 +184,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
               ],
               orElse: () => const [],
             ),
-            onCreate: () => context.push('${AppRoutes.stacks}/new'),
+            onCreate: () => context.openDetail('${AppRoutes.stacks}/new'),
             onRefresh: () => ref.read(stacksProvider.notifier).refresh(),
             onBatchCompleted: () => ref.invalidate(stacksProvider),
           ),
@@ -189,6 +195,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
           RefreshIndicator(
             onRefresh: () => ref.read(stacksProvider.notifier).refresh(),
             child: ListView(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16),
               children: [
                 AppSwitcher(
@@ -389,23 +396,26 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                             _intro.wrap(
                               i,
                               id: filtered[i].id,
-                              StackCard(
-                                stack: filtered[i],
-                                serverName:
-                                    serverNames[filtered[i].info.serverId],
-                                displayTags: _displayTags(
-                                  filtered[i].tags,
-                                  tagNameById,
-                                ),
-                                onTap: () => context.push(
-                                  '${AppRoutes.stacks}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
-                                ),
-                                onAction: (action) => _handleAction(
-                                  context,
-                                  ref,
-                                  filtered[i].id,
-                                  filtered[i].name,
-                                  action,
+                              SelectionHighlight(
+                                selected: filtered[i].id == widget.selectedId,
+                                child: StackCard(
+                                  stack: filtered[i],
+                                  serverName:
+                                      serverNames[filtered[i].info.serverId],
+                                  displayTags: _displayTags(
+                                    filtered[i].tags,
+                                    tagNameById,
+                                  ),
+                                  onTap: () => context.openDetail(
+                                    '${AppRoutes.stacks}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
+                                  ),
+                                  onAction: (action) => _handleAction(
+                                    context,
+                                    ref,
+                                    filtered[i].id,
+                                    filtered[i].name,
+                                    action,
+                                  ),
                                 ),
                               ),
                             ),

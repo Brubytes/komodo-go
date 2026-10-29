@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 
 /// Status line shown under a detail page title: a colored dot plus label,
 /// e.g. "Running · 2 services" or "Ok · built 5m ago".
@@ -54,8 +55,19 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isCentered = centerTitle ?? false;
+    // In a side-by-side detail pane there is no previous screen to go back
+    // to; the pane is closed instead.
+    final closesPane = ListDetailScope.isSplitDetailPane(context);
 
     return AppBar(
+      automaticallyImplyLeading: !closesPane,
+      leading: closesPane
+          ? IconButton(
+              tooltip: 'Close',
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(context).maybePop(),
+            )
+          : null,
       centerTitle: isCentered,
       titleSpacing: isCentered ? 0 : 16,
       toolbarHeight: 68,

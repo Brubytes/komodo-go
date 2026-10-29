@@ -15,8 +15,7 @@ class ServerSystemInfoContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLockedDown = info.terminalsDisabled || info.containerExecDisabled;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return DetailResponsiveColumns(
       children: [
         DetailSubCard(
           title: 'Basics',
@@ -32,7 +31,6 @@ class ServerSystemInfoContent extends StatelessWidget {
             ],
           ),
         ),
-        const Gap(12),
         DetailSubCard(
           title: 'OS',
           icon: AppIcons.settings,
@@ -47,7 +45,6 @@ class ServerSystemInfoContent extends StatelessWidget {
             ],
           ),
         ),
-        const Gap(12),
         DetailSubCard(
           title: 'Hardware',
           icon: AppIcons.cpu,
@@ -62,7 +59,6 @@ class ServerSystemInfoContent extends StatelessWidget {
             ],
           ),
         ),
-        const Gap(12),
         DetailSubCard(
           title: 'Access',
           icon: AppIcons.lock,

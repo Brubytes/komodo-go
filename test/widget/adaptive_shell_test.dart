@@ -1,0 +1,366 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/composition/settings/settings_view.dart';
+import 'package:komodo_go/core/connections/connection_profile.dart';
+import 'package:komodo_go/core/router/app_router.dart';
+import 'package:komodo_go/core/router/split_aware_page.dart';
+import 'package:komodo_go/core/storage/secure_storage_service.dart';
+import 'package:komodo_go/core/ui/breakpoints.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
+import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/features/auth/data/models/auth_state.dart';
+import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/notifications_tab_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class _StubAlerts extends Alerts {
+  @override
+  Future<AlertsState> build() => Completer<AlertsState>().future;
+}
+
+class _List extends StatelessWidget {
+  const _List({this.selectedId});
+
+  final String? selectedId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: const MainAppBar(title: 'Items'),
+      body: ListView(
+        children: [
+          for (final id in const ['1', '2'])
+            SelectionHighlight(
+              selected: selectedId == id,
+              child: Material(
+                child: ListTile(
+                  title: Text('item $id'),
+                  onTap: () => context.openDetail('/res/$id'),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Detail extends StatefulWidget {
+  const _Detail({required this.id});
+
+  final String id;
+
+  @override
+  State<_Detail> createState() => _DetailState();
+}
+
+class _DetailState extends State<_Detail> {
+  int _count = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: MainAppBar(title: 'Detail ${widget.id}'),
+      body: TextButton(
+        onPressed: () => setState(() => _count++),
+        child: Text('count $_count'),
+      ),
+    );
+  }
+}
+
+GoRouter _router() => GoRouter(
+  initialLocation: '/',
+  routes: [
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, shell) => MainShell(navigationShell: shell),
+      branches: [
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/', builder: (_, _) => const Text('home page')),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/res',
+              pageBuilder: (context, state) => const NoTransitionPage<void>(
+                child: ListDetailLayout(
+                  list: _List(),
+                ),
+              ),
+              routes: [
+                GoRoute(
+                  path: ':id',
+                  pageBuilder: (context, state) {
+                    final id = state.pathParameters['id']!;
+                    return SplitAwarePage(
+                      key: state.pageKey,
+                      child: ListDetailLayout(
+                        list: _List(selectedId: id),
+                        detail: _Detail(id: id),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+        for (final path in const ['/c', '/n', '/s'])
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: path, builder: (_, _) => Text('page $path')),
+            ],
+          ),
+      ],
+    ),
+  ],
+);
+
+Future<GoRouter> _pump(WidgetTester tester, Size size) async {
+  final router = _router();
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [alertsProvider.overrideWith(_StubAlerts.new)],
+      child: MaterialApp.router(routerConfig: router),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return router;
+}
+
+Future<void> _resize(WidgetTester tester, Size size) async {
+  tester.view.physicalSize = size;
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  const outer = Size(466, 678);
+  const inner = Size(951, 669);
+
+  test('WindowSizeClass thresholds', () {
+    expect(WindowSizeClass.fromWidth(599), WindowSizeClass.compact);
+    expect(WindowSizeClass.fromWidth(600), WindowSizeClass.medium);
+    expect(WindowSizeClass.fromWidth(839), WindowSizeClass.medium);
+    expect(WindowSizeClass.fromWidth(840), WindowSizeClass.expanded);
+  });
+
+  testWidgets('compact shows the bottom bar, wide shows the rail', (
+    tester,
+  ) async {
+    await _pump(tester, outer);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+
+    await _resize(tester, inner);
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(
+      tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
+      isFalse,
+    );
+
+    await _resize(tester, const Size(1366, 1024));
+    expect(
+      tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
+      isTrue,
+    );
+
+    await _resize(tester, outer);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+  });
+
+  testWidgets('rail keeps destination keys and selection behaviour', (
+    tester,
+  ) async {
+    await _pump(tester, inner);
+    expect(find.text('home page'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('bottom_nav_resources')).first);
+    await tester.pumpAndSettle();
+    expect(find.text('item 1'), findsOneWidget);
+    expect(find.text('Select an item'), findsOneWidget);
+  });
+
+  testWidgets('selected detail, branch and state survive fold/unfold', (
+    tester,
+  ) async {
+    await _pump(tester, outer);
+    await tester.tap(find.byKey(const ValueKey('bottom_nav_resources')));
+    await tester.pumpAndSettle();
+    // Compact: one pane (the list).
+    expect(find.text('item 1'), findsOneWidget);
+    expect(find.text('Select an item'), findsNothing);
+
+    await tester.tap(find.text('item 1'));
+    await tester.pumpAndSettle();
+    // Compact: only the detail is visible.
+    expect(find.text('Detail 1'), findsOneWidget);
+    expect(find.text('item 1'), findsNothing);
+    expect(find.byIcon(Icons.close), findsNothing);
+
+    await tester.tap(find.text('count 0'));
+    await tester.pump();
+    expect(find.text('count 1'), findsOneWidget);
+
+    // Unfold: list and detail side by side, detail state preserved.
+    await _resize(tester, inner);
+    expect(find.text('item 1'), findsOneWidget);
+    expect(find.text('Detail 1'), findsOneWidget);
+    expect(find.text('count 1'), findsOneWidget);
+    expect(find.byIcon(Icons.close), findsOneWidget);
+
+    // Selecting another item replaces the detail in place.
+    await tester.tap(find.text('item 2'));
+    await tester.pumpAndSettle();
+    expect(find.text('Detail 2'), findsOneWidget);
+    expect(find.text('Detail 1'), findsNothing);
+
+    // Fold again: only the detail, still the same branch and route.
+    await _resize(tester, outer);
+    expect(find.text('Detail 2'), findsOneWidget);
+    expect(find.text('item 1'), findsNothing);
+    expect(find.byType(NavigationBar), findsOneWidget);
+
+    // Back returns to the list, not to a previous detail.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('item 1'), findsOneWidget);
+    expect(find.text('Detail 2'), findsNothing);
+  });
+
+  testWidgets('closing the split detail pane shows the placeholder', (
+    tester,
+  ) async {
+    await _pump(tester, inner);
+    await tester.tap(find.byKey(const ValueKey('bottom_nav_resources')).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('item 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Detail 1'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.text('Detail 1'), findsNothing);
+    expect(find.text('Select an item'), findsOneWidget);
+  });
+
+  testWidgets('cross-branch go lands on the split with the item selected', (
+    tester,
+  ) async {
+    final router = await _pump(tester, inner);
+    expect(find.text('home page'), findsOneWidget);
+
+    router.go('/res/2');
+    await tester.pumpAndSettle();
+    expect(find.text('Detail 2'), findsOneWidget);
+    expect(find.text('item 1'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.text('Select an item'), findsOneWidget);
+  });
+
+  testWidgets('split is disabled by the screen without losing list state', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = inner;
+    addTearDown(tester.view.reset);
+    final enabled = ValueNotifier(false);
+    addTearDown(enabled.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ValueListenableBuilder<bool>(
+          valueListenable: enabled,
+          builder: (context, value, _) => ListDetailLayout(
+            list: const _Detail(id: 'list'),
+            splitEnabled: value,
+            singlePaneMaxWidth: 500,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('count 0'));
+    await tester.pump();
+    expect(find.text('Select an item'), findsNothing);
+    expect(tester.getSize(find.byType(Scaffold)).width, 500);
+
+    enabled.value = true;
+    await tester.pumpAndSettle();
+    expect(find.text('Select an item'), findsOneWidget);
+    expect(find.text('count 1'), findsOneWidget);
+    expect(
+      tester.getSize(find.byType(Scaffold).first).width,
+      closeTo(380.4, 0.1),
+    );
+  });
+
+  test('notifications tab provider defaults to alerts', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    expect(container.read(notificationsTabIndexProvider), 0);
+    container.read(notificationsTabIndexProvider.notifier).index = 1;
+    expect(container.read(notificationsTabIndexProvider), 1);
+  });
+
+  for (final width in [320.0, 380.0]) {
+    testWidgets('settings index renders at ${width}pt without exceptions', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = Size(width, 900);
+      addTearDown(tester.view.reset);
+      final profile = ConnectionProfile(
+        id: 'c1',
+        name: 'Production',
+        baseUrl: 'https://komodo.example.com',
+        createdAt: DateTime(2026),
+        lastUsedAt: DateTime(2026),
+      );
+      const credentials = ApiCredentials(
+        baseUrl: 'https://komodo.example.com',
+        apiKey: 'key',
+        apiSecret: 'secret',
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authProvider.overrideWith(
+              () => _TestAuth(
+                AuthState.authenticated(
+                  connection: profile,
+                  credentials: credentials,
+                ),
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: SettingsView()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Connections'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+}
+
+class _TestAuth extends Auth {
+  _TestAuth(this.initialState);
+
+  final AuthState initialState;
+
+  @override
+  Future<AuthState> build() async => initialState;
+}

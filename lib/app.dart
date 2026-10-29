@@ -24,7 +24,16 @@ class KomodoApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       builder: (context, child) => SkeletonizerConfig(
         data: _skeletonConfig(context),
-        child: child ?? const SizedBox.shrink(),
+        // Respect horizontal system insets once for the whole app (e.g. the
+        // 84pt status/camera strip on the foldable iPhone's inner display).
+        child: ColoredBox(
+          color: Theme.of(context).colorScheme.surface,
+          child: SafeArea(
+            top: false,
+            bottom: false,
+            child: child ?? const SizedBox.shrink(),
+          ),
+        ),
       ),
     );
   }

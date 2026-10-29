@@ -166,102 +166,126 @@ class _ResourcesViewState extends ConsumerState<ResourcesView> {
       ),
     ];
 
-    final width = MediaQuery.sizeOf(context).width;
-    final isTablet = width >= 720;
-    final quickStatsColumns = switch (width) {
-      >= 1200 => 4,
-      >= 720 => 3,
-      >= 520 => 3,
-      _ => 2,
-    };
-    final quickStatsAspectRatio = switch (width) {
-      >= 720 => 1.2,
-      >= 520 => 1.55,
-      _ => 1.35,
-    };
-    final gridSpacing = isTablet ? 12.0 : 8.0;
-    final listPadding = isTablet
-        ? const EdgeInsets.fromLTRB(24, 24, 24, 28)
-        : const EdgeInsets.fromLTRB(12, 12, 12, 20);
-    final maxGridWidth = width >= 1200 ? 1180.0 : double.infinity;
-
-    var animIndex = 0;
-    // Rows of [quickStatsColumns] tiles; a short last row stretches its tiles
-    // to the full width so odd counts leave no empty slot.
-    Widget grid(List<Widget> tiles) => LayoutBuilder(
-      builder: (context, constraints) {
-        final tileWidth =
-            (constraints.maxWidth - gridSpacing * (quickStatsColumns - 1)) /
-            quickStatsColumns;
-        final tileHeight = tileWidth / quickStatsAspectRatio;
-        final children = [
-          for (final t in tiles)
-            _intro.wrap(animIndex++, t, id: t.key ?? animIndex),
-        ];
-        return Column(
-          children: [
-            for (var i = 0; i < children.length; i += quickStatsColumns) ...[
-              if (i > 0) SizedBox(height: gridSpacing),
-              SizedBox(
-                height: tileHeight,
-                child: Row(
-                  children: [
-                    for (
-                      var j = i;
-                      j < i + quickStatsColumns && j < children.length;
-                      j++
-                    ) ...[
-                      if (j > i) SizedBox(width: gridSpacing),
-                      Expanded(child: children[j]),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ],
-        );
-      },
-    );
-
-    final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader(title: 'Run'),
-        grid(runTiles),
-        const Gap(20),
-        const _SectionHeader(title: 'Build & Automate'),
-        grid(buildTiles),
-      ],
-    );
-
     return Scaffold(
       appBar: const MainAppBar(title: 'Resources', icon: AppIcons.resources),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref
-            ..invalidate(serversProvider)
-            ..invalidate(deploymentsProvider)
-            ..invalidate(stacksProvider)
-            ..invalidate(reposProvider)
-            ..invalidate(syncsProvider)
-            ..invalidate(buildsProvider)
-            ..invalidate(proceduresProvider)
-            ..invalidate(actionsProvider);
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Local width: the content area is narrower than the window beside a
+          // navigation rail or inside a split pane.
+          final width = constraints.maxWidth;
+          final isTablet = width >= 700;
+          final quickStatsColumns = switch (width) {
+            >= 1000 => 4,
+            >= 520 => 3,
+            _ => 2,
+          };
+          final quickStatsAspectRatio = switch (width) {
+            >= 700 => 1.2,
+            >= 520 => 1.55,
+            _ => 1.35,
+          };
+          final gridSpacing = isTablet ? 12.0 : 8.0;
+          final listPadding = isTablet
+              ? const EdgeInsets.fromLTRB(24, 24, 24, 28)
+              : const EdgeInsets.fromLTRB(12, 12, 12, 20);
+          final maxGridWidth = width >= 1200 ? 1180.0 : double.infinity;
+
+          var animIndex = 0;
+          // Rows of [quickStatsColumns] tiles; a short last row stretches its tiles
+          // to the full width so odd counts leave no empty slot.
+          Widget grid(List<Widget> tiles) => LayoutBuilder(
+            builder: (context, constraints) {
+              final tileWidth =
+                  (constraints.maxWidth -
+                      gridSpacing * (quickStatsColumns - 1)) /
+                  quickStatsColumns;
+              // Phones keep the ratio; wide tiles get a modest fixed minimum so
+              // they stay dense instead of stretching with the column width.
+              final tileHeight = isTablet
+                  ? 132.0
+                  : tileWidth / quickStatsAspectRatio;
+              final children = [
+                for (final t in tiles)
+                  _intro.wrap(animIndex++, t, id: t.key ?? animIndex),
+              ];
+              return Column(
+                children: [
+                  for (
+                    var i = 0;
+                    i < children.length;
+                    i += quickStatsColumns
+                  ) ...[
+                    if (i > 0) SizedBox(height: gridSpacing),
+                    // The height is only a minimum: a row grows to its
+                    // tallest tile so in-between widths and large text never
+                    // overflow.
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (
+                            var j = i;
+                            j < i + quickStatsColumns && j < children.length;
+                            j++
+                          ) ...[
+                            if (j > i) SizedBox(width: gridSpacing),
+                            Expanded(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: tileHeight,
+                                ),
+                                child: children[j],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
+          );
+
+          final content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionHeader(title: 'Run'),
+              grid(runTiles),
+              const Gap(20),
+              const _SectionHeader(title: 'Build & Automate'),
+              grid(buildTiles),
+            ],
+          );
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref
+                ..invalidate(serversProvider)
+                ..invalidate(deploymentsProvider)
+                ..invalidate(stacksProvider)
+                ..invalidate(reposProvider)
+                ..invalidate(syncsProvider)
+                ..invalidate(buildsProvider)
+                ..invalidate(proceduresProvider)
+                ..invalidate(actionsProvider);
+            },
+            child: ListView(
+              padding: listPadding,
+              children: [
+                if (maxGridWidth.isFinite)
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: maxGridWidth),
+                      child: content,
+                    ),
+                  )
+                else
+                  content,
+              ],
+            ),
+          );
         },
-        child: ListView(
-          padding: listPadding,
-          children: [
-            if (maxGridWidth.isFinite)
-              Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxGridWidth),
-                  child: content,
-                ),
-              )
-            else
-              content,
-          ],
-        ),
       ),
     );
   }

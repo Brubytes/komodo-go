@@ -10,6 +10,7 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
@@ -222,7 +223,10 @@ class _FilteredEmptyMessage extends StatelessWidget {
 }
 
 class UpdatesTab extends ConsumerStatefulWidget {
-  const UpdatesTab({super.key});
+  const UpdatesTab({this.selectedUpdateId, super.key});
+
+  /// Update open in the detail pane, highlighted in the list.
+  final String? selectedUpdateId;
 
   @override
   ConsumerState<UpdatesTab> createState() => _UpdatesTabState();
@@ -320,7 +324,10 @@ class _UpdatesTabState extends ConsumerState<UpdatesTab> {
 
                       return _intro.wrap(
                         index,
-                        UpdateTile(update: items[index]),
+                        UpdateTile(
+                          update: items[index],
+                          selected: items[index].id == widget.selectedUpdateId,
+                        ),
                         id: items[index].id,
                       );
                     },
@@ -444,9 +451,13 @@ class UpdateTile extends ConsumerWidget {
     required this.update,
     super.key,
     this.currentTargetId,
+    this.selected = false,
   });
 
   final UpdateListItem update;
+
+  /// Highlights the tile as the update open in the detail pane.
+  final bool selected;
 
   /// Id of the resource whose detail screen embeds this tile. When the
   /// update targets it, the target name and the "Open resource" action are
@@ -491,96 +502,101 @@ class UpdateTile extends ConsumerWidget {
     );
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppPressable(
-      enabled: route != null,
-      child: AppCardSurface(
-        padding: EdgeInsets.zero,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: cardRadius,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: route == null ? null : () => context.push(route),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.md,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Icon(
-                      _iconForTargetType(target?.type),
-                      color: scheme.primary,
-                      size: 22,
+    return SelectionHighlight(
+      selected: selected,
+      child: AppPressable(
+        enabled: route != null,
+        child: AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: cardRadius,
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: route == null ? null : () => context.openDetail(route),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Icon(
+                        _iconForTargetType(target?.type),
+                        color: scheme.primary,
+                        size: 22,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        if (!isCurrent)
+                          if (!isCurrent)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: AppSpacing.xxs,
+                              ),
+                              child: Text(
+                                targetName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: muted,
+                              ),
+                            ),
                           Padding(
                             padding: const EdgeInsets.only(top: AppSpacing.xxs),
                             child: Text(
-                              targetName,
+                              operator == null
+                                  ? startTime
+                                  : '$startTime  ·  $operator',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: muted,
                             ),
                           ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.xxs),
-                          child: Text(
-                            operator == null
-                                ? startTime
-                                : '$startTime  ·  $operator',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: muted,
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _updateStatusPill(update),
+                        if (resourceRoute != null)
+                          IconButton(
+                            key: ValueKey('update_open_resource_${update.id}'),
+                            tooltip: 'Open resource',
+                            visualDensity: VisualDensity.compact,
+                            style: const ButtonStyle(
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            iconSize: 18,
+                            padding: const EdgeInsets.all(AppSpacing.xs),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                            onPressed: () => context.push(resourceRoute),
+                            icon: const Icon(AppIcons.externalLink),
                           ),
-                        ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _updateStatusPill(update),
-                      if (resourceRoute != null)
-                        IconButton(
-                          key: ValueKey('update_open_resource_${update.id}'),
-                          tooltip: 'Open resource',
-                          visualDensity: VisualDensity.compact,
-                          style: const ButtonStyle(
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          iconSize: 18,
-                          padding: const EdgeInsets.all(AppSpacing.xs),
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
-                          onPressed: () => context.push(resourceRoute),
-                          icon: const Icon(AppIcons.externalLink),
-                        ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
