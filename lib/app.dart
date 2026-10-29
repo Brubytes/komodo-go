@@ -43,7 +43,7 @@ class KomodoApp extends ConsumerWidget {
             duration: AppMotion.shimmer,
           );
     return SkeletonizerConfigData(
-      effect: effect,
+      effectResolver: (_) => effect,
       enableSwitchAnimation: true,
       switchAnimationConfig: const SwitchAnimationConfig(
         duration: AppMotion.base,
