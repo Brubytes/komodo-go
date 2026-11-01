@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -25,9 +26,12 @@ import 'package:komodo_go/features/notifications/presentation/utils/alerts_error
 import 'package:skeletonizer/skeletonizer.dart';
 
 class AlertsTab extends ConsumerStatefulWidget {
-  const AlertsTab({this.onOpenUpdates, super.key});
+  const AlertsTab({this.onOpenUpdates, this.selectedAlertId, super.key});
 
   final VoidCallback? onOpenUpdates;
+
+  /// Alert open in the detail pane, highlighted in the list.
+  final String? selectedAlertId;
 
   @override
   ConsumerState<AlertsTab> createState() => _AlertsTabState();
@@ -101,11 +105,11 @@ class _AlertsTabState extends ConsumerState<AlertsTab> {
                     return false;
                   },
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
+                    padding: EdgeInsets.fromLTRB(
                       AppSpacing.lg,
                       AppSpacing.sm,
                       AppSpacing.lg,
-                      AppSpacing.lg,
+                      AppSpacing.lg + MediaQuery.paddingOf(context).bottom,
                     ),
                     itemCount: (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
                     separatorBuilder: (_, _) => const Gap(AppSpacing.md),
@@ -135,7 +139,10 @@ class _AlertsTabState extends ConsumerState<AlertsTab> {
 
                       return _intro.wrap(
                         index,
-                        AlertTile(alert: items[index]),
+                        AlertTile(
+                          alert: items[index],
+                          selected: items[index].id == widget.selectedAlertId,
+                        ),
                         id: items[index].id,
                       );
                     },
@@ -290,11 +297,11 @@ class _UpdatesTabState extends ConsumerState<UpdatesTab> {
                     return false;
                   },
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
+                    padding: EdgeInsets.fromLTRB(
                       AppSpacing.lg,
                       AppSpacing.sm,
                       AppSpacing.lg,
-                      AppSpacing.lg,
+                      AppSpacing.lg + MediaQuery.paddingOf(context).bottom,
                     ),
                     itemCount: (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
                     separatorBuilder: (_, _) => const Gap(AppSpacing.md),
@@ -349,9 +356,12 @@ class _UpdatesTabState extends ConsumerState<UpdatesTab> {
 }
 
 class AlertTile extends ConsumerWidget {
-  const AlertTile({required this.alert, super.key});
+  const AlertTile({required this.alert, this.selected = false, super.key});
 
   final Alert alert;
+
+  /// Highlights the tile as the alert open in the detail pane.
+  final bool selected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -379,66 +389,81 @@ class AlertTile extends ConsumerWidget {
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppPressable(
-      enabled: route != null,
-      child: AppCardSurface(
-        padding: EdgeInsets.zero,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: cardRadius,
-          clipBehavior: Clip.antiAlias,
-          child: ListTile(
-            titleAlignment: ListTileTitleAlignment.top,
-            leading: Icon(_iconForAlert(alert), color: severityColor),
-            title: Text(title),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (primary != null && primary.isNotEmpty) Text(primary),
-                // The target name usually equals the payload's primary name;
-                // only show it when it adds information.
-                if (targetName != null &&
-                    targetName.isNotEmpty &&
-                    targetName != primary) ...[
-                  const Gap(AppSpacing.xs),
-                  Text(
-                    targetName,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-                const Gap(AppSpacing.xs),
-                Row(
-                  children: [
-                    Icon(
-                      AppIcons.clock,
-                      size: 16,
-                      color: scheme.onSurfaceVariant,
-                    ),
+    // Side by side the alert opens in the detail pane; on narrow windows the
+    // tap goes straight to the alert's target, as before.
+    final split = ListDetailScope.maybeOf(context)?.split ?? false;
+    final canOpen = route != null || (split && alert.id.isNotEmpty);
+
+    return SelectionHighlight(
+      selected: selected,
+      child: AppPressable(
+        enabled: canOpen,
+        child: AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: cardRadius,
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              titleAlignment: ListTileTitleAlignment.top,
+              leading: Icon(_iconForAlert(alert), color: severityColor),
+              title: Text(title),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (primary != null && primary.isNotEmpty) Text(primary),
+                  // The target name usually equals the payload's primary name;
+                  // only show it when it adds information.
+                  if (targetName != null &&
+                      targetName.isNotEmpty &&
+                      targetName != primary) ...[
                     const Gap(AppSpacing.xs),
-                    Expanded(
-                      child: Text(
-                        _formatTimestamp(alert.timestamp.toLocal()),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+                    Text(
+                      targetName,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                   ],
-                ),
-              ],
-            ),
-            trailing: alert.resolved
-                ? const NotificationsStatusChip(
-                    label: 'RESOLVED',
-                    kind: NotificationsStatusChipKind.neutral,
-                  )
-                : NotificationsStatusChip(
-                    label: _labelForSeverity(alert.level),
-                    kind: _chipKindForAlertLevel(alert.level),
+                  const Gap(AppSpacing.xs),
+                  Row(
+                    children: [
+                      Icon(
+                        AppIcons.clock,
+                        size: 16,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      const Gap(AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          _formatTimestamp(alert.timestamp.toLocal()),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                    ],
                   ),
-            onTap: route == null ? null : () => context.go(route),
+                ],
+              ),
+              trailing: alert.resolved
+                  ? const NotificationsStatusChip(
+                      label: 'RESOLVED',
+                      kind: NotificationsStatusChipKind.neutral,
+                    )
+                  : NotificationsStatusChip(
+                      label: _labelForSeverity(alert.level),
+                      kind: _chipKindForAlertLevel(alert.level),
+                    ),
+              onTap: !canOpen
+                  ? null
+                  : split && alert.id.isNotEmpty
+                  ? () => context.openDetail(
+                      '${AppRoutes.alertDetails}/${Uri.encodeComponent(alert.id)}',
+                    )
+                  : () => context.go(route!),
+            ),
           ),
         ),
       ),

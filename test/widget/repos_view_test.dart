@@ -50,8 +50,9 @@ void main() {
     }),
   ];
 
-  testWidgets('Repos list renders repo cards via ResourceListView',
-      (tester) async {
+  testWidgets('Repos list renders repo cards via ResourceListView', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app(repos));
     await tester.pumpAndSettle();
 
@@ -61,8 +62,9 @@ void main() {
     expect(find.byKey(const ValueKey('repo_card_r2')), findsOneWidget);
   });
 
-  testWidgets('search matches repo info fields (branch) via repos_search',
-      (tester) async {
+  testWidgets('search matches repo info fields (branch) via repos_search', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app(repos));
     await tester.pumpAndSettle();
 

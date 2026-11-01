@@ -185,9 +185,10 @@ class _ResourcesViewState extends ConsumerState<ResourcesView> {
             _ => 1.35,
           };
           final gridSpacing = isTablet ? 12.0 : 8.0;
+          final bottomInset = MediaQuery.paddingOf(context).bottom;
           final listPadding = isTablet
-              ? const EdgeInsets.fromLTRB(24, 24, 24, 28)
-              : const EdgeInsets.fromLTRB(12, 12, 12, 20);
+              ? EdgeInsets.fromLTRB(24, 24, 24, 28 + bottomInset)
+              : EdgeInsets.fromLTRB(12, 12, 12, 20 + bottomInset);
           final maxGridWidth = width >= 1200 ? 1180.0 : double.infinity;
 
           var animIndex = 0;

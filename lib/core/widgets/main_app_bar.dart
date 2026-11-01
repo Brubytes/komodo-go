@@ -27,6 +27,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.bottom,
     this.onTitleLongPress,
     this.showBottomBorder = true,
+    this.tabRoot = false,
     super.key,
   });
 
@@ -47,6 +48,10 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// continues the header (e.g. a filter row) and draws its own divider.
   final bool showBottomBorder;
 
+  /// The bar belongs to a bottom-navigation tab root. Next to a detail pane
+  /// its back arrow would lead nowhere, so it is hidden there.
+  final bool tabRoot;
+
   @override
   Size get preferredSize =>
       Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0));
@@ -58,9 +63,11 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     // In a side-by-side detail pane there is no previous screen to go back
     // to; the pane is closed instead.
     final closesPane = ListDetailScope.isSplitDetailPane(context);
+    final hidesBack =
+        tabRoot && (ListDetailScope.maybeOf(context)?.split ?? false);
 
     return AppBar(
-      automaticallyImplyLeading: !closesPane,
+      automaticallyImplyLeading: !closesPane && !hidesBack,
       leading: closesPane
           ? IconButton(
               tooltip: 'Close',

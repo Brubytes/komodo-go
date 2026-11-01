@@ -62,7 +62,12 @@ class _AlertersViewState extends ConsumerState<AlertersView> {
 
                 return ListView.separated(
                   controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    16 + MediaQuery.paddingOf(context).bottom,
+                  ),
                   itemCount: items.length,
                   separatorBuilder: (_, _) => const Gap(12),
                   itemBuilder: (context, index) => _intro.wrap(

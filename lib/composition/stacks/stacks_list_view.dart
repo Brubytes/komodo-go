@@ -196,7 +196,12 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
             onRefresh: () => ref.read(stacksProvider.notifier).refresh(),
             child: ListView(
               controller: _scrollController,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                16 + MediaQuery.paddingOf(context).bottom,
+              ),
               children: [
                 AppSwitcher(
                   child: _isSearchVisible

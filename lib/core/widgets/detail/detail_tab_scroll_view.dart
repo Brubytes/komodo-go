@@ -91,6 +91,9 @@ class DetailTabScrollView extends StatelessWidget {
               padding: resolved.copyWith(
                 left: resolved.left + extra,
                 right: resolved.right + extra,
+                // Scrolls to the physical edge; the last item clears the
+                // home indicator.
+                bottom: resolved.bottom + MediaQuery.paddingOf(context).bottom,
               ),
               sliver: sliver,
             );

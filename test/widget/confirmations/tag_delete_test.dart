@@ -67,7 +67,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.text('Delete')));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Delete'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     verify(() => repository.deleteTag(id: 't1')).called(1);

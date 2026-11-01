@@ -419,7 +419,12 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                     }
 
                     return SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        0,
+                        16,
+                        28 + MediaQuery.paddingOf(context).bottom,
+                      ),
                       sliver: SliverList.separated(
                         itemCount: filtered.length,
                         separatorBuilder: (_, _) => const Gap(12),

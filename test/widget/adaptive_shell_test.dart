@@ -435,12 +435,104 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('count 0'));
       await tester.pump();
+      // Folded: the strip keeps the rail, no bottom bar.
       await _resize(tester, outer);
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(NavigationRail), findsOneWidget);
       expect(find.text('count 1'), findsOneWidget);
       await _resize(tester, inner);
       expect(tester.getTopLeft(find.byType(NavigationRail)).dx, 867);
       expect(find.text('count 1'), findsOneWidget);
+    });
+
+    testWidgets('compact trailing strip: rail at 466x678 R84', (tester) async {
+      inset(tester);
+      await _pump(
+        tester,
+        outer,
+        bar: const VerticalBarInfo(
+          edge: VerticalBarEdge.trailing,
+          occludedRegions: [Rect.fromLTWH(382, 0, 84, 90)],
+        ),
+      );
+      expect(find.byType(NavigationBar), findsNothing);
+      final rail = find.byType(NavigationRail);
+      expect(tester.getTopLeft(rail).dx, 382);
+      expect(tester.getSize(rail).width, 84);
+      // All five destinations are reachable (rail scrolls if needed).
+      await tester.tap(
+        find.byKey(const ValueKey('bottom_nav_resources')).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('item 1'), findsOneWidget);
+      expect(tester.getTopLeft(find.text('item 1')).dx, lessThan(382));
+    });
+
+    testWidgets('content reaches the bottom edge in strip mode', (
+      tester,
+    ) async {
+      inset(tester);
+      await _pump(
+        tester,
+        outer,
+        bar: const VerticalBarInfo(
+          edge: VerticalBarEdge.trailing,
+          occludedRegions: [Rect.fromLTWH(382, 0, 84, 90)],
+        ),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('bottom_nav_resources')).first,
+      );
+      await tester.pumpAndSettle();
+      // The scroll view runs to the physical edge (no padded band); the inset
+      // stays available to it via MediaQuery.
+      expect(tester.getBottomLeft(find.byType(ListView)).dy, outer.height);
+      expect(
+        MediaQuery.paddingOf(tester.element(find.byType(ListView))).bottom,
+        34,
+      );
+    });
+
+    testWidgets('leading strip: rail at 678x466 L84', (tester) async {
+      tester.view.padding = const FakeViewPadding(left: 84, bottom: 34);
+      tester.view.viewPadding = const FakeViewPadding(left: 84, bottom: 34);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      await _pump(
+        tester,
+        const Size(678, 466),
+        bar: const VerticalBarInfo(
+          edge: VerticalBarEdge.leading,
+          occludedRegions: [Rect.fromLTWH(0, 0, 84, 90)],
+        ),
+      );
+      expect(find.byType(NavigationBar), findsNothing);
+      final rail = find.byType(NavigationRail);
+      expect(tester.getTopLeft(rail).dx, 0);
+      expect(tester.getSize(rail).width, 84);
+      expect(
+        tester.getTopLeft(find.text('home page')).dx,
+        greaterThanOrEqualTo(84),
+      );
+      // Short display: every destination stays reachable.
+      for (final key in const [
+        'bottom_nav_home',
+        'bottom_nav_resources',
+        'bottom_nav_containers',
+        'bottom_nav_notifications',
+        'bottom_nav_settings',
+      ]) {
+        expect(find.byKey(ValueKey(key)), findsWidgets);
+      }
+    });
+
+    testWidgets('without strip info compact shows the bottom bar', (
+      tester,
+    ) async {
+      inset(tester);
+      await _pump(tester, outer);
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(NavigationRail), findsNothing);
     });
   });
 }

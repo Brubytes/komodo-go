@@ -50,8 +50,9 @@ void main() {
     }),
   ];
 
-  testWidgets('Builds list renders build cards via ResourceListView',
-      (tester) async {
+  testWidgets('Builds list renders build cards via ResourceListView', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app(builds));
     await tester.pumpAndSettle();
 
@@ -61,8 +62,9 @@ void main() {
     expect(find.byKey(const ValueKey('build_card_b2')), findsOneWidget);
   });
 
-  testWidgets('search narrows builds by name via builds_search field',
-      (tester) async {
+  testWidgets('search narrows builds by name via builds_search field', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app(builds));
     await tester.pumpAndSettle();
 

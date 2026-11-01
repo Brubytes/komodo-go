@@ -162,7 +162,12 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
         onRefresh: () => ref.read(serversProvider.notifier).refresh(),
         child: ListView(
           controller: _scrollController,
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.paddingOf(context).bottom,
+          ),
           children: [
             AppSwitcher(
               child: _isSearchVisible

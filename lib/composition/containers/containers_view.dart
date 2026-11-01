@@ -146,6 +146,7 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
 
     return Scaffold(
       appBar: MainAppBar(
+        tabRoot: true,
         title: 'Containers',
         icon: AppIcons.containers,
         actions: [
@@ -175,7 +176,12 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                       ref.read(containersProvider.notifier).refresh(),
                   child: ListView(
                     controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      16,
+                      16,
+                      16 + MediaQuery.paddingOf(context).bottom,
+                    ),
                     children: [
                       _FiltersRow(
                         servers: serversAsync.maybeWhen(

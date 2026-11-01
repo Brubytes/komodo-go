@@ -469,7 +469,12 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                     _lastKind = 'data';
                     return [
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          0,
+                          16,
+                          24 + MediaQuery.paddingOf(context).bottom,
+                        ),
                         sliver: SliverList.builder(
                           itemCount: filtered.length,
                           itemBuilder: (context, i) {

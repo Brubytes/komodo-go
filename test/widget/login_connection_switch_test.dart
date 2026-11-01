@@ -83,8 +83,7 @@ void main() {
     final testAuth = _TestAuth(
       const AuthState.unauthenticated(),
       failureOnSelect: const Failure.auth(
-        message:
-            'The saved credentials are unavailable. Enter the API key and secret again.',
+        message: 'The saved credentials are unavailable. Enter the API key and secret again.',
       ),
     );
     final testConnections = _TestConnections(

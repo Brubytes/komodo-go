@@ -36,13 +36,17 @@ class SettingsView extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: const MainAppBar(title: 'Settings', icon: AppIcons.settings),
+      appBar: const MainAppBar(
+        title: 'Settings',
+        icon: AppIcons.settings,
+        tabRoot: true,
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
           AppSpacing.lg,
           AppSpacing.lg,
-          28,
+          28 + MediaQuery.paddingOf(context).bottom,
         ),
         children: [
           const Gap(AppSpacing.xs),

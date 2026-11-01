@@ -41,6 +41,7 @@ import 'package:komodo_go/features/builds/presentation/views/builds_list_view.da
 import 'package:komodo_go/features/containers/presentation/views/container_detail_view.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/notifications_tab_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/views/alert_detail_view.dart';
 import 'package:komodo_go/features/notifications/presentation/views/notifications_view.dart';
 import 'package:komodo_go/features/notifications/presentation/views/update_detail_view.dart';
 import 'package:komodo_go/features/procedures/presentation/views/procedures_list_view.dart';
@@ -194,6 +195,7 @@ abstract class AppRoutes {
   static const containerDetail = '/containers/:serverId/:container';
   static const notifications = '/notifications';
   static const updateDetails = '$notifications/updates';
+  static const alertDetails = '$notifications/alerts';
   static const settings = '/settings';
 
   static const servers = '$resources/servers';
@@ -448,7 +450,7 @@ GoRouter appRouter(Ref ref) {
               GoRoute(
                 path: AppRoutes.notifications,
                 pageBuilder: (context, state) => _noTransitionTabPage(
-                  _withComposedNames(const _NotificationsPane()),
+                  _withComposedNames(const NotificationsPane()),
                 ),
                 routes: [
                   GoRoute(
@@ -457,7 +459,17 @@ GoRouter appRouter(Ref ref) {
                       final id = state.pathParameters['id']!;
                       return _appStackPage(
                         state,
-                        _withComposedNames(_NotificationsPane(updateId: id)),
+                        _withComposedNames(NotificationsPane(updateId: id)),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'alerts/:id',
+                    pageBuilder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return _appStackPage(
+                        state,
+                        _withComposedNames(NotificationsPane(alertId: id)),
                       );
                     },
                   ),
@@ -549,25 +561,40 @@ GoRouter appRouter(Ref ref) {
   );
 }
 
-/// Notifications split only while the Updates tab is active or an update is
-/// open; alerts lead to resources, so that tab gets the full width.
-class _NotificationsPane extends ConsumerWidget {
-  const _NotificationsPane({this.updateId});
+/// Notifications: alerts and updates share one list/detail split. The
+/// placeholder follows the active tab.
+class NotificationsPane extends StatelessWidget {
+  const NotificationsPane({this.updateId, this.alertId, super.key});
 
   final String? updateId;
+  final String? alertId;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListDetailLayout(
+      list: NotificationsView(
+        selectedUpdateId: updateId,
+        selectedAlertId: alertId,
+      ),
+      detail: updateId != null
+          ? UpdateDetailView(updateId: updateId!)
+          : alertId != null
+          ? AlertDetailView(alertId: alertId!)
+          : null,
+      placeholder: const _NotificationsPlaceholder(),
+    );
+  }
+}
+
+class _NotificationsPlaceholder extends ConsumerWidget {
+  const _NotificationsPlaceholder();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final onUpdatesTab = ref.watch(notificationsTabIndexProvider) == 1;
-    return ListDetailLayout(
-      list: NotificationsView(selectedUpdateId: updateId),
-      detail: updateId == null ? null : UpdateDetailView(updateId: updateId!),
-      placeholder: const ListDetailPlaceholder(
-        icon: AppIcons.notifications,
-        label: 'Select an update',
-      ),
-      splitEnabled: updateId != null || onUpdatesTab,
-      singlePaneMaxWidth: 760,
+    final onUpdates = ref.watch(notificationsTabIndexProvider) == 1;
+    return ListDetailPlaceholder(
+      icon: AppIcons.notifications,
+      label: onUpdates ? 'Select an update' : 'Select an alert',
     );
   }
 }
@@ -649,7 +676,6 @@ class _MainShellState extends ConsumerState<MainShell> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final useRail = !WindowSizeClass.fromWidth(width).isCompact;
         // The system may reserve a vertical bar strip (foldable iPhone inner
         // display). The app root leaves that inset to us: with a rail it is
         // the rail's home, otherwise it is padded here.
@@ -659,8 +685,11 @@ class _MainShellState extends ConsumerState<MainShell> {
         final stripInset = stripOnRight
             ? media.padding.right
             : media.padding.left;
-        final railInStrip =
-            useRail && (strip.left || strip.right) && stripInset > 0;
+        // With a strip the navigation always lives in it (any width class);
+        // the bottom bar is only for windows without one.
+        final railInStrip = (strip.left || strip.right) && stripInset > 0;
+        final useRail =
+            railInStrip || !WindowSizeClass.fromWidth(width).isCompact;
         final info = VerticalBarScope.maybeOf(context);
         final stripTopGap = railInStrip
             ? ((info?.occludedBottomInStrip(

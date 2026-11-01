@@ -51,7 +51,7 @@ class HomeDashboardLayout extends StatelessWidget {
           side + extra,
           twoColumn ? 16 : 12,
           side + extra,
-          20,
+          20 + MediaQuery.paddingOf(context).bottom,
         );
 
         if (!twoColumn) {

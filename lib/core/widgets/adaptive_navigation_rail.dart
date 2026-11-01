@@ -77,6 +77,9 @@ class AdaptiveNavigationRail extends StatelessWidget {
                 selectedIndex: selectedIndex,
                 onDestinationSelected: onTap,
                 minWidth: strip,
+                // The shortest display (466pt) minus camera and bottom inset
+                // may not fit five destinations.
+                scrollable: true,
                 labelType: NavigationRailLabelType.none,
                 backgroundColor: Colors.transparent,
                 indicatorColor: scheme.primaryContainer,
