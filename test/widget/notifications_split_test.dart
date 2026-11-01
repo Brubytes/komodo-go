@@ -144,12 +144,44 @@ void main() {
     expect(find.text('Select an update'), findsOneWidget);
   });
 
-  testWidgets('narrow: alert tap goes straight to the target', (tester) async {
+  testWidgets('narrow: row tap opens details, with back', (tester) async {
     await _pump(tester, outer);
     await tester.tap(find.text('Server Unreachable'));
     await tester.pumpAndSettle();
-    expect(find.text('server s1'), findsOneWidget);
-    expect(find.text('Alert details'), findsNothing);
+    expect(find.text('Alert details'), findsOneWidget);
+    expect(find.text('server s1'), findsNothing);
+    expect(find.byType(BackButton), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Server Unreachable'), findsOneWidget);
+  });
+
+  testWidgets('open-resource icon jumps to the target (narrow and split)', (
+    tester,
+  ) async {
+    for (final size in [outer, inner]) {
+      await _pump(tester, size);
+      await tester.tap(find.byKey(const ValueKey('alert_open_resource_a1')));
+      await tester.pumpAndSettle();
+      expect(find.text('server s1'), findsOneWidget);
+      expect(find.text('Alert details'), findsNothing);
+    }
+  });
+
+  testWidgets('open-resource icon is hidden without a destination', (
+    tester,
+  ) async {
+    await _pump(tester, outer);
+    expect(
+      find.byKey(const ValueKey('alert_open_resource_a1')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('alert_open_resource_a2')), findsNothing);
+    // The row still opens its details.
+    await tester.tap(find.text('Custom'));
+    await tester.pumpAndSettle();
+    expect(find.text('Alert details'), findsOneWidget);
   });
 
   testWidgets('narrow: an open alert page renders as a full page', (

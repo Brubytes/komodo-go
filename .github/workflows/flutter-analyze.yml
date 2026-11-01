@@ -38,6 +38,9 @@ jobs:
       - name: Generate code
         run: flutter pub run build_runner build --delete-conflicting-outputs
 
+      - name: Check formatting
+        run: ./scripts/format.sh --check
+
       - name: Analyze
         run: flutter analyze
 

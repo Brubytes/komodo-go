@@ -389,10 +389,9 @@ class AlertTile extends ConsumerWidget {
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    // Side by side the alert opens in the detail pane; on narrow windows the
-    // tap goes straight to the alert's target, as before.
-    final split = ListDetailScope.maybeOf(context)?.split ?? false;
-    final canOpen = route != null || (split && alert.id.isNotEmpty);
+    // Tapping the row opens the alert's details (in the pane when side by
+    // side, as a page otherwise); the icon jumps to its target.
+    final canOpen = alert.id.isNotEmpty;
 
     return SelectionHighlight(
       selected: selected,
@@ -406,6 +405,8 @@ class AlertTile extends ConsumerWidget {
             clipBehavior: Clip.antiAlias,
             child: ListTile(
               titleAlignment: ListTileTitleAlignment.top,
+              // Room for the status chip plus the open-resource icon.
+              isThreeLine: true,
               leading: Icon(_iconForAlert(alert), color: severityColor),
               title: Text(title),
               subtitle: Column(
@@ -447,22 +448,44 @@ class AlertTile extends ConsumerWidget {
                   ),
                 ],
               ),
-              trailing: alert.resolved
-                  ? const NotificationsStatusChip(
-                      label: 'RESOLVED',
-                      kind: NotificationsStatusChipKind.neutral,
-                    )
-                  : NotificationsStatusChip(
-                      label: _labelForSeverity(alert.level),
-                      kind: _chipKindForAlertLevel(alert.level),
-                    ),
+              trailing: SizedBox(
+                width: 108,
+                child: OverflowBox(
+                  alignment: Alignment.topRight,
+                  maxHeight: 96,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (alert.resolved)
+                        const NotificationsStatusChip(
+                          label: 'RESOLVED',
+                          kind: NotificationsStatusChipKind.neutral,
+                        )
+                      else
+                        NotificationsStatusChip(
+                          label: _labelForSeverity(alert.level),
+                          kind: _chipKindForAlertLevel(alert.level),
+                        ),
+                      if (route != null)
+                        OpenResourceButton(
+                          key: ValueKey('alert_open_resource_${alert.id}'),
+                          route: route,
+                          replaceStack: true,
+                        )
+                      else
+                        // Keeps the row height stable without a destination.
+                        const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+
               onTap: !canOpen
                   ? null
-                  : split && alert.id.isNotEmpty
-                  ? () => context.openDetail(
+                  : () => context.openDetail(
                       '${AppRoutes.alertDetails}/${Uri.encodeComponent(alert.id)}',
-                    )
-                  : () => context.go(route!),
+                    ),
             ),
           ),
         ),
@@ -602,21 +625,9 @@ class UpdateTile extends ConsumerWidget {
                       children: [
                         _updateStatusPill(update),
                         if (resourceRoute != null)
-                          IconButton(
+                          OpenResourceButton(
                             key: ValueKey('update_open_resource_${update.id}'),
-                            tooltip: 'Open resource',
-                            visualDensity: VisualDensity.compact,
-                            style: const ButtonStyle(
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            iconSize: 18,
-                            padding: const EdgeInsets.all(AppSpacing.xs),
-                            constraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 32,
-                            ),
-                            onPressed: () => context.push(resourceRoute),
-                            icon: const Icon(AppIcons.externalLink),
+                            route: resourceRoute,
                           ),
                       ],
                     ),
@@ -627,6 +638,38 @@ class UpdateTile extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Small "open external" icon on notification rows: jumps straight to the
+/// resource the row is about, while tapping the row opens its details.
+class OpenResourceButton extends StatelessWidget {
+  const OpenResourceButton({
+    required this.route,
+    this.replaceStack = false,
+    super.key,
+  });
+
+  final String route;
+
+  /// Switches branch with `go` instead of pushing on the current stack.
+  final bool replaceStack;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: 'Open resource',
+      visualDensity: VisualDensity.compact,
+      style: const ButtonStyle(
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      iconSize: 18,
+      padding: const EdgeInsets.all(AppSpacing.xs),
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      onPressed: () =>
+          replaceStack ? context.go(route) : unawaited(context.push(route)),
+      icon: const Icon(AppIcons.externalLink),
     );
   }
 }
