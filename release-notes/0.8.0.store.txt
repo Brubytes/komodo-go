@@ -1,0 +1,6 @@
+Better use of bigger screens, and clearer alerts.
+
+• Lists and details side by side on tablets
+• Navigation rail on wider screens
+• New alert details screen
+• Same layout for Alerts and Updates
