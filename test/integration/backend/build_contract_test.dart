@@ -14,138 +14,34 @@ void registerBuildContractTests() {
   final config = BackendTestConfig.fromEnvironment();
   final missingConfigReason = config == null
       ? 'Set KOMODO_TEST_BASE_URL, KOMODO_TEST_API_KEY, and '
-          'KOMODO_TEST_API_SECRET to run backend tests.'
+            'KOMODO_TEST_API_SECRET to run backend tests.'
       : null;
 
-  group('Build CRUD (real backend)', () {
-    late BuildRepository repository;
-    late KomodoApiClient client;
+  group(
+    'Build CRUD (real backend)',
+    () {
+      late BuildRepository repository;
+      late KomodoApiClient client;
 
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      client = buildTestClient(requireConfig(config), RpcRecorder());
-      repository = BuildRepository(client);
-    });
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        client = buildTestClient(requireConfig(config), RpcRecorder());
+        repository = BuildRepository(client);
+      });
 
-    test('create/update/delete build', () async {
-      KomodoBuild? created;
-      String? createdId;
-      var deleted = false;
+      test('create/update/delete build', () async {
+        KomodoBuild? created;
+        String? createdId;
+        var deleted = false;
 
-      try {
-        final builds = expectRight(await repository.listBuilds());
-        expect(builds, isNotEmpty);
+        try {
+          final builds = expectRight(await repository.listBuilds());
+          expect(builds, isNotEmpty);
 
-        final seed = builds.first;
-        final seedDetail = expectRight(await repository.getBuild(seed.id));
+          final seed = builds.first;
+          final seedDetail = expectRight(await repository.getBuild(seed.id));
 
-        final name = 'contract-build-${_randomToken(Random(13021))}';
-        final createdJson = await client.write(
-          RpcRequest(
-            type: 'CreateBuild',
-            params: <String, dynamic>{
-              'name': name,
-              'config': seedDetail.config.toJson(),
-            },
-          ),
-        );
-        created = KomodoBuild.fromJson(createdJson as Map<String, dynamic>);
-
-        createdId = await waitForListItemId(
-          listItems: () async {
-            final listed = expectRight(await repository.listBuilds());
-            return listed.map((item) => item.toJson()).toList();
-          },
-          name: name,
-        );
-        final createdIdValue = createdId;
-
-        final updated = await retryAsync(() async {
-          return expectRight(
-            await repository.updateBuildConfig(
-              buildId: createdIdValue,
-              partialConfig: <String, dynamic>{
-                'auto_increment_version':
-                    !seedDetail.config.autoIncrementVersion,
-              },
-            ),
-          );
-        });
-        expect(updated.id, createdId);
-
-        final updatedFields = await retryAsync(() async {
-          return expectRight(
-            await repository.updateBuildConfig(
-              buildId: createdIdValue,
-              partialConfig: <String, dynamic>{
-                'use_buildx': !seedDetail.config.useBuildx,
-                'image_tag': 'test-${_randomToken(Random(13022))}',
-              },
-            ),
-          );
-        });
-        expect(updatedFields.id, createdIdValue);
-
-        final refreshed =
-            expectRight(await repository.getBuild(createdIdValue));
-        expect(refreshed.config.useBuildx, updatedFields.config.useBuildx);
-        expect(refreshed.config.imageTag, updatedFields.config.imageTag);
-
-        await retryAsync(() async {
-          await client.write(
-            RpcRequest(
-              type: 'DeleteBuild',
-              params: <String, dynamic>{'id': createdIdValue},
-            ),
-          );
-        });
-        deleted = true;
-        await expectEventuallyServerFailure(
-          () => repository.getBuild(createdIdValue),
-        );
-        final afterDelete = expectRight(await repository.listBuilds());
-        expect(afterDelete.any((b) => b.id == createdIdValue), isFalse);
-      } finally {
-        final idToDelete = createdId ?? created?.id;
-        if (!deleted && idToDelete != null) {
-          await retryAsync(() async {
-            await client.write(
-              RpcRequest(
-                type: 'DeleteBuild',
-                params: <String, dynamic>{'id': idToDelete},
-              ),
-            );
-          });
-        }
-      }
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
-
-  group('Build CRUD property-based (real backend)', () {
-    late BuildRepository repository;
-    late KomodoApiClient client;
-
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      client = buildTestClient(requireConfig(config), RpcRecorder());
-      repository = BuildRepository(client);
-    });
-
-    test('randomized builds survive CRUD roundtrip', () async {
-      final builds = expectRight(await repository.listBuilds());
-      expect(builds, isNotEmpty);
-
-      final seed = builds.first;
-      final seedDetail = expectRight(await repository.getBuild(seed.id));
-      final random = Random(13031);
-      final pendingDeletes = <String>{};
-
-      try {
-        for (var i = 0; i < 5; i++) {
-          final name = 'prop-build-$i-${_randomToken(random)}';
+          final name = 'contract-build-${_randomToken(Random(13021))}';
           final createdJson = await client.write(
             RpcRequest(
               type: 'CreateBuild',
@@ -155,59 +51,172 @@ void registerBuildContractTests() {
               },
             ),
           );
-          KomodoBuild.fromJson(createdJson as Map<String, dynamic>);
+          created = KomodoBuild.fromJson(createdJson as Map<String, dynamic>);
 
-          final createdId = await waitForListItemId(
+          createdId = await waitForListItemId(
             listItems: () async {
               final listed = expectRight(await repository.listBuilds());
               return listed.map((item) => item.toJson()).toList();
             },
             name: name,
           );
-          pendingDeletes.add(createdId);
+          final createdIdValue = createdId;
 
-          final imageTag = 'prop-${_randomToken(random)}';
-          final updated = expectRight(
-            await repository.updateBuildConfig(
-              buildId: createdId,
-              partialConfig: <String, dynamic>{'image_tag': imageTag},
-            ),
+          final updated = await retryAsync(() async {
+            return expectRight(
+              await repository.updateBuildConfig(
+                buildId: createdIdValue,
+                partialConfig: <String, dynamic>{
+                  'auto_increment_version':
+                      !seedDetail.config.autoIncrementVersion,
+                },
+              ),
+            );
+          });
+          expect(updated.id, createdId);
+
+          final updatedFields = await retryAsync(() async {
+            return expectRight(
+              await repository.updateBuildConfig(
+                buildId: createdIdValue,
+                partialConfig: <String, dynamic>{
+                  'use_buildx': !seedDetail.config.useBuildx,
+                  'image_tag': 'test-${_randomToken(Random(13022))}',
+                },
+              ),
+            );
+          });
+          expect(updatedFields.id, createdIdValue);
+
+          final refreshed = expectRight(
+            await repository.getBuild(createdIdValue),
           );
-          expect(updated.config.imageTag, imageTag);
-
-          final refreshed = expectRight(await repository.getBuild(createdId));
-          expect(refreshed.config.imageTag, imageTag);
+          expect(refreshed.config.useBuildx, updatedFields.config.useBuildx);
+          expect(refreshed.config.imageTag, updatedFields.config.imageTag);
 
           await retryAsync(() async {
             await client.write(
               RpcRequest(
                 type: 'DeleteBuild',
-                params: <String, dynamic>{'id': createdId},
+                params: <String, dynamic>{'id': createdIdValue},
               ),
             );
           });
-          pendingDeletes.remove(createdId);
+          deleted = true;
           await expectEventuallyServerFailure(
-            () => repository.getBuild(createdId),
+            () => repository.getBuild(createdIdValue),
           );
+          final afterDelete = expectRight(await repository.listBuilds());
+          expect(afterDelete.any((b) => b.id == createdIdValue), isFalse);
+        } finally {
+          final idToDelete = createdId ?? created?.id;
+          if (!deleted && idToDelete != null) {
+            await retryAsync(() async {
+              await client.write(
+                RpcRequest(
+                  type: 'DeleteBuild',
+                  params: <String, dynamic>{'id': idToDelete},
+                ),
+              );
+            });
+          }
         }
-      } finally {
-        for (final id in pendingDeletes) {
-          await retryAsync(() async {
-            await client.write(
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
+
+  group(
+    'Build CRUD property-based (real backend)',
+    () {
+      late BuildRepository repository;
+      late KomodoApiClient client;
+
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        client = buildTestClient(requireConfig(config), RpcRecorder());
+        repository = BuildRepository(client);
+      });
+
+      test('randomized builds survive CRUD roundtrip', () async {
+        final builds = expectRight(await repository.listBuilds());
+        expect(builds, isNotEmpty);
+
+        final seed = builds.first;
+        final seedDetail = expectRight(await repository.getBuild(seed.id));
+        final random = Random(13031);
+        final pendingDeletes = <String>{};
+
+        try {
+          for (var i = 0; i < 5; i++) {
+            final name = 'prop-build-$i-${_randomToken(random)}';
+            final createdJson = await client.write(
               RpcRequest(
-                type: 'DeleteBuild',
-                params: <String, dynamic>{'id': id},
+                type: 'CreateBuild',
+                params: <String, dynamic>{
+                  'name': name,
+                  'config': seedDetail.config.toJson(),
+                },
               ),
             );
-          });
+            KomodoBuild.fromJson(createdJson as Map<String, dynamic>);
+
+            final createdId = await waitForListItemId(
+              listItems: () async {
+                final listed = expectRight(await repository.listBuilds());
+                return listed.map((item) => item.toJson()).toList();
+              },
+              name: name,
+            );
+            pendingDeletes.add(createdId);
+
+            final imageTag = 'prop-${_randomToken(random)}';
+            final updated = expectRight(
+              await repository.updateBuildConfig(
+                buildId: createdId,
+                partialConfig: <String, dynamic>{'image_tag': imageTag},
+              ),
+            );
+            expect(updated.config.imageTag, imageTag);
+
+            final refreshed = expectRight(await repository.getBuild(createdId));
+            expect(refreshed.config.imageTag, imageTag);
+
+            await retryAsync(() async {
+              await client.write(
+                RpcRequest(
+                  type: 'DeleteBuild',
+                  params: <String, dynamic>{'id': createdId},
+                ),
+              );
+            });
+            pendingDeletes.remove(createdId);
+            await expectEventuallyServerFailure(
+              () => repository.getBuild(createdId),
+            );
+          }
+        } finally {
+          for (final id in pendingDeletes) {
+            await retryAsync(() async {
+              await client.write(
+                RpcRequest(
+                  type: 'DeleteBuild',
+                  params: <String, dynamic>{'id': id},
+                ),
+              );
+            });
+          }
         }
-      }
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
 }
 
 void main() => registerBuildContractTests();

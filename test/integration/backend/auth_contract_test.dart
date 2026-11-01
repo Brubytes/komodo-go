@@ -8,7 +8,7 @@ void registerAuthContractTests() {
   final config = BackendTestConfig.fromEnvironment();
   final missingConfigReason = config == null
       ? 'Set KOMODO_TEST_BASE_URL, KOMODO_TEST_API_KEY, and '
-          'KOMODO_TEST_API_SECRET to run backend tests.'
+            'KOMODO_TEST_API_SECRET to run backend tests.'
       : null;
 
   group('Auth failures (real backend)', () {

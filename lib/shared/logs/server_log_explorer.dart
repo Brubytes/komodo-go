@@ -117,41 +117,46 @@ class _ServerLogExplorerState extends ConsumerState<ServerLogExplorer> {
         ),
       );
     }
-    final size = MediaQuery.sizeOf(context);
-    final logHeight = size.width >= 720
-        ? 620.0
-        : (size.height * 0.6).clamp(320.0, 640.0);
-    return DetailSection(
-      title: widget.title,
-      icon: AppIcons.logs,
-      trailing: ListenableBuilder(
-        listenable: _controller,
-        builder: (context, _) => IconButton(
-          tooltip: 'Refresh logs',
-          onPressed: _controller.loading ? null : _controller.load,
-          icon: const Icon(AppIcons.refresh, size: 20),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ServerLogToolbar(
-            controller: _controller,
-            onAutoRefreshChanged: widget.onAutoRefreshChanged,
-          ),
-          const Gap(10),
-          ServerLogViewer(
-            controller: _controller,
-            height: logHeight,
-            onExpand: () => ServerLogFullscreenPage.open(
-              context,
-              controller: _controller,
-              title: widget.title,
-              onAutoRefreshChanged: widget.onAutoRefreshChanged,
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    // Decide from the local width: the explorer may sit in a narrow pane.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final logHeight = constraints.maxWidth >= 720
+            ? 620.0
+            : (screenHeight * 0.6).clamp(320.0, 640.0);
+        return DetailSection(
+          title: widget.title,
+          icon: AppIcons.logs,
+          trailing: ListenableBuilder(
+            listenable: _controller,
+            builder: (context, _) => IconButton(
+              tooltip: 'Refresh logs',
+              onPressed: _controller.loading ? null : _controller.load,
+              icon: const Icon(AppIcons.refresh, size: 20),
             ),
           ),
-        ],
-      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ServerLogToolbar(
+                controller: _controller,
+                onAutoRefreshChanged: widget.onAutoRefreshChanged,
+              ),
+              const Gap(10),
+              ServerLogViewer(
+                controller: _controller,
+                height: logHeight,
+                onExpand: () => ServerLogFullscreenPage.open(
+                  context,
+                  controller: _controller,
+                  title: widget.title,
+                  onAutoRefreshChanged: widget.onAutoRefreshChanged,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

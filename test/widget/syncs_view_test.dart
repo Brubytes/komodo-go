@@ -50,8 +50,9 @@ void main() {
     }),
   ];
 
-  testWidgets('Syncs list renders sync cards via ResourceListView',
-      (tester) async {
+  testWidgets('Syncs list renders sync cards via ResourceListView', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app(syncs));
     await tester.pumpAndSettle();
 
@@ -61,8 +62,9 @@ void main() {
     expect(find.text('Cluster State'), findsOneWidget);
   });
 
-  testWidgets('search matches sync info fields via syncs_search',
-      (tester) async {
+  testWidgets('search matches sync info fields via syncs_search', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app(syncs));
     await tester.pumpAndSettle();
 

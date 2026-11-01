@@ -12,15 +12,15 @@ void main() {
           'enabled': false,
           'endpoint': {
             'type': 'Slack',
-            'params': {'url': 'http://localhost:7000'}
+            'params': {'url': 'http://localhost:7000'},
           },
           'alert_types': ['ServerCpu', 'ServerMem'],
           'resources': [
             {'type': 'Build', 'id': 'b1'},
-            {'type': 'Alerter', 'id': 'a1'}
+            {'type': 'Alerter', 'id': 'a1'},
           ],
           'except_resources': [
-            {'type': 'Build', 'id': 'b1'}
+            {'type': 'Build', 'id': 'b1'},
           ],
           'maintenance_windows': [
             {
@@ -33,8 +33,8 @@ void main() {
               'minute': 8,
               'duration_minutes': 60,
               'timezone': 'UTC',
-              'enabled': true
-            }
+              'enabled': true,
+            },
           ],
         },
       });
@@ -58,7 +58,7 @@ void main() {
         'updated_at': '2024-01-01',
         'config': {
           'endpoint': {
-            'Custom': {'url': 'https://example.com/hook'}
+            'Custom': {'url': 'https://example.com/hook'},
           },
         },
       });

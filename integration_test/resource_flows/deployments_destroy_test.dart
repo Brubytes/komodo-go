@@ -37,8 +37,9 @@ void registerDeploymentsDestroyTests() {
             .waitUntilVisible();
         await $(find.byKey(const ValueKey('resources_stat_deployments'))).tap();
 
-        final deploymentName =
-            config.isFake ? 'Test Deployment' : config.deploymentName;
+        final deploymentName = config.isFake
+            ? 'Test Deployment'
+            : config.deploymentName;
         await $(find.text(deploymentName)).waitUntilVisible();
 
         if (config.isFake) {
@@ -52,7 +53,9 @@ void registerDeploymentsDestroyTests() {
           ).tap();
 
           await $(
-            find.byKey(const ValueKey('deployment_destroy_confirm_deployment-1')),
+            find.byKey(
+              const ValueKey('deployment_destroy_confirm_deployment-1'),
+            ),
           ).tap();
         } else {
           await $(find.text(deploymentName)).tap();
@@ -68,7 +71,9 @@ void registerDeploymentsDestroyTests() {
           expect(find.text('Test Deployment'), findsNothing);
 
           final destroyCalls = backend.fake!.calls
-              .where((c) => c.path == '/execute' && c.type == 'DestroyDeployment')
+              .where(
+                (c) => c.path == '/execute' && c.type == 'DestroyDeployment',
+              )
               .toList();
           expect(destroyCalls.length, 1);
         }
@@ -76,11 +81,13 @@ void registerDeploymentsDestroyTests() {
         await backend.stop();
       }
     },
-    skip: config.skipReason(
-      requiresDestructive: true,
-      requiredResourceLabel: 'KOMODO_TEST_DEPLOYMENT_NAME',
-      requiredResourceValue: config.deploymentName,
-    ) != null,
+    skip:
+        config.skipReason(
+          requiresDestructive: true,
+          requiredResourceLabel: 'KOMODO_TEST_DEPLOYMENT_NAME',
+          requiredResourceValue: config.deploymentName,
+        ) !=
+        null,
   );
 }
 

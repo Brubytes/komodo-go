@@ -1074,6 +1074,8 @@ class DemoBackend {
         return _alertsPage(params);
       case 'ListUpdates':
         return _updatesPage(params);
+      case 'GetUpdate':
+        return _updateDetail(params['id']?.toString());
       case 'ListGitProviderAccounts':
         return List<Map<String, dynamic>>.from(_gitProviderAccounts);
       case 'ListImageRegistryAccounts':
@@ -1767,6 +1769,30 @@ Map<String, dynamic> _updatesPage(Map<String, dynamic> params) {
     return <String, dynamic>{'updates': <Object>[], 'next_page': null};
   }
   return <String, dynamic>{'updates': _updates, 'next_page': null};
+}
+
+/// Detail for `GetUpdate`: the list item plus a short, successful log.
+Map<String, dynamic> _updateDetail(String? id) {
+  final item = _updates.firstWhere(
+    (update) => update['id'] == id,
+    orElse: () => _updates.first,
+  );
+  final start = item['start_ts'] as int;
+  return <String, dynamic>{
+    ...item,
+    'end_ts': start + 42000,
+    'logs': <Map<String, dynamic>>[
+      <String, dynamic>{
+        'stage': item['operation'],
+        'command': 'komodo run ${item['operation']}',
+        'stdout': 'Started ${item['operation']}\nDone.',
+        'stderr': '',
+        'success': item['success'],
+        'start_ts': start,
+        'end_ts': start + 42000,
+      },
+    ],
+  };
 }
 
 int _readPage(Object? value) {

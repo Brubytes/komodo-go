@@ -206,10 +206,7 @@ class DetailResourceHeader extends StatelessWidget {
             padding: EdgeInsets.zero,
             child: Column(
               children: [
-                for (var i = 0; i < facts.length; i++) ...[
-                  if (i > 0) const _HeaderDivider(),
-                  _FactRow(fact: facts[i]),
-                ],
+                _FactGrid(facts: facts),
                 if (stats.isNotEmpty) ...[
                   if (facts.isNotEmpty) const _HeaderDivider(indent: 0),
                   _StatStrip(stats: stats),
@@ -235,6 +232,46 @@ class DetailResourceHeader extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Fact rows in one column, or two side by side when the card is wide.
+class _FactGrid extends StatelessWidget {
+  const _FactGrid({required this.facts});
+
+  final List<DetailFact> facts;
+
+  /// Local card width from which facts flow into two columns.
+  static const double twoColumnMinWidth = 640;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget column(List<DetailFact> items) => Column(
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0) const _HeaderDivider(),
+          _FactRow(fact: items[i]),
+        ],
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (facts.length < 4 || constraints.maxWidth < twoColumnMinWidth) {
+          return column(facts);
+        }
+        // First half left, second half right, so related facts stay together.
+        final split = (facts.length + 1) ~/ 2;
+        return Row(
+          key: const ValueKey('detail_header_fact_columns'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: column(facts.sublist(0, split))),
+            Expanded(child: column(facts.sublist(split))),
+          ],
+        );
+      },
     );
   }
 }

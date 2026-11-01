@@ -21,7 +21,7 @@ Komodo Go is a Flutter app for controlling the Komodo infrastructure management 
 
 ## Development Commands
 
-Flutter is pinned via FVM (`.fvmrc`) to `3.47.2`. All Flutter commands must be prefixed with `fvm`:
+Flutter is pinned via FVM (`.fvmrc`) to `3.47.8`. All Flutter commands must be prefixed with `fvm`:
 
 ```bash
 # Install dependencies
@@ -48,6 +48,12 @@ fvm flutter test test/unit/features/auth/data/repositories/auth_repository_test.
 # Lint and analyze
 fvm flutter analyze
 
+# Format all hand-written Dart (FVM SDK; skips generated files)
+./scripts/format.sh
+
+# Check formatting without changing files (also run in CI)
+./scripts/format.sh --check
+
 # Clean build artifacts
 fvm flutter clean
 ```
@@ -55,6 +61,7 @@ fvm flutter clean
 ## Coding Style
 
 - Use standard Dart formatting (2-space indentation, trailing commas where appropriate).
+- Formatting: the only way to format is `./scripts/format.sh` (`--check` to verify). It always runs through the FVM-pinned SDK from `.fvmrc` and skips generated files (`*.g.dart`, `*.freezed.dart`, `integration_test/test_bundle.dart`). Do not run a one-off `dart format` on a directory, use a different SDK, or format with an IDE formatter on another version; each produces diffs that fight the pinned formatter.
 - Names:
   - Files: `lower_snake_case.dart`
   - Types: `UpperCamelCase`

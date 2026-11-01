@@ -14,75 +14,84 @@ void registerBuilderContractTests() {
   final config = BackendTestConfig.fromEnvironment();
   final missingConfigReason = config == null
       ? 'Set KOMODO_TEST_BASE_URL, KOMODO_TEST_API_KEY, and '
-          'KOMODO_TEST_API_SECRET to run backend tests.'
+            'KOMODO_TEST_API_SECRET to run backend tests.'
       : null;
 
-  group('Builder CRUD (real backend)', () {
-    late BuilderRepository repository;
-    late KomodoApiClient client;
+  group(
+    'Builder CRUD (real backend)',
+    () {
+      late BuilderRepository repository;
+      late KomodoApiClient client;
 
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      client = buildTestClient(requireConfig(config), RpcRecorder());
-      repository = BuilderRepository(client);
-    });
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        client = buildTestClient(requireConfig(config), RpcRecorder());
+        repository = BuilderRepository(client);
+      });
 
-    test('create/rename/delete builder', () async {
-      BuilderListItem? created;
+      test('create/rename/delete builder', () async {
+        BuilderListItem? created;
 
-      try {
-        final builders = expectRight(await repository.listBuilders());
-        expect(builders, isNotEmpty);
+        try {
+          final builders = expectRight(await repository.listBuilders());
+          expect(builders, isNotEmpty);
 
-        final seed = builders.first;
-        final seedJson = expectRight(
-          await repository.getBuilderJson(builderIdOrName: seed.id),
-        );
-        final seedConfigRaw = seedJson['config'];
-        final seedConfig = seedConfigRaw is Map
-            ? Map<String, dynamic>.from(seedConfigRaw)
-            : <String, dynamic>{};
+          final seed = builders.first;
+          final seedJson = expectRight(
+            await repository.getBuilderJson(builderIdOrName: seed.id),
+          );
+          final seedConfigRaw = seedJson['config'];
+          final seedConfig = seedConfigRaw is Map
+              ? Map<String, dynamic>.from(seedConfigRaw)
+              : <String, dynamic>{};
 
-        final name = 'contract-builder-${_randomToken(Random(5021))}';
-        final createdJson = await client.write(
-          RpcRequest(
-            type: 'CreateBuilder',
-            params: <String, dynamic>{'name': name, 'config': seedConfig},
-          ),
-        );
-        final createdMap = createdJson as Map<String, dynamic>;
-        final createdId = readIdFromMap(createdMap);
+          final name = 'contract-builder-${_randomToken(Random(5021))}';
+          final createdJson = await client.write(
+            RpcRequest(
+              type: 'CreateBuilder',
+              params: <String, dynamic>{'name': name, 'config': seedConfig},
+            ),
+          );
+          final createdMap = createdJson as Map<String, dynamic>;
+          final createdId = readIdFromMap(createdMap);
 
-        final afterCreate = expectRight(await repository.listBuilders());
-        created = afterCreate.firstWhere(
-          (item) => item.id == createdId,
-          orElse: () => BuilderListItem.fromJson(createdMap),
-        );
+          final afterCreate = expectRight(await repository.listBuilders());
+          created = afterCreate.firstWhere(
+            (item) => item.id == createdId,
+            orElse: () => BuilderListItem.fromJson(createdMap),
+          );
 
-        expectRight(
-          await repository.renameBuilder(id: createdId, name: '$name-renamed'),
-        );
+          expectRight(
+            await repository.renameBuilder(
+              id: createdId,
+              name: '$name-renamed',
+            ),
+          );
 
-        final afterRename = expectRight(await repository.listBuilders());
-        final renamed = afterRename.firstWhere((item) => item.id == createdId);
-        expect(renamed.name, '$name-renamed');
+          final afterRename = expectRight(await repository.listBuilders());
+          final renamed = afterRename.firstWhere(
+            (item) => item.id == createdId,
+          );
+          expect(renamed.name, '$name-renamed');
 
-        expectRight(await repository.deleteBuilder(id: createdId));
-        await expectEventuallyServerFailure(
-          () => repository.getBuilderJson(builderIdOrName: createdId),
-        );
-        final afterDelete = expectRight(await repository.listBuilders());
-        expect(afterDelete.any((item) => item.id == createdId), isFalse);
-      } finally {
-        if (created != null) {
-          await repository.deleteBuilder(id: created.id);
+          expectRight(await repository.deleteBuilder(id: createdId));
+          await expectEventuallyServerFailure(
+            () => repository.getBuilderJson(builderIdOrName: createdId),
+          );
+          final afterDelete = expectRight(await repository.listBuilders());
+          expect(afterDelete.any((item) => item.id == createdId), isFalse);
+        } finally {
+          if (created != null) {
+            await repository.deleteBuilder(id: created.id);
+          }
         }
-      }
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
 }
 
 void main() => registerBuilderContractTests();

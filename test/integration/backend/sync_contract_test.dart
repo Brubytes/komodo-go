@@ -14,117 +14,127 @@ void registerSyncContractTests() {
   final config = BackendTestConfig.fromEnvironment();
   final missingConfigReason = config == null
       ? 'Set KOMODO_TEST_BASE_URL, KOMODO_TEST_API_KEY, and '
-          'KOMODO_TEST_API_SECRET to run backend tests.'
+            'KOMODO_TEST_API_SECRET to run backend tests.'
       : null;
 
-  group('Resource sync CRUD (real backend)', () {
-    late SyncRepository repository;
-    late KomodoApiClient client;
+  group(
+    'Resource sync CRUD (real backend)',
+    () {
+      late SyncRepository repository;
+      late KomodoApiClient client;
 
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      client = buildTestClient(requireConfig(config), RpcRecorder());
-      repository = SyncRepository(client);
-    });
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        client = buildTestClient(requireConfig(config), RpcRecorder());
+        repository = SyncRepository(client);
+      });
 
-    test('create/update/delete sync', () async {
-      KomodoResourceSync? created;
-      String? createdId;
-      var deleted = false;
+      test('create/update/delete sync', () async {
+        KomodoResourceSync? created;
+        String? createdId;
+        var deleted = false;
 
-      try {
-        final syncs = expectRight(await repository.listSyncs());
-        expect(syncs, isNotEmpty);
+        try {
+          final syncs = expectRight(await repository.listSyncs());
+          expect(syncs, isNotEmpty);
 
-        final seed = syncs.first;
-        final seedDetail = expectRight(await repository.getSync(seed.id));
+          final seed = syncs.first;
+          final seedDetail = expectRight(await repository.getSync(seed.id));
 
-        final name = 'contract-sync-${_randomToken(Random(12021))}';
-        final createdJson = await client.write(
-          RpcRequest(
-            type: 'CreateResourceSync',
-            params: <String, dynamic>{
-              'name': name,
-              'config': seedDetail.config.toJson(),
-            },
-          ),
-        );
-        created =
-            KomodoResourceSync.fromJson(createdJson as Map<String, dynamic>);
-
-        createdId = await waitForListItemId(
-          listItems: () async {
-            final listed = expectRight(await repository.listSyncs());
-            return listed.map((item) => item.toJson()).toList();
-          },
-          name: name,
-        );
-        final createdIdValue = createdId;
-
-        final updated = await retryAsync(() async {
-          return expectRight(
-            await repository.updateSyncConfig(
-              syncId: createdIdValue,
-              partialConfig: <String, dynamic>{
-                'include_resources': !seedDetail.config.includeResources,
-              },
-            ),
-          );
-        });
-        expect(updated.id, createdId);
-
-        final updatedFlags = await retryAsync(() async {
-          return expectRight(
-            await repository.updateSyncConfig(
-              syncId: createdIdValue,
-              partialConfig: <String, dynamic>{
-                'include_variables': !seedDetail.config.includeVariables,
-                'pending_alert': !seedDetail.config.pendingAlert,
-              },
-            ),
-          );
-        });
-        expect(updatedFlags.id, createdIdValue);
-
-        final refreshed = expectRight(await repository.getSync(createdIdValue));
-        expect(
-          refreshed.config.includeVariables,
-          updatedFlags.config.includeVariables,
-        );
-        expect(refreshed.config.pendingAlert, updatedFlags.config.pendingAlert);
-
-        await retryAsync(() async {
-          await client.write(
+          final name = 'contract-sync-${_randomToken(Random(12021))}';
+          final createdJson = await client.write(
             RpcRequest(
-              type: 'DeleteResourceSync',
-              params: <String, dynamic>{'id': createdIdValue},
+              type: 'CreateResourceSync',
+              params: <String, dynamic>{
+                'name': name,
+                'config': seedDetail.config.toJson(),
+              },
             ),
           );
-        });
-        deleted = true;
-        await expectEventuallyServerFailure(
-          () => repository.getSync(createdIdValue),
-        );
-        final afterDelete = expectRight(await repository.listSyncs());
-        expect(afterDelete.any((s) => s.id == createdIdValue), isFalse);
-      } finally {
-        final idToDelete = createdId ?? created?.id;
-        if (!deleted && idToDelete != null) {
+          created = KomodoResourceSync.fromJson(
+            createdJson as Map<String, dynamic>,
+          );
+
+          createdId = await waitForListItemId(
+            listItems: () async {
+              final listed = expectRight(await repository.listSyncs());
+              return listed.map((item) => item.toJson()).toList();
+            },
+            name: name,
+          );
+          final createdIdValue = createdId;
+
+          final updated = await retryAsync(() async {
+            return expectRight(
+              await repository.updateSyncConfig(
+                syncId: createdIdValue,
+                partialConfig: <String, dynamic>{
+                  'include_resources': !seedDetail.config.includeResources,
+                },
+              ),
+            );
+          });
+          expect(updated.id, createdId);
+
+          final updatedFlags = await retryAsync(() async {
+            return expectRight(
+              await repository.updateSyncConfig(
+                syncId: createdIdValue,
+                partialConfig: <String, dynamic>{
+                  'include_variables': !seedDetail.config.includeVariables,
+                  'pending_alert': !seedDetail.config.pendingAlert,
+                },
+              ),
+            );
+          });
+          expect(updatedFlags.id, createdIdValue);
+
+          final refreshed = expectRight(
+            await repository.getSync(createdIdValue),
+          );
+          expect(
+            refreshed.config.includeVariables,
+            updatedFlags.config.includeVariables,
+          );
+          expect(
+            refreshed.config.pendingAlert,
+            updatedFlags.config.pendingAlert,
+          );
+
           await retryAsync(() async {
             await client.write(
               RpcRequest(
                 type: 'DeleteResourceSync',
-                params: <String, dynamic>{'id': idToDelete},
+                params: <String, dynamic>{'id': createdIdValue},
               ),
             );
           });
+          deleted = true;
+          await expectEventuallyServerFailure(
+            () => repository.getSync(createdIdValue),
+          );
+          final afterDelete = expectRight(await repository.listSyncs());
+          expect(afterDelete.any((s) => s.id == createdIdValue), isFalse);
+        } finally {
+          final idToDelete = createdId ?? created?.id;
+          if (!deleted && idToDelete != null) {
+            await retryAsync(() async {
+              await client.write(
+                RpcRequest(
+                  type: 'DeleteResourceSync',
+                  params: <String, dynamic>{'id': idToDelete},
+                ),
+              );
+            });
+          }
         }
-      }
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
 }
 
 void main() => registerSyncContractTests();

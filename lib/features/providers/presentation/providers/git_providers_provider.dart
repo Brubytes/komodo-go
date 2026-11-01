@@ -16,12 +16,11 @@ class GitProviders extends _$GitProviders {
 
     final result = await repository.listAccounts();
     final accounts = unwrapOrThrow(result);
-    return accounts
-      ..sort(
-        (a, b) => a.domain.compareTo(b.domain) != 0
-            ? a.domain.compareTo(b.domain)
-            : a.username.compareTo(b.username),
-      );
+    return accounts..sort(
+      (a, b) => a.domain.compareTo(b.domain) != 0
+          ? a.domain.compareTo(b.domain)
+          : a.username.compareTo(b.username),
+    );
   }
 
   Future<void> refresh() async {

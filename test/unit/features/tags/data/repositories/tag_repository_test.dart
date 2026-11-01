@@ -58,25 +58,27 @@ void main() {
       expect(request.params, <String, dynamic>{});
     });
 
-    test('createTag sends CreateTag via write with name and color token',
-        () async {
-      when(() => client.write(any())).thenAnswer((_) async => _tagJson);
+    test(
+      'createTag sends CreateTag via write with name and color token',
+      () async {
+        when(() => client.write(any())).thenAnswer((_) async => _tagJson);
 
-      final result = await repository.createTag(
-        name: 'prod',
-        color: TagColor.darkGreen,
-      );
+        final result = await repository.createTag(
+          name: 'prod',
+          color: TagColor.darkGreen,
+        );
 
-      expect(_rightOrFail(result).id, 'tag-1');
+        expect(_rightOrFail(result).id, 'tag-1');
 
-      final request = capturedWrite();
-      expect(request.type, 'CreateTag');
-      expect(request.params, <String, dynamic>{
-        'name': 'prod',
-        'color': 'DarkGreen',
-      });
-      verifyNever(() => client.execute(any()));
-    });
+        final request = capturedWrite();
+        expect(request.type, 'CreateTag');
+        expect(request.params, <String, dynamic>{
+          'name': 'prod',
+          'color': 'DarkGreen',
+        });
+        verifyNever(() => client.execute(any()));
+      },
+    );
 
     test('createTag sends null color when color is omitted', () async {
       when(() => client.write(any())).thenAnswer((_) async => _tagJson);
@@ -118,23 +120,25 @@ void main() {
       });
     });
 
-    test('updateTagColor sends UpdateTagColor via write with tag and token',
-        () async {
-      when(() => client.write(any())).thenAnswer((_) async => _tagJson);
+    test(
+      'updateTagColor sends UpdateTagColor via write with tag and token',
+      () async {
+        when(() => client.write(any())).thenAnswer((_) async => _tagJson);
 
-      final result = await repository.updateTagColor(
-        tagIdOrName: 'tag-1',
-        color: TagColor.lightBlue,
-      );
+        final result = await repository.updateTagColor(
+          tagIdOrName: 'tag-1',
+          color: TagColor.lightBlue,
+        );
 
-      expect(_rightOrFail(result).id, 'tag-1');
+        expect(_rightOrFail(result).id, 'tag-1');
 
-      final request = capturedWrite();
-      expect(request.type, 'UpdateTagColor');
-      expect(request.params, <String, dynamic>{
-        'tag': 'tag-1',
-        'color': 'LightBlue',
-      });
-    });
+        final request = capturedWrite();
+        expect(request.type, 'UpdateTagColor');
+        expect(request.params, <String, dynamic>{
+          'tag': 'tag-1',
+          'color': 'LightBlue',
+        });
+      },
+    );
   });
 }

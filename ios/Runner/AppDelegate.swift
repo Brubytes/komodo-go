@@ -12,5 +12,6 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    VerticalBarBridge.register(messenger: engineBridge.applicationRegistrar.messenger())
   }
 }

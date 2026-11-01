@@ -73,8 +73,7 @@ void main() {
       if (!deletedKeys.contains(key)) {
         throw PlatformException(
           code: 'Unexpected security result code',
-          message:
-              'Code: -25299, Message: The specified item already exists in the keychain.',
+          message: 'Code: -25299, Message: The specified item already exists in the keychain.',
           details: -25299,
         );
       }

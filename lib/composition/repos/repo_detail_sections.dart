@@ -452,8 +452,7 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
                     labelText: 'Server',
                     prefixIcon: const Icon(AppIcons.server),
                     helperStyle: TextStyle(color: scheme.onSurfaceVariant),
-                    helperText:
-                        'Changing server may cleanup the repo on the old server.',
+                    helperText: 'Changing server may cleanup the repo on the old server.',
                   ),
                   items: [
                     const KomodoSelectMenuItem(value: '', label: '—'),
@@ -475,8 +474,7 @@ class RepoConfigEditorContentState extends State<RepoConfigEditorContent> {
                     labelText: 'Server ID',
                     prefixIcon: const Icon(AppIcons.server),
                     helperStyle: TextStyle(color: scheme.onSurfaceVariant),
-                    helperText:
-                        'Changing server may cleanup the repo on the old server.',
+                    helperText: 'Changing server may cleanup the repo on the old server.',
                   ),
                 ),
               if (sortedServers.isNotEmpty && !serverIdInList) ...[

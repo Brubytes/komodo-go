@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/providers/theme_provider.dart';
@@ -12,6 +11,7 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/segmented/app_segmented_control.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -20,7 +20,10 @@ import 'package:komodo_go/features/auth/presentation/providers/auth_provider.dar
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsView extends ConsumerWidget {
-  const SettingsView({super.key});
+  const SettingsView({this.activeRoute, super.key});
+
+  /// Settings page shown in the detail pane, highlighted in the index.
+  final String? activeRoute;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -33,13 +36,17 @@ class SettingsView extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: const MainAppBar(title: 'Settings', icon: AppIcons.settings),
+      appBar: const MainAppBar(
+        title: 'Settings',
+        icon: AppIcons.settings,
+        tabRoot: true,
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
           AppSpacing.lg,
           AppSpacing.lg,
-          28,
+          28 + MediaQuery.paddingOf(context).bottom,
         ),
         children: [
           const Gap(AppSpacing.xs),
@@ -51,7 +58,8 @@ class SettingsView extends ConsumerWidget {
             title: 'Connections',
             subtitle: connection?.baseUrl,
             trailing: _CardTrailing(label: connection?.name, showChevron: true),
-            onTap: () => context.push(AppRoutes.connections),
+            selected: activeRoute == AppRoutes.connections,
+            onTap: () => context.openDetail(AppRoutes.connections),
           ),
           if (coreVersion != null) ...[
             const Gap(AppSpacing.sm),
@@ -117,7 +125,8 @@ class SettingsView extends ConsumerWidget {
             title: 'Auto-update review',
             subtitle: 'Check images and review updates before deployment',
             trailing: const _CardTrailing(showChevron: true),
-            onTap: () => unawaited(context.push(AppRoutes.autoUpdateReview)),
+            selected: activeRoute == AppRoutes.autoUpdateReview,
+            onTap: () => context.openDetail(AppRoutes.autoUpdateReview),
           ),
           const Gap(AppSpacing.sm),
           _SettingsCardTile(
@@ -127,7 +136,8 @@ class SettingsView extends ConsumerWidget {
             title: 'Variables',
             subtitle: 'View and edit global variables',
             trailing: const _CardTrailing(showChevron: true),
-            onTap: () => unawaited(context.push(AppRoutes.komodoVariables)),
+            selected: activeRoute == AppRoutes.komodoVariables,
+            onTap: () => context.openDetail(AppRoutes.komodoVariables),
           ),
           const Gap(AppSpacing.sm),
           _SettingsCardTile(
@@ -137,7 +147,8 @@ class SettingsView extends ConsumerWidget {
             title: 'Tags',
             subtitle: 'View and edit tags',
             trailing: const _CardTrailing(showChevron: true),
-            onTap: () => unawaited(context.push(AppRoutes.komodoTags)),
+            selected: activeRoute == AppRoutes.komodoTags,
+            onTap: () => context.openDetail(AppRoutes.komodoTags),
           ),
           const Gap(AppSpacing.sm),
           _SettingsCardTile(
@@ -147,7 +158,8 @@ class SettingsView extends ConsumerWidget {
             title: 'Providers',
             subtitle: 'Manage git and registry accounts',
             trailing: const _CardTrailing(showChevron: true),
-            onTap: () => unawaited(context.push(AppRoutes.komodoProviders)),
+            selected: activeRoute == AppRoutes.komodoProviders,
+            onTap: () => context.openDetail(AppRoutes.komodoProviders),
           ),
           const Gap(AppSpacing.sm),
           _SettingsCardTile(
@@ -157,7 +169,8 @@ class SettingsView extends ConsumerWidget {
             title: 'Builders',
             subtitle: 'View and manage builders',
             trailing: const _CardTrailing(showChevron: true),
-            onTap: () => unawaited(context.push(AppRoutes.komodoBuilders)),
+            selected: activeRoute == AppRoutes.komodoBuilders,
+            onTap: () => context.openDetail(AppRoutes.komodoBuilders),
           ),
           const Gap(AppSpacing.sm),
           _SettingsCardTile(
@@ -167,7 +180,8 @@ class SettingsView extends ConsumerWidget {
             title: 'Alerters',
             subtitle: 'View and manage alerters',
             trailing: const _CardTrailing(showChevron: true),
-            onTap: () => unawaited(context.push(AppRoutes.komodoAlerters)),
+            selected: activeRoute == AppRoutes.komodoAlerters,
+            onTap: () => context.openDetail(AppRoutes.komodoAlerters),
           ),
           const Gap(20),
           const _SettingsSectionHeader(title: 'About'),
@@ -177,7 +191,8 @@ class SettingsView extends ConsumerWidget {
             accentColor: scheme.primary,
             title: 'About Komodo Go',
             trailing: const _CardTrailing(showChevron: true),
-            onTap: () => context.push(AppRoutes.credits),
+            selected: activeRoute == AppRoutes.credits,
+            onTap: () => context.openDetail(AppRoutes.credits),
           ),
           const Gap(AppSpacing.sm),
           _SettingsCardTile(
@@ -295,6 +310,7 @@ class _SettingsCardTile extends StatelessWidget {
     this.onTap,
     this.trailing,
     this.enabled = true,
+    this.selected = false,
     super.key,
   });
 
@@ -305,6 +321,7 @@ class _SettingsCardTile extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? trailing;
   final bool enabled;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -313,68 +330,73 @@ class _SettingsCardTile extends StatelessWidget {
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppCardSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: cardRadius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: enabled ? onTap : null,
+    return SelectionHighlight(
+      selected: selected,
+      child: AppCardSurface(
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
           borderRadius: cardRadius,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: enabled ? onTap : null,
+            borderRadius: cardRadius,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: accentColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(icon, size: 20, color: accentColor),
                   ),
-                  child: Icon(icon, size: 20, color: accentColor),
-                ),
-                const Gap(AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      if (subtitle != null) ...[
-                        const Gap(AppSpacing.xxs),
+                  const Gap(AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          subtitle!,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            height: 1.25,
+                          title,
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
+                        if (subtitle != null) ...[
+                          const Gap(AppSpacing.xxs),
+                          Text(
+                            subtitle!,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              height: 1.25,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                const Gap(AppSpacing.md),
-                DefaultTextStyle.merge(
-                  style: TextStyle(color: scheme.onSurfaceVariant),
-                  child:
-                      trailing ??
-                      Icon(
-                        AppIcons.chevron,
-                        color: scheme.onSurfaceVariant.withValues(alpha: 0.65),
-                      ),
-                ),
-              ],
+                  const Gap(AppSpacing.md),
+                  DefaultTextStyle.merge(
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                    child:
+                        trailing ??
+                        Icon(
+                          AppIcons.chevron,
+                          color: scheme.onSurfaceVariant.withValues(
+                            alpha: 0.65,
+                          ),
+                        ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

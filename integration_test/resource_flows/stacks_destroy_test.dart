@@ -38,7 +38,8 @@ void registerStacksDestroyTests() {
         if (config.isFake) {
           // Open overflow menu for the first stack card.
           await $(find.byKey(const ValueKey('stack_card_menu_stack-1'))).tap();
-          await $(find.byKey(const ValueKey('stack_card_destroy_stack-1'))).tap();
+          await $(find.byKey(const ValueKey('stack_card_destroy_stack-1')))
+              .tap();
         } else {
           await $(find.text(stackName)).tap();
           await $(find.byIcon(AppIcons.moreVertical)).tap();
@@ -61,11 +62,13 @@ void registerStacksDestroyTests() {
         await backend.stop();
       }
     },
-    skip: config.skipReason(
-      requiresDestructive: true,
-      requiredResourceLabel: 'KOMODO_TEST_STACK_NAME',
-      requiredResourceValue: config.stackName,
-    ) != null,
+    skip:
+        config.skipReason(
+          requiresDestructive: true,
+          requiredResourceLabel: 'KOMODO_TEST_STACK_NAME',
+          requiredResourceValue: config.stackName,
+        ) !=
+        null,
   );
 }
 

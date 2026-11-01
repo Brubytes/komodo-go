@@ -44,7 +44,9 @@ void registerContainersLogsActionsTests() {
 
         if (backend.isFake) {
           final restartCalls = backend.fake!.calls
-              .where((c) => c.path == '/execute' && c.type == 'RestartContainer')
+              .where(
+                (c) => c.path == '/execute' && c.type == 'RestartContainer',
+              )
               .toList();
           expect(restartCalls.length, 1);
 
@@ -62,11 +64,13 @@ void registerContainersLogsActionsTests() {
         await backend.stop();
       }
     },
-    skip: config.skipReason(
-      requiresDestructive: true,
-      requiredResourceLabel: 'KOMODO_TEST_CONTAINER_ID',
-      requiredResourceValue: config.containerId,
-    ) != null,
+    skip:
+        config.skipReason(
+          requiresDestructive: true,
+          requiredResourceLabel: 'KOMODO_TEST_CONTAINER_ID',
+          requiredResourceValue: config.containerId,
+        ) !=
+        null,
   );
 }
 

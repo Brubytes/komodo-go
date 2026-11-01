@@ -38,9 +38,13 @@ class PatrolTestConfig {
     const stackNameRaw = String.fromEnvironment('KOMODO_TEST_STACK_NAME');
     const serverNameRaw = String.fromEnvironment('KOMODO_TEST_SERVER_NAME');
     const buildNameRaw = String.fromEnvironment('KOMODO_TEST_BUILD_NAME');
-    const procedureNameRaw = String.fromEnvironment('KOMODO_TEST_PROCEDURE_NAME');
+    const procedureNameRaw = String.fromEnvironment(
+      'KOMODO_TEST_PROCEDURE_NAME',
+    );
     const actionNameRaw = String.fromEnvironment('KOMODO_TEST_ACTION_NAME');
-    const containerNameRaw = String.fromEnvironment('KOMODO_TEST_CONTAINER_NAME');
+    const containerNameRaw = String.fromEnvironment(
+      'KOMODO_TEST_CONTAINER_NAME',
+    );
     const containerIdRaw = String.fromEnvironment('KOMODO_TEST_CONTAINER_ID');
     const deploymentNameRaw = String.fromEnvironment(
       'KOMODO_TEST_DEPLOYMENT_NAME',

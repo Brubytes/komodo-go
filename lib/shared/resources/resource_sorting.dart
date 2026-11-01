@@ -30,8 +30,7 @@ enum ResourceSortMode {
   name('Name'),
 
   /// Most recent timestamp first (only for kinds exposing a timestamp).
-  recentlyUpdated('Recently updated')
-  ;
+  recentlyUpdated('Recently updated');
 
   const ResourceSortMode(this.label);
 

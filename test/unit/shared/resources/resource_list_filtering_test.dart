@@ -57,8 +57,7 @@ void main() {
       );
     });
 
-    test('tag filter matches raw tag values case/whitespace-insensitively',
-        () {
+    test('tag filter matches raw tag values case/whitespace-insensitively', () {
       expect(_filter([plain, tagged], selectedTags: {'T1'}), [tagged]);
       expect(_filter([plain, tagged], selectedTags: {'prod'}), [tagged]);
       expect(_filter([plain, tagged], selectedTags: {'other'}), isEmpty);

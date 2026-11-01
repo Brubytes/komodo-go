@@ -50,8 +50,9 @@ void main() {
     }),
   ];
 
-  testWidgets('Actions list renders action cards via ResourceListView',
-      (tester) async {
+  testWidgets('Actions list renders action cards via ResourceListView', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app(actions));
     await tester.pumpAndSettle();
 
@@ -61,8 +62,9 @@ void main() {
     expect(find.byKey(const ValueKey('action_card_a2')), findsOneWidget);
   });
 
-  testWidgets('search narrows actions by name via actions_search field',
-      (tester) async {
+  testWidgets('search narrows actions by name via actions_search field', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app(actions));
     await tester.pumpAndSettle();
 

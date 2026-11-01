@@ -21,10 +21,15 @@ import 'package:komodo_go/composition/settings/settings_view.dart';
 import 'package:komodo_go/composition/stacks/stack_detail_view.dart';
 import 'package:komodo_go/composition/stacks/stacks_list_view.dart';
 import 'package:komodo_go/composition/syncs/sync_detail_view.dart';
+import 'package:komodo_go/core/platform/vertical_bar_info.dart';
 import 'package:komodo_go/core/router/route_observer.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
+import 'package:komodo_go/core/router/split_aware_page.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/breakpoints.dart';
 import 'package:komodo_go/core/widgets/adaptive_bottom_navigation_bar.dart';
+import 'package:komodo_go/core/widgets/adaptive_navigation_rail.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/features/actions/presentation/views/actions_list_view.dart';
 import 'package:komodo_go/features/alerters/presentation/views/alerters_view.dart';
 import 'package:komodo_go/features/auth/data/models/auth_state.dart';
@@ -35,6 +40,8 @@ import 'package:komodo_go/features/builders/presentation/views/builders_view.dar
 import 'package:komodo_go/features/builds/presentation/views/builds_list_view.dart';
 import 'package:komodo_go/features/containers/presentation/views/container_detail_view.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/alerts_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/notifications_tab_provider.dart';
+import 'package:komodo_go/features/notifications/presentation/views/alert_detail_view.dart';
 import 'package:komodo_go/features/notifications/presentation/views/notifications_view.dart';
 import 'package:komodo_go/features/notifications/presentation/views/update_detail_view.dart';
 import 'package:komodo_go/features/procedures/presentation/views/procedures_list_view.dart';
@@ -53,8 +60,130 @@ part 'app_router.g.dart';
 Page<void> _noTransitionTabPage(Widget child) =>
     NoTransitionPage<void>(child: child);
 
-Page<void> _appStackPage(GoRouterState state, Widget child) =>
-    MaterialPage<void>(key: state.pageKey, child: child);
+Page<void> _appStackPage(
+  GoRouterState state,
+  Widget child, {
+  double splitMinWidth = kListDetailSplitMinWidth,
+}) => SplitAwarePage(
+  key: state.pageKey,
+  splitMinWidth: splitMinWidth,
+  child: child,
+);
+
+/// Stack page showing [detail] next to [list] on wide windows and alone on
+/// narrow ones. [list] is the same list the list route shows, with the open
+/// item selected.
+Page<void> _splitPage(
+  GoRouterState state, {
+  required Widget list,
+  required Widget detail,
+  required IconData icon,
+  required String label,
+  double splitMinWidth = kListDetailSplitMinWidth,
+  double? fixedListWidth,
+  double? singlePaneMaxWidth,
+}) {
+  final layout = ListDetailLayout(
+    list: list,
+    detail: detail,
+    placeholder: ListDetailPlaceholder(icon: icon, label: label),
+    splitMinWidth: splitMinWidth,
+    minListWidth: fixedListWidth ?? 320,
+    maxListWidth: fixedListWidth ?? 420,
+    singlePaneMaxWidth: singlePaneMaxWidth,
+  );
+  return _appStackPage(state, layout, splitMinWidth: splitMinWidth);
+}
+
+/// Settings split only on tablet-landscape widths; below that the index is a
+/// single readable column, like on phones.
+const double _settingsSplitMinWidth = 960;
+const double _settingsListWidth = 380;
+const double _settingsColumnMaxWidth = 720;
+
+/// Resolves resource names through the composed resolver, which knows every
+/// feature's resources.
+Widget _withComposedNames(Widget child) => ProviderScope(
+  overrides: [
+    resourceNameResolverProvider.overrideWith(
+      (ref) => ref.watch(composedResourceNameResolverProvider),
+    ),
+  ],
+  child: child,
+);
+
+/// `/resources/<path>` list route with its `new` and `:id` children, all
+/// rendered as list/detail layouts.
+GoRoute _resourceRoute({
+  required String path,
+  required IconData icon,
+  required String noun,
+  required String fallbackName,
+  required Widget Function(String? selectedId) list,
+  required Widget Function(String id, String name) detail,
+  ResourceKind? createKind,
+}) {
+  final label = 'Select a $noun';
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => _appStackPage(
+      state,
+      ListDetailLayout(
+        list: list(null),
+        placeholder: ListDetailPlaceholder(icon: icon, label: label),
+      ),
+    ),
+    routes: [
+      if (createKind != null)
+        GoRoute(
+          path: 'new',
+          pageBuilder: (context, state) => _splitPage(
+            state,
+            list: list(null),
+            detail: ResourceCreationView(kind: createKind),
+            icon: icon,
+            label: label,
+          ),
+        ),
+      GoRoute(
+        path: ':id',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final name = state.uri.queryParameters['name'] ?? fallbackName;
+          return _splitPage(
+            state,
+            list: list(id),
+            detail: detail(id, name),
+            icon: icon,
+            label: label,
+          );
+        },
+      ),
+    ],
+  );
+}
+
+/// `/settings/<path>` page: the settings index with the page beside it on
+/// wide windows.
+GoRoute _settingsRoute({
+  required String path,
+  required String location,
+  required Widget page,
+  List<RouteBase> routes = const [],
+}) => GoRoute(
+  path: path,
+  pageBuilder: (context, state) => _splitPage(
+    state,
+    list: SettingsView(activeRoute: location),
+    detail: page,
+    icon: AppIcons.settings,
+    label: 'Select a setting',
+    splitMinWidth: _settingsSplitMinWidth,
+    fixedListWidth: _settingsListWidth,
+    singlePaneMaxWidth: _settingsColumnMaxWidth,
+  ),
+  routes: routes,
+);
 
 /// Route paths
 abstract class AppRoutes {
@@ -66,6 +195,7 @@ abstract class AppRoutes {
   static const containerDetail = '/containers/:serverId/:container';
   static const notifications = '/notifications';
   static const updateDetails = '$notifications/updates';
+  static const alertDetails = '$notifications/alerts';
   static const settings = '/settings';
 
   static const servers = '$resources/servers';
@@ -144,13 +274,15 @@ GoRouter appRouter(Ref ref) {
       // Startup splash while auth state is being restored/validated
       GoRoute(
         path: AppRoutes.splash,
-        builder: (context, state) => const AuthLoadingView(),
+        builder: (context, state) =>
+            const VerticalBarSafeArea(child: AuthLoadingView()),
       ),
 
       // Login
       GoRoute(
         path: AppRoutes.login,
-        builder: (context, state) => const LoginView(),
+        builder: (context, state) =>
+            const VerticalBarSafeArea(child: LoginView()),
       ),
 
       // Bottom navigation with stateful branch navigators.
@@ -176,212 +308,96 @@ GoRouter appRouter(Ref ref) {
                 pageBuilder: (context, state) =>
                     _noTransitionTabPage(const ResourcesView()),
                 routes: [
-                  GoRoute(
+                  _resourceRoute(
                     path: 'servers',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const ServersListView()),
-                    routes: [
-                      GoRoute(
-                        path: 'new',
-                        pageBuilder: (context, state) => _appStackPage(
-                          state,
-                          const ResourceCreationView(
-                            kind: ResourceKind.servers,
-                          ),
-                        ),
-                      ),
-                      GoRoute(
-                        path: ':id',
-                        pageBuilder: (context, state) {
-                          final id = state.pathParameters['id']!;
-                          final name =
-                              state.uri.queryParameters['name'] ?? 'Server';
-                          return _appStackPage(
-                            state,
-                            AdvancedServerDetailView(
-                              serverId: id,
-                              serverName: name,
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                    icon: AppIcons.server,
+                    noun: 'server',
+                    fallbackName: 'Server',
+                    createKind: ResourceKind.servers,
+                    list: (selectedId) =>
+                        ServersListView(selectedId: selectedId),
+                    detail: (id, name) => AdvancedServerDetailView(
+                      serverId: id,
+                      serverName: name,
+                    ),
                   ),
-                  GoRoute(
+                  _resourceRoute(
                     path: 'deployments',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const DeploymentsListView()),
-                    routes: [
-                      GoRoute(
-                        path: 'new',
-                        pageBuilder: (context, state) => _appStackPage(
-                          state,
-                          const ResourceCreationView(
-                            kind: ResourceKind.deployments,
-                          ),
-                        ),
-                      ),
-                      GoRoute(
-                        path: ':id',
-                        pageBuilder: (context, state) {
-                          final id = state.pathParameters['id']!;
-                          final name =
-                              state.uri.queryParameters['name'] ?? 'Deployment';
-                          return _appStackPage(
-                            state,
-                            DeploymentDetailView(
-                              deploymentId: id,
-                              deploymentName: name,
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                    icon: AppIcons.deployments,
+                    noun: 'deployment',
+                    fallbackName: 'Deployment',
+                    createKind: ResourceKind.deployments,
+                    list: (selectedId) =>
+                        DeploymentsListView(selectedId: selectedId),
+                    detail: (id, name) => DeploymentDetailView(
+                      deploymentId: id,
+                      deploymentName: name,
+                    ),
                   ),
-                  GoRoute(
+                  _resourceRoute(
                     path: 'stacks',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const StacksListView()),
-                    routes: [
-                      GoRoute(
-                        path: 'new',
-                        pageBuilder: (context, state) => _appStackPage(
-                          state,
-                          const ResourceCreationView(kind: ResourceKind.stacks),
-                        ),
-                      ),
-                      GoRoute(
-                        path: ':id',
-                        pageBuilder: (context, state) {
-                          final id = state.pathParameters['id']!;
-                          final name =
-                              state.uri.queryParameters['name'] ?? 'Stack';
-                          return _appStackPage(
-                            state,
-                            StackDetailView(stackId: id, stackName: name),
-                          );
-                        },
-                      ),
-                    ],
+                    icon: AppIcons.stacks,
+                    noun: 'stack',
+                    fallbackName: 'Stack',
+                    createKind: ResourceKind.stacks,
+                    list: (selectedId) =>
+                        StacksListView(selectedId: selectedId),
+                    detail: (id, name) =>
+                        StackDetailView(stackId: id, stackName: name),
                   ),
-                  GoRoute(
+                  _resourceRoute(
                     path: 'repos',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const ReposListView()),
-                    routes: [
-                      GoRoute(
-                        path: ':id',
-                        pageBuilder: (context, state) {
-                          final id = state.pathParameters['id']!;
-                          final name =
-                              state.uri.queryParameters['name'] ?? 'Repo';
-                          return _appStackPage(
-                            state,
-                            RepoDetailView(repoId: id, repoName: name),
-                          );
-                        },
-                      ),
-                    ],
+                    icon: AppIcons.repos,
+                    noun: 'repo',
+                    fallbackName: 'Repo',
+                    list: (selectedId) => ReposListView(selectedId: selectedId),
+                    detail: (id, name) =>
+                        RepoDetailView(repoId: id, repoName: name),
                   ),
-                  GoRoute(
+                  _resourceRoute(
                     path: 'syncs',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const SyncsListView()),
-                    routes: [
-                      GoRoute(
-                        path: ':id',
-                        pageBuilder: (context, state) {
-                          final id = state.pathParameters['id']!;
-                          final name =
-                              state.uri.queryParameters['name'] ?? 'Sync';
-                          return _appStackPage(
-                            state,
-                            SyncDetailView(syncId: id, syncName: name),
-                          );
-                        },
-                      ),
-                    ],
+                    icon: AppIcons.syncs,
+                    noun: 'sync',
+                    fallbackName: 'Sync',
+                    list: (selectedId) => SyncsListView(selectedId: selectedId),
+                    detail: (id, name) =>
+                        SyncDetailView(syncId: id, syncName: name),
                   ),
-                  GoRoute(
+                  _resourceRoute(
                     path: 'builds',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const BuildsListView()),
-                    routes: [
-                      GoRoute(
-                        path: ':id',
-                        pageBuilder: (context, state) {
-                          final id = state.pathParameters['id']!;
-                          final name =
-                              state.uri.queryParameters['name'] ?? 'Build';
-                          return _appStackPage(
-                            state,
-                            BuildDetailView(buildId: id, buildName: name),
-                          );
-                        },
-                      ),
-                    ],
+                    icon: AppIcons.builds,
+                    noun: 'build',
+                    fallbackName: 'Build',
+                    list: (selectedId) =>
+                        BuildsListView(selectedId: selectedId),
+                    detail: (id, name) =>
+                        BuildDetailView(buildId: id, buildName: name),
                   ),
-                  GoRoute(
+                  _resourceRoute(
                     path: 'procedures',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const ProceduresListView()),
-                    routes: [
-                      GoRoute(
-                        path: 'new',
-                        pageBuilder: (context, state) => _appStackPage(
-                          state,
-                          const ResourceCreationView(
-                            kind: ResourceKind.procedures,
-                          ),
-                        ),
-                      ),
-                      GoRoute(
-                        path: ':id',
-                        pageBuilder: (context, state) {
-                          final id = state.pathParameters['id']!;
-                          final name =
-                              state.uri.queryParameters['name'] ?? 'Procedure';
-                          return _appStackPage(
-                            state,
-                            AdvancedProcedureDetailView(
-                              procedureId: id,
-                              procedureName: name,
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                    icon: AppIcons.procedures,
+                    noun: 'procedure',
+                    fallbackName: 'Procedure',
+                    createKind: ResourceKind.procedures,
+                    list: (selectedId) =>
+                        ProceduresListView(selectedId: selectedId),
+                    detail: (id, name) => AdvancedProcedureDetailView(
+                      procedureId: id,
+                      procedureName: name,
+                    ),
                   ),
-                  GoRoute(
+                  _resourceRoute(
                     path: 'actions',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const ActionsListView()),
-                    routes: [
-                      GoRoute(
-                        path: 'new',
-                        pageBuilder: (context, state) => _appStackPage(
-                          state,
-                          const ResourceCreationView(
-                            kind: ResourceKind.actions,
-                          ),
-                        ),
-                      ),
-                      GoRoute(
-                        path: ':id',
-                        pageBuilder: (context, state) {
-                          final id = state.pathParameters['id']!;
-                          final name =
-                              state.uri.queryParameters['name'] ?? 'Action';
-                          return _appStackPage(
-                            state,
-                            AdvancedActionDetailView(
-                              actionId: id,
-                              actionName: name,
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                    icon: AppIcons.actions,
+                    noun: 'action',
+                    fallbackName: 'Action',
+                    createKind: ResourceKind.actions,
+                    list: (selectedId) =>
+                        ActionsListView(selectedId: selectedId),
+                    detail: (id, name) => AdvancedActionDetailView(
+                      actionId: id,
+                      actionName: name,
+                    ),
                   ),
                 ],
               ),
@@ -392,23 +408,35 @@ GoRouter appRouter(Ref ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.containers,
-                pageBuilder: (context, state) =>
-                    _noTransitionTabPage(const ContainersView()),
+                pageBuilder: (context, state) => _noTransitionTabPage(
+                  const ListDetailLayout(
+                    list: ContainersView(),
+                    placeholder: ListDetailPlaceholder(
+                      icon: AppIcons.containers,
+                      label: 'Select a container',
+                    ),
+                  ),
+                ),
                 routes: [
                   GoRoute(
                     path: ':serverId/:container',
                     pageBuilder: (context, state) {
                       final serverId = state.pathParameters['serverId']!;
                       final container = state.pathParameters['container']!;
-                      return _appStackPage(
+                      return _splitPage(
                         state,
-                        ContainerDetailView(
+                        list: ContainersView(
+                          selectedId: '$serverId/$container',
+                        ),
+                        detail: ContainerDetailView(
                           serverId: serverId,
                           containerIdOrName: container,
                           initialItem: state.extra is ContainerOverviewItem
                               ? state.extra! as ContainerOverviewItem
                               : null,
                         ),
+                        icon: AppIcons.containers,
+                        label: 'Select a container',
                       );
                     },
                   ),
@@ -422,34 +450,28 @@ GoRouter appRouter(Ref ref) {
               GoRoute(
                 path: AppRoutes.notifications,
                 pageBuilder: (context, state) => _noTransitionTabPage(
-                  ProviderScope(
-                    overrides: [
-                      resourceNameResolverProvider.overrideWith(
-                        (ref) =>
-                            ref.watch(composedResourceNameResolverProvider),
-                      ),
-                    ],
-                    child: const NotificationsView(),
-                  ),
+                  _withComposedNames(const NotificationsPane()),
                 ),
                 routes: [
                   GoRoute(
                     path: 'updates/:id',
-                    pageBuilder: (context, state) => _appStackPage(
-                      state,
-                      ProviderScope(
-                        overrides: [
-                          resourceNameResolverProvider.overrideWith(
-                            (ref) => ref.watch(
-                              composedResourceNameResolverProvider,
-                            ),
-                          ),
-                        ],
-                        child: UpdateDetailView(
-                          updateId: state.pathParameters['id']!,
-                        ),
-                      ),
-                    ),
+                    pageBuilder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return _appStackPage(
+                        state,
+                        _withComposedNames(NotificationsPane(updateId: id)),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'alerts/:id',
+                    pageBuilder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return _appStackPage(
+                        state,
+                        _withComposedNames(NotificationsPane(alertId: id)),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -460,60 +482,74 @@ GoRouter appRouter(Ref ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.settings,
-                pageBuilder: (context, state) =>
-                    _noTransitionTabPage(const SettingsView()),
+                pageBuilder: (context, state) => _noTransitionTabPage(
+                  const ListDetailLayout(
+                    list: SettingsView(),
+                    placeholder: ListDetailPlaceholder(
+                      icon: AppIcons.settings,
+                      label: 'Select a setting',
+                    ),
+                    splitMinWidth: _settingsSplitMinWidth,
+                    minListWidth: _settingsListWidth,
+                    maxListWidth: _settingsListWidth,
+                    singlePaneMaxWidth: _settingsColumnMaxWidth,
+                  ),
+                ),
                 routes: [
-                  GoRoute(
+                  _settingsRoute(
                     path: 'connections',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const ConnectionsView()),
+                    location: AppRoutes.connections,
+                    page: const ConnectionsView(),
                   ),
-                  GoRoute(
+                  _settingsRoute(
                     path: 'komodo/auto-updates',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const AutoUpdateReviewView()),
+                    location: AppRoutes.autoUpdateReview,
+                    page: const AutoUpdateReviewView(),
                   ),
-                  GoRoute(
+                  _settingsRoute(
                     path: 'komodo/variables',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const VariablesView()),
+                    location: AppRoutes.komodoVariables,
+                    page: const VariablesView(),
                   ),
-                  GoRoute(
+                  _settingsRoute(
                     path: 'komodo/tags',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const TagsView()),
+                    location: AppRoutes.komodoTags,
+                    page: const TagsView(),
                   ),
-                  GoRoute(
+                  _settingsRoute(
                     path: 'komodo/providers',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const ProvidersView()),
+                    location: AppRoutes.komodoProviders,
+                    page: const ProvidersView(),
                   ),
-                  GoRoute(
+                  _settingsRoute(
                     path: 'komodo/builders',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const BuildersView()),
+                    location: AppRoutes.komodoBuilders,
+                    page: const BuildersView(),
                   ),
-                  GoRoute(
+                  _settingsRoute(
                     path: 'komodo/alerters',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const AlertersView()),
+                    location: AppRoutes.komodoAlerters,
+                    page: const AlertersView(),
                     routes: [
                       GoRoute(
                         path: ':id',
                         pageBuilder: (context, state) {
                           final id = state.pathParameters['id']!;
-                          return _appStackPage(
+                          return _splitPage(
                             state,
-                            AlerterDetailView(alerterIdOrName: id),
+                            list: AlertersView(selectedId: id),
+                            detail: AlerterDetailView(alerterIdOrName: id),
+                            icon: AppIcons.notifications,
+                            label: 'Select an alerter',
                           );
                         },
                       ),
                     ],
                   ),
-                  GoRoute(
+                  _settingsRoute(
                     path: 'credits',
-                    pageBuilder: (context, state) =>
-                        _appStackPage(state, const CreditsView()),
+                    location: AppRoutes.credits,
+                    page: const CreditsView(),
                   ),
                 ],
               ),
@@ -525,19 +561,72 @@ GoRouter appRouter(Ref ref) {
   );
 }
 
-/// Main shell with bottom navigation.
-class MainShell extends ConsumerWidget {
+/// Notifications: alerts and updates share one list/detail split. The
+/// placeholder follows the active tab.
+class NotificationsPane extends StatelessWidget {
+  const NotificationsPane({this.updateId, this.alertId, super.key});
+
+  final String? updateId;
+  final String? alertId;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListDetailLayout(
+      list: NotificationsView(
+        selectedUpdateId: updateId,
+        selectedAlertId: alertId,
+      ),
+      detail: updateId != null
+          ? UpdateDetailView(updateId: updateId!)
+          : alertId != null
+          ? AlertDetailView(alertId: alertId!)
+          : null,
+      placeholder: const _NotificationsPlaceholder(),
+    );
+  }
+}
+
+class _NotificationsPlaceholder extends ConsumerWidget {
+  const _NotificationsPlaceholder();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final onUpdates = ref.watch(notificationsTabIndexProvider) == 1;
+    return ListDetailPlaceholder(
+      icon: AppIcons.notifications,
+      label: onUpdates ? 'Select an update' : 'Select an alert',
+    );
+  }
+}
+
+/// Main shell: bottom navigation on compact windows, a left navigation rail
+/// on wider ones.
+///
+/// The window resizes live on fold/unfold and in Split View, so the layout is
+/// derived from the current constraints on every build. The
+/// [navigationShell] is held under a [GlobalKey] so switching between bar and
+/// rail reparents it instead of rebuilding (and resetting) every branch.
+class MainShell extends ConsumerStatefulWidget {
   const MainShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentIndex = navigationShell.currentIndex;
+  ConsumerState<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends ConsumerState<MainShell> {
+  final GlobalKey _shellKey = GlobalKey(debugLabel: 'mainShellContent');
+
+  StatefulNavigationShell get _shell => widget.navigationShell;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentIndex = _shell.currentIndex;
     final storedIndex = ref.watch(mainShellIndexProvider);
     if (storedIndex != currentIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!context.mounted) return;
+        if (!mounted) return;
         ref.read(mainShellIndexProvider.notifier).index = currentIndex;
       });
     }
@@ -550,53 +639,120 @@ class MainShell extends ConsumerWidget {
       ),
     );
 
-    return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: AdaptiveBottomNavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onTap: (index) => _onItemTapped(ref, index),
-        items: [
-          const AdaptiveNavigationItem(
-            key: ValueKey('bottom_nav_home'),
-            icon: Icon(AppIcons.home),
-            activeIcon: Icon(AppIcons.home),
-            label: 'Home',
-          ),
-          const AdaptiveNavigationItem(
-            key: ValueKey('bottom_nav_resources'),
-            icon: Icon(AppIcons.resources),
-            activeIcon: Icon(AppIcons.resources),
-            label: 'Resources',
-          ),
-          const AdaptiveNavigationItem(
-            key: ValueKey('bottom_nav_containers'),
-            icon: Icon(AppIcons.containers),
-            activeIcon: Icon(AppIcons.containers),
-            label: 'Containers',
-          ),
-          AdaptiveNavigationItem(
-            key: const ValueKey('bottom_nav_notifications'),
-            icon: const Icon(AppIcons.notifications),
-            activeIcon: const Icon(AppIcons.notificationsActive),
-            label: 'Notifications',
-            badgeCount: unresolvedAlerts,
-          ),
-          const AdaptiveNavigationItem(
-            key: ValueKey('bottom_nav_settings'),
-            icon: Icon(AppIcons.settings),
-            activeIcon: Icon(AppIcons.settings),
-            label: 'Settings',
-          ),
-        ],
+    final items = [
+      const AdaptiveNavigationItem(
+        key: ValueKey('bottom_nav_home'),
+        icon: Icon(AppIcons.home),
+        activeIcon: Icon(AppIcons.home),
+        label: 'Home',
       ),
+      const AdaptiveNavigationItem(
+        key: ValueKey('bottom_nav_resources'),
+        icon: Icon(AppIcons.resources),
+        activeIcon: Icon(AppIcons.resources),
+        label: 'Resources',
+      ),
+      const AdaptiveNavigationItem(
+        key: ValueKey('bottom_nav_containers'),
+        icon: Icon(AppIcons.containers),
+        activeIcon: Icon(AppIcons.containers),
+        label: 'Containers',
+      ),
+      AdaptiveNavigationItem(
+        key: const ValueKey('bottom_nav_notifications'),
+        icon: const Icon(AppIcons.notifications),
+        activeIcon: const Icon(AppIcons.notificationsActive),
+        label: 'Notifications',
+        badgeCount: unresolvedAlerts,
+      ),
+      const AdaptiveNavigationItem(
+        key: ValueKey('bottom_nav_settings'),
+        icon: Icon(AppIcons.settings),
+        activeIcon: Icon(AppIcons.settings),
+        label: 'Settings',
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        // The system may reserve a vertical bar strip (foldable iPhone inner
+        // display). The app root leaves that inset to us: with a rail it is
+        // the rail's home, otherwise it is padded here.
+        final media = MediaQuery.of(context);
+        final strip = verticalBarSides(context);
+        final stripOnRight = strip.right;
+        final stripInset = stripOnRight
+            ? media.padding.right
+            : media.padding.left;
+        // With a strip the navigation always lives in it (any width class);
+        // the bottom bar is only for windows without one.
+        final railInStrip = (strip.left || strip.right) && stripInset > 0;
+        final useRail =
+            railInStrip || !WindowSizeClass.fromWidth(width).isCompact;
+        final info = VerticalBarScope.maybeOf(context);
+        final stripTopGap = railInStrip
+            ? ((info?.occludedBottomInStrip(
+                            windowWidth: media.size.width,
+                            stripWidth: stripInset,
+                            onRight: stripOnRight,
+                          ) ??
+                          0) +
+                      8)
+                  .clamp(media.padding.top + 8, double.infinity)
+            : 0.0;
+
+        // The strip is the rail's; screens must not pad for it again.
+        final content = MediaQuery.removePadding(
+          context: context,
+          removeLeft: railInStrip && !stripOnRight,
+          removeRight: railInStrip && stripOnRight,
+          child: KeyedSubtree(key: _shellKey, child: _shell),
+        );
+
+        Widget rail({double? stripWidth}) => AdaptiveNavigationRail(
+          selectedIndex: currentIndex,
+          onTap: _onItemTapped,
+          items: items,
+          extended: stripWidth == null && width >= kExtendedRailMinWidth,
+          stripWidth: stripWidth,
+          stripTopGap: stripTopGap,
+          stripOnRight: stripOnRight,
+        );
+
+        return SafeArea(
+          top: false,
+          bottom: false,
+          left: strip.left && !railInStrip,
+          right: strip.right && !railInStrip,
+          child: Scaffold(
+            body: useRail
+                ? Row(
+                    children: [
+                      if (!railInStrip) rail(),
+                      if (railInStrip && !stripOnRight)
+                        rail(stripWidth: stripInset),
+                      Expanded(child: content),
+                      if (railInStrip && stripOnRight)
+                        rail(stripWidth: stripInset),
+                    ],
+                  )
+                : content,
+            bottomNavigationBar: useRail
+                ? null
+                : AdaptiveBottomNavigationBar(
+                    selectedIndex: currentIndex,
+                    onTap: _onItemTapped,
+                    items: items,
+                  ),
+          ),
+        );
+      },
     );
   }
 
-  void _onItemTapped(WidgetRef ref, int index) {
-    navigationShell.goBranch(
-      index,
-      initialLocation: index == navigationShell.currentIndex,
-    );
+  void _onItemTapped(int index) {
+    _shell.goBranch(index, initialLocation: index == _shell.currentIndex);
     ref.read(mainShellIndexProvider.notifier).index = index;
   }
 }

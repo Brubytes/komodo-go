@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/resources/resource_tag_options_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_list_view.dart';
 import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
@@ -17,12 +17,16 @@ import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all procedures.
 class ProceduresListView extends StatelessWidget {
-  const ProceduresListView({super.key});
+  const ProceduresListView({this.selectedId, super.key});
+
+  /// Id of the item open in the detail pane, highlighted in the list.
+  final String? selectedId;
 
   @override
   Widget build(BuildContext context) {
     return ResourceListView<ProcedureListItem>(
       config: _proceduresListConfig,
+      selectedId: selectedId,
     );
   }
 }
@@ -51,15 +55,16 @@ final _proceduresListConfig = ResourceListConfig<ProcedureListItem>(
     item.info.stages.toString(),
   ],
   batchItemOf: (item) => ResourceBatchItem(id: item.id, name: item.name),
-  onCreate: (context) => context.push('${AppRoutes.procedures}/new'),
+  onCreate: (context) => context.openDetail('${AppRoutes.procedures}/new'),
   nameOf: (item) => item.name,
+  idOf: (item) => item.id,
   severityOf: _severityOf,
   stateLabelOf: (item) => resourceStateLabel(item.info.state),
   updatedAtOf: (item) => item.info.lastRunAt ?? 0,
   cardBuilder: (context, ref, item, displayTags) => ProcedureCard(
     procedure: item,
     displayTags: displayTags,
-    onTap: () => context.push(
+    onTap: () => context.openDetail(
       '${AppRoutes.procedures}/${item.id}?name=${Uri.encodeComponent(item.name)}',
     ),
     onRun: () => _runProcedure(context, ref, item.id),

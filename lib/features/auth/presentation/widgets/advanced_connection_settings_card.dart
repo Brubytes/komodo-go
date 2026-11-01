@@ -132,8 +132,7 @@ class ProxyHeaderAuthSection extends StatelessWidget {
 
     return AdvancedConnectionSection(
       title: 'Proxy Header Auth',
-      description:
-          'Optional. The app sends Authorization: Basic <base64(username:password)> on each request when enabled.',
+      description: 'Optional. The app sends Authorization: Basic <base64(username:password)> on each request when enabled.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -141,9 +140,7 @@ class ProxyHeaderAuthSection extends StatelessWidget {
             contentPadding: EdgeInsets.zero,
             title: const Text('Enable proxy header auth'),
             subtitle: Text(
-              enabled
-                  ? 'Authorization will be sent on requests.'
-                  : 'Stored credentials are kept, but Authorization is not sent.',
+              enabled ? 'Authorization will be sent on requests.' : 'Stored credentials are kept, but Authorization is not sent.',
               style: bodyStyle,
             ),
             value: enabled,
@@ -280,8 +277,7 @@ class _CustomHeadersSectionState extends State<CustomHeadersSection> {
 
     return AdvancedConnectionSection(
       title: 'Custom Headers',
-      description:
-          'Optional. Add additional headers to every request. Reserved auth headers such as Authorization, X-Api-Key, and X-Api-Secret cannot be overridden here.',
+      description: 'Optional. Add additional headers to every request. Reserved auth headers such as Authorization, X-Api-Key, and X-Api-Secret cannot be overridden here.',
       showTopDivider: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -189,8 +189,7 @@ void main() {
           (failure) => expect(
             failure,
             const Failure.server(
-              message:
-                  'Received an unexpected response for GetVersion. Your reverse proxy may be serving a login page instead of the Komodo API.',
+              message: 'Received an unexpected response for GetVersion. Your reverse proxy may be serving a login page instead of the Komodo API.',
             ),
           ),
           (_) => fail('Expected validation to fail'),
@@ -224,8 +223,7 @@ void main() {
           (failure) => expect(
             failure,
             const Failure.server(
-              message:
-                  'Connection works for /read, but your reverse proxy still requires authentication for /execute. Configure machine access for /execute as well (same policy as /read and /write).',
+              message: 'Connection works for /read, but your reverse proxy still requires authentication for /execute. Configure machine access for /execute as well (same policy as /read and /write).',
               statusCode: 401,
             ),
           ),

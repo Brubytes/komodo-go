@@ -60,10 +60,12 @@ void registerBuildsRunCancelTests() {
         await backend.stop();
       }
     },
-    skip: config.skipReason(
-      requiredResourceLabel: 'KOMODO_TEST_BUILD_NAME',
-      requiredResourceValue: config.buildName,
-    ) != null,
+    skip:
+        config.skipReason(
+          requiredResourceLabel: 'KOMODO_TEST_BUILD_NAME',
+          requiredResourceValue: config.buildName,
+        ) !=
+        null,
   );
 }
 

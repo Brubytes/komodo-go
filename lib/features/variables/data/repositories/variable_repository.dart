@@ -54,7 +54,10 @@ class VariableRepository {
   }) async {
     return apiCall(() async {
       final response = await _client.write(
-        RpcRequest(type: 'DeleteVariable', params: <String, dynamic>{'name': name}),
+        RpcRequest(
+          type: 'DeleteVariable',
+          params: <String, dynamic>{'name': name},
+        ),
       );
 
       return KomodoVariable.fromJson(response as Map<String, dynamic>);

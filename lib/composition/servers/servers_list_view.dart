@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
@@ -10,6 +9,7 @@ import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/filters/template_filter.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
@@ -26,7 +26,10 @@ import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all servers.
 class ServersListView extends ConsumerStatefulWidget {
-  const ServersListView({super.key});
+  const ServersListView({this.selectedId, super.key});
+
+  /// Id of the item open in the detail pane, highlighted in the list.
+  final String? selectedId;
 
   @override
   ConsumerState<ServersListView> createState() => _ServersListViewState();
@@ -35,6 +38,7 @@ class ServersListView extends ConsumerStatefulWidget {
 class _ServersListViewState extends ConsumerState<ServersListView> {
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
+  late final ScrollController _scrollController;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
   late final _intro = AppListIntro();
@@ -47,6 +51,7 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
       text: ref.read(serversSearchQueryProvider),
     );
     _searchFocusNode = FocusNode();
+    _scrollController = ListScrollMemory.controllerFor('resources_servers');
     _searchQuerySubscription = ref.listenManual<String>(
       serversSearchQueryProvider,
       (previous, next) {
@@ -66,6 +71,7 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
     _searchQuerySubscription?.close();
     _searchQuerySubscription = null;
     _searchFocusNode.dispose();
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -147,7 +153,7 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
           ),
           ResourceListActionsMenu(
             kind: ResourceKind.servers,
-            onCreate: () => context.push('${AppRoutes.servers}/new'),
+            onCreate: () => context.openDetail('${AppRoutes.servers}/new'),
             onRefresh: () => ref.read(serversProvider.notifier).refresh(),
           ),
         ],
@@ -155,7 +161,13 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
       body: RefreshIndicator(
         onRefresh: () => ref.read(serversProvider.notifier).refresh(),
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          controller: _scrollController,
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.paddingOf(context).bottom,
+          ),
           children: [
             AppSwitcher(
               child: _isSearchVisible
@@ -315,14 +327,17 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
                         _intro.wrap(
                           i,
                           id: filtered[i].id,
-                          ServerCard(
-                            server: filtered[i],
-                            displayTags: _displayTags(
-                              filtered[i].tags,
-                              tagNameById,
-                            ),
-                            onTap: () => context.push(
-                              '${AppRoutes.servers}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
+                          SelectionHighlight(
+                            selected: filtered[i].id == widget.selectedId,
+                            child: ServerCard(
+                              server: filtered[i],
+                              displayTags: _displayTags(
+                                filtered[i].tags,
+                                tagNameById,
+                              ),
+                              onTap: () => context.openDetail(
+                                '${AppRoutes.servers}/${filtered[i].id}?name=${Uri.encodeComponent(filtered[i].name)}',
+                              ),
                             ),
                           ),
                         ),

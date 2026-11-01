@@ -263,18 +263,18 @@ void registerAdvancedEditsContractTests() {
               ),
             );
             expect(results, hasLength(2));
-          expect(
-            results.map((result) => result.item.id).toSet(),
-            {created.id, copied.id},
-          );
-          expect(
-            results.where((result) => !result.success),
-            isEmpty,
-            reason: results
-                .where((result) => !result.success)
-                .map((result) => '${result.item.name}: ${result.error}')
-                .join('\n'),
-          );
+            expect(
+              results.map((result) => result.item.id).toSet(),
+              {created.id, copied.id},
+            );
+            expect(
+              results.where((result) => !result.success),
+              isEmpty,
+              reason: results
+                  .where((result) => !result.success)
+                  .map((result) => '${result.item.name}: ${result.error}')
+                  .join('\n'),
+            );
           } finally {
             if (copiedId != null) {
               await management.delete(

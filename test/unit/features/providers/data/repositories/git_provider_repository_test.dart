@@ -42,35 +42,38 @@ void main() {
         verify(() => client.write(captureAny())).captured.single
             as RpcRequest<dynamic>;
 
-    test('listAccounts sends ListGitProviderAccounts with empty params',
-        () async {
-      when(() => client.read(any())).thenAnswer((_) async => [_accountJson]);
+    test(
+      'listAccounts sends ListGitProviderAccounts with empty params',
+      () async {
+        when(() => client.read(any())).thenAnswer((_) async => [_accountJson]);
 
-      final result = await repository.listAccounts();
+        final result = await repository.listAccounts();
 
-      expect(_rightOrFail(result).single.id, 'acc-1');
+        expect(_rightOrFail(result).single.id, 'acc-1');
 
-      final request = capturedRead();
-      expect(request.type, 'ListGitProviderAccounts');
-      expect(request.params, <String, dynamic>{});
-    });
-
-    test('listAccounts trims and forwards domain and username filters',
-        () async {
-      when(() => client.read(any())).thenAnswer((_) async => <dynamic>[]);
-
-      await repository.listAccounts(domain: ' github.com ', username: ' me ');
-
-      final request = capturedRead();
-      expect(request.type, 'ListGitProviderAccounts');
-      expect(request.params, <String, dynamic>{
-        'domain': 'github.com',
-        'username': 'me',
-      });
-    });
+        final request = capturedRead();
+        expect(request.type, 'ListGitProviderAccounts');
+        expect(request.params, <String, dynamic>{});
+      },
+    );
 
     test(
-        'createAccount sends CreateGitProviderAccount via write '
+      'listAccounts trims and forwards domain and username filters',
+      () async {
+        when(() => client.read(any())).thenAnswer((_) async => <dynamic>[]);
+
+        await repository.listAccounts(domain: ' github.com ', username: ' me ');
+
+        final request = capturedRead();
+        expect(request.type, 'ListGitProviderAccounts');
+        expect(request.params, <String, dynamic>{
+          'domain': 'github.com',
+          'username': 'me',
+        });
+      },
+    );
+
+    test('createAccount sends CreateGitProviderAccount via write '
         'with nested trimmed account', () async {
       when(() => client.write(any())).thenAnswer((_) async => _accountJson);
 
@@ -96,8 +99,7 @@ void main() {
       verifyNever(() => client.execute(any()));
     });
 
-    test(
-        'updateAccount sends UpdateGitProviderAccount via write '
+    test('updateAccount sends UpdateGitProviderAccount via write '
         'with id and only provided fields', () async {
       when(() => client.write(any())).thenAnswer((_) async => _accountJson);
 
@@ -117,18 +119,20 @@ void main() {
       });
     });
 
-    test('deleteAccount sends DeleteGitProviderAccount via write with id',
-        () async {
-      when(() => client.write(any())).thenAnswer((_) async => _accountJson);
+    test(
+      'deleteAccount sends DeleteGitProviderAccount via write with id',
+      () async {
+        when(() => client.write(any())).thenAnswer((_) async => _accountJson);
 
-      final result = await repository.deleteAccount(id: 'acc-1');
+        final result = await repository.deleteAccount(id: 'acc-1');
 
-      expect(_rightOrFail(result).id, 'acc-1');
+        expect(_rightOrFail(result).id, 'acc-1');
 
-      final request = capturedWrite();
-      expect(request.type, 'DeleteGitProviderAccount');
-      expect(request.params, <String, dynamic>{'id': 'acc-1'});
-      verifyNever(() => client.execute(any()));
-    });
+        final request = capturedWrite();
+        expect(request.type, 'DeleteGitProviderAccount');
+        expect(request.params, <String, dynamic>{'id': 'acc-1'});
+        verifyNever(() => client.execute(any()));
+      },
+    );
   });
 }

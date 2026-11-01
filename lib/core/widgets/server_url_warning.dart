@@ -30,8 +30,7 @@ class ServerUrlWarning extends StatelessWidget {
 
     if (!_hasExplicitScheme(normalized)) {
       return const _WarningBox(
-        message:
-            'Include http:// or https:// explicitly. If you omit a scheme, the app will default to https://. To use http://, you must include it explicitly.',
+        message: 'Include http:// or https:// explicitly. If you omit a scheme, the app will default to https://. To use http://, you must include it explicitly.',
       );
     }
 

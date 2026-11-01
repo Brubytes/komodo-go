@@ -53,7 +53,10 @@ Dio buildTestDio(BackendTestConfig config, {RpcRecorder? recorder}) {
   return dio;
 }
 
-KomodoApiClient buildTestClient(BackendTestConfig config, RpcRecorder recorder) {
+KomodoApiClient buildTestClient(
+  BackendTestConfig config,
+  RpcRecorder recorder,
+) {
   final version = KomodoCoreVersion.parse(config.coreVersion);
   return KomodoApiClient(
     buildTestDio(config, recorder: recorder),

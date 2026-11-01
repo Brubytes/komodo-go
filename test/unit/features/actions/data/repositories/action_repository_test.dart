@@ -8,8 +8,7 @@ import 'package:komodo_go/features/actions/data/repositories/action_repository.d
 import 'package:mocktail/mocktail.dart';
 
 class _MockApiClient extends Mock implements KomodoApiClient {
-  KomodoApiCapabilities capabilitiesValue =
-      KomodoApiCapabilities.v23AndNewer;
+  KomodoApiCapabilities capabilitiesValue = KomodoApiCapabilities.v23AndNewer;
 
   @override
   KomodoApiCapabilities get capabilities => capabilitiesValue;
@@ -95,24 +94,26 @@ void main() {
       expect(request.params, <String, dynamic>{'action': 'action-1'});
     });
 
-    test('runAction sends RunAction via execute with null args by default',
-        () async {
-      when(
-        () => client.execute(any()),
-      ).thenAnswer((_) async => <String, dynamic>{});
+    test(
+      'runAction sends RunAction via execute with null args by default',
+      () async {
+        when(
+          () => client.execute(any()),
+        ).thenAnswer((_) async => <String, dynamic>{});
 
-      final result = await repository.runAction('action-1');
+        final result = await repository.runAction('action-1');
 
-      _rightOrFail(result);
+        _rightOrFail(result);
 
-      final request = capturedExecute();
-      expect(request.type, 'RunAction');
-      expect(request.params, <String, dynamic>{
-        'action': 'action-1',
-        'args': null,
-      });
-      verifyNever(() => client.write(any()));
-    });
+        final request = capturedExecute();
+        expect(request.type, 'RunAction');
+        expect(request.params, <String, dynamic>{
+          'action': 'action-1',
+          'args': null,
+        });
+        verifyNever(() => client.write(any()));
+      },
+    );
 
     test('runAction forwards args map', () async {
       when(
@@ -134,22 +135,24 @@ void main() {
       });
     });
 
-    test('cancelAction sends CancelAction with an optional update id',
-        () async {
-      when(() => client.execute(any()))
-          .thenAnswer((_) async => <String, dynamic>{});
+    test(
+      'cancelAction sends CancelAction with an optional update id',
+      () async {
+        when(() => client.execute(any()))
+            .thenAnswer((_) async => <String, dynamic>{});
 
-      _rightOrFail(
-        await repository.cancelAction('action-1', updateId: 'update-1'),
-      );
+        _rightOrFail(
+          await repository.cancelAction('action-1', updateId: 'update-1'),
+        );
 
-      final request = capturedExecute();
-      expect(request.type, 'CancelAction');
-      expect(request.params, <String, dynamic>{
-        'action': 'action-1',
-        'update_id': 'update-1',
-      });
-    });
+        final request = capturedExecute();
+        expect(request.type, 'CancelAction');
+        expect(request.params, <String, dynamic>{
+          'action': 'action-1',
+          'update_id': 'update-1',
+        });
+      },
+    );
 
     test('Komodo 2.2 reports action cancellation as unsupported', () async {
       client.capabilitiesValue = KomodoApiCapabilities.v22;
@@ -168,31 +171,33 @@ void main() {
       verifyNever(() => client.execute(any()));
     });
 
-    test('updateActionConfig sends UpdateAction via write with id and config',
-        () async {
-      when(() => client.write(any())).thenAnswer(
-        (_) async => <String, dynamic>{
+    test(
+      'updateActionConfig sends UpdateAction via write with id and config',
+      () async {
+        when(() => client.write(any())).thenAnswer(
+          (_) async => <String, dynamic>{
+            'id': 'action-1',
+            'name': 'cleanup',
+            'config': <String, dynamic>{},
+          },
+        );
+
+        final result = await repository.updateActionConfig(
+          actionId: 'action-1',
+          partialConfig: {'schedule_enabled': true},
+        );
+
+        expect(_rightOrFail(result).id, 'action-1');
+
+        final request = capturedWrite();
+        expect(request.type, 'UpdateAction');
+        expect(request.params, <String, dynamic>{
           'id': 'action-1',
-          'name': 'cleanup',
-          'config': <String, dynamic>{},
-        },
-      );
-
-      final result = await repository.updateActionConfig(
-        actionId: 'action-1',
-        partialConfig: {'schedule_enabled': true},
-      );
-
-      expect(_rightOrFail(result).id, 'action-1');
-
-      final request = capturedWrite();
-      expect(request.type, 'UpdateAction');
-      expect(request.params, <String, dynamic>{
-        'id': 'action-1',
-        'config': {'schedule_enabled': true},
-      });
-      verifyNever(() => client.execute(any()));
-    });
+          'config': {'schedule_enabled': true},
+        });
+        verifyNever(() => client.execute(any()));
+      },
+    );
 
     test('runAction maps 401 to auth failure', () async {
       when(() => client.execute(any())).thenThrow(

@@ -8,6 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/home/home_ops_pulse.dart';
 import 'package:komodo_go/composition/home/home_server_overview_provider.dart';
 import 'package:komodo_go/composition/home/widgets/home_attention_card.dart';
+import 'package:komodo_go/composition/home/widgets/home_dashboard_layout.dart';
 import 'package:komodo_go/composition/home/widgets/home_dashboard_tiles.dart';
 import 'package:komodo_go/composition/home/widgets/home_sections.dart';
 import 'package:komodo_go/core/router/app_router.dart';
@@ -103,22 +104,19 @@ class _HomeViewState extends ConsumerState<HomeView> {
             ..invalidate(alertsProvider)
             ..invalidate(updatesProvider);
         },
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-          children: [
-            staggeredSection(
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  HomeAttentionCard(),
-                  Gap(20),
-                ],
-              ),
+        child: HomeDashboardLayout(
+          attention: staggeredSection(
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                HomeAttentionCard(),
+                Gap(20),
+              ],
             ),
-            staggeredSection(const HomeServerOverviewSection()),
-            staggeredSection(const HomeAlertsSection()),
-            staggeredSection(const HomeOpsPulseSection()),
-          ],
+          ),
+          serverOverview: staggeredSection(const HomeServerOverviewSection()),
+          alerts: staggeredSection(const HomeAlertsSection()),
+          opsPulse: staggeredSection(const HomeOpsPulseSection()),
         ),
       ),
     );
@@ -189,12 +187,10 @@ class _ServerMetricGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final columns = width >= 720 ? 4 : (width >= 520 ? 3 : 2);
-        final aspectRatio = switch (columns) {
-          4 => 1.85,
-          3 => 1.55,
-          _ => 1.4,
-        };
+        // Four tiles: one row of 4 when each stays roomy, else 2 + 2, never
+        // a 3 + 1 orphan row.
+        final columns = (width - _spacing * 3) / 4 >= 165 ? 4 : 2;
+        final aspectRatio = columns == 4 ? 1.85 : 1.4;
         final cellWidth = (width - _spacing * (columns - 1)) / columns;
         final cellHeight = cellWidth / aspectRatio;
 
@@ -408,8 +404,7 @@ class HomeAlertsSection extends ConsumerWidget {
             if (isAlertsPermissionError(e)) {
               return const HomeEmptyListTile(
                 icon: AppIcons.notifications,
-                message:
-                    'Alerts unavailable for this account. Check Updates instead.',
+                message: 'Alerts unavailable for this account. Check Updates instead.',
               );
             }
             return HomeErrorTile(message: e.toString());

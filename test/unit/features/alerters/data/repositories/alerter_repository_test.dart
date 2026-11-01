@@ -9,8 +9,7 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockApiClient extends Mock implements KomodoApiClient {
   @override
-  KomodoApiCapabilities get capabilities =>
-      KomodoApiCapabilities.v23AndNewer;
+  KomodoApiCapabilities get capabilities => KomodoApiCapabilities.v23AndNewer;
 }
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
@@ -100,30 +99,31 @@ void main() {
       expect(request.params, <String, dynamic>{'alerter': 'alerter-1'});
     });
 
-    test('renameAlerter sends RenameAlerter via write with id and name',
-        () async {
-      when(
-        () => client.write(any()),
-      ).thenAnswer((_) async => <String, dynamic>{});
+    test(
+      'renameAlerter sends RenameAlerter via write with id and name',
+      () async {
+        when(
+          () => client.write(any()),
+        ).thenAnswer((_) async => <String, dynamic>{});
 
-      final result = await repository.renameAlerter(
-        id: 'alerter-1',
-        name: 'discord',
-      );
+        final result = await repository.renameAlerter(
+          id: 'alerter-1',
+          name: 'discord',
+        );
 
-      _rightOrFail(result);
+        _rightOrFail(result);
 
-      final request = capturedWrite();
-      expect(request.type, 'RenameAlerter');
-      expect(request.params, <String, dynamic>{
-        'id': 'alerter-1',
-        'name': 'discord',
-      });
-      verifyNever(() => client.execute(any()));
-    });
+        final request = capturedWrite();
+        expect(request.type, 'RenameAlerter');
+        expect(request.params, <String, dynamic>{
+          'id': 'alerter-1',
+          'name': 'discord',
+        });
+        verifyNever(() => client.execute(any()));
+      },
+    );
 
-    test('deleteAlerter sends DeleteAlerter via write with id param',
-        () async {
+    test('deleteAlerter sends DeleteAlerter via write with id param', () async {
       when(
         () => client.write(any()),
       ).thenAnswer((_) async => <String, dynamic>{});
@@ -138,60 +138,69 @@ void main() {
       verifyNever(() => client.execute(any()));
     });
 
-    test('updateAlerterConfig sends UpdateAlerter via write with id and config',
-        () async {
-      when(
-        () => client.write(any()),
-      ).thenAnswer((_) async => <String, dynamic>{});
+    test(
+      'updateAlerterConfig sends UpdateAlerter via write with id and config',
+      () async {
+        when(
+          () => client.write(any()),
+        ).thenAnswer((_) async => <String, dynamic>{});
 
-      final result = await repository.updateAlerterConfig(
-        id: 'alerter-1',
-        config: {'alert_types': <String>[]},
-      );
+        final result = await repository.updateAlerterConfig(
+          id: 'alerter-1',
+          config: {'alert_types': <String>[]},
+        );
 
-      _rightOrFail(result);
+        _rightOrFail(result);
 
-      final request = capturedWrite();
-      expect(request.type, 'UpdateAlerter');
-      expect(request.params, <String, dynamic>{
-        'id': 'alerter-1',
-        'config': {'alert_types': <String>[]},
-      });
-    });
+        final request = capturedWrite();
+        expect(request.type, 'UpdateAlerter');
+        expect(request.params, <String, dynamic>{
+          'id': 'alerter-1',
+          'config': {'alert_types': <String>[]},
+        });
+      },
+    );
 
-    test('setEnabled delegates to UpdateAlerter with enabled-only config',
-        () async {
-      when(
-        () => client.write(any()),
-      ).thenAnswer((_) async => <String, dynamic>{});
+    test(
+      'setEnabled delegates to UpdateAlerter with enabled-only config',
+      () async {
+        when(
+          () => client.write(any()),
+        ).thenAnswer((_) async => <String, dynamic>{});
 
-      final result = await repository.setEnabled(id: 'alerter-1', enabled: false);
+        final result = await repository.setEnabled(
+          id: 'alerter-1',
+          enabled: false,
+        );
 
-      _rightOrFail(result);
+        _rightOrFail(result);
 
-      final request = capturedWrite();
-      expect(request.type, 'UpdateAlerter');
-      expect(request.params, <String, dynamic>{
-        'id': 'alerter-1',
-        'config': {'enabled': false},
-      });
-    });
+        final request = capturedWrite();
+        expect(request.type, 'UpdateAlerter');
+        expect(request.params, <String, dynamic>{
+          'id': 'alerter-1',
+          'config': {'enabled': false},
+        });
+      },
+    );
 
-    test('testAlerter sends TestAlerter via execute with alerter param',
-        () async {
-      when(
-        () => client.execute(any()),
-      ).thenAnswer((_) async => <String, dynamic>{});
+    test(
+      'testAlerter sends TestAlerter via execute with alerter param',
+      () async {
+        when(
+          () => client.execute(any()),
+        ).thenAnswer((_) async => <String, dynamic>{});
 
-      final result = await repository.testAlerter(idOrName: 'alerter-1');
+        final result = await repository.testAlerter(idOrName: 'alerter-1');
 
-      _rightOrFail(result);
+        _rightOrFail(result);
 
-      final request = capturedExecute();
-      expect(request.type, 'TestAlerter');
-      expect(request.params, <String, dynamic>{'alerter': 'alerter-1'});
-      verifyNever(() => client.write(any()));
-    });
+        final request = capturedExecute();
+        expect(request.type, 'TestAlerter');
+        expect(request.params, <String, dynamic>{'alerter': 'alerter-1'});
+        verifyNever(() => client.write(any()));
+      },
+    );
 
     test('deleteAlerter maps 401 to auth failure', () async {
       when(() => client.write(any())).thenThrow(

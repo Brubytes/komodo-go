@@ -33,7 +33,10 @@ void main() {
               'name': 'stage 1',
               'enabled': true,
               'executions': [
-                {'enabled': true, 'execution': {'type': 'RunBuild'}},
+                {
+                  'enabled': true,
+                  'execution': {'type': 'RunBuild'},
+                },
               ],
             },
           ],

@@ -8,7 +8,8 @@ sealed class GitProviderAccount with _$GitProviderAccount {
   const factory GitProviderAccount({
     @JsonKey(readValue: _readId) required String id,
     required String domain,
-    required String username, @Default(true) bool https,
+    required String username,
+    @Default(true) bool https,
     @Default('') String token,
   }) = _GitProviderAccount;
 
