@@ -60,7 +60,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.brubytes.komodoGo
       flutter: fvm
-      xcode: 26.2
+      xcode: 27.1
       cocoapods: default
     cache:
       cache_paths:
@@ -182,7 +182,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.brubytes.komodoGo
       flutter: fvm
-      xcode: 26.2
+      xcode: 27.1
       cocoapods: default
       vars:
         APP_ID: 6758161017
