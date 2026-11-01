@@ -14,120 +14,129 @@ void registerProcedureContractTests() {
   final config = BackendTestConfig.fromEnvironment();
   final missingConfigReason = config == null
       ? 'Set KOMODO_TEST_BASE_URL, KOMODO_TEST_API_KEY, and '
-          'KOMODO_TEST_API_SECRET to run backend tests.'
+            'KOMODO_TEST_API_SECRET to run backend tests.'
       : null;
 
-  group('Procedure CRUD (real backend)', () {
-    late ProcedureRepository repository;
-    late KomodoApiClient client;
+  group(
+    'Procedure CRUD (real backend)',
+    () {
+      late ProcedureRepository repository;
+      late KomodoApiClient client;
 
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      client = buildTestClient(requireConfig(config), RpcRecorder());
-      repository = ProcedureRepository(client);
-    });
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        client = buildTestClient(requireConfig(config), RpcRecorder());
+        repository = ProcedureRepository(client);
+      });
 
-    test('create/update/delete procedure', () async {
-      KomodoProcedure? created;
-      String? createdId;
-      var deleted = false;
+      test('create/update/delete procedure', () async {
+        KomodoProcedure? created;
+        String? createdId;
+        var deleted = false;
 
-      try {
-        final procedures = expectRight(await repository.listProcedures());
-        expect(procedures, isNotEmpty);
+        try {
+          final procedures = expectRight(await repository.listProcedures());
+          expect(procedures, isNotEmpty);
 
-        final seed = procedures.first;
-        final seedDetail = expectRight(await repository.getProcedure(seed.id));
-
-        final name = 'contract-proc-${_randomToken(Random(10021))}';
-        final createdJson = await client.write(
-          RpcRequest(
-            type: 'CreateProcedure',
-            params: <String, dynamic>{
-              'name': name,
-              'config': seedDetail.config.toJson(),
-            },
-          ),
-        );
-        created = KomodoProcedure.fromJson(createdJson as Map<String, dynamic>);
-
-        createdId = await waitForListItemId(
-          listItems: () async {
-            final listed = expectRight(await repository.listProcedures());
-            return listed.map((item) => item.toJson()).toList();
-          },
-          name: name,
-        );
-        final createdIdValue = createdId;
-
-        final updated = await retryAsync(() async {
-          return expectRight(
-            await repository.updateProcedureConfig(
-              procedureId: createdIdValue,
-              partialConfig: <String, dynamic>{
-                'schedule_enabled': !seedDetail.config.scheduleEnabled,
-              },
-            ),
+          final seed = procedures.first;
+          final seedDetail = expectRight(
+            await repository.getProcedure(seed.id),
           );
-        });
-        expect(updated.id, createdId);
 
-        final alertsUpdated = await retryAsync(() async {
-          return expectRight(
-            await repository.updateProcedureConfig(
-              procedureId: createdIdValue,
-              partialConfig: <String, dynamic>{
-                'schedule_alert': !seedDetail.config.scheduleAlert,
-                'failure_alert': !seedDetail.config.failureAlert,
-              },
-            ),
-          );
-        });
-        expect(alertsUpdated.id, createdIdValue);
-
-        final refreshed =
-            expectRight(await repository.getProcedure(createdIdValue));
-        expect(
-          refreshed.config.scheduleAlert,
-          alertsUpdated.config.scheduleAlert,
-        );
-        expect(
-          refreshed.config.failureAlert,
-          alertsUpdated.config.failureAlert,
-        );
-
-        await retryAsync(() async {
-          await client.write(
+          final name = 'contract-proc-${_randomToken(Random(10021))}';
+          final createdJson = await client.write(
             RpcRequest(
-              type: 'DeleteProcedure',
-              params: <String, dynamic>{'id': createdIdValue},
+              type: 'CreateProcedure',
+              params: <String, dynamic>{
+                'name': name,
+                'config': seedDetail.config.toJson(),
+              },
             ),
           );
-        });
-        deleted = true;
-        await expectEventuallyServerFailure(
-          () => repository.getProcedure(createdIdValue),
-        );
-        final afterDelete = expectRight(await repository.listProcedures());
-        expect(afterDelete.any((p) => p.id == createdIdValue), isFalse);
-      } finally {
-        final idToDelete = createdId ?? created?.id;
-        if (!deleted && idToDelete != null) {
+          created = KomodoProcedure.fromJson(
+            createdJson as Map<String, dynamic>,
+          );
+
+          createdId = await waitForListItemId(
+            listItems: () async {
+              final listed = expectRight(await repository.listProcedures());
+              return listed.map((item) => item.toJson()).toList();
+            },
+            name: name,
+          );
+          final createdIdValue = createdId;
+
+          final updated = await retryAsync(() async {
+            return expectRight(
+              await repository.updateProcedureConfig(
+                procedureId: createdIdValue,
+                partialConfig: <String, dynamic>{
+                  'schedule_enabled': !seedDetail.config.scheduleEnabled,
+                },
+              ),
+            );
+          });
+          expect(updated.id, createdId);
+
+          final alertsUpdated = await retryAsync(() async {
+            return expectRight(
+              await repository.updateProcedureConfig(
+                procedureId: createdIdValue,
+                partialConfig: <String, dynamic>{
+                  'schedule_alert': !seedDetail.config.scheduleAlert,
+                  'failure_alert': !seedDetail.config.failureAlert,
+                },
+              ),
+            );
+          });
+          expect(alertsUpdated.id, createdIdValue);
+
+          final refreshed = expectRight(
+            await repository.getProcedure(createdIdValue),
+          );
+          expect(
+            refreshed.config.scheduleAlert,
+            alertsUpdated.config.scheduleAlert,
+          );
+          expect(
+            refreshed.config.failureAlert,
+            alertsUpdated.config.failureAlert,
+          );
+
           await retryAsync(() async {
             await client.write(
               RpcRequest(
                 type: 'DeleteProcedure',
-                params: <String, dynamic>{'id': idToDelete},
+                params: <String, dynamic>{'id': createdIdValue},
               ),
             );
           });
+          deleted = true;
+          await expectEventuallyServerFailure(
+            () => repository.getProcedure(createdIdValue),
+          );
+          final afterDelete = expectRight(await repository.listProcedures());
+          expect(afterDelete.any((p) => p.id == createdIdValue), isFalse);
+        } finally {
+          final idToDelete = createdId ?? created?.id;
+          if (!deleted && idToDelete != null) {
+            await retryAsync(() async {
+              await client.write(
+                RpcRequest(
+                  type: 'DeleteProcedure',
+                  params: <String, dynamic>{'id': idToDelete},
+                ),
+              );
+            });
+          }
         }
-      }
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
 }
 
 void main() => registerProcedureContractTests();

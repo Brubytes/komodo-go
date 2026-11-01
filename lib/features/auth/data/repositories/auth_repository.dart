@@ -13,11 +13,10 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'auth_repository.g.dart';
 
-typedef ValidationDioFactory =
-    Dio Function(
-      String baseUrl,
-      ApiCredentials credentials,
-    );
+typedef ValidationDioFactory = Dio Function(
+  String baseUrl,
+  ApiCredentials credentials,
+);
 
 ApiCredentials normalizeCredentials({
   required String baseUrl,
@@ -117,22 +116,22 @@ class AuthRepository {
         return Failure.server(message: e.message, statusCode: e.statusCode);
       },
       onDioException: (_) => const Failure.network(
-        message:
-            'Cannot reach the server. Check your connection and server address.',
+        message: 'Cannot reach the server. Check your connection and server address.',
       ),
     );
   }
 
   KomodoCoreVersion _validateVersionProbeResponse(Object? response) {
-    if (response case {
-      'version': final String version,
-    } when version.trim().isNotEmpty) {
+    if (response
+        case {
+          'version': final String version,
+        }
+        when version.trim().isNotEmpty) {
       return KomodoCoreVersion.parse(version);
     }
 
     throw const ApiException(
-      message:
-          'Received an unexpected response for GetVersion. Your reverse proxy may be serving a login page instead of the Komodo API.',
+      message: 'Received an unexpected response for GetVersion. Your reverse proxy may be serving a login page instead of the Komodo API.',
     );
   }
 
@@ -164,8 +163,7 @@ class AuthRepository {
     final statusCode = response.statusCode;
     if (statusCode == null) {
       throw const ApiException(
-        message:
-            'Connection works for /read, but /execute returned no HTTP status. Check your reverse proxy configuration.',
+        message: 'Connection works for /read, but /execute returned no HTTP status. Check your reverse proxy configuration.',
       );
     }
 
@@ -184,16 +182,14 @@ class AuthRepository {
 
     if (statusCode == 401 || statusCode == 403) {
       throw ApiException(
-        message:
-            'Connection works for /read, but your reverse proxy still requires authentication for /execute. Configure machine access for /execute as well (same policy as /read and /write).',
+        message: 'Connection works for /read, but your reverse proxy still requires authentication for /execute. Configure machine access for /execute as well (same policy as /read and /write).',
         statusCode: statusCode,
       );
     }
 
     if (!_looksLikeApiResponsePayload(response.data)) {
       throw ApiException(
-        message:
-            'Connection works for /read, but /execute returned a non-API response. Your reverse proxy may still be serving a login page for /execute.',
+        message: 'Connection works for /read, but /execute returned a non-API response. Your reverse proxy may still be serving a login page for /execute.',
         statusCode: statusCode,
       );
     }

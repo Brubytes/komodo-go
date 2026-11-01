@@ -37,7 +37,10 @@ void main() {
       final subscription = listenProvider(container, serversProvider);
       addTearDown(subscription.close);
 
-      final servers = await readAsyncProvider(container, serversProvider.future);
+      final servers = await readAsyncProvider(
+        container,
+        serversProvider.future,
+      );
 
       expect(servers, hasLength(2));
       expect(servers.first.name, 'Server A');
@@ -51,7 +54,10 @@ void main() {
       final subscription = listenProvider(container, serversProvider);
       addTearDown(subscription.close);
 
-      final servers = await readAsyncProvider(container, serversProvider.future);
+      final servers = await readAsyncProvider(
+        container,
+        serversProvider.future,
+      );
 
       expect(servers, isEmpty);
     });

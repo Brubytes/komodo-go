@@ -64,10 +64,12 @@ void registerStacksServicesLogsTests() {
         await backend.stop();
       }
     },
-    skip: config.skipReason(
-      requiredResourceLabel: 'KOMODO_TEST_STACK_NAME',
-      requiredResourceValue: config.stackName,
-    ) != null,
+    skip:
+        config.skipReason(
+          requiredResourceLabel: 'KOMODO_TEST_STACK_NAME',
+          requiredResourceValue: config.stackName,
+        ) !=
+        null,
   );
 }
 

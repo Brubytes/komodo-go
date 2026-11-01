@@ -110,7 +110,8 @@ void main() {
         expect(
           remaining.map((c) => c.id),
           contains(profile.id),
-          reason: 'A user connection that happens to share the demo display '
+          reason:
+              'A user connection that happens to share the demo display '
               'name must never be deleted when demo mode is disabled.',
         );
         expect(
@@ -138,8 +139,9 @@ void main() {
           .read(demoModeProvider.notifier)
           .setEnabled(enabled: false);
 
-      final remainingIds =
-          (await store.listConnections()).map((c) => c.id).toList();
+      final remainingIds = (await store.listConnections())
+          .map((c) => c.id)
+          .toList();
       expect(remainingIds, isNot(contains(demo.id)));
       expect(remainingIds, contains(real.id));
       expect(await store.getCredentials(demo.id), isNull);

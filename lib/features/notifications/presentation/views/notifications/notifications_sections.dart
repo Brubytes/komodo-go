@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
@@ -24,9 +26,12 @@ import 'package:komodo_go/features/notifications/presentation/utils/alerts_error
 import 'package:skeletonizer/skeletonizer.dart';
 
 class AlertsTab extends ConsumerStatefulWidget {
-  const AlertsTab({this.onOpenUpdates, super.key});
+  const AlertsTab({this.onOpenUpdates, this.selectedAlertId, super.key});
 
   final VoidCallback? onOpenUpdates;
+
+  /// Alert open in the detail pane, highlighted in the list.
+  final String? selectedAlertId;
 
   @override
   ConsumerState<AlertsTab> createState() => _AlertsTabState();
@@ -100,11 +105,11 @@ class _AlertsTabState extends ConsumerState<AlertsTab> {
                     return false;
                   },
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
+                    padding: EdgeInsets.fromLTRB(
                       AppSpacing.lg,
                       AppSpacing.sm,
                       AppSpacing.lg,
-                      AppSpacing.lg,
+                      AppSpacing.lg + MediaQuery.paddingOf(context).bottom,
                     ),
                     itemCount: (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
                     separatorBuilder: (_, _) => const Gap(AppSpacing.md),
@@ -134,7 +139,10 @@ class _AlertsTabState extends ConsumerState<AlertsTab> {
 
                       return _intro.wrap(
                         index,
-                        AlertTile(alert: items[index]),
+                        AlertTile(
+                          alert: items[index],
+                          selected: items[index].id == widget.selectedAlertId,
+                        ),
                         id: items[index].id,
                       );
                     },
@@ -222,7 +230,10 @@ class _FilteredEmptyMessage extends StatelessWidget {
 }
 
 class UpdatesTab extends ConsumerStatefulWidget {
-  const UpdatesTab({super.key});
+  const UpdatesTab({this.selectedUpdateId, super.key});
+
+  /// Update open in the detail pane, highlighted in the list.
+  final String? selectedUpdateId;
 
   @override
   ConsumerState<UpdatesTab> createState() => _UpdatesTabState();
@@ -286,11 +297,11 @@ class _UpdatesTabState extends ConsumerState<UpdatesTab> {
                     return false;
                   },
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
+                    padding: EdgeInsets.fromLTRB(
                       AppSpacing.lg,
                       AppSpacing.sm,
                       AppSpacing.lg,
-                      AppSpacing.lg,
+                      AppSpacing.lg + MediaQuery.paddingOf(context).bottom,
                     ),
                     itemCount: (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
                     separatorBuilder: (_, _) => const Gap(AppSpacing.md),
@@ -320,7 +331,10 @@ class _UpdatesTabState extends ConsumerState<UpdatesTab> {
 
                       return _intro.wrap(
                         index,
-                        UpdateTile(update: items[index]),
+                        UpdateTile(
+                          update: items[index],
+                          selected: items[index].id == widget.selectedUpdateId,
+                        ),
                         id: items[index].id,
                       );
                     },
@@ -342,9 +356,12 @@ class _UpdatesTabState extends ConsumerState<UpdatesTab> {
 }
 
 class AlertTile extends ConsumerWidget {
-  const AlertTile({required this.alert, super.key});
+  const AlertTile({required this.alert, this.selected = false, super.key});
 
   final Alert alert;
+
+  /// Highlights the tile as the alert open in the detail pane.
+  final bool selected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -372,66 +389,104 @@ class AlertTile extends ConsumerWidget {
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppPressable(
-      enabled: route != null,
-      child: AppCardSurface(
-        padding: EdgeInsets.zero,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: cardRadius,
-          clipBehavior: Clip.antiAlias,
-          child: ListTile(
-            titleAlignment: ListTileTitleAlignment.top,
-            leading: Icon(_iconForAlert(alert), color: severityColor),
-            title: Text(title),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (primary != null && primary.isNotEmpty) Text(primary),
-                // The target name usually equals the payload's primary name;
-                // only show it when it adds information.
-                if (targetName != null &&
-                    targetName.isNotEmpty &&
-                    targetName != primary) ...[
-                  const Gap(AppSpacing.xs),
-                  Text(
-                    targetName,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-                const Gap(AppSpacing.xs),
-                Row(
-                  children: [
-                    Icon(
-                      AppIcons.clock,
-                      size: 16,
-                      color: scheme.onSurfaceVariant,
-                    ),
+    // Tapping the row opens the alert's details (in the pane when side by
+    // side, as a page otherwise); the icon jumps to its target.
+    final canOpen = alert.id.isNotEmpty;
+
+    return SelectionHighlight(
+      selected: selected,
+      child: AppPressable(
+        enabled: canOpen,
+        child: AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: cardRadius,
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              titleAlignment: ListTileTitleAlignment.top,
+              // Room for the status chip plus the open-resource icon.
+              isThreeLine: true,
+              leading: Icon(_iconForAlert(alert), color: severityColor),
+              title: Text(title),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (primary != null && primary.isNotEmpty) Text(primary),
+                  // The target name usually equals the payload's primary name;
+                  // only show it when it adds information.
+                  if (targetName != null &&
+                      targetName.isNotEmpty &&
+                      targetName != primary) ...[
                     const Gap(AppSpacing.xs),
-                    Expanded(
-                      child: Text(
-                        _formatTimestamp(alert.timestamp.toLocal()),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+                    Text(
+                      targetName,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                   ],
-                ),
-              ],
-            ),
-            trailing: alert.resolved
-                ? const NotificationsStatusChip(
-                    label: 'RESOLVED',
-                    kind: NotificationsStatusChipKind.neutral,
-                  )
-                : NotificationsStatusChip(
-                    label: _labelForSeverity(alert.level),
-                    kind: _chipKindForAlertLevel(alert.level),
+                  const Gap(AppSpacing.xs),
+                  Row(
+                    children: [
+                      Icon(
+                        AppIcons.clock,
+                        size: 16,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      const Gap(AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          _formatTimestamp(alert.timestamp.toLocal()),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                    ],
                   ),
-            onTap: route == null ? null : () => context.go(route),
+                ],
+              ),
+              trailing: SizedBox(
+                width: 108,
+                child: OverflowBox(
+                  alignment: Alignment.topRight,
+                  maxHeight: 96,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (alert.resolved)
+                        const NotificationsStatusChip(
+                          label: 'RESOLVED',
+                          kind: NotificationsStatusChipKind.neutral,
+                        )
+                      else
+                        NotificationsStatusChip(
+                          label: _labelForSeverity(alert.level),
+                          kind: _chipKindForAlertLevel(alert.level),
+                        ),
+                      if (route != null)
+                        OpenResourceButton(
+                          key: ValueKey('alert_open_resource_${alert.id}'),
+                          route: route,
+                          replaceStack: true,
+                        )
+                      else
+                        // Keeps the row height stable without a destination.
+                        const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+
+              onTap: !canOpen
+                  ? null
+                  : () => context.openDetail(
+                      '${AppRoutes.alertDetails}/${Uri.encodeComponent(alert.id)}',
+                    ),
+            ),
           ),
         ),
       ),
@@ -444,9 +499,13 @@ class UpdateTile extends ConsumerWidget {
     required this.update,
     super.key,
     this.currentTargetId,
+    this.selected = false,
   });
 
   final UpdateListItem update;
+
+  /// Highlights the tile as the update open in the detail pane.
+  final bool selected;
 
   /// Id of the resource whose detail screen embeds this tile. When the
   /// update targets it, the target name and the "Open resource" action are
@@ -491,101 +550,126 @@ class UpdateTile extends ConsumerWidget {
     );
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
 
-    return AppPressable(
-      enabled: route != null,
-      child: AppCardSurface(
-        padding: EdgeInsets.zero,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: cardRadius,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: route == null ? null : () => context.push(route),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.md,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Icon(
-                      _iconForTargetType(target?.type),
-                      color: scheme.primary,
-                      size: 22,
+    return SelectionHighlight(
+      selected: selected,
+      child: AppPressable(
+        enabled: route != null,
+        child: AppCardSurface(
+          padding: EdgeInsets.zero,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: cardRadius,
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: route == null ? null : () => context.openDetail(route),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Icon(
+                        _iconForTargetType(target?.type),
+                        color: scheme.primary,
+                        size: 22,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        if (!isCurrent)
+                          if (!isCurrent)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: AppSpacing.xxs,
+                              ),
+                              child: Text(
+                                targetName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: muted,
+                              ),
+                            ),
                           Padding(
                             padding: const EdgeInsets.only(top: AppSpacing.xxs),
                             child: Text(
-                              targetName,
+                              operator == null
+                                  ? startTime
+                                  : '$startTime  ·  $operator',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: muted,
                             ),
                           ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.xxs),
-                          child: Text(
-                            operator == null
-                                ? startTime
-                                : '$startTime  ·  $operator',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: muted,
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _updateStatusPill(update),
+                        if (resourceRoute != null)
+                          OpenResourceButton(
+                            key: ValueKey('update_open_resource_${update.id}'),
+                            route: resourceRoute,
                           ),
-                        ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _updateStatusPill(update),
-                      if (resourceRoute != null)
-                        IconButton(
-                          key: ValueKey('update_open_resource_${update.id}'),
-                          tooltip: 'Open resource',
-                          visualDensity: VisualDensity.compact,
-                          style: const ButtonStyle(
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          iconSize: 18,
-                          padding: const EdgeInsets.all(AppSpacing.xs),
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
-                          onPressed: () => context.push(resourceRoute),
-                          icon: const Icon(AppIcons.externalLink),
-                        ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Small "open external" icon on notification rows: jumps straight to the
+/// resource the row is about, while tapping the row opens its details.
+class OpenResourceButton extends StatelessWidget {
+  const OpenResourceButton({
+    required this.route,
+    this.replaceStack = false,
+    super.key,
+  });
+
+  final String route;
+
+  /// Switches branch with `go` instead of pushing on the current stack.
+  final bool replaceStack;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: 'Open resource',
+      visualDensity: VisualDensity.compact,
+      style: const ButtonStyle(
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      iconSize: 18,
+      padding: const EdgeInsets.all(AppSpacing.xs),
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      onPressed: () =>
+          replaceStack ? context.go(route) : unawaited(context.push(route)),
+      icon: const Icon(AppIcons.externalLink),
     );
   }
 }

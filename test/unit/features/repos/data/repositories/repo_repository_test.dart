@@ -9,8 +9,7 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockApiClient extends Mock implements KomodoApiClient {
   @override
-  KomodoApiCapabilities get capabilities =>
-      KomodoApiCapabilities.v23AndNewer;
+  KomodoApiCapabilities get capabilities => KomodoApiCapabilities.v23AndNewer;
 }
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
@@ -121,32 +120,34 @@ void main() {
       }
     });
 
-    test('updateRepoConfig sends UpdateRepo via write with id and config',
-        () async {
-      when(() => client.write(any())).thenAnswer(
-        (_) async => <String, dynamic>{
+    test(
+      'updateRepoConfig sends UpdateRepo via write with id and config',
+      () async {
+        when(() => client.write(any())).thenAnswer(
+          (_) async => <String, dynamic>{
+            'id': 'repo-1',
+            'name': 'infra',
+            'config': <String, dynamic>{},
+            'info': <String, dynamic>{},
+          },
+        );
+
+        final result = await repository.updateRepoConfig(
+          repoId: 'repo-1',
+          partialConfig: {'branch': 'main'},
+        );
+
+        expect(_rightOrFail(result).id, 'repo-1');
+
+        final request = capturedWrite();
+        expect(request.type, 'UpdateRepo');
+        expect(request.params, <String, dynamic>{
           'id': 'repo-1',
-          'name': 'infra',
-          'config': <String, dynamic>{},
-          'info': <String, dynamic>{},
-        },
-      );
-
-      final result = await repository.updateRepoConfig(
-        repoId: 'repo-1',
-        partialConfig: {'branch': 'main'},
-      );
-
-      expect(_rightOrFail(result).id, 'repo-1');
-
-      final request = capturedWrite();
-      expect(request.type, 'UpdateRepo');
-      expect(request.params, <String, dynamic>{
-        'id': 'repo-1',
-        'config': {'branch': 'main'},
-      });
-      verifyNever(() => client.execute(any()));
-    });
+          'config': {'branch': 'main'},
+        });
+        verifyNever(() => client.execute(any()));
+      },
+    );
 
     test('pullRepo maps 401 to auth failure', () async {
       when(() => client.execute(any())).thenThrow(

@@ -15,145 +15,160 @@ void registerProviderContractTests() {
   final config = BackendTestConfig.fromEnvironment();
   final missingConfigReason = config == null
       ? 'Set KOMODO_TEST_BASE_URL, KOMODO_TEST_API_KEY, and '
-          'KOMODO_TEST_API_SECRET to run backend tests.'
+            'KOMODO_TEST_API_SECRET to run backend tests.'
       : null;
 
-  group('Git provider account CRUD (real backend)', () {
-    late GitProviderRepository repository;
+  group(
+    'Git provider account CRUD (real backend)',
+    () {
+      late GitProviderRepository repository;
 
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      repository = GitProviderRepository(buildTestClient(requireConfig(config), RpcRecorder()));
-    });
-
-    test('create/update/delete account', () async {
-      GitProviderAccount? created;
-      final suffix = _randomToken(Random(3101));
-      final username = 'contract-$suffix';
-
-      try {
-        created = expectRight(
-          await repository.createAccount(
-            domain: 'example.com',
-            username: username,
-            token: 'token-$suffix',
-            https: true,
-          ),
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        repository = GitProviderRepository(
+          buildTestClient(requireConfig(config), RpcRecorder()),
         );
-        final createdValue = created ??
-            (throw StateError('Expected created git provider account.'));
+      });
 
-        final listed = expectRight(await repository.listAccounts());
-        expect(listed.any((a) => a.id == createdValue.id), isTrue);
+      test('create/update/delete account', () async {
+        GitProviderAccount? created;
+        final suffix = _randomToken(Random(3101));
+        final username = 'contract-$suffix';
 
-        final filtered = expectRight(
-          await repository.listAccounts(domain: 'example.com', username: username),
-        );
-        expect(filtered.any((a) => a.id == createdValue.id), isTrue);
+        try {
+          created = expectRight(
+            await repository.createAccount(
+              domain: 'example.com',
+              username: username,
+              token: 'token-$suffix',
+              https: true,
+            ),
+          );
+          final createdValue =
+              created ??
+              (throw StateError('Expected created git provider account.'));
 
-        final updated = expectRight(
-          await repository.updateAccount(
-            id: createdValue.id,
-            domain: 'example.org',
-            username: '$username-updated',
-            token: 'token-$suffix-updated',
-            https: false,
-          ),
-        );
-        expect(updated.id, createdValue.id);
-        expect(updated.domain, 'example.org');
-        expect(updated.https, isFalse);
+          final listed = expectRight(await repository.listAccounts());
+          expect(listed.any((a) => a.id == createdValue.id), isTrue);
 
-        expectRight(await repository.deleteAccount(id: createdValue.id));
-        final afterDelete = expectRight(await repository.listAccounts());
-        expect(afterDelete.any((a) => a.id == createdValue.id), isFalse);
-      } finally {
-        if (created != null) {
-          await repository.deleteAccount(id: created.id);
+          final filtered = expectRight(
+            await repository.listAccounts(
+              domain: 'example.com',
+              username: username,
+            ),
+          );
+          expect(filtered.any((a) => a.id == createdValue.id), isTrue);
+
+          final updated = expectRight(
+            await repository.updateAccount(
+              id: createdValue.id,
+              domain: 'example.org',
+              username: '$username-updated',
+              token: 'token-$suffix-updated',
+              https: false,
+            ),
+          );
+          expect(updated.id, createdValue.id);
+          expect(updated.domain, 'example.org');
+          expect(updated.https, isFalse);
+
+          expectRight(await repository.deleteAccount(id: createdValue.id));
+          final afterDelete = expectRight(await repository.listAccounts());
+          expect(afterDelete.any((a) => a.id == createdValue.id), isFalse);
+        } finally {
+          if (created != null) {
+            await repository.deleteAccount(id: created.id);
+          }
         }
-      }
-    });
+      });
 
-    test('update missing account returns server failure', () async {
-      final missingId = 'missing-git-${_randomToken(Random(7777))}';
-      final result = await repository.updateAccount(
-        id: missingId,
-        domain: 'example.com',
-      );
-      expectServerFailure(result);
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
-
-  group('Docker registry account CRUD (real backend)', () {
-    late DockerRegistryRepository repository;
-
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      repository = DockerRegistryRepository(
-        buildTestClient(requireConfig(config), RpcRecorder()),
-      );
-    });
-
-    test('create/update/delete account', () async {
-      DockerRegistryAccount? created;
-      final suffix = _randomToken(Random(4101));
-      final username = 'contract-$suffix';
-
-      try {
-        created = expectRight(
-          await repository.createAccount(
-            domain: 'registry.example.com',
-            username: username,
-            token: 'token-$suffix',
-          ),
+      test('update missing account returns server failure', () async {
+        final missingId = 'missing-git-${_randomToken(Random(7777))}';
+        final result = await repository.updateAccount(
+          id: missingId,
+          domain: 'example.com',
         );
-        final createdValue = created ??
-            (throw StateError('Expected created docker registry account.'));
+        expectServerFailure(result);
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
 
-        final listed = expectRight(await repository.listAccounts());
-        expect(listed.any((a) => a.id == createdValue.id), isTrue);
+  group(
+    'Docker registry account CRUD (real backend)',
+    () {
+      late DockerRegistryRepository repository;
 
-        final filtered = expectRight(
-          await repository.listAccounts(
-            domain: 'registry.example.com',
-            username: username,
-          ),
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        repository = DockerRegistryRepository(
+          buildTestClient(requireConfig(config), RpcRecorder()),
         );
-        expect(filtered.any((a) => a.id == createdValue.id), isTrue);
+      });
 
-        final updated = expectRight(
-          await repository.updateAccount(
-            id: createdValue.id,
-            domain: 'registry.example.org',
-            username: '$username-updated',
-            token: 'token-$suffix-updated',
-          ),
-        );
-        expect(updated.id, createdValue.id);
-        expect(updated.domain, 'registry.example.org');
+      test('create/update/delete account', () async {
+        DockerRegistryAccount? created;
+        final suffix = _randomToken(Random(4101));
+        final username = 'contract-$suffix';
 
-        expectRight(await repository.deleteAccount(id: createdValue.id));
-        final afterDelete = expectRight(await repository.listAccounts());
-        expect(afterDelete.any((a) => a.id == createdValue.id), isFalse);
-      } finally {
-        if (created != null) {
-          await repository.deleteAccount(id: created.id);
+        try {
+          created = expectRight(
+            await repository.createAccount(
+              domain: 'registry.example.com',
+              username: username,
+              token: 'token-$suffix',
+            ),
+          );
+          final createdValue =
+              created ??
+              (throw StateError('Expected created docker registry account.'));
+
+          final listed = expectRight(await repository.listAccounts());
+          expect(listed.any((a) => a.id == createdValue.id), isTrue);
+
+          final filtered = expectRight(
+            await repository.listAccounts(
+              domain: 'registry.example.com',
+              username: username,
+            ),
+          );
+          expect(filtered.any((a) => a.id == createdValue.id), isTrue);
+
+          final updated = expectRight(
+            await repository.updateAccount(
+              id: createdValue.id,
+              domain: 'registry.example.org',
+              username: '$username-updated',
+              token: 'token-$suffix-updated',
+            ),
+          );
+          expect(updated.id, createdValue.id);
+          expect(updated.domain, 'registry.example.org');
+
+          expectRight(await repository.deleteAccount(id: createdValue.id));
+          final afterDelete = expectRight(await repository.listAccounts());
+          expect(afterDelete.any((a) => a.id == createdValue.id), isFalse);
+        } finally {
+          if (created != null) {
+            await repository.deleteAccount(id: created.id);
+          }
         }
-      }
-    });
+      });
 
-    test('delete missing account returns server failure', () async {
-      final missingId = 'missing-docker-${_randomToken(Random(8888))}';
-      final result = await repository.deleteAccount(id: missingId);
-      expectServerFailure(result);
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
+      test('delete missing account returns server failure', () async {
+        final missingId = 'missing-docker-${_randomToken(Random(8888))}';
+        final result = await repository.deleteAccount(id: missingId);
+        expectServerFailure(result);
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
 }
 
 void main() => registerProviderContractTests();

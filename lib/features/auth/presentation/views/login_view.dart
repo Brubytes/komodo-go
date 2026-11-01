@@ -345,8 +345,7 @@ class LoginView extends HookConsumerWidget {
                       loading: () => const SizedBox.shrink(),
                       error: (error, stackTrace) => const _InlineErrorCard(
                         title: 'Saved connections unavailable',
-                        message:
-                            'The saved connection list could not be loaded. Restart the app and try again.',
+                        message: 'The saved connection list could not be loaded. Restart the app and try again.',
                       ),
                     ),
 

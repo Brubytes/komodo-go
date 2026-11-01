@@ -42,7 +42,10 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
-      final subscription = listenProvider(container, dockerRegistryAccountsProvider);
+      final subscription = listenProvider(
+        container,
+        dockerRegistryAccountsProvider,
+      );
       addTearDown(subscription.close);
 
       final accounts = await readAsyncProvider(
@@ -61,7 +64,10 @@ void main() {
         overrides: [dockerRegistryRepositoryProvider.overrideWithValue(null)],
       );
       addTearDown(container.dispose);
-      final subscription = listenProvider(container, dockerRegistryAccountsProvider);
+      final subscription = listenProvider(
+        container,
+        dockerRegistryAccountsProvider,
+      );
       addTearDown(subscription.close);
 
       final accounts = await readAsyncProvider(
@@ -84,7 +90,10 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
-      final subscription = listenProvider(container, dockerRegistryAccountsProvider);
+      final subscription = listenProvider(
+        container,
+        dockerRegistryAccountsProvider,
+      );
       addTearDown(subscription.close);
 
       await expectLater(

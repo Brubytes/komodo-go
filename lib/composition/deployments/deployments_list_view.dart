@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
@@ -12,6 +11,7 @@ import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/filters/template_filter.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
@@ -31,7 +31,10 @@ import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all deployments.
 class DeploymentsListView extends ConsumerStatefulWidget {
-  const DeploymentsListView({super.key});
+  const DeploymentsListView({this.selectedId, super.key});
+
+  /// Id of the item open in the detail pane, highlighted in the list.
+  final String? selectedId;
 
   @override
   ConsumerState<DeploymentsListView> createState() =>
@@ -41,6 +44,7 @@ class DeploymentsListView extends ConsumerStatefulWidget {
 class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
+  late final ScrollController _scrollController;
   ProviderSubscription<String>? _searchQuerySubscription;
   bool _isSearchVisible = false;
   late final _intro = AppListIntro();
@@ -53,6 +57,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
       text: ref.read(deploymentsSearchQueryProvider),
     );
     _searchFocusNode = FocusNode();
+    _scrollController = ListScrollMemory.controllerFor('resources_deployments');
     _searchQuerySubscription = ref.listenManual<String>(
       deploymentsSearchQueryProvider,
       (previous, next) {
@@ -72,6 +77,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
     _searchQuerySubscription?.close();
     _searchQuerySubscription = null;
     _searchFocusNode.dispose();
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -173,7 +179,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
               ],
               orElse: () => const [],
             ),
-            onCreate: () => context.push('${AppRoutes.deployments}/new'),
+            onCreate: () => context.openDetail('${AppRoutes.deployments}/new'),
             onRefresh: () => ref.read(deploymentsProvider.notifier).refresh(),
             onBatchCompleted: () => ref.invalidate(deploymentsProvider),
           ),
@@ -184,6 +190,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
           RefreshIndicator(
             onRefresh: () => ref.read(deploymentsProvider.notifier).refresh(),
             child: CustomScrollView(
+              controller: _scrollController,
               slivers: [
                 // Header: filters and search
                 SliverPadding(
@@ -412,7 +419,12 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                     }
 
                     return SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        0,
+                        16,
+                        28 + MediaQuery.paddingOf(context).bottom,
+                      ),
                       sliver: SliverList.separated(
                         itemCount: filtered.length,
                         separatorBuilder: (_, _) => const Gap(12),
@@ -421,23 +433,26 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                           return _intro.wrap(
                             i,
                             id: deployment.id,
-                            DeploymentCard(
-                              deployment: deployment,
-                              serverName:
-                                  serverNames[deployment.info?.serverId],
-                              displayTags: _displayTags(
-                                deployment.tags,
-                                tagNameById,
-                              ),
-                              onTap: () => context.push(
-                                '${AppRoutes.deployments}/${deployment.id}?name=${Uri.encodeComponent(deployment.name)}',
-                              ),
-                              onAction: (action) => _handleAction(
-                                context,
-                                ref,
-                                deployment.id,
-                                deployment.name,
-                                action,
+                            SelectionHighlight(
+                              selected: deployment.id == widget.selectedId,
+                              child: DeploymentCard(
+                                deployment: deployment,
+                                serverName:
+                                    serverNames[deployment.info?.serverId],
+                                displayTags: _displayTags(
+                                  deployment.tags,
+                                  tagNameById,
+                                ),
+                                onTap: () => context.openDetail(
+                                  '${AppRoutes.deployments}/${deployment.id}?name=${Uri.encodeComponent(deployment.name)}',
+                                ),
+                                onAction: (action) => _handleAction(
+                                  context,
+                                  ref,
+                                  deployment.id,
+                                  deployment.name,
+                                  action,
+                                ),
                               ),
                             ),
                           );

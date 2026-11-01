@@ -33,8 +33,7 @@ class Auth extends _$Auth {
       if (connectionsState.activeConnectionId != null) {
         return const AuthState.error(
           failure: Failure.unknown(
-            message:
-                'The selected saved connection no longer exists. Choose another connection or add it again.',
+            message: 'The selected saved connection no longer exists. Choose another connection or add it again.',
           ),
         );
       }

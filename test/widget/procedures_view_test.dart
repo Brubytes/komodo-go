@@ -50,8 +50,9 @@ void main() {
     }),
   ];
 
-  testWidgets('Procedures list renders procedure cards via ResourceListView',
-      (tester) async {
+  testWidgets('Procedures list renders procedure cards via ResourceListView', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app(procedures));
     await tester.pumpAndSettle();
 

@@ -49,10 +49,12 @@ void registerActionsRunTests() {
         await backend.stop();
       }
     },
-    skip: config.skipReason(
-      requiredResourceLabel: 'KOMODO_TEST_ACTION_NAME',
-      requiredResourceValue: config.actionName,
-    ) != null,
+    skip:
+        config.skipReason(
+          requiredResourceLabel: 'KOMODO_TEST_ACTION_NAME',
+          requiredResourceValue: config.actionName,
+        ) !=
+        null,
   );
 }
 

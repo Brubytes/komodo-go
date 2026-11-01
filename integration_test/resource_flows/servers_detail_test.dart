@@ -54,7 +54,9 @@ void registerServersDetailTests() {
           expect(statsCalls, isNotEmpty);
 
           final systemCalls = backend.fake!.calls
-              .where((c) => c.path == '/read' && c.type == 'GetSystemInformation')
+              .where(
+                (c) => c.path == '/read' && c.type == 'GetSystemInformation',
+              )
               .toList();
           expect(systemCalls, isNotEmpty);
         }
@@ -62,10 +64,12 @@ void registerServersDetailTests() {
         await backend.stop();
       }
     },
-    skip: config.skipReason(
-      requiredResourceLabel: 'KOMODO_TEST_SERVER_NAME',
-      requiredResourceValue: config.serverName,
-    ) != null,
+    skip:
+        config.skipReason(
+          requiredResourceLabel: 'KOMODO_TEST_SERVER_NAME',
+          requiredResourceValue: config.serverName,
+        ) !=
+        null,
   );
 }
 

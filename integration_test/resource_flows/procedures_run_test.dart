@@ -33,8 +33,9 @@ void registerProceduresRunTests() {
             .waitUntilVisible();
         await $(find.byKey(const ValueKey('resources_stat_procedures'))).tap();
 
-        final procedureName =
-            config.isFake ? 'Test Procedure' : config.procedureName;
+        final procedureName = config.isFake
+            ? 'Test Procedure'
+            : config.procedureName;
         await $(find.text(procedureName)).waitUntilVisible();
         await $(find.text(procedureName)).tap();
         await $(find.byIcon(AppIcons.play)).tap();
@@ -50,10 +51,12 @@ void registerProceduresRunTests() {
         await backend.stop();
       }
     },
-    skip: config.skipReason(
-      requiredResourceLabel: 'KOMODO_TEST_PROCEDURE_NAME',
-      requiredResourceValue: config.procedureName,
-    ) != null,
+    skip:
+        config.skipReason(
+          requiredResourceLabel: 'KOMODO_TEST_PROCEDURE_NAME',
+          requiredResourceValue: config.procedureName,
+        ) !=
+        null,
   );
 }
 

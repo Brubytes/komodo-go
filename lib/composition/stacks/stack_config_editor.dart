@@ -797,8 +797,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                     decoration: const InputDecoration(
                       labelText: 'Repo',
                       prefixIcon: Icon(AppIcons.repos),
-                      helperText:
-                          'Select an existing Repo to attach, or configure below.',
+                      helperText: 'Select an existing Repo to attach, or configure below.',
                     ),
                     items: [
                       for (final repo in sortedRepos)
@@ -863,8 +862,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                     decoration: const InputDecoration(
                       labelText: 'Commit hash',
                       prefixIcon: Icon(AppIcons.tag),
-                      helperText:
-                          'Optional. Switch to a specific commit after cloning.',
+                      helperText: 'Optional. Switch to a specific commit after cloning.',
                     ),
                   ),
                   const Gap(AppSpacing.md),
@@ -908,8 +906,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                 decoration: const InputDecoration(
                   labelText: 'Run directory',
                   prefixIcon: Icon(AppIcons.package),
-                  helperText:
-                      'Working directory for compose up, relative to repo root.',
+                  helperText: 'Working directory for compose up, relative to repo root.',
                 ),
               ),
               const Gap(AppSpacing.md),
@@ -1177,8 +1174,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
                         decoration: const InputDecoration(
                           labelText: 'Services (optional)',
                           prefixIcon: Icon(AppIcons.widgets),
-                          helperText:
-                              'Comma-separated list of services this file applies to.',
+                          helperText: 'Comma-separated list of services this file applies to.',
                         ),
                       ),
                       const Gap(AppSpacing.md),

@@ -31,8 +31,9 @@ class _TestActiveConnection extends ActiveConnection {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Settings displays the Core version and 2.2 compatibility mode',
-      (tester) async {
+  testWidgets('Settings displays the Core version and 2.2 compatibility mode', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final profile = ConnectionProfile(
       id: 'connection-1',

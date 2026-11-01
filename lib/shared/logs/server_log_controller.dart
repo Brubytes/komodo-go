@@ -6,8 +6,9 @@ import 'package:komodo_go/core/network/network_status.dart';
 import 'package:komodo_go/shared/logs/server_log.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-typedef ServerLogLoader =
-    Future<ServerLogSnapshot> Function(ServerLogRequest request);
+typedef ServerLogLoader = Future<ServerLogSnapshot> Function(
+  ServerLogRequest request,
+);
 
 /// Holds the log query, latest snapshot, and refresh timer so the inline
 /// explorer and the full-screen viewer stay in sync.

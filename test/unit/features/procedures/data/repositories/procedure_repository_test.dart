@@ -8,8 +8,7 @@ import 'package:komodo_go/features/procedures/data/repositories/procedure_reposi
 import 'package:mocktail/mocktail.dart';
 
 class _MockApiClient extends Mock implements KomodoApiClient {
-  KomodoApiCapabilities capabilitiesValue =
-      KomodoApiCapabilities.v23AndNewer;
+  KomodoApiCapabilities capabilitiesValue = KomodoApiCapabilities.v23AndNewer;
 
   @override
   KomodoApiCapabilities get capabilities => capabilitiesValue;
@@ -48,35 +47,37 @@ void main() {
         verify(() => client.execute(captureAny())).captured.single
             as RpcRequest<dynamic>;
 
-    test('listProcedures sends ListProcedures with exact query payload',
-        () async {
-      when(() => client.read(any())).thenAnswer(
-        (_) async => [
-          {'id': 'proc-1', 'name': 'backup', 'info': <String, dynamic>{}},
-        ],
-      );
+    test(
+      'listProcedures sends ListProcedures with exact query payload',
+      () async {
+        when(() => client.read(any())).thenAnswer(
+          (_) async => [
+            {'id': 'proc-1', 'name': 'backup', 'info': <String, dynamic>{}},
+          ],
+        );
 
-      final result = await repository.listProcedures();
+        final result = await repository.listProcedures();
 
-      expect(_rightOrFail(result).single.id, 'proc-1');
+        expect(_rightOrFail(result).single.id, 'proc-1');
 
-      final request = capturedRead();
-      expect(request.type, 'ListProcedures');
-      expect(request.params, <String, dynamic>{
-        'query': <String, dynamic>{
-          'terms': '',
-          'names': <String>[],
-          'templates': 'Include',
-          'tags': <String>[],
-          'tag_behavior': 'All',
-          'specific': <String, dynamic>{},
-        },
-        'sort_by': 'Name',
-        'sort_desc': false,
-        'page': 0,
-        'limit': 50,
-      });
-    });
+        final request = capturedRead();
+        expect(request.type, 'ListProcedures');
+        expect(request.params, <String, dynamic>{
+          'query': <String, dynamic>{
+            'terms': '',
+            'names': <String>[],
+            'templates': 'Include',
+            'tags': <String>[],
+            'tag_behavior': 'All',
+            'specific': <String, dynamic>{},
+          },
+          'sort_by': 'Name',
+          'sort_desc': false,
+          'page': 0,
+          'limit': 50,
+        });
+      },
+    );
 
     test('getProcedure sends GetProcedure with procedure param', () async {
       when(() => client.read(any())).thenAnswer(
@@ -96,41 +97,44 @@ void main() {
       expect(request.params, <String, dynamic>{'procedure': 'proc-1'});
     });
 
-    test('runProcedure sends RunProcedure via execute with exact payload',
-        () async {
-      when(
-        () => client.execute(any()),
-      ).thenAnswer((_) async => <String, dynamic>{});
+    test(
+      'runProcedure sends RunProcedure via execute with exact payload',
+      () async {
+        when(
+          () => client.execute(any()),
+        ).thenAnswer((_) async => <String, dynamic>{});
 
-      final result = await repository.runProcedure('proc-1');
+        final result = await repository.runProcedure('proc-1');
 
-      _rightOrFail(result);
+        _rightOrFail(result);
 
-      final request = capturedExecute();
-      expect(request.type, 'RunProcedure');
-      expect(request.params, <String, dynamic>{'procedure': 'proc-1'});
-      verifyNever(() => client.write(any()));
-    });
+        final request = capturedExecute();
+        expect(request.type, 'RunProcedure');
+        expect(request.params, <String, dynamic>{'procedure': 'proc-1'});
+        verifyNever(() => client.write(any()));
+      },
+    );
 
-    test('cancelProcedure sends CancelProcedure with an optional update id',
-        () async {
-      when(() => client.execute(any()))
-          .thenAnswer((_) async => <String, dynamic>{});
+    test(
+      'cancelProcedure sends CancelProcedure with an optional update id',
+      () async {
+        when(() => client.execute(any()))
+            .thenAnswer((_) async => <String, dynamic>{});
 
-      _rightOrFail(
-        await repository.cancelProcedure('proc-1', updateId: 'update-1'),
-      );
+        _rightOrFail(
+          await repository.cancelProcedure('proc-1', updateId: 'update-1'),
+        );
 
-      final request = capturedExecute();
-      expect(request.type, 'CancelProcedure');
-      expect(request.params, <String, dynamic>{
-        'procedure': 'proc-1',
-        'update_id': 'update-1',
-      });
-    });
+        final request = capturedExecute();
+        expect(request.type, 'CancelProcedure');
+        expect(request.params, <String, dynamic>{
+          'procedure': 'proc-1',
+          'update_id': 'update-1',
+        });
+      },
+    );
 
-    test('Komodo 2.2 reports procedure cancellation as unsupported',
-        () async {
+    test('Komodo 2.2 reports procedure cancellation as unsupported', () async {
       client.capabilitiesValue = KomodoApiCapabilities.v22;
 
       final result = await repository.cancelProcedure('procedure-1');
@@ -147,8 +151,7 @@ void main() {
       verifyNever(() => client.execute(any()));
     });
 
-    test(
-        'updateProcedureConfig sends UpdateProcedure via write '
+    test('updateProcedureConfig sends UpdateProcedure via write '
         'with id and config', () async {
       when(() => client.write(any())).thenAnswer(
         (_) async => <String, dynamic>{

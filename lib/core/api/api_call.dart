@@ -30,8 +30,7 @@ Future<Either<Failure, T>> apiCall<T>(
     }
     return const Left(
       Failure.network(
-        message:
-            'Cannot reach the server. Check your connection and server address.',
+        message: 'Cannot reach the server. Check your connection and server address.',
       ),
     );
   } on Object catch (e) {

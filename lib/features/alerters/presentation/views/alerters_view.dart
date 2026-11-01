@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
@@ -11,6 +10,7 @@ import 'package:komodo_go/core/widgets/detail/detail_pill_list.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
+import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -19,7 +19,10 @@ import 'package:komodo_go/features/alerters/presentation/providers/alerters_prov
 import 'package:skeletonizer/skeletonizer.dart';
 
 class AlertersView extends ConsumerStatefulWidget {
-  const AlertersView({super.key});
+  const AlertersView({this.selectedId, super.key});
+
+  /// Id of the alerter open in the detail pane, highlighted in the list.
+  final String? selectedId;
 
   @override
   ConsumerState<AlertersView> createState() => _AlertersViewState();
@@ -27,6 +30,16 @@ class AlertersView extends ConsumerStatefulWidget {
 
 class _AlertersViewState extends ConsumerState<AlertersView> {
   late final _intro = AppListIntro();
+  late final ScrollController _scrollController =
+      ListScrollMemory.controllerFor(
+        'alerters',
+      );
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,12 +61,21 @@ class _AlertersViewState extends ConsumerState<AlertersView> {
                 if (items.isEmpty) return const _EmptyState();
 
                 return ListView.separated(
-                  padding: const EdgeInsets.all(16),
+                  controller: _scrollController,
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    16 + MediaQuery.paddingOf(context).bottom,
+                  ),
                   itemCount: items.length,
                   separatorBuilder: (_, _) => const Gap(12),
                   itemBuilder: (context, index) => _intro.wrap(
                     index,
-                    _AlerterTile(item: items[index]),
+                    SelectionHighlight(
+                      selected: items[index].id == widget.selectedId,
+                      child: _AlerterTile(item: items[index]),
+                    ),
                     id: items[index].id,
                   ),
                 );
@@ -98,7 +120,8 @@ class _AlerterTile extends ConsumerWidget {
         borderRadius: cardRadius,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => context.push('${AppRoutes.komodoAlerters}/${item.id}'),
+          onTap: () =>
+              context.openDetail('${AppRoutes.komodoAlerters}/${item.id}'),
           borderRadius: cardRadius,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 88),
@@ -199,7 +222,7 @@ class _AlerterTile extends ConsumerWidget {
                           onSelected: (action) async {
                             switch (action) {
                               case _AlerterAction.edit:
-                                await context.push(
+                                context.openDetail(
                                   '${AppRoutes.komodoAlerters}/${item.id}',
                                 );
                                 return;

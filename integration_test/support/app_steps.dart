@@ -61,7 +61,9 @@ Future<void> loginWith(
 
   await ensureOnLoginAddForm($);
 
-  await $(find.byKey(const Key('login_serverUrl'))).scrollTo().enterText(baseUrl);
+  await $(find.byKey(const Key('login_serverUrl')))
+      .scrollTo()
+      .enterText(baseUrl);
   await $(find.byKey(const Key('login_apiKey'))).scrollTo().enterText(apiKey);
   await $(find.byKey(const Key('login_apiSecret')))
       .scrollTo()

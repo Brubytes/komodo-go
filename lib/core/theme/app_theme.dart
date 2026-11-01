@@ -96,6 +96,7 @@ class AppTheme {
         backgroundColor: colorScheme.surface,
         surfaceTintColor: _surfaceTint,
         shape: controlShape,
+        constraints: const BoxConstraints(minWidth: 280, maxWidth: 560),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: colorScheme.surface,
@@ -103,6 +104,8 @@ class AppTheme {
         surfaceTintColor: _surfaceTint,
         shape: controlShape,
         elevation: 0,
+        // Centered, phone-width sheets on wide windows.
+        constraints: const BoxConstraints(maxWidth: 640),
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: isDark

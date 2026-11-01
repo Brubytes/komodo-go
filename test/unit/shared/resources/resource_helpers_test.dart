@@ -57,32 +57,35 @@ void main() {
       expect(resourceIcon(ResourceKind.unknown), AppIcons.widgets);
     });
 
-    test('resourceLabel prefers direct name, lookup name, then short fallback', () {
-      expect(
-        resourceLabel(
-          ref: const ResourceRef(kind: ResourceKind.builds, id: 'build-1'),
-          directName: '  Web ',
-          lookup: const {},
-        ),
-        'Web',
-      );
-      expect(
-        resourceLabel(
-          ref: const ResourceRef(kind: ResourceKind.builds, id: 'build-1'),
-          lookup: const {'build:build-1': 'API'},
-        ),
-        'API',
-      );
-      expect(
-        resourceLabel(
-          ref: const ResourceRef(
-            kind: ResourceKind.builds,
-            id: '1234567890abcdef',
+    test(
+      'resourceLabel prefers direct name, lookup name, then short fallback',
+      () {
+        expect(
+          resourceLabel(
+            ref: const ResourceRef(kind: ResourceKind.builds, id: 'build-1'),
+            directName: '  Web ',
+            lookup: const {},
           ),
-          lookup: const {},
-        ),
-        'Build 123456...cdef',
-      );
-    });
+          'Web',
+        );
+        expect(
+          resourceLabel(
+            ref: const ResourceRef(kind: ResourceKind.builds, id: 'build-1'),
+            lookup: const {'build:build-1': 'API'},
+          ),
+          'API',
+        );
+        expect(
+          resourceLabel(
+            ref: const ResourceRef(
+              kind: ResourceKind.builds,
+              id: '1234567890abcdef',
+            ),
+            lookup: const {},
+          ),
+          'Build 123456...cdef',
+        );
+      },
+    );
   });
 }

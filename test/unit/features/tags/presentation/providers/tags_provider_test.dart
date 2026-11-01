@@ -105,8 +105,12 @@ void main() {
 
     test('create returns false on server failure', () async {
       final repository = _MockTagRepository();
-      when(() => repository.createTag(name: any(named: 'name'), color: any(named: 'color')))
-          .thenAnswer(
+      when(
+        () => repository.createTag(
+          name: any(named: 'name'),
+          color: any(named: 'color'),
+        ),
+      ).thenAnswer(
         (_) async => const Left(Failure.server(message: 'nope')),
       );
 
@@ -124,8 +128,12 @@ void main() {
 
     test('create returns true on success', () async {
       final repository = _MockTagRepository();
-      when(() => repository.createTag(name: any(named: 'name'), color: any(named: 'color')))
-          .thenAnswer(
+      when(
+        () => repository.createTag(
+          name: any(named: 'name'),
+          color: any(named: 'color'),
+        ),
+      ).thenAnswer(
         (_) async => Right(
           KomodoTag.fromJson(<String, dynamic>{
             'id': 't1',

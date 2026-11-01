@@ -32,6 +32,7 @@ class ResourceListConfig<T> {
     required this.cardBuilder,
     required this.nameOf,
     required this.severityOf,
+    this.idOf,
     this.stateLabelOf,
     this.serverNameOf,
     this.updatedAtOf,
@@ -104,6 +105,10 @@ class ResourceListConfig<T> {
 
   /// Display name, used as the sort tie-breaker.
   final String Function(T item) nameOf;
+
+  /// Resource id, used to highlight the item open in a side-by-side detail
+  /// pane. Null disables the highlight.
+  final String Function(T item)? idOf;
 
   /// Severity bucket, see `ResourceSeverity`: 0 = needs attention
   /// (failed/unhealthy/dead/unreachable), 1 = warning (update available,

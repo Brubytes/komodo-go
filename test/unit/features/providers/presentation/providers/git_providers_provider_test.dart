@@ -9,7 +9,8 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../../../../support/provider_test_templates.dart';
 
-class _MockGitProviderRepository extends Mock implements GitProviderRepository {}
+class _MockGitProviderRepository extends Mock
+    implements GitProviderRepository {}
 
 void main() {
   group('Git providers', () {
@@ -36,7 +37,9 @@ void main() {
       );
 
       final container = createProviderContainer(
-        overrides: [gitProviderRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          gitProviderRepositoryProvider.overrideWithValue(repository),
+        ],
       );
       addTearDown(container.dispose);
       final subscription = listenProvider(container, gitProvidersProvider);
@@ -76,7 +79,9 @@ void main() {
       );
 
       final container = createProviderContainer(
-        overrides: [gitProviderRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          gitProviderRepositoryProvider.overrideWithValue(repository),
+        ],
       );
       addTearDown(container.dispose);
       final subscription = listenProvider(container, gitProvidersProvider);
@@ -131,7 +136,9 @@ void main() {
       );
 
       final container = createProviderContainer(
-        overrides: [gitProviderRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          gitProviderRepositoryProvider.overrideWithValue(repository),
+        ],
       );
       addTearDown(container.dispose);
 
@@ -168,7 +175,9 @@ void main() {
       );
 
       final container = createProviderContainer(
-        overrides: [gitProviderRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          gitProviderRepositoryProvider.overrideWithValue(repository),
+        ],
       );
       addTearDown(container.dispose);
 
@@ -203,7 +212,9 @@ void main() {
       );
 
       final container = createProviderContainer(
-        overrides: [gitProviderRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          gitProviderRepositoryProvider.overrideWithValue(repository),
+        ],
       );
       addTearDown(container.dispose);
 

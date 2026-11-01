@@ -139,7 +139,7 @@ class _UpdateDetailContent extends ConsumerWidget {
           ],
         ),
         const Gap(AppSpacing.lg),
-        DetailSection(
+        DetailSubCard(
           title: 'Summary',
           icon: AppIcons.info,
           child: Column(
@@ -177,7 +177,7 @@ class _UpdateDetailContent extends ConsumerWidget {
           ),
         ),
         const Gap(AppSpacing.lg),
-        DetailSection(
+        DetailSubCard(
           title: 'Execution logs',
           icon: AppIcons.logs,
           child: update.logs.isEmpty
@@ -198,7 +198,7 @@ class _UpdateDetailContent extends ConsumerWidget {
         ),
         if (update.otherData.trim().isNotEmpty) ...[
           const Gap(AppSpacing.lg),
-          DetailSection(
+          DetailSubCard(
             title: 'Additional data',
             icon: AppIcons.notepadText,
             child: DetailCodeBlock(code: update.otherData),
@@ -207,7 +207,7 @@ class _UpdateDetailContent extends ConsumerWidget {
         if (update.previousToml.trim().isNotEmpty ||
             update.currentToml.trim().isNotEmpty) ...[
           const Gap(AppSpacing.lg),
-          DetailSection(
+          DetailSubCard(
             title: 'Configuration change',
             icon: AppIcons.code,
             child: Column(
