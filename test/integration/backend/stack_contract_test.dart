@@ -14,276 +14,290 @@ void registerStackContractTests() {
   final config = BackendTestConfig.fromEnvironment();
   final missingConfigReason = config == null
       ? 'Set KOMODO_TEST_BASE_URL, KOMODO_TEST_API_KEY, and '
-          'KOMODO_TEST_API_SECRET to run backend tests.'
+            'KOMODO_TEST_API_SECRET to run backend tests.'
       : null;
 
-  group('Stack contract CRUD-ish (real backend)', () {
-    late StackRepository repository;
-    late RpcRecorder recorder;
-    late KomodoApiClient client;
+  group(
+    'Stack contract CRUD-ish (real backend)',
+    () {
+      late StackRepository repository;
+      late RpcRecorder recorder;
+      late KomodoApiClient client;
 
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      recorder = RpcRecorder();
-      client = buildTestClient(requireConfig(config), recorder);
-      repository = StackRepository(client);
-    });
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        recorder = RpcRecorder();
+        client = buildTestClient(requireConfig(config), recorder);
+        repository = StackRepository(client);
+      });
 
-    test('list/get/update stack config + golden request', () async {
-      final stacks = expectRight(await repository.listStacks());
-      expect(stacks, isNotEmpty);
-
-      final target = stacks.first;
-      final stack = expectRight(await repository.getStack(target.id));
-      final originalEnvironment = stack.config.environment;
-
-      final updated = expectRight(
-        await repository.updateStackConfig(
-          stackId: stack.id,
-          partialConfig: <String, dynamic>{'environment': 'komodo-test'},
-        ),
-      );
-      expect(updated.id, stack.id);
-      expect(updated.config.environment.trim(), 'komodo-test');
-
-      final requestData = recorder.lastRequest?.data;
-      expect(requestData, isA<Map<String, dynamic>>());
-
-      final normalizedRequest = normalizeStackUpdateRequest(
-        requestData as Map<String, dynamic>,
-      );
-      expect(
-        normalizedRequest,
-        loadGoldenJson('test/golden/stack_update_request.json'),
-      );
-
-      final toggled = expectRight(
-        await repository.updateStackConfig(
-          stackId: stack.id,
-          partialConfig: <String, dynamic>{
-            'poll_for_updates': !stack.config.pollForUpdates,
-            'auto_update': !stack.config.autoUpdate,
-          },
-        ),
-      );
-      expect(toggled.id, stack.id);
-
-      final refreshed = expectRight(await repository.getStack(target.id));
-      expect(refreshed.config.environment.trim(), 'komodo-test');
-      expect(
-        refreshed.config.pollForUpdates,
-        toggled.config.pollForUpdates,
-      );
-      expect(refreshed.config.autoUpdate, toggled.config.autoUpdate);
-
-      await repository.updateStackConfig(
-        stackId: stack.id,
-        partialConfig: <String, dynamic>{
-          'environment': originalEnvironment,
-          'poll_for_updates': stack.config.pollForUpdates,
-          'auto_update': stack.config.autoUpdate,
-        },
-      );
-    });
-
-    test('create/delete stack', () async {
-      KomodoStack? created;
-      String? createdId;
-      var deleted = false;
-
-      try {
+      test('list/get/update stack config + golden request', () async {
         final stacks = expectRight(await repository.listStacks());
         expect(stacks, isNotEmpty);
 
-        final seed = stacks.first;
-        final seedDetail = expectRight(await repository.getStack(seed.id));
+        final target = stacks.first;
+        final stack = expectRight(await repository.getStack(target.id));
+        final originalEnvironment = stack.config.environment;
 
-        final name = 'contract-stack-${_randomToken(Random(21021))}';
-        final createdJson = await client.write(
-          RpcRequest(
-            type: 'CreateStack',
-            params: <String, dynamic>{
-              'name': name,
-              'config': seedDetail.config.toJson(),
+        final updated = expectRight(
+          await repository.updateStackConfig(
+            stackId: stack.id,
+            partialConfig: <String, dynamic>{'environment': 'komodo-test'},
+          ),
+        );
+        expect(updated.id, stack.id);
+        expect(updated.config.environment.trim(), 'komodo-test');
+
+        final requestData = recorder.lastRequest?.data;
+        expect(requestData, isA<Map<String, dynamic>>());
+
+        final normalizedRequest = normalizeStackUpdateRequest(
+          requestData as Map<String, dynamic>,
+        );
+        expect(
+          normalizedRequest,
+          loadGoldenJson('test/golden/stack_update_request.json'),
+        );
+
+        final toggled = expectRight(
+          await repository.updateStackConfig(
+            stackId: stack.id,
+            partialConfig: <String, dynamic>{
+              'poll_for_updates': !stack.config.pollForUpdates,
+              'auto_update': !stack.config.autoUpdate,
             },
           ),
         );
-        created = KomodoStack.fromJson(createdJson as Map<String, dynamic>);
+        expect(toggled.id, stack.id);
 
-        createdId = await waitForListItemId(
-          listItems: () async {
-            final listed = expectRight(await repository.listStacks());
-            return listed.map((item) => item.toJson()).toList();
+        final refreshed = expectRight(await repository.getStack(target.id));
+        expect(refreshed.config.environment.trim(), 'komodo-test');
+        expect(
+          refreshed.config.pollForUpdates,
+          toggled.config.pollForUpdates,
+        );
+        expect(refreshed.config.autoUpdate, toggled.config.autoUpdate);
+
+        await repository.updateStackConfig(
+          stackId: stack.id,
+          partialConfig: <String, dynamic>{
+            'environment': originalEnvironment,
+            'poll_for_updates': stack.config.pollForUpdates,
+            'auto_update': stack.config.autoUpdate,
           },
-          name: name,
         );
-        final createdIdValue = createdId;
+      });
 
-        await retryAsync(() async {
-          await client.write(
-            RpcRequest(
-              type: 'DeleteStack',
-              params: <String, dynamic>{'id': createdIdValue},
-            ),
-          );
-        });
-        deleted = true;
-        await expectEventuallyServerFailure(
-          () => repository.getStack(createdIdValue),
-        );
-        final afterDelete = expectRight(await repository.listStacks());
-        expect(afterDelete.any((s) => s.id == createdIdValue), isFalse);
-      } finally {
-        final idToDelete = createdId ?? created?.id;
-        if (!deleted && idToDelete != null) {
-          await retryAsync(() async {
-            await client.write(
-              RpcRequest(
-                type: 'DeleteStack',
-                params: <String, dynamic>{'id': idToDelete},
-              ),
-            );
-          });
-        }
-      }
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
+      test('create/delete stack', () async {
+        KomodoStack? created;
+        String? createdId;
+        var deleted = false;
 
-  group('Stack CRUD property-based (real backend)', () {
-    late StackRepository repository;
-    late KomodoApiClient client;
+        try {
+          final stacks = expectRight(await repository.listStacks());
+          expect(stacks, isNotEmpty);
 
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      client = buildTestClient(requireConfig(config), RpcRecorder());
-      repository = StackRepository(client);
-    });
+          final seed = stacks.first;
+          final seedDetail = expectRight(await repository.getStack(seed.id));
 
-    test('randomized stacks survive CRUD roundtrip', () async {
-      final stacks = expectRight(await repository.listStacks());
-      expect(stacks, isNotEmpty);
-
-      final seed = stacks.first;
-      final seedDetail = expectRight(await repository.getStack(seed.id));
-      final createConfig = seedDetail.config.toJson();
-
-      final random = Random(21031);
-      final pendingDeletes = <String>{};
-
-      try {
-        for (var i = 0; i < 5; i++) {
-          final name = 'prop-stack-$i-${_randomToken(random)}';
+          final name = 'contract-stack-${_randomToken(Random(21021))}';
           final createdJson = await client.write(
             RpcRequest(
               type: 'CreateStack',
               params: <String, dynamic>{
                 'name': name,
-                'config': createConfig,
+                'config': seedDetail.config.toJson(),
               },
             ),
           );
-          KomodoStack.fromJson(createdJson as Map<String, dynamic>);
+          created = KomodoStack.fromJson(createdJson as Map<String, dynamic>);
 
-          final createdId = await waitForListItemId(
+          createdId = await waitForListItemId(
             listItems: () async {
               final listed = expectRight(await repository.listStacks());
               return listed.map((item) => item.toJson()).toList();
             },
             name: name,
           );
-          pendingDeletes.add(createdId);
-
-          final environment = 'prop-env-$i-${_randomToken(random)}';
-          final updated = expectRight(
-            await repository.updateStackConfig(
-              stackId: createdId,
-              partialConfig: <String, dynamic>{'environment': environment},
-            ),
-          );
-          expect(updated.config.environment.trim(), environment);
-
-          final refreshed = expectRight(await repository.getStack(createdId));
-          expect(refreshed.config.environment.trim(), environment);
+          final createdIdValue = createdId;
 
           await retryAsync(() async {
             await client.write(
               RpcRequest(
                 type: 'DeleteStack',
-                params: <String, dynamic>{'id': createdId},
+                params: <String, dynamic>{'id': createdIdValue},
               ),
             );
           });
-          pendingDeletes.remove(createdId);
+          deleted = true;
           await expectEventuallyServerFailure(
-            () => repository.getStack(createdId),
+            () => repository.getStack(createdIdValue),
           );
+          final afterDelete = expectRight(await repository.listStacks());
+          expect(afterDelete.any((s) => s.id == createdIdValue), isFalse);
+        } finally {
+          final idToDelete = createdId ?? created?.id;
+          if (!deleted && idToDelete != null) {
+            await retryAsync(() async {
+              await client.write(
+                RpcRequest(
+                  type: 'DeleteStack',
+                  params: <String, dynamic>{'id': idToDelete},
+                ),
+              );
+            });
+          }
         }
-      } finally {
-        for (final id in pendingDeletes) {
-          await retryAsync(() async {
-            await client.write(
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
+
+  group(
+    'Stack CRUD property-based (real backend)',
+    () {
+      late StackRepository repository;
+      late KomodoApiClient client;
+
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        client = buildTestClient(requireConfig(config), RpcRecorder());
+        repository = StackRepository(client);
+      });
+
+      test('randomized stacks survive CRUD roundtrip', () async {
+        final stacks = expectRight(await repository.listStacks());
+        expect(stacks, isNotEmpty);
+
+        final seed = stacks.first;
+        final seedDetail = expectRight(await repository.getStack(seed.id));
+        final createConfig = seedDetail.config.toJson();
+
+        final random = Random(21031);
+        final pendingDeletes = <String>{};
+
+        try {
+          for (var i = 0; i < 5; i++) {
+            final name = 'prop-stack-$i-${_randomToken(random)}';
+            final createdJson = await client.write(
               RpcRequest(
-                type: 'DeleteStack',
-                params: <String, dynamic>{'id': id},
+                type: 'CreateStack',
+                params: <String, dynamic>{
+                  'name': name,
+                  'config': createConfig,
+                },
               ),
             );
-          });
+            KomodoStack.fromJson(createdJson as Map<String, dynamic>);
+
+            final createdId = await waitForListItemId(
+              listItems: () async {
+                final listed = expectRight(await repository.listStacks());
+                return listed.map((item) => item.toJson()).toList();
+              },
+              name: name,
+            );
+            pendingDeletes.add(createdId);
+
+            final environment = 'prop-env-$i-${_randomToken(random)}';
+            final updated = expectRight(
+              await repository.updateStackConfig(
+                stackId: createdId,
+                partialConfig: <String, dynamic>{'environment': environment},
+              ),
+            );
+            expect(updated.config.environment.trim(), environment);
+
+            final refreshed = expectRight(await repository.getStack(createdId));
+            expect(refreshed.config.environment.trim(), environment);
+
+            await retryAsync(() async {
+              await client.write(
+                RpcRequest(
+                  type: 'DeleteStack',
+                  params: <String, dynamic>{'id': createdId},
+                ),
+              );
+            });
+            pendingDeletes.remove(createdId);
+            await expectEventuallyServerFailure(
+              () => repository.getStack(createdId),
+            );
+          }
+        } finally {
+          for (final id in pendingDeletes) {
+            await retryAsync(() async {
+              await client.write(
+                RpcRequest(
+                  type: 'DeleteStack',
+                  params: <String, dynamic>{'id': id},
+                ),
+              );
+            });
+          }
         }
-      }
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
 
-  group('Stack config property-based (real backend)', () {
-    late StackRepository repository;
+  group(
+    'Stack config property-based (real backend)',
+    () {
+      late StackRepository repository;
 
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      repository = StackRepository(
-        buildTestClient(requireConfig(config), RpcRecorder()),
-      );
-    });
-
-    test('randomized environment values survive update', () async {
-      final stacks = expectRight(await repository.listStacks());
-      expect(stacks, isNotEmpty);
-
-      final target = stacks.first;
-      final original = expectRight(await repository.getStack(target.id));
-      final originalEnvironment = original.config.environment;
-
-      final random = Random(2026);
-
-      try {
-        for (var i = 0; i < 10; i++) {
-          final environment = 'komodo-test-${_randomToken(random)}';
-          final updated = expectRight(
-            await repository.updateStackConfig(
-              stackId: target.id,
-              partialConfig: <String, dynamic>{'environment': environment},
-            ),
-          );
-          expect(updated.config.environment.trim(), environment);
-
-          final refreshed = expectRight(await repository.getStack(target.id));
-          expect(refreshed.config.environment.trim(), environment);
-        }
-      } finally {
-        await repository.updateStackConfig(
-          stackId: target.id,
-          partialConfig: <String, dynamic>{'environment': originalEnvironment},
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        repository = StackRepository(
+          buildTestClient(requireConfig(config), RpcRecorder()),
         );
-      }
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
+      });
+
+      test('randomized environment values survive update', () async {
+        final stacks = expectRight(await repository.listStacks());
+        expect(stacks, isNotEmpty);
+
+        final target = stacks.first;
+        final original = expectRight(await repository.getStack(target.id));
+        final originalEnvironment = original.config.environment;
+
+        final random = Random(2026);
+
+        try {
+          for (var i = 0; i < 10; i++) {
+            final environment = 'komodo-test-${_randomToken(random)}';
+            final updated = expectRight(
+              await repository.updateStackConfig(
+                stackId: target.id,
+                partialConfig: <String, dynamic>{'environment': environment},
+              ),
+            );
+            expect(updated.config.environment.trim(), environment);
+
+            final refreshed = expectRight(await repository.getStack(target.id));
+            expect(refreshed.config.environment.trim(), environment);
+          }
+        } finally {
+          await repository.updateStackConfig(
+            stackId: target.id,
+            partialConfig: <String, dynamic>{
+              'environment': originalEnvironment,
+            },
+          );
+        }
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
 }
 
 void main() => registerStackContractTests();

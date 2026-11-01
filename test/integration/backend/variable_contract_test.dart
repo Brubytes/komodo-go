@@ -13,172 +13,182 @@ void registerVariableContractTests() {
   final config = BackendTestConfig.fromEnvironment();
   final missingConfigReason = config == null
       ? 'Set KOMODO_TEST_BASE_URL, KOMODO_TEST_API_KEY, and '
-          'KOMODO_TEST_API_SECRET to run backend tests.'
+            'KOMODO_TEST_API_SECRET to run backend tests.'
       : null;
 
-  group('Variable contract CRUD (real backend)', () {
-    late VariableRepository repository;
-    late RpcRecorder recorder;
+  group(
+    'Variable contract CRUD (real backend)',
+    () {
+      late VariableRepository repository;
+      late RpcRecorder recorder;
 
-    setUp(() async {
-      await resetBackendIfConfigured(requireConfig(config));
-      recorder = RpcRecorder();
-      repository = VariableRepository(buildTestClient(requireConfig(config), recorder));
-    });
-
-    test('create/update/delete variable + goldens', () async {
-      KomodoVariable? created;
-      const name = 'CONTRACT_VARIABLE';
-
-      try {
-        final createResult = await repository.createVariable(
-          name: name,
-          value: 'Contract Value',
-          description: 'Contract Description',
-          isSecret: false,
+      setUp(() async {
+        await resetBackendIfConfigured(requireConfig(config));
+        recorder = RpcRecorder();
+        repository = VariableRepository(
+          buildTestClient(requireConfig(config), recorder),
         );
-        created = expectRight(createResult);
+      });
 
-        final requestData = recorder.lastRequest?.data;
-        final responseData = recorder.lastResponse?.data;
+      test('create/update/delete variable + goldens', () async {
+        KomodoVariable? created;
+        const name = 'CONTRACT_VARIABLE';
 
-        expect(requestData, isA<Map<String, dynamic>>());
-        expect(responseData, isA<Map<String, dynamic>>());
-
-        final normalizedRequest = normalizeJson(
-          requestData as Map<String, dynamic>,
-        );
-        expect(
-          normalizedRequest,
-          loadGoldenJson('test/golden/variable_create_request.json'),
-        );
-
-        final normalizedResponse = normalizeVariableResponse(
-          responseData as Map<String, dynamic>,
-        );
-        expect(
-          normalizedResponse,
-          loadGoldenJson('test/golden/variable_create_response.json'),
-        );
-
-        final listed = expectRight(await repository.listVariables());
-        final listedVar = listed.firstWhere((v) => v.name == name);
-        expect(listedVar.description, isNotNull);
-
-        final updatedValue = expectRight(
-          await repository.updateVariableValue(
+        try {
+          final createResult = await repository.createVariable(
             name: name,
-            value: 'Updated Value',
-          ),
-        );
-        expect(updatedValue.name, name);
-
-        final updatedDescription = expectRight(
-          await repository.updateVariableDescription(
-            name: name,
-            description: 'Updated Description',
-          ),
-        );
-        expect(updatedDescription.description, 'Updated Description');
-
-        final updatedSecret = expectRight(
-          await repository.updateVariableIsSecret(
-            name: name,
-            isSecret: true,
-          ),
-        );
-        expect(updatedSecret.isSecret, true);
-
-        expectRight(await repository.deleteVariable(name: name));
-        final afterDelete = expectRight(await repository.listVariables());
-        expect(afterDelete.any((v) => v.name == name), isFalse);
-      } finally {
-        if (created != null) {
-          await repository.deleteVariable(name: created.name);
-        }
-      }
-    });
-
-    test('update missing variable returns server failure', () async {
-      final missingName = 'missing_var_${_randomToken(Random(991))}';
-      final result = await repository.updateVariableValue(
-        name: missingName,
-        value: 'noop',
-      );
-      expectServerFailure(result);
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
-
-  group('Variable CRUD property-based (real backend)', () {
-    late VariableRepository repository;
-
-    setUp(() async {
-      final testConfig = config ?? (throw StateError('Missing test config'));
-      await resetBackendIfConfigured(testConfig);
-      repository = VariableRepository(
-        buildTestClient(testConfig, RpcRecorder()),
-      );
-    });
-
-    test('randomized variables survive CRUD roundtrip', () async {
-      final random = Random(4242);
-      final createdNames = <String>[];
-
-      try {
-        for (var i = 0; i < 20; i++) {
-          final name = 'prop_var_${i}_${_randomToken(random)}';
-          final value = 'val-${_randomToken(random)}';
-          final description = 'desc-${_randomToken(random)}';
-          final isSecret = random.nextBool();
-
-          final created = expectRight(
-            await repository.createVariable(
-              name: name,
-              value: value,
-              description: description,
-              isSecret: isSecret,
-            ),
+            value: 'Contract Value',
+            description: 'Contract Description',
+            isSecret: false,
           );
-          createdNames.add(created.name);
+          created = expectRight(createResult);
+
+          final requestData = recorder.lastRequest?.data;
+          final responseData = recorder.lastResponse?.data;
+
+          expect(requestData, isA<Map<String, dynamic>>());
+          expect(responseData, isA<Map<String, dynamic>>());
+
+          final normalizedRequest = normalizeJson(
+            requestData as Map<String, dynamic>,
+          );
+          expect(
+            normalizedRequest,
+            loadGoldenJson('test/golden/variable_create_request.json'),
+          );
+
+          final normalizedResponse = normalizeVariableResponse(
+            responseData as Map<String, dynamic>,
+          );
+          expect(
+            normalizedResponse,
+            loadGoldenJson('test/golden/variable_create_response.json'),
+          );
 
           final listed = expectRight(await repository.listVariables());
-          final fromList = listed.firstWhere((v) => v.name == name);
-          expect(fromList.name, name);
-          expect(fromList.isSecret, isSecret);
+          final listedVar = listed.firstWhere((v) => v.name == name);
+          expect(listedVar.description, isNotNull);
 
-          final updatedValue = 'val-${_randomToken(random)}';
-          final updatedDescription = 'desc-${_randomToken(random)}';
-
-          expectRight(
+          final updatedValue = expectRight(
             await repository.updateVariableValue(
               name: name,
-              value: updatedValue,
+              value: 'Updated Value',
             ),
           );
-          expectRight(
+          expect(updatedValue.name, name);
+
+          final updatedDescription = expectRight(
             await repository.updateVariableDescription(
               name: name,
-              description: updatedDescription,
+              description: 'Updated Description',
             ),
           );
+          expect(updatedDescription.description, 'Updated Description');
+
+          final updatedSecret = expectRight(
+            await repository.updateVariableIsSecret(
+              name: name,
+              isSecret: true,
+            ),
+          );
+          expect(updatedSecret.isSecret, true);
 
           expectRight(await repository.deleteVariable(name: name));
           final afterDelete = expectRight(await repository.listVariables());
           expect(afterDelete.any((v) => v.name == name), isFalse);
+        } finally {
+          if (created != null) {
+            await repository.deleteVariable(name: created.name);
+          }
         }
-      } finally {
-        for (final name in createdNames) {
-          await repository.deleteVariable(name: name);
+      });
+
+      test('update missing variable returns server failure', () async {
+        final missingName = 'missing_var_${_randomToken(Random(991))}';
+        final result = await repository.updateVariableValue(
+          name: missingName,
+          value: 'noop',
+        );
+        expectServerFailure(result);
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
+
+  group(
+    'Variable CRUD property-based (real backend)',
+    () {
+      late VariableRepository repository;
+
+      setUp(() async {
+        final testConfig = config ?? (throw StateError('Missing test config'));
+        await resetBackendIfConfigured(testConfig);
+        repository = VariableRepository(
+          buildTestClient(testConfig, RpcRecorder()),
+        );
+      });
+
+      test('randomized variables survive CRUD roundtrip', () async {
+        final random = Random(4242);
+        final createdNames = <String>[];
+
+        try {
+          for (var i = 0; i < 20; i++) {
+            final name = 'prop_var_${i}_${_randomToken(random)}';
+            final value = 'val-${_randomToken(random)}';
+            final description = 'desc-${_randomToken(random)}';
+            final isSecret = random.nextBool();
+
+            final created = expectRight(
+              await repository.createVariable(
+                name: name,
+                value: value,
+                description: description,
+                isSecret: isSecret,
+              ),
+            );
+            createdNames.add(created.name);
+
+            final listed = expectRight(await repository.listVariables());
+            final fromList = listed.firstWhere((v) => v.name == name);
+            expect(fromList.name, name);
+            expect(fromList.isSecret, isSecret);
+
+            final updatedValue = 'val-${_randomToken(random)}';
+            final updatedDescription = 'desc-${_randomToken(random)}';
+
+            expectRight(
+              await repository.updateVariableValue(
+                name: name,
+                value: updatedValue,
+              ),
+            );
+            expectRight(
+              await repository.updateVariableDescription(
+                name: name,
+                description: updatedDescription,
+              ),
+            );
+
+            expectRight(await repository.deleteVariable(name: name));
+            final afterDelete = expectRight(await repository.listVariables());
+            expect(afterDelete.any((v) => v.name == name), isFalse);
+          }
+        } finally {
+          for (final name in createdNames) {
+            await repository.deleteVariable(name: name);
+          }
         }
-      }
-    });
-  },
-      skip: missingConfigReason ??
-          config?.skipReason() ??
-          config?.requireResetReason());
+      });
+    },
+    skip:
+        missingConfigReason ??
+        config?.skipReason() ??
+        config?.requireResetReason(),
+  );
 }
 
 void main() => registerVariableContractTests();

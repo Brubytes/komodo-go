@@ -9,8 +9,7 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockApiClient extends Mock implements KomodoApiClient {
   @override
-  KomodoApiCapabilities get capabilities =>
-      KomodoApiCapabilities.v23AndNewer;
+  KomodoApiCapabilities get capabilities => KomodoApiCapabilities.v23AndNewer;
 }
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
@@ -127,48 +126,52 @@ void main() {
       verifyNever(() => client.write(any()));
     });
 
-    test('cancelBuild sends CancelBuild via execute with exact payload',
-        () async {
-      when(
-        () => client.execute(any()),
-      ).thenAnswer((_) async => <String, dynamic>{});
+    test(
+      'cancelBuild sends CancelBuild via execute with exact payload',
+      () async {
+        when(
+          () => client.execute(any()),
+        ).thenAnswer((_) async => <String, dynamic>{});
 
-      final result = await repository.cancelBuild('build-1');
+        final result = await repository.cancelBuild('build-1');
 
-      _rightOrFail(result);
+        _rightOrFail(result);
 
-      final request = capturedExecute();
-      expect(request.type, 'CancelBuild');
-      expect(request.params, <String, dynamic>{'build': 'build-1'});
-      verifyNever(() => client.write(any()));
-    });
+        final request = capturedExecute();
+        expect(request.type, 'CancelBuild');
+        expect(request.params, <String, dynamic>{'build': 'build-1'});
+        verifyNever(() => client.write(any()));
+      },
+    );
 
-    test('updateBuildConfig sends UpdateBuild via write with id and config',
-        () async {
-      when(() => client.write(any())).thenAnswer(
-        (_) async => <String, dynamic>{
+    test(
+      'updateBuildConfig sends UpdateBuild via write with id and config',
+      () async {
+        when(() => client.write(any())).thenAnswer(
+          (_) async => <String, dynamic>{
+            'id': 'build-1',
+            'name': 'image',
+            'config': <String, dynamic>{},
+            'info': <String, dynamic>{},
+          },
+        );
+
+        final result = await repository.updateBuildConfig(
+          buildId: 'build-1',
+          partialConfig: {'branch': 'main'},
+        );
+
+        expect(_rightOrFail(result).id, 'build-1');
+
+        final request = capturedWrite();
+        expect(request.type, 'UpdateBuild');
+        expect(request.params, <String, dynamic>{
           'id': 'build-1',
-          'name': 'image',
-          'config': <String, dynamic>{},
-          'info': <String, dynamic>{},
-        },
-      );
-
-      final result = await repository.updateBuildConfig(
-        buildId: 'build-1',
-        partialConfig: {'branch': 'main'},
-      );
-
-      expect(_rightOrFail(result).id, 'build-1');
-
-      final request = capturedWrite();
-      expect(request.type, 'UpdateBuild');
-      expect(request.params, <String, dynamic>{
-        'id': 'build-1',
-        'config': {'branch': 'main'},
-      });
-      verifyNever(() => client.execute(any()));
-    });
+          'config': {'branch': 'main'},
+        });
+        verifyNever(() => client.execute(any()));
+      },
+    );
 
     test('runBuild maps 401 to auth failure', () async {
       when(() => client.execute(any())).thenThrow(

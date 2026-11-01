@@ -8,8 +8,7 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockApiClient extends Mock implements KomodoApiClient {
   @override
-  KomodoApiCapabilities get capabilities =>
-      KomodoApiCapabilities.v23AndNewer;
+  KomodoApiCapabilities get capabilities => KomodoApiCapabilities.v23AndNewer;
 }
 
 class _FakeRpcRequest extends Fake implements RpcRequest<dynamic> {}
@@ -86,30 +85,31 @@ void main() {
       expect(request.params, <String, dynamic>{'builder': 'builder-1'});
     });
 
-    test('renameBuilder sends RenameBuilder via write with id and name',
-        () async {
-      when(
-        () => client.write(any()),
-      ).thenAnswer((_) async => <String, dynamic>{});
+    test(
+      'renameBuilder sends RenameBuilder via write with id and name',
+      () async {
+        when(
+          () => client.write(any()),
+        ).thenAnswer((_) async => <String, dynamic>{});
 
-      final result = await repository.renameBuilder(
-        id: 'builder-1',
-        name: 'remote',
-      );
+        final result = await repository.renameBuilder(
+          id: 'builder-1',
+          name: 'remote',
+        );
 
-      _rightOrFail(result);
+        _rightOrFail(result);
 
-      final request = capturedWrite();
-      expect(request.type, 'RenameBuilder');
-      expect(request.params, <String, dynamic>{
-        'id': 'builder-1',
-        'name': 'remote',
-      });
-      verifyNever(() => client.execute(any()));
-    });
+        final request = capturedWrite();
+        expect(request.type, 'RenameBuilder');
+        expect(request.params, <String, dynamic>{
+          'id': 'builder-1',
+          'name': 'remote',
+        });
+        verifyNever(() => client.execute(any()));
+      },
+    );
 
-    test('deleteBuilder sends DeleteBuilder via write with id param',
-        () async {
+    test('deleteBuilder sends DeleteBuilder via write with id param', () async {
       when(
         () => client.write(any()),
       ).thenAnswer((_) async => <String, dynamic>{});
@@ -124,26 +124,28 @@ void main() {
       verifyNever(() => client.execute(any()));
     });
 
-    test('updateBuilderConfig sends UpdateBuilder via write with id and config',
-        () async {
-      when(
-        () => client.write(any()),
-      ).thenAnswer((_) async => <String, dynamic>{});
+    test(
+      'updateBuilderConfig sends UpdateBuilder via write with id and config',
+      () async {
+        when(
+          () => client.write(any()),
+        ).thenAnswer((_) async => <String, dynamic>{});
 
-      final result = await repository.updateBuilderConfig(
-        id: 'builder-1',
-        config: {'type': 'Server'},
-      );
+        final result = await repository.updateBuilderConfig(
+          id: 'builder-1',
+          config: {'type': 'Server'},
+        );
 
-      _rightOrFail(result);
+        _rightOrFail(result);
 
-      final request = capturedWrite();
-      expect(request.type, 'UpdateBuilder');
-      expect(request.params, <String, dynamic>{
-        'id': 'builder-1',
-        'config': {'type': 'Server'},
-      });
-      verifyNever(() => client.execute(any()));
-    });
+        final request = capturedWrite();
+        expect(request.type, 'UpdateBuilder');
+        expect(request.params, <String, dynamic>{
+          'id': 'builder-1',
+          'config': {'type': 'Server'},
+        });
+        verifyNever(() => client.execute(any()));
+      },
+    );
   });
 }

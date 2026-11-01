@@ -27,8 +27,9 @@ void main() {
       );
 
       container
-          .read(resourceSearchQueryProvider(ResourceKind.builds).notifier)
-          .query = 'api';
+              .read(resourceSearchQueryProvider(ResourceKind.builds).notifier)
+              .query =
+          'api';
 
       expect(
         container.read(resourceSearchQueryProvider(ResourceKind.builds)),
@@ -111,11 +112,12 @@ void main() {
       );
 
       container
-          .read(
-            resourceTemplateFilterStateProvider(ResourceKind.procedures)
-                .notifier,
-          )
-          .value = TemplateFilter.only;
+              .read(
+                resourceTemplateFilterStateProvider(ResourceKind.procedures)
+                    .notifier,
+              )
+              .value =
+          TemplateFilter.only;
 
       expect(
         container.read(
