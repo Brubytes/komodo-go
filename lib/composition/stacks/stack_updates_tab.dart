@@ -9,6 +9,7 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/widgets/async/async_content.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
+import 'package:komodo_go/core/widgets/scroll/new_items_hold.dart';
 import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart'
     show UpdatesState;
 import 'package:komodo_go/features/notifications/presentation/views/notifications/notifications_sections.dart'
@@ -24,7 +25,8 @@ class StackUpdatesTab extends ConsumerStatefulWidget {
   ConsumerState<StackUpdatesTab> createState() => _StackUpdatesTabState();
 }
 
-class _StackUpdatesTabState extends ConsumerState<StackUpdatesTab> {
+class _StackUpdatesTabState extends ConsumerState<StackUpdatesTab>
+    with NewItemsHoldState<StackUpdatesTab> {
   /// Pull-to-refresh running: its spinner replaces the thin progress bar.
   var _pulling = false;
 
@@ -42,6 +44,11 @@ class _StackUpdatesTabState extends ConsumerState<StackUpdatesTab> {
   @override
   Widget build(BuildContext context) {
     final stackUpdatesAsync = ref.watch(stackUpdatesProvider(stackId));
+    // New updates above the viewport are held back (see NewItemsHold).
+    final loaded = stackUpdatesAsync.value?.items;
+    final shown = loaded == null
+        ? null
+        : hold.apply(loaded, (u) => u.id, scrollPixels);
 
     return ProviderScope(
       overrides: [
@@ -49,76 +56,95 @@ class _StackUpdatesTabState extends ConsumerState<StackUpdatesTab> {
           (ref) => ref.watch(composedResourceNameResolverProvider),
         ),
       ],
-      child: RefreshIndicator(
-        onRefresh: _pull,
-        child: NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification.metrics.pixels >=
-                notification.metrics.maxScrollExtent - 200) {
-              unawaited(
-                ref
-                    .read(stackUpdatesProvider(stackId).notifier)
-                    .fetchNextPage(),
-              );
-            }
-            return false;
-          },
-          child: DetailTabScrollView(
-            scrollKey: PageStorageKey('stack_${stackId}_updates'),
-            sliver: SliverAsyncContent<UpdatesState>(
-              value: stackUpdatesAsync,
-              errorTitle: 'Failed to load updates',
-              onRetry: () => ref.invalidate(stackUpdatesProvider(stackId)),
-              showProgress: !_pulling,
-              bannerPadding: const EdgeInsets.only(bottom: 12),
-              skeletonBuilder: (_) => const Column(
-                children: [
-                  AppSkeletonCard(showChips: false),
-                  Gap(12),
-                  AppSkeletonCard(showChips: false),
-                  Gap(12),
-                  AppSkeletonCard(showChips: false),
-                ],
-              ),
-              builder: (context, state) {
-                if (state.items.isEmpty) {
-                  return const SliverToBoxAdapter(
-                    child: NotificationsEmptyState(
-                      icon: AppIcons.updateAvailable,
-                      title: 'No updates',
-                      description: 'No recent activity for this stack.',
-                      scrollable: false,
-                    ),
+      child: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: _pull,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                trackScroll(notification);
+                if (notification.metrics.pixels >=
+                    notification.metrics.maxScrollExtent - 200) {
+                  unawaited(
+                    ref
+                        .read(stackUpdatesProvider(stackId).notifier)
+                        .fetchNextPage(),
                   );
                 }
-
-                final itemCount =
-                    state.items.length + (state.nextPage == null ? 0 : 1);
-                final sliverChildCount = itemCount * 2 - 1;
-
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    if (index.isOdd) return const Gap(12);
-
-                    final itemIndex = index ~/ 2;
-                    final isFooter = itemIndex >= state.items.length;
-                    if (isFooter) {
-                      return PaginationFooter(
-                        isLoading: state.isLoadingMore,
-                        onLoadMore: () => ref
-                            .read(stackUpdatesProvider(stackId).notifier)
-                            .fetchNextPage(),
+                return false;
+              },
+              child: DetailTabScrollView(
+                scrollKey: PageStorageKey('stack_${stackId}_updates'),
+                sliver: SliverAsyncContent<UpdatesState>(
+                  value: stackUpdatesAsync,
+                  errorTitle: 'Failed to load updates',
+                  onRetry: () => ref.invalidate(stackUpdatesProvider(stackId)),
+                  showProgress: !_pulling,
+                  bannerPadding: const EdgeInsets.only(bottom: 12),
+                  skeletonBuilder: (_) => const Column(
+                    children: [
+                      AppSkeletonCard(showChips: false),
+                      Gap(12),
+                      AppSkeletonCard(showChips: false),
+                      Gap(12),
+                      AppSkeletonCard(showChips: false),
+                    ],
+                  ),
+                  builder: (context, state) {
+                    final items = shown ?? state.items;
+                    if (items.isEmpty) {
+                      return const SliverToBoxAdapter(
+                        child: NotificationsEmptyState(
+                          icon: AppIcons.updateAvailable,
+                          title: 'No updates',
+                          description: 'No recent activity for this stack.',
+                          scrollable: false,
+                        ),
                       );
                     }
 
-                    final update = state.items[itemIndex];
-                    return UpdateTile(update: update, currentTargetId: stackId);
-                  }, childCount: sliverChildCount),
-                );
-              },
+                    final itemCount =
+                        items.length + (state.nextPage == null ? 0 : 1);
+                    final sliverChildCount = itemCount * 2 - 1;
+
+                    return SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        if (index.isOdd) return const Gap(12);
+
+                        final itemIndex = index ~/ 2;
+                        final isFooter = itemIndex >= items.length;
+                        if (isFooter) {
+                          return PaginationFooter(
+                            isLoading: state.isLoadingMore,
+                            onLoadMore: () => ref
+                                .read(stackUpdatesProvider(stackId).notifier)
+                                .fetchNextPage(),
+                          );
+                        }
+
+                        final update = items[itemIndex];
+                        return UpdateTile(
+                          update: update,
+                          currentTargetId: stackId,
+                        );
+                      }, childCount: sliverChildCount),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
-        ),
+          NewItemsPill(
+            count: hold.pending,
+            noun: 'update',
+            topInset:
+                NestedScrollView.sliverOverlapAbsorberHandleFor(
+                  context,
+                ).layoutExtent ??
+                0,
+            onPressed: () => unawaited(showHeldItems()),
+          ),
+        ],
       ),
     );
   }

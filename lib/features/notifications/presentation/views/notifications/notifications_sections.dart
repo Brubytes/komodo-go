@@ -15,6 +15,7 @@ import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
 import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
+import 'package:komodo_go/core/widgets/scroll/new_items_hold.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/models/resource_target.dart';
@@ -39,7 +40,8 @@ class AlertsTab extends ConsumerStatefulWidget {
   ConsumerState<AlertsTab> createState() => _AlertsTabState();
 }
 
-class _AlertsTabState extends ConsumerState<AlertsTab> {
+class _AlertsTabState extends ConsumerState<AlertsTab>
+    with NewItemsHoldState<AlertsTab> {
   late final _intro = AppListIntro();
 
   // True while a pull-to-refresh runs: the pull spinner is the indicator, so
@@ -54,6 +56,10 @@ class _AlertsTabState extends ConsumerState<AlertsTab> {
     final filters = ref.watch(alertFiltersProvider);
 
     final alertItems = alertsAsync.value?.items;
+    // New alerts above the viewport are held back (see NewItemsHold).
+    final shownAlerts = alertItems == null
+        ? null
+        : hold.apply(filters.apply(alertItems), (a) => a.id, scrollPixels);
     final unresolvedCount = alertItems?.where((a) => !a.resolved).length;
     final criticalCount = alertItems
         ?.where((a) => a.level == SeverityLevel.critical)
@@ -84,103 +90,121 @@ class _AlertsTabState extends ConsumerState<AlertsTab> {
           ],
         ),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              setState(() => _pulling = true);
-              try {
-                await ref.read(alertsProvider.notifier).refresh();
-              } finally {
-                if (mounted) setState(() => _pulling = false);
-              }
-            },
-            child: alertsAsync.hasBlockingError
-                ? _alertsError(alertsAsync.error!)
-                : AsyncContent<AlertsState>(
-                    value: alertsAsync,
-                    fill: true,
-                    showProgress: !_pulling,
-                    errorTitle: 'Failed to load alerts',
-                    onRetry: () => unawaited(
-                      ref.read(alertsProvider.notifier).refresh(),
-                    ),
-                    skeletonBuilder: (_) => const _AlertsSkeletonList(),
-                    builder: (context, state) {
-                      if (state.items.isEmpty) {
-                        return const NotificationsEmptyState(
-                          icon: AppIcons.warning,
-                          title: 'No alerts',
-                          description: 'You’re all caught up.',
-                        );
-                      }
-
-                      final items = filters.apply(state.items);
-                      final isEmpty = items.isEmpty;
-                      final hasMore = state.nextPage != null;
-
-                      return NotificationListener<ScrollNotification>(
-                        onNotification: (notification) {
-                          if (notification.metrics.pixels >=
-                              notification.metrics.maxScrollExtent - 200) {
-                            unawaited(
-                              ref.read(alertsProvider.notifier).fetchNextPage(),
+          child: Stack(
+            children: [
+              RefreshIndicator(
+                onRefresh: () async {
+                  setState(() => _pulling = true);
+                  try {
+                    await ref.read(alertsProvider.notifier).refresh();
+                  } finally {
+                    if (mounted) setState(() => _pulling = false);
+                  }
+                },
+                child: alertsAsync.hasBlockingError
+                    ? _alertsError(alertsAsync.error!)
+                    : AsyncContent<AlertsState>(
+                        value: alertsAsync,
+                        fill: true,
+                        showProgress: !_pulling,
+                        errorTitle: 'Failed to load alerts',
+                        onRetry: () => unawaited(
+                          ref.read(alertsProvider.notifier).refresh(),
+                        ),
+                        skeletonBuilder: (_) => const _AlertsSkeletonList(),
+                        builder: (context, state) {
+                          if (state.items.isEmpty) {
+                            return const NotificationsEmptyState(
+                              icon: AppIcons.warning,
+                              title: 'No alerts',
+                              description: 'You’re all caught up.',
                             );
                           }
-                          return false;
-                        },
-                        child: ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsets.fromLTRB(
-                            AppSpacing.lg,
-                            AppSpacing.sm,
-                            AppSpacing.lg,
-                            AppSpacing.lg +
-                                MediaQuery.paddingOf(context).bottom,
-                          ),
-                          itemCount:
-                              (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
-                          separatorBuilder: (_, _) => const Gap(AppSpacing.md),
-                          itemBuilder: (context, index) {
-                            if (isEmpty && index == 0) {
-                              return _FilteredEmptyMessage(
-                                message: filters.criticalOnly
-                                    ? 'No matching alerts'
-                                    : 'No unresolved alerts',
-                                showAllLabel: 'Show all alerts',
-                                onShowAll: () =>
-                                    ref
-                                            .read(alertFiltersProvider.notifier)
-                                            .filters =
-                                        const AlertFilters(),
-                              );
-                            }
-                            final isFooter = isEmpty
-                                ? index > 0
-                                : index >= items.length;
-                            if (isFooter) {
-                              return PaginationFooter(
-                                isLoading: state.isLoadingMore,
-                                onLoadMore: () => unawaited(
+
+                          final items =
+                              shownAlerts ?? filters.apply(state.items);
+                          final isEmpty = items.isEmpty;
+                          final hasMore = state.nextPage != null;
+
+                          return NotificationListener<ScrollNotification>(
+                            onNotification: (notification) {
+                              trackScroll(notification);
+                              if (notification.metrics.pixels >=
+                                  notification.metrics.maxScrollExtent - 200) {
+                                unawaited(
                                   ref
                                       .read(alertsProvider.notifier)
                                       .fetchNextPage(),
-                                ),
-                              );
-                            }
-
-                            return _intro.wrap(
-                              index,
-                              AlertTile(
-                                alert: items[index],
-                                selected:
-                                    items[index].id == widget.selectedAlertId,
+                                );
+                              }
+                              return false;
+                            },
+                            child: ListView.separated(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.fromLTRB(
+                                AppSpacing.lg,
+                                AppSpacing.sm,
+                                AppSpacing.lg,
+                                AppSpacing.lg +
+                                    MediaQuery.paddingOf(context).bottom,
                               ),
-                              id: items[index].id,
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  ),
+                              itemCount:
+                                  (isEmpty ? 1 : items.length) +
+                                  (hasMore ? 1 : 0),
+                              separatorBuilder: (_, _) =>
+                                  const Gap(AppSpacing.md),
+                              itemBuilder: (context, index) {
+                                if (isEmpty && index == 0) {
+                                  return _FilteredEmptyMessage(
+                                    message: filters.criticalOnly
+                                        ? 'No matching alerts'
+                                        : 'No unresolved alerts',
+                                    showAllLabel: 'Show all alerts',
+                                    onShowAll: () =>
+                                        ref
+                                                .read(
+                                                  alertFiltersProvider.notifier,
+                                                )
+                                                .filters =
+                                            const AlertFilters(),
+                                  );
+                                }
+                                final isFooter = isEmpty
+                                    ? index > 0
+                                    : index >= items.length;
+                                if (isFooter) {
+                                  return PaginationFooter(
+                                    isLoading: state.isLoadingMore,
+                                    onLoadMore: () => unawaited(
+                                      ref
+                                          .read(alertsProvider.notifier)
+                                          .fetchNextPage(),
+                                    ),
+                                  );
+                                }
+
+                                return _intro.wrap(
+                                  index,
+                                  AlertTile(
+                                    alert: items[index],
+                                    selected:
+                                        items[index].id ==
+                                        widget.selectedAlertId,
+                                  ),
+                                  id: items[index].id,
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              NewItemsPill(
+                count: hold.pending,
+                noun: 'alert',
+                onPressed: () => unawaited(showHeldItems()),
+              ),
+            ],
           ),
         ),
       ],
@@ -268,7 +292,8 @@ class UpdatesTab extends ConsumerStatefulWidget {
   ConsumerState<UpdatesTab> createState() => _UpdatesTabState();
 }
 
-class _UpdatesTabState extends ConsumerState<UpdatesTab> {
+class _UpdatesTabState extends ConsumerState<UpdatesTab>
+    with NewItemsHoldState<UpdatesTab> {
   late final _intro = AppListIntro();
 
   // See _AlertsTabState._pulling.
@@ -280,6 +305,14 @@ class _UpdatesTabState extends ConsumerState<UpdatesTab> {
     final failedOnly = ref.watch(updatesFailedOnlyProvider);
 
     final updateItems = updatesAsync.value?.items;
+    // New updates above the viewport are held back (see NewItemsHold).
+    final shownUpdates = updateItems == null
+        ? null
+        : hold.apply(
+            applyUpdatesFilter(updateItems, failedOnly: failedOnly),
+            (u) => u.id,
+            scrollPixels,
+          );
     final failedCount = updateItems
         ?.where((u) => u.status == UpdateStatus.failed)
         .length;
@@ -299,97 +332,112 @@ class _UpdatesTabState extends ConsumerState<UpdatesTab> {
           ],
         ),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              setState(() => _pulling = true);
-              try {
-                await ref.read(updatesProvider.notifier).refresh();
-              } finally {
-                if (mounted) setState(() => _pulling = false);
-              }
-            },
-            child: AsyncContent<UpdatesState>(
-              value: updatesAsync,
-              fill: true,
-              showProgress: !_pulling,
-              errorTitle: 'Failed to load updates',
-              onRetry: () => unawaited(
-                ref.read(updatesProvider.notifier).refresh(),
-              ),
-              skeletonBuilder: (_) => const _UpdatesSkeletonList(),
-              builder: (context, state) {
-                if (state.items.isEmpty) {
-                  return const NotificationsEmptyState(
-                    icon: AppIcons.updateAvailable,
-                    title: 'No updates',
-                    description: 'No recent activity yet.',
-                  );
-                }
-
-                final items = applyUpdatesFilter(
-                  state.items,
-                  failedOnly: failedOnly,
-                );
-                final isEmpty = items.isEmpty;
-                final hasMore = state.nextPage != null;
-
-                return NotificationListener<ScrollNotification>(
-                  onNotification: (notification) {
-                    if (notification.metrics.pixels >=
-                        notification.metrics.maxScrollExtent - 200) {
-                      unawaited(
-                        ref.read(updatesProvider.notifier).fetchNextPage(),
+          child: Stack(
+            children: [
+              RefreshIndicator(
+                onRefresh: () async {
+                  setState(() => _pulling = true);
+                  try {
+                    await ref.read(updatesProvider.notifier).refresh();
+                  } finally {
+                    if (mounted) setState(() => _pulling = false);
+                  }
+                },
+                child: AsyncContent<UpdatesState>(
+                  value: updatesAsync,
+                  fill: true,
+                  showProgress: !_pulling,
+                  errorTitle: 'Failed to load updates',
+                  onRetry: () => unawaited(
+                    ref.read(updatesProvider.notifier).refresh(),
+                  ),
+                  skeletonBuilder: (_) => const _UpdatesSkeletonList(),
+                  builder: (context, state) {
+                    if (state.items.isEmpty) {
+                      return const NotificationsEmptyState(
+                        icon: AppIcons.updateAvailable,
+                        title: 'No updates',
+                        description: 'No recent activity yet.',
                       );
                     }
-                    return false;
-                  },
-                  child: ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.sm,
-                      AppSpacing.lg,
-                      AppSpacing.lg + MediaQuery.paddingOf(context).bottom,
-                    ),
-                    itemCount: (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
-                    separatorBuilder: (_, _) => const Gap(AppSpacing.md),
-                    itemBuilder: (context, index) {
-                      if (isEmpty && index == 0) {
-                        return _FilteredEmptyMessage(
-                          message: 'No failed updates',
-                          showAllLabel: 'Show all updates',
-                          onShowAll: () =>
-                              ref
-                                      .read(updatesFailedOnlyProvider.notifier)
-                                      .value =
-                                  false,
-                        );
-                      }
-                      final isFooter = isEmpty
-                          ? index > 0
-                          : index >= items.length;
-                      if (isFooter) {
-                        return PaginationFooter(
-                          isLoading: state.isLoadingMore,
-                          onLoadMore: () => unawaited(
-                            ref.read(updatesProvider.notifier).fetchNextPage(),
-                          ),
-                        );
-                      }
 
-                      return _intro.wrap(
-                        index,
-                        UpdateTile(
-                          update: items[index],
-                          selected: items[index].id == widget.selectedUpdateId,
+                    final items =
+                        shownUpdates ??
+                        applyUpdatesFilter(state.items, failedOnly: failedOnly);
+                    final isEmpty = items.isEmpty;
+                    final hasMore = state.nextPage != null;
+
+                    return NotificationListener<ScrollNotification>(
+                      onNotification: (notification) {
+                        trackScroll(notification);
+                        if (notification.metrics.pixels >=
+                            notification.metrics.maxScrollExtent - 200) {
+                          unawaited(
+                            ref.read(updatesProvider.notifier).fetchNextPage(),
+                          );
+                        }
+                        return false;
+                      },
+                      child: ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: EdgeInsets.fromLTRB(
+                          AppSpacing.lg,
+                          AppSpacing.sm,
+                          AppSpacing.lg,
+                          AppSpacing.lg + MediaQuery.paddingOf(context).bottom,
                         ),
-                        id: items[index].id,
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+                        itemCount:
+                            (isEmpty ? 1 : items.length) + (hasMore ? 1 : 0),
+                        separatorBuilder: (_, _) => const Gap(AppSpacing.md),
+                        itemBuilder: (context, index) {
+                          if (isEmpty && index == 0) {
+                            return _FilteredEmptyMessage(
+                              message: 'No failed updates',
+                              showAllLabel: 'Show all updates',
+                              onShowAll: () =>
+                                  ref
+                                          .read(
+                                            updatesFailedOnlyProvider.notifier,
+                                          )
+                                          .value =
+                                      false,
+                            );
+                          }
+                          final isFooter = isEmpty
+                              ? index > 0
+                              : index >= items.length;
+                          if (isFooter) {
+                            return PaginationFooter(
+                              isLoading: state.isLoadingMore,
+                              onLoadMore: () => unawaited(
+                                ref
+                                    .read(updatesProvider.notifier)
+                                    .fetchNextPage(),
+                              ),
+                            );
+                          }
+
+                          return _intro.wrap(
+                            index,
+                            UpdateTile(
+                              update: items[index],
+                              selected:
+                                  items[index].id == widget.selectedUpdateId,
+                            ),
+                            id: items[index].id,
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+              NewItemsPill(
+                count: hold.pending,
+                noun: 'update',
+                onPressed: () => unawaited(showHeldItems()),
+              ),
+            ],
           ),
         ),
       ],
