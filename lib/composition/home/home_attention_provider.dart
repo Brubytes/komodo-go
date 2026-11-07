@@ -320,7 +320,7 @@ final homeAttentionProvider = Provider<AsyncValue<HomeAttentionSnapshot>>((
   final syncs = ref.watch(syncsProvider);
   final alerts = ref.watch(alertsProvider);
   final updates = ref.watch(updatesProvider);
-  final dismissed = ref.watch(dismissedUpdatesProvider).asData?.value ?? {};
+  final dismissed = ref.watch(dismissedUpdatesProvider).value ?? {};
 
   final sources = <AsyncValue<dynamic>>[
     servers,
@@ -343,7 +343,7 @@ final homeAttentionProvider = Provider<AsyncValue<HomeAttentionSnapshot>>((
   }
 
   // Forget dismissed IDs that expired or vanished from the updates list.
-  final updateItems = updates.asData?.value.items;
+  final updateItems = updates.value?.items;
   if (updateItems != null && dismissed.isNotEmpty) {
     final cutoff = DateTime.now().subtract(homeAttentionUpdateWindow);
     final valid = {
@@ -362,16 +362,16 @@ final homeAttentionProvider = Provider<AsyncValue<HomeAttentionSnapshot>>((
   return AsyncValue.data(
     buildHomeAttention(
       now: DateTime.now(),
-      servers: servers.asData?.value ?? const [],
-      stacks: stacks.asData?.value ?? const [],
-      deployments: deployments.asData?.value ?? const [],
-      builds: builds.asData?.value ?? const [],
-      repos: repos.asData?.value ?? const [],
-      procedures: procedures.asData?.value ?? const [],
-      actions: actions.asData?.value ?? const [],
-      syncs: syncs.asData?.value ?? const [],
-      alerts: alerts.asData?.value.items ?? const [],
-      updates: updates.asData?.value.items ?? const [],
+      servers: servers.value ?? const [],
+      stacks: stacks.value ?? const [],
+      deployments: deployments.value ?? const [],
+      builds: builds.value ?? const [],
+      repos: repos.value ?? const [],
+      procedures: procedures.value ?? const [],
+      actions: actions.value ?? const [],
+      syncs: syncs.value ?? const [],
+      alerts: alerts.value?.items ?? const [],
+      updates: updates.value?.items ?? const [],
       dismissedUpdateIds: dismissed,
     ),
   );

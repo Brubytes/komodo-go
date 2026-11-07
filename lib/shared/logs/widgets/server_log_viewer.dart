@@ -8,6 +8,7 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/shared/logs/log_line.dart';
 import 'package:komodo_go/shared/logs/server_log_controller.dart';
@@ -213,7 +214,12 @@ class _ServerLogViewerState extends State<ServerLogViewer> {
     final error = _controller.error;
 
     if (_controller.loading && _shownText == null) {
-      return const Center(child: CircularProgressIndicator());
+      // First load only: later polls keep the lines and show the thin bar.
+      return const SingleChildScrollView(
+        physics: NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.all(AppSpacing.md),
+        child: AppSkeletonCard(showChips: false),
+      );
     }
     if (error != null && _entries.isEmpty) {
       return _Message(

@@ -205,7 +205,7 @@ class _ExecutionRowState extends ConsumerState<_ExecutionRow> {
     final nameAsync = target == null
         ? null
         : ref.watch(executionTargetNameProvider(target));
-    final name = nameAsync?.asData?.value ?? parsed.rawTarget;
+    final name = nameAsync?.value ?? parsed.rawTarget;
     final off = !widget.execution.enabled || !widget.stageEnabled;
 
     return Padding(

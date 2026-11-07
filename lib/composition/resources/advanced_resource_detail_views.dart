@@ -24,7 +24,7 @@ class AdvancedActionDetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final action = ref.watch(actionDetailProvider(actionId)).asData?.value;
+    final action = ref.watch(actionDetailProvider(actionId)).value;
     return ActionDetailView(
       actionId: actionId,
       actionName: actionName,
@@ -64,10 +64,7 @@ class AdvancedProcedureDetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final procedure = ref
-        .watch(procedureDetailProvider(procedureId))
-        .asData
-        ?.value;
+    final procedure = ref.watch(procedureDetailProvider(procedureId)).value;
     return ProviderScope(
       overrides: [
         resourceNameResolverProvider.overrideWith(
@@ -114,7 +111,7 @@ class AdvancedServerDetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final server = ref.watch(serverDetailProvider(serverId)).asData?.value;
+    final server = ref.watch(serverDetailProvider(serverId)).value;
     return ServerDetailView(
       serverId: serverId,
       serverName: serverName,

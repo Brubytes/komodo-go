@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/containers/containers_provider.dart';
 import 'package:komodo_go/composition/resources/resource_name_resolver_provider.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
@@ -14,6 +15,12 @@ import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/ui/app_switcher.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/detail_skeletons.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
+import 'package:komodo_go/core/widgets/async/refresh_progress_bar.dart';
+import 'package:komodo_go/core/widgets/async/stale_data_banner.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
@@ -55,6 +62,7 @@ class _ContainerDetailViewState
   final _tabsKey = GlobalKey<DetailTabScaffoldState>();
   String _activeTabId = _tabLogs;
   var _autoRefreshLogs = true;
+  var _pulling = false;
 
   String get _container => Uri.decodeComponent(widget.containerIdOrName);
 
@@ -62,14 +70,7 @@ class _ContainerDetailViewState
   Widget build(BuildContext context) {
     final serverId = widget.serverId;
     final container = _container;
-    final itemAsync = ref.watch(
-      _containerItemProviderFamily(
-        _ContainerItemArgs(
-          serverId: serverId,
-          containerIdOrName: widget.containerIdOrName,
-        ),
-      ),
-    );
+    final containersAsync = ref.watch(containersProvider);
     final inspectionAsync = ref.watch(
       containerInspectionProvider(
         serverIdOrName: serverId,
@@ -89,30 +90,51 @@ class _ContainerDetailViewState
       enabled: _autoRefreshLogs,
     );
 
-    // While (re)loading, keep showing the item passed in from the list as
-    // a placeholder instead of a skeleton.
-    final item = itemAsync.asData?.value ?? widget.initialItem;
-    final notFound = itemAsync.hasValue && itemAsync.value == null;
+    // The navigation-time item is only a placeholder until the list has
+    // loaded once. After that the live list is the truth, and it keeps its
+    // previous value while refreshing, so the header never reverts to a
+    // stale snapshot.
+    final containers = containersAsync.value;
+    final ContainerOverviewItem? item;
+    if (containers == null) {
+      item = widget.initialItem;
+    } else {
+      item = _findItem(containers.items);
+    }
+    final notFound = containers != null && item == null;
 
     final Widget headerContent;
-    if (itemAsync.hasError && item == null) {
-      headerContent = ErrorStateView.fromError(
-        title: 'Failed to load container',
-        error: itemAsync.error!,
-        onRetry: () => ref.invalidate(containersProvider),
-      );
-    } else if (notFound) {
-      headerContent = const _NotFound();
-    } else if (item == null) {
-      headerContent = const AppSkeletonCard();
-    } else {
+    if (item != null) {
       headerContent = Column(
+        key: const ValueKey('container_header_content'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(context, item, resourceAsync.asData?.value),
+          RefreshProgressBar(
+            active: containersAsync.isBackgroundRefresh && !_pulling,
+          ),
+          StaleDataBanner(
+            visible: containersAsync.hasStaleError,
+            error: containersAsync.error,
+            onRetry: () => ref.invalidate(containersProvider),
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          ),
+          _buildHeader(context, item, resourceAsync.value),
           const Gap(AppSpacing.md),
           _buildActionBar(context, item),
         ],
+      );
+    } else if (containersAsync.hasError) {
+      headerContent = ErrorStateView.fromError(
+        key: const ValueKey('container_header_error'),
+        title: 'Failed to load container',
+        error: containersAsync.error!,
+        onRetry: () => ref.invalidate(containersProvider),
+      );
+    } else if (notFound) {
+      headerContent = const _NotFound(key: ValueKey('container_header_empty'));
+    } else {
+      headerContent = const AppSkeletonCard(
+        key: ValueKey('container_header_skeleton'),
       );
     }
 
@@ -135,7 +157,7 @@ class _ContainerDetailViewState
                 AppSpacing.lg,
                 AppSpacing.sm,
               ),
-              child: headerContent,
+              child: AppSwitcher(child: headerContent),
             ),
           ),
         ],
@@ -185,25 +207,28 @@ class _ContainerDetailViewState
             icon: AppIcons.eye,
             body: RefreshIndicator(
               onRefresh: () async {
-                ref
-                  ..invalidate(containersProvider)
-                  ..invalidate(
+                setState(() => _pulling = true);
+                try {
+                  await refreshProviders(ref, [
+                    containersProvider.future,
                     containerInspectionProvider(
                       serverIdOrName: serverId,
                       containerIdOrName: container,
-                    ),
-                  )
-                  ..invalidate(
+                    ).future,
                     containerAssociatedResourceProvider(
                       serverIdOrName: serverId,
                       containerIdOrName: container,
-                    ),
-                  );
+                    ).future,
+                  ]);
+                } finally {
+                  if (mounted) setState(() => _pulling = false);
+                }
               },
               child: DetailTabScrollView.box(
                 scrollKey: PageStorageKey('container_${container}_inspect'),
                 child: _ContainerInspectionPanel(
                   inspectionAsync: inspectionAsync,
+                  showProgress: !_pulling,
                   onRetry: () => ref.invalidate(
                     containerInspectionProvider(
                       serverIdOrName: serverId,
@@ -217,6 +242,17 @@ class _ContainerDetailViewState
         ],
       ),
     );
+  }
+
+  ContainerOverviewItem? _findItem(List<ContainerOverviewItem> items) {
+    final normalized = _container;
+    for (final item in items) {
+      if (item.serverId != widget.serverId) continue;
+      final id = item.container.id;
+      if (id != null && id == normalized) return item;
+      if (item.container.name == normalized) return item;
+    }
+    return null;
   }
 
   MainAppBarStatus _appBarStatus(ContainerState state) {
@@ -255,8 +291,7 @@ class _ContainerDetailViewState
       final isStack = resource.type == ContainerResourceType.stack;
       final name = ref
           .watch(_linkedResourceNameProvider((resource.type, resource.id)))
-          .asData
-          ?.value;
+          .value;
       linkedFact = DetailFact(
         icon: isStack ? AppIcons.stacks : AppIcons.deployments,
         label: isStack ? 'Stack' : 'Deployment',
@@ -511,15 +546,23 @@ class _ContainerInspectionPanel extends StatelessWidget {
   const _ContainerInspectionPanel({
     required this.inspectionAsync,
     required this.onRetry,
+    required this.showProgress,
   });
+
+  final bool showProgress;
 
   final AsyncValue<ContainerInspection?> inspectionAsync;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return inspectionAsync.when(
-      data: (inspection) {
+    return AsyncContent<ContainerInspection?>(
+      value: inspectionAsync,
+      errorTitle: 'Inspection unavailable',
+      onRetry: onRetry,
+      showProgress: showProgress,
+      skeletonBuilder: (_) => const DetailTabSkeleton(count: 1),
+      builder: (context, inspection) {
         if (inspection == null) return const _NotFound();
         return DetailSection(
           title: 'Inspect',
@@ -583,55 +626,12 @@ class _ContainerInspectionPanel extends StatelessWidget {
           ),
         );
       },
-      loading: () => const AppSkeletonCard(),
-      error: (error, _) => ErrorStateView.fromError(
-        title: 'Inspection unavailable',
-        error: error,
-        onRetry: onRetry,
-      ),
     );
   }
 }
 
-final FutureProviderFamily<ContainerOverviewItem?, _ContainerItemArgs>
-_containerItemProviderFamily = FutureProvider.autoDispose
-    .family<ContainerOverviewItem?, _ContainerItemArgs>((ref, args) async {
-      final result = await ref.watch(containersProvider.future);
-
-      final normalized = Uri.decodeComponent(args.containerIdOrName);
-      for (final item in result.items) {
-        if (item.serverId != args.serverId) continue;
-        final id = item.container.id;
-        if (id != null && id == normalized) return item;
-        if (item.container.name == normalized) return item;
-      }
-
-      return null;
-    });
-
-@immutable
-class _ContainerItemArgs {
-  const _ContainerItemArgs({
-    required this.serverId,
-    required this.containerIdOrName,
-  });
-
-  final String serverId;
-  final String containerIdOrName;
-
-  @override
-  bool operator ==(Object other) {
-    return other is _ContainerItemArgs &&
-        other.serverId == serverId &&
-        other.containerIdOrName == containerIdOrName;
-  }
-
-  @override
-  int get hashCode => Object.hash(serverId, containerIdOrName);
-}
-
 class _NotFound extends StatelessWidget {
-  const _NotFound();
+  const _NotFound({super.key});
 
   @override
   Widget build(BuildContext context) {

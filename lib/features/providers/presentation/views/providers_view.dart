@@ -1,15 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
+import 'package:komodo_go/core/widgets/async/stale_data_banner.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
@@ -52,92 +57,113 @@ class _ProvidersViewState extends ConsumerState<ProvidersView> {
       body: Stack(
         children: [
           RefreshIndicator(
-            onRefresh: () async {
-              await Future.wait<void>([
-                ref.read(gitProvidersProvider.notifier).refresh(),
-                ref.read(dockerRegistryAccountsProvider.notifier).refresh(),
-              ]);
-            },
-            child: providersAsync.when(
-              data: (providers) => registriesAsync.when(
-                data: (registries) {
-                  if (providers.isEmpty && registries.isEmpty) {
-                    return const _EmptyState();
-                  }
+            onRefresh: _refresh,
+            child: AppSwitcher(
+              animateSize: false,
+              alignment: Alignment.center,
+              child: _body(context, providersAsync, registriesAsync),
+            ),
+          ),
+          ActionBusyOverlay(busy: isBusy),
+        ],
+      ),
+    );
+  }
 
-                  return ListView(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    children: [
-                      const _SectionHeader(title: 'Git Providers'),
-                      const Gap(AppSpacing.sm),
-                      if (providers.isEmpty)
-                        const _SectionHint(
-                          message: 'No git provider accounts yet.',
-                        )
-                      else
-                        ..._buildCards(
-                          'git',
-                          providers.map(
-                            (provider) => (
-                              provider.id,
-                              _ProviderTile(
-                                provider: provider,
-                                onEdit: () =>
-                                    _editGitProvider(context, ref, provider),
-                                onDelete: () =>
-                                    _deleteGitProvider(context, ref, provider),
-                              ),
-                            ),
-                          ),
-                        ),
-                      const Gap(20),
-                      const _SectionHeader(title: 'Registry Accounts'),
-                      const Gap(AppSpacing.sm),
-                      if (registries.isEmpty)
-                        const _SectionHint(message: 'No registry accounts yet.')
-                      else
-                        ..._buildCards(
-                          'registry',
-                          registries.map(
-                            (registry) => (
-                              registry.id,
-                              _RegistryTile(
-                                registry: registry,
-                                onEdit: () =>
-                                    _editRegistry(context, ref, registry),
-                                onDelete: () =>
-                                    _deleteRegistry(context, ref, registry),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  );
-                },
-                loading: () => const _ProvidersSkeletonList(),
-                error: (error, _) => ErrorStateView(
-                  title: 'Failed to load registries',
-                  message: error.toString(),
-                  onRetry: () => ref.invalidate(dockerRegistryAccountsProvider),
+  Future<void> _refresh() => refreshProviders(ref, [
+    gitProvidersProvider.future,
+    dockerRegistryAccountsProvider.future,
+  ]);
+
+  Widget _body(
+    BuildContext context,
+    AsyncValue<List<GitProviderAccount>> providersAsync,
+    AsyncValue<List<DockerRegistryAccount>> registriesAsync,
+  ) {
+    final providers = providersAsync.value;
+    final registries = registriesAsync.value;
+    final firstLoad = providersAsync.isFirstLoad || registriesAsync.isFirstLoad;
+    if (firstLoad) {
+      return const SingleChildScrollView(
+        key: ValueKey('providers_skeleton'),
+        physics: AlwaysScrollableScrollPhysics(),
+        child: _ProvidersSkeletonList(),
+      );
+    }
+    if (providers != null &&
+        registries != null &&
+        providers.isEmpty &&
+        registries.isEmpty) {
+      return const _EmptyState(key: ValueKey('providers_empty'));
+    }
+
+    final staleError = providersAsync.hasStaleError
+        ? providersAsync.error
+        : registriesAsync.hasStaleError
+        ? registriesAsync.error
+        : null;
+
+    return ListView(
+      key: const ValueKey('providers_content'),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      children: [
+        StaleDataBanner(
+          visible: staleError != null,
+          error: staleError,
+          onRetry: () => unawaited(_refresh()),
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+        ),
+        const _SectionHeader(title: 'Git Providers'),
+        const Gap(AppSpacing.sm),
+        if (providers == null)
+          ErrorStateView.fromError(
+            title: 'Failed to load providers',
+            error: providersAsync.error!,
+            onRetry: () => ref.invalidate(gitProvidersProvider),
+          )
+        else if (providers.isEmpty)
+          const _SectionHint(message: 'No git provider accounts yet.')
+        else
+          ..._buildCards(
+            'git',
+            providers.map(
+              (provider) => (
+                provider.id,
+                _ProviderTile(
+                  provider: provider,
+                  onEdit: () => _editGitProvider(context, ref, provider),
+                  onDelete: () => _deleteGitProvider(context, ref, provider),
                 ),
-              ),
-              loading: () => const _ProvidersSkeletonList(),
-              error: (error, _) => ErrorStateView(
-                title: 'Failed to load providers',
-                message: error.toString(),
-                onRetry: () => ref.invalidate(gitProvidersProvider),
               ),
             ),
           ),
-          if (isBusy)
-            ColoredBox(
-              color: Theme.of(
-                context,
-              ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
+        const Gap(20),
+        const _SectionHeader(title: 'Registry Accounts'),
+        const Gap(AppSpacing.sm),
+        if (registries == null)
+          ErrorStateView.fromError(
+            title: 'Failed to load registries',
+            error: registriesAsync.error!,
+            onRetry: () => ref.invalidate(dockerRegistryAccountsProvider),
+          )
+        else if (registries.isEmpty)
+          const _SectionHint(message: 'No registry accounts yet.')
+        else
+          ..._buildCards(
+            'registry',
+            registries.map(
+              (registry) => (
+                registry.id,
+                _RegistryTile(
+                  registry: registry,
+                  onEdit: () => _editRegistry(context, ref, registry),
+                  onDelete: () => _deleteRegistry(context, ref, registry),
+                ),
+              ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -323,75 +349,90 @@ class _ProvidersSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      child: ListView(
+      child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          Text('Git Providers', style: textTheme.titleSmall),
-          const Gap(AppSpacing.sm),
-          ...List.generate(
-            3,
-            (_) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-              child: AppCardSurface(
-                padding: EdgeInsets.zero,
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(radius: 16),
-                      const Gap(AppSpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Provider name', style: textTheme.titleSmall),
-                            const Gap(AppSpacing.xs),
-                            Text('Username • Host', style: textTheme.bodySmall),
-                          ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Git Providers', style: textTheme.titleSmall),
+            const Gap(AppSpacing.sm),
+            ...List.generate(
+              3,
+              (_) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: AppCardSurface(
+                  padding: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(radius: 16),
+                        const Gap(AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Provider name',
+                                style: textTheme.titleSmall,
+                              ),
+                              const Gap(AppSpacing.xs),
+                              Text(
+                                'Username • Host',
+                                style: textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const Gap(AppSpacing.sm),
-                      const Chip(label: Text('Active')),
-                    ],
+                        const Gap(AppSpacing.sm),
+                        const Chip(label: Text('Active')),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          const Gap(AppSpacing.sm),
-          Text('Registry Accounts', style: textTheme.titleSmall),
-          const Gap(AppSpacing.sm),
-          ...List.generate(
-            3,
-            (_) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-              child: AppCardSurface(
-                padding: EdgeInsets.zero,
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(radius: 16),
-                      const Gap(AppSpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Registry name', style: textTheme.titleSmall),
-                            const Gap(AppSpacing.xs),
-                            Text('Username • Host', style: textTheme.bodySmall),
-                          ],
+            const Gap(AppSpacing.sm),
+            Text('Registry Accounts', style: textTheme.titleSmall),
+            const Gap(AppSpacing.sm),
+            ...List.generate(
+              3,
+              (_) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: AppCardSurface(
+                  padding: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(radius: 16),
+                        const Gap(AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Registry name',
+                                style: textTheme.titleSmall,
+                              ),
+                              const Gap(AppSpacing.xs),
+                              Text(
+                                'Username • Host',
+                                style: textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const Gap(AppSpacing.sm),
-                      const Chip(label: Text('Active')),
-                    ],
+                        const Gap(AppSpacing.sm),
+                        const Chip(label: Text('Active')),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -683,12 +724,13 @@ class _RegistryTile extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({super.key});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
         const Gap(48),

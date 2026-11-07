@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/settings/add_connection_sheet.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/demo/demo_config.dart';
 import 'package:komodo_go/core/providers/connections_provider.dart';
@@ -48,7 +49,7 @@ class _ConnectionsViewState extends ConsumerState<ConnectionsView> {
         icon: const Icon(AppIcons.add),
         label: const Text('Add'),
       ),
-      body: connectionsAsync.when(
+      body: connectionsAsync.whenStale(
         data: (connectionsState) {
           final connections = connectionsState.connections;
           final activeId = connectionsState.activeConnectionId;

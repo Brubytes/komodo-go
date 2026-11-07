@@ -33,7 +33,7 @@ class StackUpdates extends _$StackUpdates {
   }
 
   Future<void> fetchNextPage() async {
-    final current = state.asData?.value;
+    final current = state.value;
     if (current == null) return;
     final nextPage = current.nextPage;
     if (nextPage == null) return;
@@ -55,8 +55,13 @@ class StackUpdates extends _$StackUpdates {
       (_) => AsyncValue.data(current.copyWith(isLoadingMore: false)),
       (page) => AsyncValue.data(
         UpdatesState(
-          items: [...current.items, ...page.updates],
+          items: appendDedupedById(
+            current.items,
+            page.updates,
+            (i) => i.id,
+          ),
           nextPage: page.nextPage,
+          loadedPages: current.loadedPages + 1,
         ),
       ),
     );

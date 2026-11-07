@@ -6,9 +6,10 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/app_floating_action_button.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
-import 'package:komodo_go/core/widgets/empty_error_state.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/tags/data/models/tag.dart';
@@ -63,14 +64,21 @@ class _TagsViewState extends ConsumerState<TagsView> {
       body: Stack(
         children: [
           RefreshIndicator(
-            onRefresh: () => ref.read(tagsProvider.notifier).refresh(),
-            child: tagsAsync.when(
-              data: (tags) {
+            onRefresh: () => refreshProviders(ref, [tagsProvider.future]),
+            child: AsyncContent<List<KomodoTag>>(
+              value: tagsAsync,
+              fill: true,
+              showProgress: false,
+              errorTitle: 'Failed to load tags',
+              onRetry: () => ref.invalidate(tagsProvider),
+              skeletonBuilder: (_) => const _TagsSkeletonList(),
+              builder: (context, tags) {
                 if (tags.isEmpty) {
                   return const _EmptyState();
                 }
 
                 return ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   itemCount: tags.length,
                   separatorBuilder: (_, _) => const Gap(AppSpacing.md),
@@ -134,21 +142,9 @@ class _TagsViewState extends ConsumerState<TagsView> {
                   ),
                 );
               },
-              loading: () => const _TagsSkeletonList(),
-              error: (error, _) => ErrorStateView(
-                title: 'Failed to load tags',
-                message: error.toString(),
-                onRetry: () => ref.invalidate(tagsProvider),
-              ),
             ),
           ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: Theme.of(
-                context,
-              ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
+          ActionBusyOverlay(busy: actionsState.isLoading),
         ],
       ),
     );
@@ -249,33 +245,38 @@ class _TagsSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      child: ListView.separated(
+      child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(AppSpacing.md),
-        itemBuilder: (_, _) => AppCardSurface(
-          padding: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                const CircleAvatar(radius: 16),
-                const Gap(AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          children: [
+            for (var i = 0; i < 6; i++) ...[
+              if (i > 0) const Gap(AppSpacing.md),
+              AppCardSurface(
+                padding: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
                     children: [
-                      Text('Tag label', style: textTheme.titleSmall),
-                      const Gap(AppSpacing.xs),
-                      Text('Owner • Usage', style: textTheme.bodySmall),
+                      const CircleAvatar(radius: 16),
+                      const Gap(AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Tag label', style: textTheme.titleSmall),
+                            const Gap(AppSpacing.xs),
+                            Text('Owner • Usage', style: textTheme.bodySmall),
+                          ],
+                        ),
+                      ),
+                      const Gap(AppSpacing.sm),
+                      const Chip(label: Text('3')),
                     ],
                   ),
                 ),
-                const Gap(AppSpacing.sm),
-                const Chip(label: Text('3')),
-              ],
-            ),
-          ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -291,6 +292,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
         const Gap(48),

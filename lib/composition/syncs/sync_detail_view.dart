@@ -9,13 +9,17 @@ import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/resource_routes.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/utils/relative_time.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/detail_skeletons.dart';
+import 'package:komodo_go/core/widgets/async/editor_host.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
-import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/providers/data/models/git_provider_account.dart';
@@ -48,8 +52,34 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
   var _configSaveInFlight = false;
   var _dirty = false;
 
-  void _onDirtyChanged(bool dirty, KomodoResourceSync sync) {
+  /// A pull-to-refresh is running; its spinner replaces the thin progress bars.
+  var _pulling = false;
+
+  void _setDirty(bool dirty) {
+    if (_dirty == dirty) return;
     _dirty = dirty;
+    // Lets the config EditorHost adopt data it held back while dirty.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _retry() => ref.invalidate(syncDetailProvider(widget.syncId));
+
+  Future<void> _pullAll() async {
+    setState(() => _pulling = true);
+    try {
+      await refreshProviders(ref, [
+        syncDetailProvider(widget.syncId).future,
+        syncsProvider.future,
+      ]);
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
+  }
+
+  void _onDirtyChanged(bool dirty, KomodoResourceSync sync) {
+    _setDirty(dirty);
     syncDirtySnackBar(
       dirty: dirty,
       onDiscard: () => _discardConfig(sync),
@@ -91,12 +121,11 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
     final actionsState = ref.watch(syncActionsProvider);
     final reposAsync = ref.watch(reposProvider);
     final gitProvidersAsync = ref.watch(gitProvidersProvider);
-    final scheme = Theme.of(context).colorScheme;
-    final sync = syncAsync.asData?.value;
+    final sync = syncAsync.value;
 
-    final repos = reposAsync.asData?.value ?? const <RepoListItem>[];
+    final repos = reposAsync.value ?? const <RepoListItem>[];
     final gitProviders =
-        gitProvidersAsync.asData?.value ?? const <GitProviderAccount>[];
+        gitProvidersAsync.value ?? const <GitProviderAccount>[];
 
     String? repoNameForId(String repoId) {
       if (repoId.isEmpty) return null;
@@ -107,7 +136,7 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
     }
 
     ResourceSyncState? listState;
-    final syncList = ref.watch(syncsProvider).asData?.value;
+    final syncList = ref.watch(syncsProvider).value;
     if (syncList != null) {
       for (final s in syncList) {
         if (s.id == widget.syncId) {
@@ -115,10 +144,6 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
           break;
         }
       }
-    }
-
-    void retry() {
-      ref.invalidate(syncDetailProvider(widget.syncId));
     }
 
     final pendingCount = sync == null ? 0 : _pendingChangeCount(sync);
@@ -150,8 +175,19 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        syncAsync.when(
-                          data: (sync) => sync != null
+                        AsyncContent<KomodoResourceSync?>(
+                          value: syncAsync,
+                          errorTitle: 'Failed to load sync',
+                          onRetry: _retry,
+                          showProgress: !_pulling,
+                          bannerPadding: const EdgeInsets.only(
+                            bottom: AppSpacing.sm,
+                          ),
+                          skeletonBuilder: (_) => const DetailHeaderSkeleton(
+                            facts: 2,
+                            showActions: false,
+                          ),
+                          builder: (context, sync) => sync != null
                               ? _SyncHeader(
                                   syncResource: sync,
                                   repoName: repoNameForId(
@@ -174,9 +210,6 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
                               : const _MessageSurface(
                                   message: 'Sync not found',
                                 ),
-                          loading: () => const _LoadingSurface(),
-                          error: (error, _) =>
-                              _ErrorSurface(error: error, onRetry: retry),
                         ),
                         const Gap(AppSpacing.md),
                         DetailActionBar(
@@ -228,11 +261,19 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
                   label: 'Plan',
                   icon: AppIcons.syncs,
                   body: RefreshIndicator(
-                    onRefresh: () async => retry(),
+                    onRefresh: _pullAll,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey('sync_${widget.syncId}_plan'),
-                      child: syncAsync.when(
-                        data: (sync) => sync != null
+                      // The header already shows this provider's progress and
+                      // stale-error banner.
+                      child: AsyncContent<KomodoResourceSync?>(
+                        value: syncAsync,
+                        errorTitle: 'Failed to load sync',
+                        onRetry: _retry,
+                        showProgress: false,
+                        showStaleBanner: false,
+                        skeletonBuilder: (_) => const DetailTabSkeleton(),
+                        builder: (context, sync) => sync != null
                             ? Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -248,28 +289,32 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
                                   ),
                                   const Gap(AppSpacing.lg),
                                   _LastSyncContent(syncResource: sync),
-                                  if ((sync.info.pendingError ?? '')
-                                      .trim()
-                                      .isNotEmpty) ...[
-                                    const Gap(AppSpacing.md),
-                                    DetailSubCard(
-                                      key: const ValueKey('sync_error_card'),
-                                      title: 'Error details',
-                                      icon: AppIcons.error,
-                                      collapsible: true,
-                                      initiallyExpanded: false,
-                                      summary: _firstLine(
-                                        sync.info.pendingError!,
+                                  AppExpand(
+                                    expanded: (sync.info.pendingError ?? '')
+                                        .trim()
+                                        .isNotEmpty,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: AppSpacing.md,
                                       ),
-                                      child: _ErrorContent(syncResource: sync),
+                                      child: DetailSubCard(
+                                        key: const ValueKey('sync_error_card'),
+                                        title: 'Error details',
+                                        icon: AppIcons.error,
+                                        collapsible: true,
+                                        initiallyExpanded: false,
+                                        summary: _firstLine(
+                                          sync.info.pendingError ?? '',
+                                        ),
+                                        child: _ErrorContent(
+                                          syncResource: sync,
+                                        ),
+                                      ),
                                     ),
-                                  ],
+                                  ),
                                 ],
                               )
                             : const _MessageSurface(message: 'Sync not found'),
-                        loading: () => const _LoadingSurface(),
-                        error: (error, _) =>
-                            _ErrorSurface(error: error, onRetry: retry),
                       ),
                     ),
                   ),
@@ -279,34 +324,34 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
                   label: 'Config',
                   icon: AppIcons.bolt,
                   body: RefreshIndicator(
-                    onRefresh: () async => retry(),
+                    onRefresh: _pullAll,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey('sync_${widget.syncId}_config'),
-                      child: syncAsync.when(
-                        data: (sync) => sync != null
-                            ? SyncConfigEditorContent(
-                                key: _configEditorKey,
-                                initialConfig: sync.config,
-                                repos: repos,
-                                gitProviders: gitProviders,
-                                onDirtyChanged: (dirty) =>
-                                    _onDirtyChanged(dirty, sync),
-                              )
-                            : const _MessageSurface(message: 'Sync not found'),
-                        loading: () => const _LoadingSurface(),
-                        error: (error, _) =>
-                            _ErrorSurface(error: error, onRetry: retry),
+                      child: EditorHost<KomodoResourceSync>(
+                        value: syncAsync,
+                        isDirty: () => _dirty,
+                        errorTitle: 'Failed to load sync',
+                        onRetry: _retry,
+                        showProgress: false,
+                        showStaleBanner: false,
+                        skeletonBuilder: (_) => const DetailTabSkeleton(),
+                        emptyBuilder: (_) =>
+                            const _MessageSurface(message: 'Sync not found'),
+                        builder: (context, sync) => SyncConfigEditorContent(
+                          key: _configEditorKey,
+                          initialConfig: sync.config,
+                          repos: repos,
+                          gitProviders: gitProviders,
+                          onDirtyChanged: (dirty) =>
+                              _onDirtyChanged(dirty, sync),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ],
             ),
-            if (actionsState.isLoading)
-              ColoredBox(
-                color: scheme.scrim.withValues(alpha: 0.25),
-                child: const Center(child: AppSkeletonCard()),
-              ),
+            ActionBusyOverlay(busy: actionsState.isLoading),
           ],
         ),
       ),
@@ -314,7 +359,8 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
   }
 
   void _discardConfig(KomodoResourceSync sync) {
-    _configEditorKey.currentState?.resetTo(sync.config);
+    final latest = ref.read(syncDetailProvider(widget.syncId)).value ?? sync;
+    _configEditorKey.currentState?.resetTo(latest.config);
     hideDirtySnackBar();
   }
 
@@ -361,7 +407,7 @@ class _SyncDetailViewState extends ConsumerState<SyncDetailView>
         ..invalidate(syncsProvider);
 
       _configEditorKey.currentState?.resetTo(updated.config);
-      _dirty = false;
+      _setDirty(false);
       hideDirtySnackBar();
     }
 
@@ -617,33 +663,6 @@ class _MessageSurface extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: EmptyStateView.inline(icon: AppIcons.info, title: message),
-      ),
-    );
-  }
-}
-
-class _LoadingSurface extends StatelessWidget {
-  const _LoadingSurface();
-
-  @override
-  Widget build(BuildContext context) {
-    return const AppSkeletonSurface();
-  }
-}
-
-class _ErrorSurface extends StatelessWidget {
-  const _ErrorSurface({required this.error, required this.onRetry});
-
-  final Object error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return DetailSurface(
-      child: ErrorStateView.fromError(
-        title: 'Could not load sync',
-        error: error,
-        onRetry: onRetry,
       ),
     );
   }

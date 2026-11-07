@@ -74,10 +74,7 @@ class _ResourceTargetsEditorSheetState
     final textTheme = Theme.of(context).textTheme;
 
     final optionsAsync = ref.watch(resourceOptionsProvider);
-    final options = optionsAsync.maybeWhen(
-      data: (value) => value,
-      orElse: () => const <ResourceOption>[],
-    );
+    final options = optionsAsync.value ?? const <ResourceOption>[];
 
     final query = _searchController.text.trim().toLowerCase();
     final filtered = query.isEmpty

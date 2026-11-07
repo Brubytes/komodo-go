@@ -82,12 +82,23 @@ class Containers extends _$Containers {
 
   @override
   Future<ContainersResult> build() async {
-    ref.watch(resourceScopeActivityProvider(ActivityScope.containers));
+    ref.refreshOnActivity(ActivityScope.containers);
     final repository = ref.watch(containerRepositoryProvider);
     if (repository == null) {
       return const ContainersResult(items: [], errors: []);
     }
-    final servers = await ref.watch(serversProvider.future);
+    // Not `ref.watch(serversProvider.future)`: that would turn every servers
+    // refresh into a reload (AsyncLoading) of the containers. Listen and
+    // refresh instead, only when the server list actually changed.
+    ref.listen(serversProvider, (previous, next) {
+      final before = previous?.value;
+      final after = next.value;
+      // No previous value (cold start, connection switch): build() is already
+      // awaiting this very load, so invalidating would fetch twice.
+      if (before == null || after == null || next.isLoading) return;
+      if (!listEquals(before, after)) ref.invalidateSelf();
+    });
+    final servers = await ref.read(serversProvider.future);
     return _load(repository, servers);
   }
 

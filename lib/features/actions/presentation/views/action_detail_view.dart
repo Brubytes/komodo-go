@@ -10,11 +10,14 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/utils/relative_time.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/detail_skeletons.dart';
+import 'package:komodo_go/core/widgets/async/editor_host.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
-import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
@@ -51,6 +54,18 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
   CodeEditorController? _fileContentsController;
   final _configEditorKey = GlobalKey<ActionConfigEditorContentState>();
   var _configSaveInFlight = false;
+  var _pulling = false;
+  var _dirty = false;
+
+  void _setDirty(bool dirty) {
+    if (_dirty == dirty) return;
+    _dirty = dirty;
+    // Lets the config EditorHost adopt data it held back while dirty.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
   String? _lastUpdateId;
 
   @override
@@ -100,7 +115,7 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
     final scheme = Theme.of(context).colorScheme;
 
     ActionListItem? listItem;
-    final list = actionsListAsync.asData?.value;
+    final list = actionsListAsync.value;
     if (list != null) {
       for (final item in list) {
         if (item.id == actionId) {
@@ -130,8 +145,18 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    child: actionAsync.when(
-                      data: (action) {
+                    child: AsyncContent<KomodoAction?>(
+                      value: actionAsync,
+                      errorTitle: 'Failed to load action',
+                      onRetry: _reloadAction,
+                      showProgress: !_pulling,
+                      bannerPadding: const EdgeInsets.only(
+                        bottom: AppSpacing.sm,
+                      ),
+                      skeletonBuilder: (_) => const DetailHeaderSkeleton(
+                        facts: 2,
+                      ),
+                      builder: (context, action) {
                         if (action == null) {
                           return const EmptyStateView.inline(
                             icon: AppIcons.actions,
@@ -181,13 +206,6 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                           ],
                         );
                       },
-                      loading: () => const _LoadingSurface(),
-                      error: (error, _) => ErrorStateView.fromError(
-                        title: 'Failed to load action',
-                        error: error,
-                        onRetry: () =>
-                            ref.invalidate(actionDetailProvider(actionId)),
-                      ),
                     ),
                   ),
                 ),
@@ -225,22 +243,24 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
               children: [
                 _KeepAlive(
                   child: RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(actionDetailProvider(actionId));
-                    },
+                    onRefresh: _refresh,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey(
                         'action_${widget.actionId}_config',
                       ),
-                      child: actionAsync.when(
-                        data: (action) {
-                          if (action == null) {
-                            return const EmptyStateView.inline(
-                              icon: AppIcons.actions,
-                              title: 'Action not found',
-                            );
-                          }
-
+                      child: EditorHost<KomodoAction>(
+                        value: actionAsync,
+                        isDirty: () => _dirty,
+                        errorTitle: 'Failed to load action',
+                        onRetry: _reloadAction,
+                        showProgress: false,
+                        showStaleBanner: false,
+                        skeletonBuilder: (_) => const DetailTabSkeleton(),
+                        emptyBuilder: (_) => const EmptyStateView.inline(
+                          icon: AppIcons.actions,
+                          title: 'Action not found',
+                        ),
+                        builder: (context, action) {
                           final fileController = _ensureFileContentsController(
                             action.config.fileContents,
                           );
@@ -249,6 +269,7 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                             initialConfig: action.config,
                             fileContentsController: fileController,
                             onDirtyChanged: (dirty) {
+                              _setDirty(dirty);
                               syncDirtySnackBar(
                                 dirty: dirty,
                                 onDiscard: () => _discardConfig(action),
@@ -258,28 +279,25 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                             },
                           );
                         },
-                        loading: () => const _LoadingSurface(),
-                        error: (error, _) => ErrorStateView.fromError(
-                          title: 'Failed to load action',
-                          error: error,
-                          onRetry: () =>
-                              ref.invalidate(actionDetailProvider(actionId)),
-                        ),
                       ),
                     ),
                   ),
                 ),
                 _KeepAlive(
                   child: RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(actionDetailProvider(actionId));
-                    },
+                    onRefresh: _refresh,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey(
                         'action_${widget.actionId}_file_content',
                       ),
-                      child: actionAsync.when(
-                        data: (action) {
+                      child: AsyncContent<KomodoAction?>(
+                        value: actionAsync,
+                        errorTitle: 'Failed to load action',
+                        onRetry: _reloadAction,
+                        showProgress: false,
+                        showStaleBanner: false,
+                        skeletonBuilder: (_) => const DetailTabSkeleton(),
+                        builder: (context, action) {
                           if (action == null) {
                             return const EmptyStateView.inline(
                               icon: AppIcons.actions,
@@ -295,13 +313,6 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
                             maxHeight: 420,
                           );
                         },
-                        loading: () => const _LoadingSurface(),
-                        error: (error, _) => ErrorStateView.fromError(
-                          title: 'Failed to load action',
-                          error: error,
-                          onRetry: () =>
-                              ref.invalidate(actionDetailProvider(actionId)),
-                        ),
                       ),
                     ),
                   ),
@@ -309,14 +320,26 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
               ],
             ),
           ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: scheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
+          ActionBusyOverlay(busy: actionsState.isLoading),
         ],
       ),
     );
+  }
+
+  void _reloadAction() {
+    ref.invalidate(actionDetailProvider(widget.actionId));
+  }
+
+  Future<void> _refresh() async {
+    setState(() => _pulling = true);
+    try {
+      await refreshProviders(ref, [
+        actionDetailProvider(widget.actionId).future,
+        actionsProvider.future,
+      ]);
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
   }
 
   Future<void> _runAction(BuildContext context, KomodoAction action) async {
@@ -363,7 +386,9 @@ class _ActionDetailViewState extends ConsumerState<ActionDetailView>
   }
 
   void _discardConfig(KomodoAction action) {
-    _configEditorKey.currentState?.resetTo(action.config);
+    final latest =
+        ref.read(actionDetailProvider(widget.actionId)).value ?? action;
+    _configEditorKey.currentState?.resetTo(latest.config);
     hideDirtySnackBar();
   }
 
@@ -959,12 +984,3 @@ class _ActionHeader extends StatelessWidget {
 }
 
 /// Timestamps from the API are unix milliseconds.
-
-class _LoadingSurface extends StatelessWidget {
-  const _LoadingSurface();
-
-  @override
-  Widget build(BuildContext context) {
-    return const AppSkeletonSurface();
-  }
-}

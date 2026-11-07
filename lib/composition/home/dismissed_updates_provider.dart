@@ -25,20 +25,20 @@ class DismissedUpdatesNotifier extends AsyncNotifier<Set<String>> {
   }
 
   Future<void> dismiss(String id) async {
-    final current = state.asData?.value ?? await future;
+    final current = state.value ?? await future;
     if (current.contains(id)) return;
     await _save({...current, id});
   }
 
   Future<void> restore(String id) async {
-    final current = state.asData?.value ?? await future;
+    final current = state.value ?? await future;
     if (!current.contains(id)) return;
     await _save({...current}..remove(id));
   }
 
   /// Drops stored IDs that are not in [validIds] (expired or gone).
   Future<void> prune(Set<String> validIds) async {
-    final current = state.asData?.value;
+    final current = state.value;
     if (current == null) return;
     final kept = current.intersection(validIds);
     if (kept.length == current.length) return;

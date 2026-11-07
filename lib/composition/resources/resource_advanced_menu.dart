@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fpdart/fpdart.dart' show Either;
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
@@ -354,7 +355,7 @@ class _ResourceMetadataEditorSheetState
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const Gap(AppSpacing.xs),
-                    tagsAsync.when(
+                    tagsAsync.whenStale(
                       data: _buildTags,
                       loading: () => const Column(
                         children: [

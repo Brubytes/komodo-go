@@ -8,6 +8,8 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/async/refresh_progress_bar.dart';
+import 'package:komodo_go/core/widgets/async/stale_data_banner.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
@@ -29,6 +31,13 @@ class _AutoUpdateReviewViewState extends ConsumerState<AutoUpdateReviewView> {
   List<_UpdateCandidate> _candidates = const [];
   final _selected = <String>{};
   var _loading = true;
+
+  // True once candidates were loaded successfully; from then on a reload or a
+  // failed reload keeps the list instead of replacing it.
+  var _loaded = false;
+
+  // A pull-to-refresh is running (its spinner replaces the progress bar).
+  var _pulling = false;
   var _checking = false;
   var _deploying = false;
   String? _error;
@@ -48,8 +57,16 @@ class _AutoUpdateReviewViewState extends ConsumerState<AutoUpdateReviewView> {
         icon: Icons.system_update_alt,
       ),
       body: RefreshIndicator(
-        onRefresh: _loadCandidates,
+        onRefresh: () async {
+          setState(() => _pulling = true);
+          try {
+            await _loadCandidates();
+          } finally {
+            if (mounted) setState(() => _pulling = false);
+          }
+        },
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.lg,
             AppSpacing.lg,
@@ -90,15 +107,21 @@ class _AutoUpdateReviewViewState extends ConsumerState<AutoUpdateReviewView> {
                 ],
               ),
             ),
+            RefreshProgressBar(active: _loading && _loaded && !_pulling),
+            StaleDataBanner(
+              visible: _loaded && _error != null,
+              message: _error,
+              onRetry: _loadCandidates,
+            ),
             const Gap(AppSpacing.lg),
-            if (_error != null)
+            if (_error != null && !_loaded)
               AppCardSurface(
                 child: Text(
                   _error!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               )
-            else if (_loading)
+            else if (_loading && !_loaded)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(AppSpacing.xxl),
@@ -266,8 +289,17 @@ class _AutoUpdateReviewViewState extends ConsumerState<AutoUpdateReviewView> {
         }),
       ),
     );
+    if (failure != null && _loaded) {
+      // Failed reload: keep the loaded list and selection, tell the user.
+      setState(() {
+        _loading = false;
+        _error = failure!.displayMessage;
+      });
+      return;
+    }
     setState(() {
       _loading = false;
+      _loaded = failure == null;
       _error = failure?.displayMessage;
       _candidates = candidates;
       _selected

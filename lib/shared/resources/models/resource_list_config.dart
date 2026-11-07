@@ -4,11 +4,40 @@ import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 
+/// A resource-specific on/off filter (e.g. "Pending updates") shown as a chip
+/// in the filters panel and as a removable chip in the active-filters row.
+class ResourceToggleFilter<T> {
+  const ResourceToggleFilter({
+    required this.label,
+    required this.activeLabel,
+    required this.icon,
+    required this.watchEnabled,
+    required this.setEnabled,
+    required this.matches,
+  });
+
+  /// Filter chip label in the filters panel.
+  final String label;
+
+  /// Label of the removable chip summarising the active filter.
+  final String activeLabel;
+
+  final IconData icon;
+
+  /// Watches whether the filter is currently on.
+  final bool Function(WidgetRef ref) watchEnabled;
+
+  final void Function(WidgetRef ref, {required bool enabled}) setEnabled;
+
+  /// Whether an item passes the filter while it is on.
+  final bool Function(T item) matches;
+}
+
 /// Per-resource configuration consumed by `ResourceListView<T>`.
 ///
-/// Everything that differed between the five copied list views
-/// (builds/repos/actions/procedures/syncs) lives here; the shared view
-/// renders identical chrome around it.
+/// Everything that differs between resource list screens lives here; the
+/// shared view renders identical chrome and refresh/loading behaviour around
+/// it.
 class ResourceListConfig<T> {
   const ResourceListConfig({
     required this.kind,
@@ -20,7 +49,6 @@ class ResourceListConfig<T> {
     required this.skeletonTitle,
     required this.skeletonSubtitle,
     required this.skeletonChipLeft,
-    required this.skeletonChipRight,
     required this.watchList,
     required this.watchTagOptions,
     required this.refreshList,
@@ -32,12 +60,16 @@ class ResourceListConfig<T> {
     required this.cardBuilder,
     required this.nameOf,
     required this.severityOf,
+    this.skeletonChipRight,
     this.idOf,
     this.stateLabelOf,
     this.serverNameOf,
     this.updatedAtOf,
     this.batchItemOf,
     this.onCreate,
+    this.extraFilters = const [],
+    this.derivationKey,
+    this.emptyStateHint,
   });
 
   /// Keys the shared filter providers.
@@ -67,8 +99,8 @@ class ResourceListConfig<T> {
   /// Left skeleton chip label.
   final String skeletonChipLeft;
 
-  /// Right skeleton chip label.
-  final String skeletonChipRight;
+  /// Right skeleton chip label; none when null.
+  final String? skeletonChipRight;
 
   /// Watches the list provider.
   final AsyncValue<List<T>> Function(WidgetRef ref) watchList;
@@ -128,4 +160,17 @@ class ResourceListConfig<T> {
   final ResourceBatchItem Function(T item)? batchItemOf;
 
   final void Function(BuildContext context)? onCreate;
+
+  /// Resource-specific on/off filters, applied before search and sorting.
+  final List<ResourceToggleFilter<T>> extraFilters;
+
+  /// Changes whenever data captured by this config's callbacks changes (for
+  /// example a server-name lookup used by [serverNameOf] or
+  /// [searchFieldsOf]). The view re-filters and re-sorts when it changes;
+  /// compared with `==`.
+  final Object? derivationKey;
+
+  /// Empty-state hint shown when no item exists and no filter is active.
+  /// Defaults to a generic "create in the Komodo web interface" message.
+  final String? emptyStateHint;
 }

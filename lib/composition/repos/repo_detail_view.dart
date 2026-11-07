@@ -10,10 +10,13 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/utils/relative_time.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/detail_skeletons.dart';
+import 'package:komodo_go/core/widgets/async/editor_host.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
-import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
@@ -49,8 +52,34 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
   var _configSaveInFlight = false;
   var _dirty = false;
 
-  void _onDirtyChanged(bool dirty, KomodoRepo repo) {
+  /// A pull-to-refresh is running; its spinner replaces the thin progress bars.
+  var _pulling = false;
+
+  void _setDirty(bool dirty) {
+    if (_dirty == dirty) return;
     _dirty = dirty;
+    // Lets the config EditorHost adopt data it held back while dirty.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _retry() => ref.invalidate(repoDetailProvider(widget.repoId));
+
+  Future<void> _pullAll() async {
+    setState(() => _pulling = true);
+    try {
+      await refreshProviders(ref, [
+        repoDetailProvider(widget.repoId).future,
+        reposProvider.future,
+      ]);
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
+  }
+
+  void _onDirtyChanged(bool dirty, KomodoRepo repo) {
+    _setDirty(dirty);
     syncDirtySnackBar(
       dirty: dirty,
       onDiscard: () => _discardConfig(repo),
@@ -69,10 +98,9 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
     final buildersListAsync = ref.watch(buildersProvider);
     final gitProvidersAsync = ref.watch(gitProvidersProvider);
 
-    final scheme = Theme.of(context).colorScheme;
-    final repo = repoAsync.asData?.value;
+    final repo = repoAsync.value;
     RepoListItem? listItem;
-    for (final item in reposAsync.asData?.value ?? const <RepoListItem>[]) {
+    for (final item in reposAsync.value ?? const <RepoListItem>[]) {
       if (item.id == widget.repoId) {
         listItem = item;
         break;
@@ -80,7 +108,7 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
     }
 
     String? serverNameForId(String serverId) {
-      final servers = serversListAsync.asData?.value;
+      final servers = serversListAsync.value;
       if (servers == null || serverId.isEmpty) return null;
       for (final s in servers) {
         if (s.id == serverId) return s.name;
@@ -88,21 +116,16 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
       return null;
     }
 
-    final servers = serversListAsync.asData?.value ?? const <Server>[];
-    final builders =
-        buildersListAsync.asData?.value ?? const <BuilderListItem>[];
+    final servers = serversListAsync.value ?? const <Server>[];
+    final builders = buildersListAsync.value ?? const <BuilderListItem>[];
     final gitProviders =
-        gitProvidersAsync.asData?.value ?? const <GitProviderAccount>[];
+        gitProvidersAsync.value ?? const <GitProviderAccount>[];
 
     final notCloned =
         listItem != null &&
         (listItem.info.clonedHash ?? '').isEmpty &&
         listItem.info.lastPulledAt == 0;
     final hasBuilder = (repo?.config.builderId ?? '').isNotEmpty;
-
-    void retry() {
-      ref.invalidate(repoDetailProvider(widget.repoId));
-    }
 
     return UnsavedChangesGuard(
       dirty: _dirty,
@@ -131,8 +154,19 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        repoAsync.when(
-                          data: (repo) => repo != null
+                        AsyncContent<KomodoRepo?>(
+                          value: repoAsync,
+                          errorTitle: 'Failed to load repo',
+                          onRetry: _retry,
+                          showProgress: !_pulling,
+                          bannerPadding: const EdgeInsets.only(
+                            bottom: AppSpacing.sm,
+                          ),
+                          skeletonBuilder: (_) => const DetailHeaderSkeleton(
+                            facts: 2,
+                            showActions: false,
+                          ),
+                          builder: (context, repo) => repo != null
                               ? _RepoHeader(
                                   repo: repo,
                                   listItem: listItem,
@@ -160,9 +194,6 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                               : const _MessageSurface(
                                   message: 'Repo not found',
                                 ),
-                          loading: () => const _LoadingSurface(),
-                          error: (error, _) =>
-                              _ErrorSurface(error: error, onRetry: retry),
                         ),
                         const Gap(AppSpacing.md),
                         DetailActionBar(
@@ -249,26 +280,28 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                   label: 'Config',
                   icon: AppIcons.bolt,
                   body: RefreshIndicator(
-                    onRefresh: () async => retry(),
+                    onRefresh: _pullAll,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey('repo_${widget.repoId}_config'),
-                      child: repoAsync.when(
-                        data: (repo) => repo != null
-                            ? RepoConfigEditorContent(
-                                key: _configEditorKey,
-                                initialConfig: repo.config,
-                                servers: servers,
-                                builders: builders,
-                                gitProviders: gitProviders,
-                                onDirtyChanged: (dirty) =>
-                                    _onDirtyChanged(dirty, repo),
-                              )
-                            : const _MessageSurface(
-                                message: 'Repo not found',
-                              ),
-                        loading: () => const _LoadingSurface(),
-                        error: (error, _) =>
-                            _ErrorSurface(error: error, onRetry: retry),
+                      child: EditorHost<KomodoRepo>(
+                        value: repoAsync,
+                        isDirty: () => _dirty,
+                        errorTitle: 'Failed to load repo',
+                        onRetry: _retry,
+                        showProgress: false,
+                        showStaleBanner: false,
+                        skeletonBuilder: (_) => const DetailTabSkeleton(),
+                        emptyBuilder: (_) =>
+                            const _MessageSurface(message: 'Repo not found'),
+                        builder: (context, repo) => RepoConfigEditorContent(
+                          key: _configEditorKey,
+                          initialConfig: repo.config,
+                          servers: servers,
+                          builders: builders,
+                          gitProviders: gitProviders,
+                          onDirtyChanged: (dirty) =>
+                              _onDirtyChanged(dirty, repo),
+                        ),
                       ),
                     ),
                   ),
@@ -278,31 +311,29 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
                   label: 'Builds',
                   icon: AppIcons.builds,
                   body: RefreshIndicator(
-                    onRefresh: () async => retry(),
+                    onRefresh: _pullAll,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey(
                         'repo_${widget.repoId}_build_status',
                       ),
-                      child: repoAsync.when(
-                        data: (repo) => repo != null
+                      child: AsyncContent<KomodoRepo?>(
+                        value: repoAsync,
+                        errorTitle: 'Failed to load repo',
+                        onRetry: _retry,
+                        showProgress: false,
+                        showStaleBanner: false,
+                        skeletonBuilder: (_) =>
+                            const DetailTabSkeleton(count: 2),
+                        builder: (context, repo) => repo != null
                             ? _RepoBuildContent(info: repo.info)
-                            : const _MessageSurface(
-                                message: 'Repo not found',
-                              ),
-                        loading: () => const _LoadingSurface(),
-                        error: (error, _) =>
-                            _ErrorSurface(error: error, onRetry: retry),
+                            : const _MessageSurface(message: 'Repo not found'),
                       ),
                     ),
                   ),
                 ),
               ],
             ),
-            if (actionsState.isLoading)
-              ColoredBox(
-                color: scheme.scrim.withValues(alpha: 0.25),
-                child: const Center(child: AppSkeletonCard()),
-              ),
+            ActionBusyOverlay(busy: actionsState.isLoading),
           ],
         ),
       ),
@@ -310,7 +341,8 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
   }
 
   void _discardConfig(KomodoRepo repo) {
-    _configEditorKey.currentState?.resetTo(repo.config);
+    final latest = ref.read(repoDetailProvider(widget.repoId)).value ?? repo;
+    _configEditorKey.currentState?.resetTo(latest.config);
     hideDirtySnackBar();
   }
 
@@ -356,7 +388,7 @@ class _RepoDetailViewState extends ConsumerState<RepoDetailView>
         ..invalidate(reposProvider);
 
       _configEditorKey.currentState?.resetTo(updated.config);
-      _dirty = false;
+      _setDirty(false);
       hideDirtySnackBar();
       AppSnackBar.show(context, 'Repo updated', tone: AppSnackBarTone.success);
       return;
@@ -617,15 +649,6 @@ class _RepoBuildContent extends StatelessWidget {
   }
 }
 
-class _LoadingSurface extends StatelessWidget {
-  const _LoadingSurface();
-
-  @override
-  Widget build(BuildContext context) {
-    return const AppSkeletonSurface();
-  }
-}
-
 class _MessageSurface extends StatelessWidget {
   const _MessageSurface({required this.message});
 
@@ -637,24 +660,6 @@ class _MessageSurface extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: EmptyStateView.inline(icon: AppIcons.info, title: message),
-      ),
-    );
-  }
-}
-
-class _ErrorSurface extends StatelessWidget {
-  const _ErrorSurface({required this.error, required this.onRetry});
-
-  final Object error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return DetailSurface(
-      child: ErrorStateView.fromError(
-        title: 'Could not load repo',
-        error: error,
-        onRetry: onRetry,
       ),
     );
   }

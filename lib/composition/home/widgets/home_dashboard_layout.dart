@@ -56,12 +56,14 @@ class HomeDashboardLayout extends StatelessWidget {
 
         if (!twoColumn) {
           return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: padding,
             children: [attention, serverOverview, alerts, opsPulse],
           );
         }
 
         return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: padding,
           children: [
             serverOverview,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
@@ -121,20 +122,21 @@ class _NotificationsViewState extends ConsumerState<NotificationsView>
         _didAutoSwitchOnAlertsError = false;
         return;
       }
-      if (next.hasError) {
+      // Only a failed first load (alerts unavailable) switches tabs; a failed
+      // refresh keeps the stale alerts and leaves the user where they are.
+      if (next.hasBlockingError) {
         _switchToUpdatesIfNeeded();
       }
     });
 
-    final alertsUnavailable = alertsAsync.hasError;
-    final unresolvedAlerts = alertsAsync.asData?.value.items
+    final alertsUnavailable = alertsAsync.hasBlockingError;
+    final unresolvedAlerts = alertsAsync.value?.items
         .where((a) => !a.resolved)
         .length;
     final failedUpdates = ref
         .watch(updatesProvider)
-        .asData
-        ?.value
-        .items
+        .value
+        ?.items
         .where((u) => u.status == UpdateStatus.failed)
         .length;
 

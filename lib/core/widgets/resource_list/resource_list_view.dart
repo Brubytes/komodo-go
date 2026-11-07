@@ -4,13 +4,15 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/pull_refresh_mixin.dart';
+import 'package:komodo_go/core/widgets/async/refresh_status_header.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
 import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/filters/template_filter.dart';
 import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
@@ -42,7 +44,8 @@ class ResourceListView<T> extends ConsumerStatefulWidget {
       _ResourceListViewState<T>();
 }
 
-class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
+class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>>
+    with PullRefreshMixin<ResourceListView<T>> {
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
   late final ScrollController _scrollController;
@@ -58,6 +61,9 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
   String? _lastKind;
 
   _Derived<T>? _derived;
+
+  @override
+  Future<void> refreshData() => widget.config.refreshList(ref);
 
   @override
   void initState() {
@@ -103,11 +109,14 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
     required TemplateFilter templateFilter,
     required ResourceViewPrefs prefs,
     required List<TagOption> tagOptions,
+    required List<bool> toggleStates,
   }) {
     final config = widget.config;
     final previous = _derived;
     if (previous != null &&
         previous.kind == config.kind &&
+        previous.derivationKey == config.derivationKey &&
+        listEquals(previous.toggleStates, toggleStates) &&
         previous.query == query &&
         previous.templateFilter == templateFilter &&
         previous.sortMode == prefs.sortMode &&
@@ -131,8 +140,12 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
           ];
     final tagNameById = {for (final tag in availableTags) tag.id: tag.name};
 
+    final toggled = [
+      for (final item in items)
+        if (_passesToggles(item, toggleStates)) item,
+    ];
     final searched = applyResourceFilters(
-      items,
+      toggled,
       query: query,
       selectedTags: selectedTags,
       templateFilter: templateFilter,
@@ -151,6 +164,8 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
     );
     return _derived = _Derived<T>(
       kind: config.kind,
+      derivationKey: config.derivationKey,
+      toggleStates: toggleStates,
       items: items,
       query: query,
       selectedTags: selectedTags,
@@ -170,6 +185,14 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
           ? const <String>[]
           : collectDistinct(items, serverOf),
     );
+  }
+
+  bool _passesToggles(T item, List<bool> toggleStates) {
+    final filters = widget.config.extraFilters;
+    for (var i = 0; i < filters.length; i++) {
+      if (toggleStates[i] && !filters[i].matches(item)) return false;
+    }
+    return true;
   }
 
   /// True when the list state kind changed since the last build (so a
@@ -192,9 +215,13 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
       resourceTemplateFilterStateProvider(config.kind),
     );
 
+    final toggleStates = [
+      for (final filter in config.extraFilters) filter.watchEnabled(ref),
+    ];
     final listId = config.kind.name;
     final prefs = watchResourceViewPrefs(ref, listId);
     final activeFilterCount = countActiveResourceFilters(
+      extra: toggleStates.where((enabled) => enabled).length,
       query: searchQuery,
       selectedTags: selectedTags,
       templateFilter: templateFilter,
@@ -202,14 +229,8 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
       selectedStates: prefs.states,
       selectedServers: prefs.servers,
     );
-    final loadedItems = itemsAsync.maybeWhen(
-      data: (items) => items,
-      orElse: () => <T>[],
-    );
-    final tagOptions = tagsAsync.maybeWhen(
-      data: (tags) => tags,
-      orElse: () => <TagOption>[],
-    );
+    final loadedItems = itemsAsync.value ?? <T>[];
+    final tagOptions = tagsAsync.value ?? <TagOption>[];
     final derived = _derive(
       loadedItems,
       query: searchQuery,
@@ -217,6 +238,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
       templateFilter: templateFilter,
       prefs: prefs,
       tagOptions: tagOptions,
+      toggleStates: toggleStates,
     );
     final stateOptions = derived.stateOptions;
     final serverOptions = derived.serverOptions;
@@ -231,6 +253,9 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
               .read(resourceTemplateFilterStateProvider(config.kind).notifier)
               .value =
           TemplateFilter.exclude;
+      for (final filter in config.extraFilters) {
+        filter.setEnabled(ref, enabled: false);
+      }
       clearResourceViewFilters(ref, listId);
     }
 
@@ -262,10 +287,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
             kind: config.kind,
             items: config.batchItemOf == null
                 ? const []
-                : itemsAsync.maybeWhen(
-                    data: (items) => items.map(config.batchItemOf!).toList(),
-                    orElse: () => const [],
-                  ),
+                : loadedItems.map(config.batchItemOf!).toList(),
             onCreate: config.onCreate == null
                 ? null
                 : () => config.onCreate!(context),
@@ -279,7 +301,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
       body: Stack(
         children: [
           RefreshIndicator(
-            onRefresh: () => config.refreshList(ref),
+            onRefresh: pullRefresh,
             child: CustomScrollView(
               controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
@@ -335,6 +357,28 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                                         supportsRecentlyUpdated:
                                             config.updatedAtOf != null,
                                         resourceName: config.resourceName,
+                                        toggleChips: [
+                                          for (
+                                            var i = 0;
+                                            i < config.extraFilters.length;
+                                            i++
+                                          )
+                                            AppFilterChip(
+                                              key: ValueKey(
+                                                'resource_toggle_filter_$i',
+                                              ),
+                                              icon: config.extraFilters[i].icon,
+                                              label:
+                                                  config.extraFilters[i].label,
+                                              selected: toggleStates[i],
+                                              onSelected: (value) => config
+                                                  .extraFilters[i]
+                                                  .setEnabled(
+                                                    ref,
+                                                    enabled: value,
+                                                  ),
+                                            ),
+                                        ],
                                         templateFilter: templateFilter,
                                         selectedTags: selectedTags,
                                         availableTags: availableTags,
@@ -390,6 +434,13 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                                         '';
                                   },
                                 ),
+                              for (var i = 0; i < toggleStates.length; i++)
+                                if (toggleStates[i])
+                                  ActiveFilterChip(
+                                    label: config.extraFilters[i].activeLabel,
+                                    onRemove: () => config.extraFilters[i]
+                                        .setEnabled(ref, enabled: false),
+                                  ),
                               for (final tag in selectedTags)
                                 ActiveFilterChip(
                                   label: 'Tag: ${tagNameById[tag] ?? tag}',
@@ -424,9 +475,18 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                     ),
                   ),
                 ),
+                SliverToBoxAdapter(
+                  child: RefreshStatusHeader(
+                    async: itemsAsync,
+                    pulling: isPulling,
+                    onRetry: refreshData,
+                    bannerPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  ),
+                ),
                 ...itemsAsync.when(
                   skipLoadingOnRefresh: true,
                   skipLoadingOnReload: true,
+                  skipError: true,
                   data: (items) {
                     final filtered = derived.filtered;
                     if (filtered.isEmpty) {
@@ -441,12 +501,14 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                               child: _EmptyState(
                                 icon: config.icon,
                                 resourceName: config.resourceName,
+                                emptyHint: config.emptyStateHint,
                                 hasFilters:
                                     hasActiveResourceFilters(
                                       query: searchQuery,
                                       selectedTags: selectedTags,
                                       templateFilter: templateFilter,
                                     ) ||
+                                    toggleStates.any((enabled) => enabled) ||
                                     prefs.activeCount > 0,
                                 onClearFilters: clearAllFilters,
                                 tagOptions: availableTags,
@@ -550,21 +612,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
               ],
             ),
           ),
-          Positioned.fill(
-            child: AppSwitcher(
-              animateSize: false,
-              alignment: Alignment.center,
-              child: actionsState.isLoading
-                  ? ColoredBox(
-                      key: const ValueKey('resource_action_overlay'),
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.scrim.withValues(alpha: .25),
-                      child: const Center(child: AppSkeletonCard()),
-                    )
-                  : const SizedBox.shrink(key: ValueKey('no_overlay')),
-            ),
-          ),
+          ActionBusyOverlay(busy: actionsState.isLoading),
         ],
       ),
     );
@@ -613,6 +661,7 @@ class _FiltersPanel extends StatelessWidget {
     required this.serverOptions,
     required this.supportsRecentlyUpdated,
     required this.resourceName,
+    required this.toggleChips,
     required this.templateFilter,
     required this.selectedTags,
     required this.availableTags,
@@ -626,6 +675,7 @@ class _FiltersPanel extends StatelessWidget {
   final List<String> serverOptions;
   final bool supportsRecentlyUpdated;
   final String resourceName;
+  final List<Widget> toggleChips;
   final TemplateFilter templateFilter;
   final Set<String> selectedTags;
   final List<TagOption> availableTags;
@@ -653,6 +703,7 @@ class _FiltersPanel extends StatelessWidget {
             supportsRecentlyUpdated: supportsRecentlyUpdated,
             extraChips: [
               const ResourceChipGroupDivider(),
+              ...toggleChips,
               AppFilterMenuChip<TemplateFilter>(
                 key: const ValueKey('resource_template_filter'),
                 icon: AppIcons.factory,
@@ -776,7 +827,7 @@ class _ResourceSkeletonList extends StatelessWidget {
   final String title;
   final String subtitle;
   final String chipLeft;
-  final String chipRight;
+  final String? chipRight;
 
   @override
   Widget build(BuildContext context) {
@@ -793,6 +844,7 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState({
     required this.icon,
     required this.resourceName,
+    required this.emptyHint,
     required this.hasFilters,
     required this.onClearFilters,
     required this.tagOptions,
@@ -801,6 +853,7 @@ class _EmptyState extends StatelessWidget {
 
   final IconData icon;
   final String resourceName;
+  final String? emptyHint;
   final bool hasFilters;
   final VoidCallback onClearFilters;
   final List<TagOption> tagOptions;
@@ -812,7 +865,7 @@ class _EmptyState extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final message = hasFilters
         ? 'No $resourceName match your filters.'
-        : 'Create $resourceName in the Komodo web interface.';
+        : emptyHint ?? 'Create $resourceName in the Komodo web interface.';
 
     return Center(
       child: Padding(
@@ -872,6 +925,8 @@ class _EmptyState extends StatelessWidget {
 class _Derived<T> {
   _Derived({
     required this.kind,
+    required this.derivationKey,
+    required this.toggleStates,
     required this.items,
     required this.query,
     required this.selectedTags,
@@ -889,6 +944,8 @@ class _Derived<T> {
   });
 
   final ResourceKind kind;
+  final Object? derivationKey;
+  final List<bool> toggleStates;
   final List<T> items;
   final String query;
   final Set<String> selectedTags;

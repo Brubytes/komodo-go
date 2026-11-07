@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/home/home_ops_pulse.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
+import 'package:komodo_go/core/widgets/async/refresh_progress_bar.dart';
+import 'package:komodo_go/core/widgets/async/stale_data_banner.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -32,8 +36,92 @@ class HomeSectionHeader extends StatelessWidget {
   }
 }
 
+/// Renders a dashboard section from an [AsyncValue] without ever swapping
+/// existing content for a skeleton or an error tile.
+///
+/// Only the first load (no value) shows [HomeLoadingTile] and only a failure
+/// with no value shows the error. Refreshes and failed refreshes keep
+/// [data] mounted. States switch through `AppSwitcher` keyed by kind.
+class HomeAsyncSection<T> extends StatelessWidget {
+  const HomeAsyncSection({
+    required this.value,
+    required this.data,
+    required this.error,
+    super.key,
+    this.skeletonHeight = 0,
+  });
+
+  final AsyncValue<T> value;
+  final Widget Function(T data) data;
+  final Widget Function(Object error) error;
+
+  /// Minimum height of the first-load skeleton, to limit layout jumps.
+  final double skeletonHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = value.whenStale<Widget>(
+      data: (d) =>
+          KeyedSubtree(key: const ValueKey('home_data'), child: data(d)),
+      error: (e, _) =>
+          KeyedSubtree(key: const ValueKey('home_error'), child: error(e)),
+      loading: () => KeyedSubtree(
+        key: const ValueKey('home_loading'),
+        child: HomeLoadingTile(minHeight: skeletonHeight),
+      ),
+    );
+    return AppSwitcher(child: child);
+  }
+}
+
+/// Single dashboard-wide refresh status: a thin [RefreshProgressBar] while any
+/// source refreshes in the background (hidden during pull-to-refresh, whose
+/// spinner is already visible) and one [StaleDataBanner] when any source
+/// failed to refresh while still showing old data. Sections themselves stay
+/// free of per-tile indicators.
+class HomeRefreshStatus extends StatelessWidget {
+  const HomeRefreshStatus({
+    required this.sources,
+    required this.pulling,
+    required this.onRetry,
+    super.key,
+  });
+
+  /// Every async source that feeds the dashboard.
+  final List<AsyncValue<Object?>> sources;
+
+  /// A pull-to-refresh is running.
+  final bool pulling;
+
+  /// Refreshes all sources (the banner's Retry).
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final refreshing = sources.any((s) => s.isBackgroundRefresh);
+    final stale = sources.where((s) => s.hasStaleError).firstOrNull;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        RefreshProgressBar(active: refreshing && !pulling),
+        StaleDataBanner(
+          visible: stale != null,
+          error: stale?.error,
+          onRetry: onRetry,
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        ),
+      ],
+    );
+  }
+}
+
 class HomeLoadingTile extends StatelessWidget {
-  const HomeLoadingTile({super.key});
+  const HomeLoadingTile({super.key, this.minHeight = 0});
+
+  /// Minimum height, so the skeleton roughly matches the content it stands in
+  /// for.
+  final double minHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -42,40 +130,46 @@ class HomeLoadingTile extends StatelessWidget {
     return Skeletonizer(
       child: AppCardSurface(
         padding: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const CircleAvatar(radius: 18),
-                  const Gap(12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Loading status', style: textTheme.titleMedium),
-                        const Gap(6),
-                        Text('Preparing overview', style: textTheme.bodySmall),
-                      ],
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: minHeight),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(radius: 18),
+                    const Gap(12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Loading status', style: textTheme.titleMedium),
+                          const Gap(6),
+                          Text(
+                            'Preparing overview',
+                            style: textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const Gap(12),
-              Text('Loading details', style: textTheme.bodyMedium),
-              const Gap(8),
-              const Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
-                  Chip(label: Text('Loading')),
-                  Chip(label: Text('Loading')),
-                  Chip(label: Text('Loading')),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const Gap(12),
+                Text('Loading details', style: textTheme.bodyMedium),
+                const Gap(8),
+                const Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    Chip(label: Text('Loading')),
+                    Chip(label: Text('Loading')),
+                    Chip(label: Text('Loading')),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

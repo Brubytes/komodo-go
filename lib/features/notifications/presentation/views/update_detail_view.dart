@@ -5,8 +5,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
-import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
@@ -32,37 +33,36 @@ class UpdateDetailView extends ConsumerWidget {
         markColor: AppTokens.resourceStacks,
         markUseGradient: true,
         centerTitle: true,
-        status: updateAsync.asData?.value == null
+        status: updateAsync.value == null
             ? null
-            : _updateAppBarStatus(updateAsync.asData!.value!),
+            : _updateAppBarStatus(updateAsync.value!),
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(updateDetailProvider(updateId));
-          await ref.read(updateDetailProvider(updateId).future);
-        },
-        child: updateAsync.when(
-          data: (update) => update == null
-              ? _scrollableMessage('Update not found')
-              : _UpdateDetailContent(update: update),
-          loading: () => const AppSkeletonList(
+        onRefresh: () =>
+            refreshProviders(ref, [updateDetailProvider(updateId).future]),
+        child: AsyncContent<UpdateDetail?>(
+          value: updateAsync,
+          fill: true,
+          errorTitle: 'Failed to load update',
+          onRetry: () => ref.invalidate(updateDetailProvider(updateId)),
+          skeletonBuilder: (_) => const Padding(
             padding: EdgeInsets.fromLTRB(
               AppSpacing.lg,
               AppSpacing.md,
               AppSpacing.lg,
               AppSpacing.xl,
             ),
+            child: Column(
+              children: [
+                AppSkeletonCard(),
+                Gap(AppSpacing.md),
+                AppSkeletonCard(),
+              ],
+            ),
           ),
-          error: (error, _) => ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            children: [
-              ErrorStateView(
-                title: 'Failed to load update',
-                message: error.toString(),
-                onRetry: () => ref.invalidate(updateDetailProvider(updateId)),
-              ),
-            ],
-          ),
+          builder: (context, update) => update == null
+              ? _scrollableMessage('Update not found')
+              : _UpdateDetailContent(update: update),
         ),
       ),
     );
@@ -90,7 +90,7 @@ class _UpdateDetailContent extends ConsumerWidget {
     final targetNameAsync = target == null
         ? null
         : ref.watch(targetDisplayNameProvider(target));
-    final resolvedTargetName = targetNameAsync?.asData?.value;
+    final resolvedTargetName = targetNameAsync?.value;
     final targetName = target == null
         ? 'System'
         : resolvedTargetName ?? target.displayName;

@@ -5,8 +5,9 @@ import 'package:komodo_go/composition/alerters/resource_targets_editor_sheet.dar
 import 'package:komodo_go/composition/resources/resource_catalog_provider.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
-import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
@@ -81,14 +82,13 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
     );
     final resourceNameLookupMap = ref.watch(resourceNameLookupProvider);
 
-    final title = alerterAsync.maybeWhen(
-      data: (detail) {
-        if (detail == null) return 'Alerter';
-        final name = detail.name.trim();
-        return name.isEmpty ? 'Alerter' : name;
-      },
-      orElse: () => _name.isEmpty ? 'Alerter' : _name,
-    );
+    final String title;
+    if (alerterAsync.hasValue) {
+      final name = alerterAsync.value?.name.trim() ?? '';
+      title = name.isEmpty ? 'Alerter' : name;
+    } else {
+      title = _name.isEmpty ? 'Alerter' : _name;
+    }
 
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
@@ -96,15 +96,14 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
       },
       child: Scaffold(
         appBar: MainAppBar(title: title, icon: AppIcons.notifications),
-        body: alerterAsync.when(
-          loading: () => const AppSkeletonCentered(),
-          error: (error, _) => ErrorStateView(
-            title: 'Failed to load alerter',
-            message: error.toString(),
-            onRetry: () =>
-                ref.invalidate(alerterDetailProvider(widget.alerterIdOrName)),
-          ),
-          data: (detail) {
+        body: AsyncContent<AlerterDetail?>(
+          value: alerterAsync,
+          fill: true,
+          errorTitle: 'Failed to load alerter',
+          onRetry: () =>
+              ref.invalidate(alerterDetailProvider(widget.alerterIdOrName)),
+          skeletonBuilder: (_) => const AppSkeletonCentered(),
+          builder: (context, detail) {
             if (detail != null) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
@@ -165,74 +164,80 @@ class _AlerterDetailViewState extends ConsumerState<AlerterDetailView>
                 )
                 .toList();
 
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-              children: [
-                AlerterSummaryPanel(
-                  enabled: _enabled,
-                  endpointType: _endpointType,
-                  alertTypeCount: _alertTypes.length,
-                  resourceCount: _resources.length,
-                  exceptCount: _exceptResources.length,
-                  maintenanceCount: _maintenanceWindows.length,
-                ),
-                const Gap(12),
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AlerterNameSection(
-                        controller: _nameController,
-                        onChanged: (value) => setState(() => _name = value),
-                      ),
-                      const Gap(16),
-                      AlerterEnabledSection(
-                        enabled: _enabled,
-                        onChanged: (v) => setState(() => _enabled = v),
-                      ),
-                      const Gap(16),
-                      AlerterEndpointSection(
-                        endpointType: _endpointType,
-                        endpointTypes: _endpointTypes,
-                        urlController: _endpointUrlController,
-                        emailController: _endpointEmailController,
-                        onTypeChanged: (value) =>
-                            setState(() => _endpointType = value),
-                      ),
-                      const Gap(16),
-                      AlerterAlertTypesSection(
-                        selectedLabels: alertTypeLabels,
-                        onEdit: _pickAlertTypes,
-                      ),
-                      const Gap(16),
-                      AlerterResourceSection(
-                        title: 'Resource whitelist',
-                        subtitle: 'Only send alerts for these resources.',
-                        countLabel: _resources.length.toString(),
-                        pills: resourcePills,
-                        emptyLabel: 'No resource filter',
-                        onEdit: _editWhitelist,
-                      ),
-                      const Gap(16),
-                      AlerterResourceSection(
-                        title: 'Resource blacklist',
-                        subtitle: 'Suppress alerts for these resources.',
-                        countLabel: _exceptResources.length.toString(),
-                        pills: exceptPills,
-                        emptyLabel: 'No exclusions',
-                        onEdit: _editBlacklist,
-                      ),
-                      const Gap(16),
-                      AlerterMaintenanceSection(
-                        count: _maintenanceWindows.length,
-                        pills: maintenancePills,
-                        onEdit: _editMaintenance,
-                      ),
-                    ],
+            return RefreshIndicator(
+              onRefresh: () => refreshProviders(ref, [
+                alerterDetailProvider(widget.alerterIdOrName).future,
+              ]),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+                children: [
+                  AlerterSummaryPanel(
+                    enabled: _enabled,
+                    endpointType: _endpointType,
+                    alertTypeCount: _alertTypes.length,
+                    resourceCount: _resources.length,
+                    exceptCount: _exceptResources.length,
+                    maintenanceCount: _maintenanceWindows.length,
                   ),
-                ),
-              ],
+                  const Gap(12),
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AlerterNameSection(
+                          controller: _nameController,
+                          onChanged: (value) => setState(() => _name = value),
+                        ),
+                        const Gap(16),
+                        AlerterEnabledSection(
+                          enabled: _enabled,
+                          onChanged: (v) => setState(() => _enabled = v),
+                        ),
+                        const Gap(16),
+                        AlerterEndpointSection(
+                          endpointType: _endpointType,
+                          endpointTypes: _endpointTypes,
+                          urlController: _endpointUrlController,
+                          emailController: _endpointEmailController,
+                          onTypeChanged: (value) =>
+                              setState(() => _endpointType = value),
+                        ),
+                        const Gap(16),
+                        AlerterAlertTypesSection(
+                          selectedLabels: alertTypeLabels,
+                          onEdit: _pickAlertTypes,
+                        ),
+                        const Gap(16),
+                        AlerterResourceSection(
+                          title: 'Resource whitelist',
+                          subtitle: 'Only send alerts for these resources.',
+                          countLabel: _resources.length.toString(),
+                          pills: resourcePills,
+                          emptyLabel: 'No resource filter',
+                          onEdit: _editWhitelist,
+                        ),
+                        const Gap(16),
+                        AlerterResourceSection(
+                          title: 'Resource blacklist',
+                          subtitle: 'Suppress alerts for these resources.',
+                          countLabel: _exceptResources.length.toString(),
+                          pills: exceptPills,
+                          emptyLabel: 'No exclusions',
+                          onEdit: _editBlacklist,
+                        ),
+                        const Gap(16),
+                        AlerterMaintenanceSection(
+                          count: _maintenanceWindows.length,
+                          pills: maintenancePills,
+                          onEdit: _editMaintenance,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             );
           },
         ),

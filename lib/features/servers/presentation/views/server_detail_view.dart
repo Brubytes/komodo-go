@@ -3,14 +3,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/detail_skeletons.dart';
+import 'package:komodo_go/core/widgets/async/editor_host.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
+import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
+import 'package:komodo_go/features/servers/data/models/system_information.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/servers/presentation/views/server_detail/server_detail_sections.dart';
@@ -42,11 +49,23 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
 
   String _currentTabId = _tabStats;
   var _dirty = false;
+
+  void _setDirty(bool dirty) {
+    if (_dirty == dirty) return;
+    _dirty = dirty;
+    // Lets the config EditorHost adopt data it held back while dirty.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  var _pulling = false;
   Timer? _statsRefreshTimer;
   ProviderSubscription<AsyncValue<SystemStats?>>? _statsSubscription;
   final _configEditorKey = GlobalKey<ServerConfigEditorContentState>();
   var _configSaveInFlight = false;
   ServerStatsGranularity _historyGranularity = ServerStatsGranularity.oneMinute;
+  final _lastHistory = LastAsyncValue<HistoricalSystemStatsPage?>();
   bool _useFixedPercentScale = true;
 
   DateTime? _previousSampleTs;
@@ -62,11 +81,18 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
     _statsSubscription = ref.listenManual<AsyncValue<SystemStats?>>(
       serverStatsProvider(widget.serverId),
       (previous, next) {
-        final stats = next.asData?.value;
+        final stats = next.value;
         if (stats == null) return;
         _recordSample(stats);
       },
     );
+  }
+
+  @override
+  void didUpdateWidget(ServerDetailView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The remembered history belongs to one server; never bridge to another.
+    if (oldWidget.serverId != widget.serverId) _lastHistory.clear();
   }
 
   @override
@@ -166,8 +192,12 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
 
     final serverAsync = ref.watch(serverDetailProvider(widget.serverId));
     final statsAsync = ref.watch(serverStatsProvider(widget.serverId));
-    final historyAsync = ref.watch(
-      serverStatsHistoryProvider(widget.serverId, _historyGranularity),
+    // Switching granularity creates a new provider instance with no value;
+    // keep showing the previous chart (as a refresh) while it loads.
+    final historyAsync = _lastHistory.resolve(
+      ref.watch(
+        serverStatsHistoryProvider(widget.serverId, _historyGranularity),
+      ),
     );
     final processesAsync = ref.watch(serverProcessesProvider(widget.serverId));
     final systemInfoAsync = ref.watch(
@@ -176,12 +206,12 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
     final serversListAsync = ref.watch(serversProvider);
     ref.watch(serverActionsProvider);
 
-    final server = serverAsync.asData?.value;
-    final stats = statsAsync.asData?.value;
-    final systemInformation = systemInfoAsync.asData?.value;
+    final server = serverAsync.value;
+    final stats = statsAsync.value;
+    final systemInformation = systemInfoAsync.value;
 
     Server? listServer;
-    final servers = serversListAsync.asData?.value;
+    final servers = serversListAsync.value;
     if (servers != null) {
       for (final s in servers) {
         if (s.id == widget.serverId) {
@@ -237,7 +267,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                       primary: DetailActionButton(
                         label: 'Refresh',
                         icon: AppIcons.refresh,
-                        onPressed: _refreshAll,
+                        onPressed: () => unawaited(_refreshAll()),
                       ),
                       moreGroups: widget.manageGroups,
                     ),
@@ -252,11 +282,21 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
               label: 'Stats',
               icon: AppIcons.activity,
               body: RefreshIndicator(
-                onRefresh: () async => _refreshAll(),
+                onRefresh: _refreshAll,
                 child: DetailTabScrollView.box(
                   scrollKey: PageStorageKey('server_${widget.serverId}_stats'),
-                  child: historyAsync.when(
-                    data: (history) => DetailSurface(
+                  child: AsyncContent<HistoricalSystemStatsPage?>(
+                    value: historyAsync,
+                    errorTitle: 'Historical stats unavailable',
+                    onRetry: () => ref.invalidate(
+                      serverStatsHistoryProvider(
+                        widget.serverId,
+                        _historyGranularity,
+                      ),
+                    ),
+                    showProgress: !_pulling,
+                    skeletonBuilder: (_) => const DetailTabSkeleton(count: 1),
+                    builder: (context, history) => DetailSurface(
                       child: StatsHistoryContent(
                         history: history?.stats ?? const [],
                         latestStats: stats,
@@ -270,17 +310,6 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                         },
                       ),
                     ),
-                    loading: () => const ServerLoadingCard(),
-                    error: (error, _) => ServerErrorCard(
-                      title: 'Historical stats unavailable',
-                      error: error,
-                      onRetry: () => ref.invalidate(
-                        serverStatsHistoryProvider(
-                          widget.serverId,
-                          _historyGranularity,
-                        ),
-                      ),
-                    ),
                   ),
                 ),
               ),
@@ -290,16 +319,26 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
               label: 'Config',
               icon: AppIcons.bolt,
               body: RefreshIndicator(
-                onRefresh: () async => _refreshAll(),
+                onRefresh: _refreshAll,
                 child: DetailTabScrollView.box(
                   scrollKey: PageStorageKey('server_${widget.serverId}_config'),
-                  child: serverAsync.when(
-                    data: (server) => server?.config != null
+                  child: EditorHost<Server>(
+                    value: serverAsync,
+                    isDirty: () => _dirty,
+                    errorTitle: 'Could not load config',
+                    onRetry: () =>
+                        ref.invalidate(serverDetailProvider(widget.serverId)),
+                    skeletonBuilder: (_) => const AppSkeletonCard(),
+                    showProgress: !_pulling,
+                    emptyBuilder: (_) => const ServerMessageCard(
+                      message: 'No config available',
+                    ),
+                    builder: (context, server) => server.config != null
                         ? ServerConfigEditorContent(
                             key: _configEditorKey,
-                            initialConfig: server!.config!,
+                            initialConfig: server.config!,
                             onDirtyChanged: (dirty) {
-                              _dirty = dirty;
+                              _setDirty(dirty);
                               syncDirtySnackBar(
                                 dirty: dirty,
                                 onDiscard: () => _discardConfig(server),
@@ -312,14 +351,6 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                         : const ServerMessageCard(
                             message: 'No config available',
                           ),
-                    loading: () => const ServerLoadingCard(),
-                    error: (error, _) => ServerErrorCard(
-                      title: 'Could not load config',
-                      error: error,
-                      onRetry: () => ref.invalidate(
-                        serverDetailProvider(widget.serverId),
-                      ),
-                    ),
                   ),
                 ),
               ),
@@ -329,14 +360,18 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
               label: 'System',
               icon: AppIcons.cpu,
               body: RefreshIndicator(
-                onRefresh: () async {
-                  _refreshAll();
-                  ref.invalidate(serverProcessesProvider(widget.serverId));
-                },
+                onRefresh: _refreshAll,
                 child: DetailTabScrollView.box(
                   scrollKey: PageStorageKey('server_${widget.serverId}_system'),
-                  child: systemInfoAsync.when(
-                    data: (info) => info != null
+                  child: AsyncContent<SystemInformation?>(
+                    value: systemInfoAsync,
+                    errorTitle: 'System info unavailable',
+                    onRetry: () => ref.invalidate(
+                      serverSystemInformationProvider(widget.serverId),
+                    ),
+                    showProgress: !_pulling,
+                    skeletonBuilder: (_) => const DetailTabSkeleton(count: 1),
+                    builder: (context, info) => info != null
                         ? DetailSurface(
                             child: Column(
                               children: [
@@ -348,20 +383,19 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                                       listServer?.info?.containerExecDisabled,
                                 ),
                                 const Gap(AppSpacing.md),
-                                processesAsync.when(
-                                  data: (processes) => SystemProcessesContent(
-                                    processes: processes,
+                                AsyncContent<List<SystemProcess>>(
+                                  value: processesAsync,
+                                  errorTitle: 'Processes unavailable',
+                                  showProgress: false,
+                                  onRetry: () => ref.invalidate(
+                                    serverProcessesProvider(widget.serverId),
                                   ),
-                                  loading: () => const ServerLoadingCard(),
-                                  error: (error, _) => ServerErrorCard(
-                                    title: 'Processes unavailable',
-                                    error: error,
-                                    onRetry: () => ref.invalidate(
-                                      serverProcessesProvider(
-                                        widget.serverId,
+                                  skeletonBuilder: (_) =>
+                                      const AppSkeletonCard(),
+                                  builder: (context, processes) =>
+                                      SystemProcessesContent(
+                                        processes: processes,
                                       ),
-                                    ),
-                                  ),
                                 ),
                               ],
                             ),
@@ -369,14 +403,6 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                         : const ServerMessageCard(
                             message: 'System info unavailable',
                           ),
-                    loading: () => const ServerLoadingCard(),
-                    error: (error, _) => ServerErrorCard(
-                      title: 'System info unavailable',
-                      error: error,
-                      onRetry: () => ref.invalidate(
-                        serverSystemInformationProvider(widget.serverId),
-                      ),
-                    ),
                   ),
                 ),
               ),
@@ -387,18 +413,27 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
     );
   }
 
-  void _refreshAll() {
-    ref
-      ..invalidate(serverDetailProvider(widget.serverId))
-      ..invalidate(serverSystemInformationProvider(widget.serverId))
-      ..invalidate(serverStatsProvider(widget.serverId))
-      ..invalidate(
-        serverStatsHistoryProvider(widget.serverId, _historyGranularity),
-      );
+  Future<void> _refreshAll() async {
+    setState(() => _pulling = true);
+    try {
+      await refreshProviders(ref, [
+        serverDetailProvider(widget.serverId).future,
+        serverSystemInformationProvider(widget.serverId).future,
+        serverStatsProvider(widget.serverId).future,
+        serverStatsHistoryProvider(widget.serverId, _historyGranularity).future,
+        serverProcessesProvider(widget.serverId).future,
+      ]);
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
   }
 
   void _discardConfig(Server server) {
-    _configEditorKey.currentState?.resetTo(server.config!);
+    final latest =
+        ref.read(serverDetailProvider(widget.serverId)).value ?? server;
+    final config = latest.config ?? server.config;
+    if (config == null) return;
+    _configEditorKey.currentState?.resetTo(config);
     hideDirtySnackBar();
   }
 
@@ -443,7 +478,7 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
         ..invalidate(serversProvider);
 
       _configEditorKey.currentState?.resetTo(updated.config!);
-      _dirty = false;
+      _setDirty(false);
       hideDirtySnackBar();
       AppSnackBar.show(
         context,

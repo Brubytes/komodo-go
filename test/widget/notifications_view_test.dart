@@ -21,6 +21,19 @@ class _TestAlertsError extends Alerts {
   Future<AlertsState> build() async => throw Exception('permission denied');
 }
 
+/// Loads once, then fails on every rebuild (a failing refresh).
+class _TestAlertsFailsOnRefresh extends Alerts {
+  var _calls = 0;
+
+  @override
+  Future<AlertsState> build() async {
+    if (_calls++ == 0) {
+      return const AlertsState(items: <Alert>[], nextPage: null);
+    }
+    throw Exception('network down');
+  }
+}
+
 class _TestUpdates extends Updates {
   _TestUpdates(this._state);
 
@@ -75,5 +88,38 @@ void main() {
 
     expect(find.text('No updates'), findsOneWidget);
     expect(find.text('No alerts'), findsNothing);
+  });
+
+  testWidgets('stays on Alerts and keeps data when a refresh fails', (
+    tester,
+  ) async {
+    late ProviderContainer container;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          alertsProvider.overrideWith(_TestAlertsFailsOnRefresh.new),
+          updatesProvider.overrideWith(
+            () => _TestUpdates(
+              const UpdatesState(items: <UpdateListItem>[], nextPage: null),
+            ),
+          ),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            container = ProviderScope.containerOf(context);
+            return const MaterialApp(home: NotificationsView());
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('No alerts'), findsOneWidget);
+
+    container.invalidate(alertsProvider);
+    await tester.pumpAndSettle();
+
+    expect(find.text('No alerts'), findsOneWidget);
+    expect(find.text('No updates'), findsNothing);
+    expect(find.textContaining("Couldn't refresh"), findsOneWidget);
   });
 }

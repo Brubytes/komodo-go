@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/connections/connection_profile.dart';
 import 'package:komodo_go/core/demo/demo_config.dart';
 import 'package:komodo_go/core/error/failures.dart';
@@ -70,7 +71,7 @@ class LoginView extends HookConsumerWidget {
     });
 
     useEffect(() {
-      final connections = connectionsAsync.asData?.value.connections;
+      final connections = connectionsAsync.value?.connections;
       if (connections != null && connections.isEmpty && !showAddForm.value) {
         showAddForm.value = true;
       }
@@ -259,7 +260,7 @@ class LoginView extends HookConsumerWidget {
                     const Gap(32),
 
                     // Existing connections
-                    connectionsAsync.when(
+                    connectionsAsync.whenStale(
                       data: (connectionsState) {
                         final connections = connectionsState.connections;
                         if (connections.isEmpty) {

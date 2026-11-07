@@ -7,11 +7,14 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/utils/relative_time.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/detail_skeletons.dart';
+import 'package:komodo_go/core/widgets/async/editor_host.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
-import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/features/procedures/data/models/procedure.dart';
@@ -48,6 +51,17 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
   final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
   final _configEditorKey = GlobalKey<ProcedureConfigEditorContentState>();
   var _configSaveInFlight = false;
+  var _pulling = false;
+  var _dirty = false;
+
+  void _setDirty(bool dirty) {
+    if (_dirty == dirty) return;
+    _dirty = dirty;
+    // Lets the config EditorHost adopt data it held back while dirty.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   @override
   void initState() {
@@ -75,7 +89,7 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
     final scheme = Theme.of(context).colorScheme;
 
     ProcedureListItem? listItem;
-    final list = proceduresListAsync.asData?.value;
+    final list = proceduresListAsync.value;
     if (list != null) {
       for (final item in list) {
         if (item.id == procedureId) {
@@ -105,8 +119,18 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    child: procedureAsync.when(
-                      data: (procedure) {
+                    child: AsyncContent<KomodoProcedure?>(
+                      value: procedureAsync,
+                      errorTitle: 'Failed to load procedure',
+                      onRetry: _reloadProcedure,
+                      showProgress: !_pulling,
+                      bannerPadding: const EdgeInsets.only(
+                        bottom: AppSpacing.sm,
+                      ),
+                      skeletonBuilder: (_) => const DetailHeaderSkeleton(
+                        facts: 2,
+                      ),
+                      builder: (context, procedure) {
                         if (procedure == null) {
                           return const EmptyStateView.inline(
                             icon: AppIcons.procedures,
@@ -141,14 +165,6 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                           ],
                         );
                       },
-                      loading: () => const _LoadingSurface(),
-                      error: (error, _) => ErrorStateView.fromError(
-                        title: 'Failed to load procedure',
-                        error: error,
-                        onRetry: () => ref.invalidate(
-                          procedureDetailProvider(procedureId),
-                        ),
-                      ),
                     ),
                   ),
                 ),
@@ -180,26 +196,29 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
               children: [
                 _KeepAlive(
                   child: RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(procedureDetailProvider(procedureId));
-                    },
+                    onRefresh: _refresh,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey(
                         'procedure_${widget.procedureId}_config',
                       ),
-                      child: procedureAsync.when(
-                        data: (procedure) {
-                          if (procedure == null) {
-                            return const EmptyStateView.inline(
-                              icon: AppIcons.procedures,
-                              title: 'Procedure not found',
-                            );
-                          }
-
+                      child: EditorHost<KomodoProcedure>(
+                        value: procedureAsync,
+                        isDirty: () => _dirty,
+                        errorTitle: 'Failed to load procedure',
+                        onRetry: _reloadProcedure,
+                        showProgress: false,
+                        showStaleBanner: false,
+                        skeletonBuilder: (_) => const DetailTabSkeleton(),
+                        emptyBuilder: (_) => const EmptyStateView.inline(
+                          icon: AppIcons.procedures,
+                          title: 'Procedure not found',
+                        ),
+                        builder: (context, procedure) {
                           return ProcedureConfigEditorContent(
                             key: _configEditorKey,
                             initialConfig: procedure.config,
                             onDirtyChanged: (dirty) {
+                              _setDirty(dirty);
                               syncDirtySnackBar(
                                 dirty: dirty,
                                 onDiscard: () => _discardConfig(procedure),
@@ -209,29 +228,25 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                             },
                           );
                         },
-                        loading: () => const _LoadingSurface(),
-                        error: (error, _) => ErrorStateView.fromError(
-                          title: 'Failed to load procedure',
-                          error: error,
-                          onRetry: () => ref.invalidate(
-                            procedureDetailProvider(procedureId),
-                          ),
-                        ),
                       ),
                     ),
                   ),
                 ),
                 _KeepAlive(
                   child: RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(procedureDetailProvider(procedureId));
-                    },
+                    onRefresh: _refresh,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey(
                         'procedure_${widget.procedureId}_stages',
                       ),
-                      child: procedureAsync.when(
-                        data: (procedure) {
+                      child: AsyncContent<KomodoProcedure?>(
+                        value: procedureAsync,
+                        errorTitle: 'Failed to load procedure',
+                        onRetry: _reloadProcedure,
+                        showProgress: false,
+                        showStaleBanner: false,
+                        skeletonBuilder: (_) => const DetailTabSkeleton(),
+                        builder: (context, procedure) {
                           if (procedure == null) {
                             return const EmptyStateView.inline(
                               icon: AppIcons.procedures,
@@ -243,14 +258,6 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
                             stages: procedure.config.stages,
                           );
                         },
-                        loading: () => const _LoadingSurface(),
-                        error: (error, _) => ErrorStateView.fromError(
-                          title: 'Failed to load procedure',
-                          error: error,
-                          onRetry: () => ref.invalidate(
-                            procedureDetailProvider(procedureId),
-                          ),
-                        ),
                       ),
                     ),
                   ),
@@ -258,14 +265,26 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
               ],
             ),
           ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: scheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
+          ActionBusyOverlay(busy: actionsState.isLoading),
         ],
       ),
     );
+  }
+
+  void _reloadProcedure() {
+    ref.invalidate(procedureDetailProvider(widget.procedureId));
+  }
+
+  Future<void> _refresh() async {
+    setState(() => _pulling = true);
+    try {
+      await refreshProviders(ref, [
+        procedureDetailProvider(widget.procedureId).future,
+        proceduresProvider.future,
+      ]);
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
   }
 
   Future<void> _runProcedure(
@@ -304,7 +323,10 @@ class _ProcedureDetailViewState extends ConsumerState<ProcedureDetailView>
   }
 
   void _discardConfig(KomodoProcedure procedure) {
-    _configEditorKey.currentState?.resetTo(procedure.config);
+    final latest =
+        ref.read(procedureDetailProvider(widget.procedureId)).value ??
+        procedure;
+    _configEditorKey.currentState?.resetTo(latest.config);
     hideDirtySnackBar();
   }
 
@@ -770,12 +792,3 @@ class _ProcedureHeader extends StatelessWidget {
 }
 
 /// Timestamps from the API are unix milliseconds.
-
-class _LoadingSurface extends StatelessWidget {
-  const _LoadingSurface();
-
-  @override
-  Widget build(BuildContext context) {
-    return const AppSkeletonSurface();
-  }
-}

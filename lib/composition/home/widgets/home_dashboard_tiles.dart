@@ -29,7 +29,7 @@ class HomeServerStatTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final statusColor = _serverStatusColor(server.state, scheme);
     final statusIcon = _serverStatusIcon(server.state);
-    final statsValue = stats.asData?.value;
+    final statsValue = stats.value;
     final isLoading = stats.isLoading && statsValue == null;
 
     final cardRadius = BorderRadius.circular(AppTokens.radiusLg);
