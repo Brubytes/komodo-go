@@ -26,7 +26,7 @@ class AlertDetailView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final alertsAsync = ref.watch(alertsProvider);
-    final alert = alertsAsync.asData?.value.items
+    final alert = alertsAsync.value?.items
         .where((a) => a.id == alertId)
         .firstOrNull;
 
@@ -75,7 +75,7 @@ class _AlertDetailContent extends ConsumerWidget {
     final target = alert.target;
     final resolvedName = target == null
         ? null
-        : ref.watch(targetDisplayNameProvider(target)).asData?.value;
+        : ref.watch(targetDisplayNameProvider(target)).value;
     final targetName =
         resolvedName ?? target?.displayName ?? alert.payload.primaryName;
     final route = routeForAlert(alert);

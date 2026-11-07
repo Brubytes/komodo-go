@@ -12,7 +12,7 @@ part 'actions_provider.g.dart';
 class Actions extends _$Actions {
   @override
   Future<List<ActionListItem>> build() async {
-    ref.watch(resourceScopeActivityProvider(ActivityScope.actions));
+    ref.refreshOnActivity(ActivityScope.actions);
     final repository = ref.watch(actionRepositoryProvider);
     if (repository == null) {
       return [];
@@ -37,7 +37,7 @@ class Actions extends _$Actions {
 /// Provides details for a specific action.
 @riverpod
 Future<KomodoAction?> actionDetail(Ref ref, String actionIdOrName) async {
-  ref.watch(resourceScopeActivityProvider(ActivityScope.actions));
+  ref.refreshOnActivity(ActivityScope.actions);
   final repository = ref.watch(actionRepositoryProvider);
   if (repository == null) {
     return null;

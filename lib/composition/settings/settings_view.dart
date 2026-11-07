@@ -29,7 +29,7 @@ class SettingsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     final authAsync = ref.watch(authProvider);
-    final connection = authAsync.asData?.value.connection;
+    final connection = authAsync.value?.connection;
     final coreVersion = ref.watch(komodoCoreVersionProvider);
     final capabilities = ref.watch(komodoApiCapabilitiesProvider);
     final scheme = Theme.of(context).colorScheme;

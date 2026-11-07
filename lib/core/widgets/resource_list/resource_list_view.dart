@@ -1,16 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/refresh_progress_bar.dart';
+import 'package:komodo_go/core/widgets/async/stale_data_banner.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/filters/app_filter_chip.dart';
 import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/filters/template_filter.dart';
 import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
@@ -57,7 +62,25 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
   /// Kind of the last built list state, to cross-fade only on real transitions.
   String? _lastKind;
 
+  /// True while a pull-to-refresh is running, so the thin progress bar does
+  /// not double up with the RefreshIndicator spinner.
+  bool _pulling = false;
+
   _Derived<T>? _derived;
+
+  /// Refreshes without touching [_pulling], so the thin progress bar shows
+  /// (used by the stale-data banner's Retry).
+  Future<void> _refresh() => widget.config.refreshList(ref);
+
+  /// Pull-to-refresh: the RefreshIndicator spinner is visible, hide the bar.
+  Future<void> _pullRefresh() async {
+    setState(() => _pulling = true);
+    try {
+      await _refresh();
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
+  }
 
   @override
   void initState() {
@@ -202,14 +225,8 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
       selectedStates: prefs.states,
       selectedServers: prefs.servers,
     );
-    final loadedItems = itemsAsync.maybeWhen(
-      data: (items) => items,
-      orElse: () => <T>[],
-    );
-    final tagOptions = tagsAsync.maybeWhen(
-      data: (tags) => tags,
-      orElse: () => <TagOption>[],
-    );
+    final loadedItems = itemsAsync.value ?? <T>[];
+    final tagOptions = tagsAsync.value ?? <TagOption>[];
     final derived = _derive(
       loadedItems,
       query: searchQuery,
@@ -262,10 +279,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
             kind: config.kind,
             items: config.batchItemOf == null
                 ? const []
-                : itemsAsync.maybeWhen(
-                    data: (items) => items.map(config.batchItemOf!).toList(),
-                    orElse: () => const [],
-                  ),
+                : loadedItems.map(config.batchItemOf!).toList(),
             onCreate: config.onCreate == null
                 ? null
                 : () => config.onCreate!(context),
@@ -279,7 +293,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
       body: Stack(
         children: [
           RefreshIndicator(
-            onRefresh: () => config.refreshList(ref),
+            onRefresh: _pullRefresh,
             child: CustomScrollView(
               controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
@@ -424,9 +438,23 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
                     ),
                   ),
                 ),
+                SliverToBoxAdapter(
+                  child: RefreshProgressBar(
+                    active: itemsAsync.isBackgroundRefresh && !_pulling,
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: StaleDataBanner(
+                    visible: itemsAsync.hasStaleError,
+                    error: itemsAsync.error,
+                    onRetry: () => unawaited(_refresh()),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  ),
+                ),
                 ...itemsAsync.when(
                   skipLoadingOnRefresh: true,
                   skipLoadingOnReload: true,
+                  skipError: true,
                   data: (items) {
                     final filtered = derived.filtered;
                     if (filtered.isEmpty) {
@@ -550,21 +578,7 @@ class _ResourceListViewState<T> extends ConsumerState<ResourceListView<T>> {
               ],
             ),
           ),
-          Positioned.fill(
-            child: AppSwitcher(
-              animateSize: false,
-              alignment: Alignment.center,
-              child: actionsState.isLoading
-                  ? ColoredBox(
-                      key: const ValueKey('resource_action_overlay'),
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.scrim.withValues(alpha: .25),
-                      child: const Center(child: AppSkeletonCard()),
-                    )
-                  : const SizedBox.shrink(key: ValueKey('no_overlay')),
-            ),
-          ),
+          ActionBusyOverlay(busy: actionsState.isLoading),
         ],
       ),
     );

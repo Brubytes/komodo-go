@@ -125,8 +125,7 @@ class Connections extends _$Connections {
     await store.setActiveConnectionId(connectionId);
     state = AsyncValue.data(
       ConnectionsState(
-        connections:
-            state.asData?.value.connections ?? await store.listConnections(),
+        connections: state.value?.connections ?? await store.listConnections(),
         activeConnectionId: connectionId,
       ),
     );
@@ -166,7 +165,7 @@ class Connections extends _$Connections {
     state = AsyncValue.data(
       ConnectionsState(
         connections: await store.listConnections(),
-        activeConnectionId: state.asData?.value.activeConnectionId,
+        activeConnectionId: state.value?.activeConnectionId,
       ),
     );
   }
@@ -269,7 +268,7 @@ class Connections extends _$Connections {
         state = AsyncValue.data(
           ConnectionsState(
             connections: await store.listConnections(),
-            activeConnectionId: state.asData?.value.activeConnectionId,
+            activeConnectionId: state.value?.activeConnectionId,
           ),
         );
         return;
@@ -297,7 +296,7 @@ class Connections extends _$Connections {
     state = AsyncValue.data(
       ConnectionsState(
         connections: await store.listConnections(),
-        activeConnectionId: state.asData?.value.activeConnectionId,
+        activeConnectionId: state.value?.activeConnectionId,
       ),
     );
   }

@@ -1,10 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
+import 'package:komodo_go/core/widgets/async/refresh_progress_bar.dart';
+import 'package:komodo_go/core/widgets/async/stale_data_banner.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
@@ -20,6 +26,7 @@ import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_filters_provider.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/servers/presentation/widgets/server_card.dart';
+import 'package:komodo_go/features/tags/data/models/tag.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/resource_sorting.dart';
@@ -43,6 +50,24 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
   bool _isSearchVisible = false;
   late final _intro = AppListIntro();
   bool _areFiltersExpanded = false;
+
+  /// True while a pull-to-refresh runs, so the thin progress bar does not
+  /// double up with the RefreshIndicator spinner.
+  bool _pulling = false;
+
+  /// Refreshes without touching [_pulling], so the thin progress bar shows
+  /// (used by the stale-data banner's Retry).
+  Future<void> _refresh() => refreshProviders(ref, [serversProvider.future]);
+
+  /// Pull-to-refresh: the RefreshIndicator spinner is visible, hide the bar.
+  Future<void> _pullRefresh() async {
+    setState(() => _pulling = true);
+    try {
+      await _refresh();
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
+  }
 
   @override
   void initState() {
@@ -84,20 +109,14 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
     final selectedTags = ref.watch(serversTagFilterProvider);
     final templateFilter = ref.watch(serversTemplateFilterStateProvider);
 
-    final tagOptions = tagsAsync.maybeWhen(
-      data: (tags) => [
-        for (final tag in tags)
-          if (tag.name.trim().isNotEmpty)
-            TagOption(id: tag.id, name: tag.name.trim()),
-      ],
-      orElse: () => <TagOption>[],
-    );
-    final fallbackTags = serversAsync.maybeWhen(
-      data: (servers) => _collectTags(
-        servers,
-      ).map((name) => TagOption(id: name, name: name)).toList(),
-      orElse: () => <TagOption>[],
-    );
+    final tagOptions = [
+      for (final tag in tagsAsync.value ?? const <KomodoTag>[])
+        if (tag.name.trim().isNotEmpty)
+          TagOption(id: tag.id, name: tag.name.trim()),
+    ];
+    final fallbackTags = _collectTags(
+      serversAsync.value ?? const <Server>[],
+    ).map((name) => TagOption(id: name, name: name)).toList();
     final availableTags = tagOptions.isNotEmpty ? tagOptions : fallbackTags;
     final tagNameById = {
       for (final tag in availableTags) tag.id: tag.name,
@@ -113,10 +132,7 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
       selectedServers: prefs.servers,
       extra: (templateFilter == TemplateFilter.exclude ? 0 : 1),
     );
-    final loadedItems = serversAsync.maybeWhen(
-      data: (items) => items,
-      orElse: () => <Server>[],
-    );
+    final loadedItems = serversAsync.value ?? <Server>[];
     final stateOptions = collectDistinct<Server>(loadedItems, _stateLabel);
     void clearAllFilters() {
       _searchController.clear();
@@ -154,14 +170,15 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
           ResourceListActionsMenu(
             kind: ResourceKind.servers,
             onCreate: () => context.openDetail('${AppRoutes.servers}/new'),
-            onRefresh: () => ref.read(serversProvider.notifier).refresh(),
+            onRefresh: _pullRefresh,
           ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () => ref.read(serversProvider.notifier).refresh(),
+        onRefresh: _pullRefresh,
         child: ListView(
           controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
             16,
             16,
@@ -272,11 +289,21 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
               ),
             ],
             const Gap(12),
+            RefreshProgressBar(
+              active: serversAsync.isBackgroundRefresh && !_pulling,
+            ),
+            StaleDataBanner(
+              visible: serversAsync.hasStaleError,
+              error: serversAsync.error,
+              onRetry: () => unawaited(_refresh()),
+              padding: const EdgeInsets.only(bottom: 12),
+            ),
             AppSwitcher(
               animateSize: false,
               child: serversAsync.when(
                 skipLoadingOnRefresh: true,
                 skipLoadingOnReload: true,
+                skipError: true,
                 data: (servers) {
                   final searched = _applyFilters(
                     servers,
@@ -350,10 +377,10 @@ class _ServersListViewState extends ConsumerState<ServersListView> {
                 loading: () => const _ServersSkeletonList(
                   key: ValueKey('servers_loading'),
                 ),
-                error: (error, stack) => ErrorStateView(
+                error: (error, stack) => ErrorStateView.fromError(
                   key: const ValueKey('servers_error'),
                   title: 'Failed to load servers',
-                  message: error.toString(),
+                  error: error,
                   onRetry: () => ref.invalidate(serversProvider),
                 ),
               ),

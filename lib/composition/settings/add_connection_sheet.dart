@@ -95,7 +95,7 @@ class AddConnectionSheet extends HookConsumerWidget {
       );
 
       if (!context.mounted) return;
-      final nextState = ref.read(authProvider).asData?.value;
+      final nextState = ref.read(authProvider).value;
       if (nextState is! AuthStateError) {
         Navigator.of(context).pop();
       }

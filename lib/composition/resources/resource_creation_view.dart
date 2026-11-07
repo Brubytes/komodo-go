@@ -220,85 +220,74 @@ class _ResourceCreationViewState extends ConsumerState<ResourceCreationView> {
   };
 
   List<_CreationSource> _watchSources() => switch (widget.kind) {
-    ResourceKind.stacks =>
-      ref
+    ResourceKind.stacks => [
+      ...?ref
           .watch(stacksProvider)
-          .maybeWhen(
-            data: (items) => [
-              for (final item in items)
-                _CreationSource(
-                  id: item.id,
-                  name: item.name,
-                  template: item.template,
-                ),
-            ],
-            orElse: () => const [],
+          .value
+          ?.map(
+            (item) => _CreationSource(
+              id: item.id,
+              name: item.name,
+              template: item.template,
+            ),
           ),
-    ResourceKind.deployments =>
-      ref
+    ],
+    ResourceKind.deployments => [
+      ...?ref
           .watch(deploymentsProvider)
-          .maybeWhen(
-            data: (items) => [
-              for (final item in items)
-                _CreationSource(
-                  id: item.id,
-                  name: item.name,
-                  template: item.template,
-                ),
-            ],
-            orElse: () => const [],
+          .value
+          ?.map(
+            (item) => _CreationSource(
+              id: item.id,
+              name: item.name,
+              template: item.template,
+            ),
           ),
-    ResourceKind.servers =>
-      ref
+    ],
+    ResourceKind.servers => [
+      ...?ref
           .watch(serversProvider)
-          .maybeWhen(
-            data: (items) => [
-              for (final item in items)
-                _CreationSource(
-                  id: item.id,
-                  name: item.name,
-                  template: item.template,
-                ),
-            ],
-            orElse: () => const [],
+          .value
+          ?.map(
+            (item) => _CreationSource(
+              id: item.id,
+              name: item.name,
+              template: item.template,
+            ),
           ),
-    ResourceKind.actions =>
-      ref
+    ],
+    ResourceKind.actions => [
+      ...?ref
           .watch(actionsProvider)
-          .maybeWhen(
-            data: (items) => [
-              for (final item in items)
-                _CreationSource(
-                  id: item.id,
-                  name: item.name,
-                  template: item.template,
-                ),
-            ],
-            orElse: () => const [],
+          .value
+          ?.map(
+            (item) => _CreationSource(
+              id: item.id,
+              name: item.name,
+              template: item.template,
+            ),
           ),
-    ResourceKind.procedures =>
-      ref
+    ],
+    ResourceKind.procedures => [
+      ...?ref
           .watch(proceduresProvider)
-          .maybeWhen(
-            data: (items) => [
-              for (final item in items)
-                _CreationSource(
-                  id: item.id,
-                  name: item.name,
-                  template: item.template,
-                ),
-            ],
-            orElse: () => const [],
+          .value
+          ?.map(
+            (item) => _CreationSource(
+              id: item.id,
+              name: item.name,
+              template: item.template,
+            ),
           ),
+    ],
     _ => const [],
   };
 
   Widget _buildFullForm() {
-    final servers =
-        ref.watch(serversProvider).asData?.value ?? const <Server>[];
-    final repos = ref.watch(reposProvider).asData?.value ?? const [];
+    final servers = ref.watch(serversProvider).value ?? const <Server>[];
+    final repos = ref.watch(reposProvider).value ?? const [];
     final registries =
-        ref.watch(dockerRegistryAccountsProvider).asData?.value ?? const [];
+        ref.watch(dockerRegistryAccountsProvider).value ?? const [];
     return switch (widget.kind) {
       ResourceKind.stacks => StackConfigEditorContent(
         key: _stackKey,

@@ -6,12 +6,13 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pill_list.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
-import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter_list_item.dart';
@@ -55,13 +56,20 @@ class _AlertersViewState extends ConsumerState<AlertersView> {
       body: Stack(
         children: [
           RefreshIndicator(
-            onRefresh: () => ref.read(alertersProvider.notifier).refresh(),
-            child: alertersAsync.when(
-              data: (items) {
+            onRefresh: () => refreshProviders(ref, [alertersProvider.future]),
+            child: AsyncContent<List<AlerterListItem>>(
+              value: alertersAsync,
+              fill: true,
+              showProgress: false,
+              errorTitle: 'Failed to load alerters',
+              onRetry: () => ref.invalidate(alertersProvider),
+              skeletonBuilder: (_) => const _AlertersSkeletonList(),
+              builder: (context, items) {
                 if (items.isEmpty) return const _EmptyState();
 
                 return ListView.separated(
                   controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.fromLTRB(
                     16,
                     16,
@@ -80,21 +88,9 @@ class _AlertersViewState extends ConsumerState<AlertersView> {
                   ),
                 );
               },
-              loading: () => const _AlertersSkeletonList(),
-              error: (error, _) => ErrorStateView(
-                title: 'Failed to load alerters',
-                message: error.toString(),
-                onRetry: () => ref.invalidate(alertersProvider),
-              ),
             ),
           ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: Theme.of(
-                context,
-              ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
+          ActionBusyOverlay(busy: actionsState.isLoading),
         ],
       ),
     );
@@ -335,41 +331,49 @@ class _AlertersSkeletonList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Skeletonizer(
-      child: ListView.separated(
+      child: Padding(
         padding: const EdgeInsets.all(16),
-        itemCount: 6,
-        separatorBuilder: (_, _) => const Gap(12),
-        itemBuilder: (_, _) => AppCardSurface(
-          padding: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const CircleAvatar(radius: 16),
-                    const Gap(12),
-                    Expanded(
-                      child: Text('Alerter name', style: textTheme.titleMedium),
-                    ),
-                  ],
+        child: Column(
+          children: [
+            for (var i = 0; i < 6; i++) ...[
+              if (i > 0) const Gap(12),
+              AppCardSurface(
+                padding: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 76, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const CircleAvatar(radius: 16),
+                          const Gap(12),
+                          Expanded(
+                            child: Text(
+                              'Alerter name',
+                              style: textTheme.titleMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Gap(8),
+                      Text('Endpoint type', style: textTheme.bodySmall),
+                      const Gap(10),
+                      const Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          Chip(label: Text('Enabled')),
+                          Chip(label: Text('Template')),
+                          Chip(label: Text('Tag')),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                const Gap(8),
-                Text('Endpoint type', style: textTheme.bodySmall),
-                const Gap(10),
-                const Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    Chip(label: Text('Enabled')),
-                    Chip(label: Text('Template')),
-                    Chip(label: Text('Tag')),
-                  ],
-                ),
-              ],
-            ),
-          ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -413,6 +417,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(24),
       children: [
         const Gap(48),

@@ -63,6 +63,29 @@ final Provider<int> resourceAnyActivityProvider = Provider<int>(
   ),
 );
 
+/// Wires a provider to activity pulses as a *refresh*, not a *reload*.
+///
+/// `ref.watch(activityProvider)` inside `build` makes every pulse a dependency
+/// change, which Riverpod treats as a reload: the state becomes
+/// `AsyncLoading(previous)` and a plain `.when` flips to a spinner although
+/// data exists. `ref.listen` + `invalidateSelf` instead yields
+/// `AsyncData(previous)` with `isLoading` (a refresh), so UIs keep their
+/// content. Call these from `build`.
+extension ResourceActivityRefresh on Ref {
+  /// Refreshes this provider whenever [scope] is pulsed.
+  void refreshOnActivity(ActivityScope scope) {
+    listen<int>(
+      resourceScopeActivityProvider(scope),
+      (_, _) => invalidateSelf(),
+    );
+  }
+
+  /// Refreshes this provider on every pulse of any scope.
+  void refreshOnAnyActivity() {
+    listen<int>(resourceAnyActivityProvider, (_, _) => invalidateSelf());
+  }
+}
+
 class ResourceActivityNotifier extends Notifier<ResourceActivity> {
   /// Delays of the follow-up pulses after the immediate one. Docker stop can
   /// take a few seconds of graceful shutdown, so the last pulse lands later.

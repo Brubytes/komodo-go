@@ -6,8 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/resources/resource_manage_actions.dart';
 import 'package:komodo_go/composition/stacks/stack_config_editor.dart';
-import 'package:komodo_go/composition/stacks/stack_updates_provider.dart';
 import 'package:komodo_go/composition/stacks/stack_updates_tab.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/core_info_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
@@ -16,11 +16,16 @@ import 'package:komodo_go/core/router/resource_routes.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/detail_skeletons.dart';
+import 'package:komodo_go/core/widgets/async/editor_host.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_state_view.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/providers/presentation/providers/docker_registry_provider.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
@@ -68,10 +73,13 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
   var _configDirty = false;
   var _infoDirty = false;
 
+  /// A pull-to-refresh is running; its spinner replaces the thin progress bars.
+  var _pulling = false;
+
   bool get _dirty => _configDirty || _infoDirty;
 
   KomodoStack? get _currentStack =>
-      ref.read(stackDetailProvider(widget.stackId)).asData?.value;
+      ref.read(stackDetailProvider(widget.stackId)).value;
 
   void _onDirtyChanged({bool? config, bool? info}) {
     final before = _dirty;
@@ -87,6 +95,23 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() {});
       });
+    }
+  }
+
+  void _retryDetail() => ref.invalidate(stackDetailProvider(widget.stackId));
+
+  /// Pull-to-refresh for every tab: awaits the real data so the indicator
+  /// stays until it arrived.
+  Future<void> _pullAll() async {
+    setState(() => _pulling = true);
+    try {
+      await refreshProviders(ref, [
+        stackDetailProvider(widget.stackId).future,
+        stackServicesProvider(widget.stackId).future,
+        stacksProvider.future,
+      ]);
+    } finally {
+      if (mounted) setState(() => _pulling = false);
     }
   }
 
@@ -108,10 +133,8 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
     final tagsAsync = ref.watch(tagsProvider);
     final actionsState = ref.watch(stackActionsProvider);
 
-    final scheme = Theme.of(context).colorScheme;
-
     StackListItem? listItem;
-    final stacks = stacksListAsync.asData?.value;
+    final stacks = stacksListAsync.value;
     if (stacks != null) {
       for (final s in stacks) {
         if (s.id == widget.stackId) {
@@ -121,12 +144,12 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       }
     }
 
-    final services = servicesAsync.asData?.value;
+    final services = servicesAsync.value;
     final serviceCount = services?.length;
     final updateCount = services?.where((e) => e.updateAvailable).length;
 
     String? serverNameForId(String serverId) {
-      final servers = serversListAsync.asData?.value;
+      final servers = serversListAsync.value;
       if (servers == null || serverId.isEmpty) return null;
       for (final s in servers) {
         if (s.id == serverId) return s.name;
@@ -134,18 +157,14 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
       return null;
     }
 
-    final servers = serversListAsync.asData?.value ?? const [];
-    final repos = reposListAsync.asData?.value ?? const [];
-    final registryAccounts = registryAccountsAsync.asData?.value ?? const [];
-    final tagNameById = tagsAsync.maybeWhen(
-      data: (tags) => {
+    final servers = serversListAsync.value ?? const [];
+    final repos = reposListAsync.value ?? const [];
+    final registryAccounts = registryAccountsAsync.value ?? const [];
+    final tagNameById = <String, String>{
+      if (tagsAsync.value case final tags?)
         for (final tag in tags)
           if (tag.name.trim().isNotEmpty) tag.id: tag.name.trim(),
-      },
-      orElse: () => <String, String>{},
-    );
-    final stack = stackAsync.asData?.value;
-    final hasInfo = _shouldShowInfo(stack);
+    };
 
     return UnsavedChangesGuard(
       dirty: _dirty,
@@ -177,8 +196,16 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                       AppSpacing.lg,
                       AppSpacing.sm,
                     ),
-                    child: stackAsync.when(
-                      data: (stack) => stack != null
+                    child: AsyncContent<KomodoStack?>(
+                      value: stackAsync,
+                      errorTitle: 'Failed to load stack',
+                      onRetry: _retryDetail,
+                      showProgress: !_pulling,
+                      bannerPadding: const EdgeInsets.only(
+                        bottom: AppSpacing.sm,
+                      ),
+                      skeletonBuilder: (_) => const DetailHeaderSkeleton(),
+                      builder: (context, stack) => stack != null
                           ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -260,9 +287,6 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                           : const StackMessageSurface(
                               message: 'Stack not found',
                             ),
-                      loading: () => const StackLoadingSurface(),
-                      error: (error, _) =>
-                          StackMessageSurface(message: 'Error: $error'),
                     ),
                   ),
                 ),
@@ -273,41 +297,40 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                   label: 'Services',
                   icon: AppIcons.toolbox,
                   body: RefreshIndicator(
-                    onRefresh: () async {
-                      ref
-                        ..invalidate(stackServicesProvider(widget.stackId))
-                        ..invalidate(stackUpdatesProvider(widget.stackId));
-                    },
+                    onRefresh: _pullAll,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey(
                         'stack_${widget.stackId}_services',
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          servicesAsync.when(
-                            data: (services) => services.isEmpty
-                                ? const EmptyStateView.inline(
-                                    icon: AppIcons.containers,
-                                    title: 'No services found',
-                                    message:
-                                        'Services will appear here once '
-                                        'the stack is deployed.',
-                                  )
-                                : Column(
-                                    children: [
-                                      for (final service in services) ...[
-                                        StackServiceCard(service: service),
-                                        const Gap(AppSpacing.md),
-                                      ],
-                                    ],
-                                  ),
-                            loading: () => const StackLoadingSurface(),
-                            error: (error, _) => StackMessageSurface(
-                              message: 'Services unavailable: $error',
-                            ),
-                          ),
-                        ],
+                      child: AsyncContent<List<StackService>>(
+                        value: servicesAsync,
+                        errorTitle: 'Failed to load services',
+                        onRetry: () => ref.invalidate(
+                          stackServicesProvider(widget.stackId),
+                        ),
+                        showProgress:
+                            !_pulling && !stackAsync.isBackgroundRefresh,
+                        bannerPadding: const EdgeInsets.only(
+                          bottom: AppSpacing.md,
+                        ),
+                        skeletonBuilder: (_) =>
+                            const DetailTabSkeleton(count: 2),
+                        builder: (context, services) => services.isEmpty
+                            ? const EmptyStateView.inline(
+                                icon: AppIcons.containers,
+                                title: 'No services found',
+                                message:
+                                    'Services will appear here once '
+                                    'the stack is deployed.',
+                              )
+                            : Column(
+                                children: [
+                                  for (final service in services) ...[
+                                    StackServiceCard(service: service),
+                                    const Gap(AppSpacing.md),
+                                  ],
+                                ],
+                              ),
                       ),
                     ),
                   ),
@@ -317,60 +340,66 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                   label: 'Config',
                   icon: AppIcons.bolt,
                   body: RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(stackDetailProvider(widget.stackId));
-                    },
+                    onRefresh: _pullAll,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey(
                         'stack_${widget.stackId}_config',
                       ),
-                      child: stackAsync.when(
-                        data: (stack) => stack != null
-                            ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                      // The header already shows this provider's progress and
+                      // stale-error banner.
+                      child: EditorHost<KomodoStack>(
+                        value: stackAsync,
+                        isDirty: () => _dirty,
+                        errorTitle: 'Failed to load stack',
+                        onRetry: _retryDetail,
+                        showProgress: false,
+                        showStaleBanner: false,
+                        skeletonBuilder: (_) => const DetailTabSkeleton(),
+                        emptyBuilder: (_) => const StackMessageSurface(
+                          message: 'Stack not found',
+                        ),
+                        builder: (context, stack) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            StackConfigEditorContent(
+                              key: _configEditorKey,
+                              stackIdOrName: widget.stackId,
+                              initialConfig: stack.config,
+                              webhookBaseUrl:
+                                  coreInfoAsync.value?.webhookBaseUrl ?? '',
+                              servers: servers,
+                              repos: repos,
+                              registryAccounts: registryAccounts,
+                              onDirtyChanged: (dirty) =>
+                                  _onDirtyChanged(config: dirty),
+                            ),
+                            AppExpand(
+                              expanded: _shouldShowInfo(stack),
+                              child: Column(
                                 children: [
-                                  StackConfigEditorContent(
-                                    key: _configEditorKey,
-                                    stackIdOrName: widget.stackId,
-                                    initialConfig: stack.config,
-                                    webhookBaseUrl: coreInfoAsync.maybeWhen(
-                                      data: (info) => info.webhookBaseUrl,
-                                      orElse: () => '',
-                                    ),
-                                    servers: servers,
-                                    repos: repos,
-                                    registryAccounts: registryAccounts,
+                                  const Gap(AppSpacing.md),
+                                  StackInfoTabContent(
+                                    key: _infoEditorKey,
+                                    info: stack.info,
+                                    onSaveFile:
+                                        (
+                                          path,
+                                          contents, {
+                                          showSnackBar = true,
+                                        }) => _saveStackFile(
+                                          stackId: stack.id,
+                                          filePath: path,
+                                          contents: contents,
+                                          showSnackBar: showSnackBar,
+                                        ),
                                     onDirtyChanged: (dirty) =>
-                                        _onDirtyChanged(config: dirty),
+                                        _onDirtyChanged(info: dirty),
                                   ),
-                                  if (hasInfo) ...[
-                                    const Gap(AppSpacing.md),
-                                    StackInfoTabContent(
-                                      key: _infoEditorKey,
-                                      info: stack.info,
-                                      onSaveFile:
-                                          (
-                                            path,
-                                            contents, {
-                                            showSnackBar = true,
-                                          }) => _saveStackFile(
-                                            stackId: stack.id,
-                                            filePath: path,
-                                            contents: contents,
-                                            showSnackBar: showSnackBar,
-                                          ),
-                                      onDirtyChanged: (dirty) =>
-                                          _onDirtyChanged(info: dirty),
-                                    ),
-                                  ],
                                 ],
-                              )
-                            : const StackMessageSurface(
-                                message: 'Stack not found',
                               ),
-                        loading: () => const StackLoadingSurface(),
-                        error: (error, _) =>
-                            StackMessageSurface(message: 'Error: $error'),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -420,11 +449,7 @@ class _StackDetailViewState extends PollingRouteAwareState<StackDetailView>
                 ),
               ],
             ),
-            if (actionsState.isLoading)
-              ColoredBox(
-                color: scheme.scrim.withValues(alpha: 0.25),
-                child: const Center(child: AppSkeletonCard()),
-              ),
+            ActionBusyOverlay(busy: actionsState.isLoading),
           ],
         ),
       ),

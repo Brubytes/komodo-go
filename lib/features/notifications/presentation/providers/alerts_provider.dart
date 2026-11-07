@@ -1,6 +1,7 @@
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
 import 'package:komodo_go/features/notifications/data/repositories/notifications_repository.dart';
+import 'package:komodo_go/features/notifications/presentation/providers/updates_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'alerts_provider.g.dart';
@@ -53,7 +54,7 @@ class Alerts extends _$Alerts {
   }
 
   Future<void> fetchNextPage() async {
-    final current = state.asData?.value;
+    final current = state.value;
     if (current == null) return;
     final nextPage = current.nextPage;
     if (nextPage == null) return;
@@ -73,7 +74,11 @@ class Alerts extends _$Alerts {
       (page) {
         return AsyncValue.data(
           AlertsState(
-            items: [...current.items, ...page.alerts],
+            items: appendDedupedById(
+              current.items,
+              page.alerts,
+              (a) => a.id,
+            ),
             nextPage: page.nextPage,
           ),
         );

@@ -12,7 +12,7 @@ part 'repos_provider.g.dart';
 class Repos extends _$Repos {
   @override
   Future<List<RepoListItem>> build() async {
-    ref.watch(resourceScopeActivityProvider(ActivityScope.repos));
+    ref.refreshOnActivity(ActivityScope.repos);
     final repository = ref.watch(repoRepositoryProvider);
     if (repository == null) {
       return [];
@@ -37,7 +37,7 @@ class Repos extends _$Repos {
 /// Provides details for a specific repo.
 @riverpod
 Future<KomodoRepo?> repoDetail(Ref ref, String repoIdOrName) async {
-  ref.watch(resourceScopeActivityProvider(ActivityScope.repos));
+  ref.refreshOnActivity(ActivityScope.repos);
   final repository = ref.watch(repoRepositoryProvider);
   if (repository == null) {
     return null;

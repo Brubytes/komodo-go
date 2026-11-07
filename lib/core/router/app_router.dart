@@ -634,8 +634,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     // Reuses the alerts the dashboard already loads; no extra polling.
     final unresolvedAlerts = ref.watch(
       alertsProvider.select(
-        (alerts) =>
-            alerts.asData?.value.items.where((a) => !a.resolved).length ?? 0,
+        (alerts) => alerts.value?.items.where((a) => !a.resolved).length ?? 0,
       ),
     );
 

@@ -8,10 +8,15 @@ import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/resource_routes.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
+import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/detail_skeletons.dart';
+import 'package:komodo_go/core/widgets/async/editor_host.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
 import 'package:komodo_go/features/builds/data/models/build.dart';
@@ -42,8 +47,34 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
   var _configSaveInFlight = false;
   var _dirty = false;
 
-  void _onDirtyChanged(bool dirty, KomodoBuild build) {
+  /// A pull-to-refresh is running; its spinner replaces the thin progress bars.
+  var _pulling = false;
+
+  void _setDirty(bool dirty) {
+    if (_dirty == dirty) return;
     _dirty = dirty;
+    // Lets the config EditorHost adopt data it held back while dirty.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _retry() => ref.invalidate(buildDetailProvider(widget.buildId));
+
+  Future<void> _pullAll() async {
+    setState(() => _pulling = true);
+    try {
+      await refreshProviders(ref, [
+        buildDetailProvider(widget.buildId).future,
+        buildsProvider.future,
+      ]);
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
+  }
+
+  void _onDirtyChanged(bool dirty, KomodoBuild build) {
+    _setDirty(dirty);
     syncDirtySnackBar(
       dirty: dirty,
       onDiscard: () => _discardConfig(build),
@@ -71,10 +102,18 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
     final actionsState = ref.watch(buildActionsProvider);
     final buildersAsync = ref.watch(buildersProvider);
     final reposAsync = ref.watch(reposProvider);
-    final scheme = Theme.of(context).colorScheme;
-    final build = buildAsync.asData?.value;
+    final build = buildAsync.value;
+    final builderId = build?.config.builderId ?? '';
+    final builderNameAsync = builderId.isEmpty
+        ? const AsyncValue<String?>.data(null)
+        : ref.watch(builderNameProvider(builderId));
+    // Falls back to the id while the name is unknown, never to a loading text.
+    final builderName = builderNameAsync.value?.trim() ?? '';
+    final builderLabel = builderName.isNotEmpty
+        ? builderName
+        : (builderId.isNotEmpty ? builderId : null);
     BuildListItem? listItem;
-    final list = buildsListAsync.asData?.value;
+    final list = buildsListAsync.value;
     if (list != null) {
       for (final item in list) {
         if (item.id == buildId) {
@@ -84,10 +123,6 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
       }
     }
     final isBuilding = listItem?.info.state == BuildState.building;
-
-    void retry() {
-      ref.invalidate(buildDetailProvider(buildId));
-    }
 
     return UnsavedChangesGuard(
       dirty: _dirty,
@@ -116,28 +151,24 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        buildAsync.when(
-                          data: (build) {
+                        AsyncContent<KomodoBuild?>(
+                          value: buildAsync,
+                          errorTitle: 'Failed to load build',
+                          onRetry: _retry,
+                          showProgress: !_pulling,
+                          bannerPadding: const EdgeInsets.only(
+                            bottom: AppSpacing.sm,
+                          ),
+                          skeletonBuilder: (_) => const DetailHeaderSkeleton(
+                            facts: 2,
+                            showActions: false,
+                          ),
+                          builder: (context, build) {
                             if (build == null) {
                               return const BuildMessageSurface(
                                 message: 'Build not found',
                               );
                             }
-
-                            final builderId = build.config.builderId;
-                            final builderNameAsync = builderId.isEmpty
-                                ? const AsyncValue<String?>.data(null)
-                                : ref.watch(builderNameProvider(builderId));
-
-                            final builderLabel = builderNameAsync.when(
-                              data: (name) =>
-                                  (name != null && name.trim().isNotEmpty)
-                                  ? name.trim()
-                                  : (builderId.isNotEmpty ? builderId : null),
-                              loading: () => 'Loading…',
-                              error: (_, _) =>
-                                  builderId.isNotEmpty ? builderId : null,
-                            );
 
                             final linkedRepo = build.config.linkedRepo.trim();
                             return BuildHeader(
@@ -165,9 +196,6 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                                     ),
                             );
                           },
-                          loading: () => const BuildLoadingSurface(),
-                          error: (error, _) =>
-                              BuildErrorSurface(error: error, onRetry: retry),
                         ),
                         const Gap(AppSpacing.md),
                         DetailActionBar(
@@ -215,23 +243,27 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                   label: 'Config',
                   icon: AppIcons.bolt,
                   body: RefreshIndicator(
-                    onRefresh: () async => retry(),
+                    onRefresh: _pullAll,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey(
                         'build_${widget.buildId}_config',
                       ),
-                      child: buildAsync.when(
-                        data: (build) {
-                          if (build == null) {
-                            return const BuildMessageSurface(
-                              message: 'Build not found',
-                            );
-                          }
-
-                          final builders =
-                              buildersAsync.asData?.value ?? const [];
-                          final repos = reposAsync.asData?.value ?? const [];
-
+                      // The header already shows this provider's progress and
+                      // stale-error banner.
+                      child: EditorHost<KomodoBuild>(
+                        value: buildAsync,
+                        isDirty: () => _dirty,
+                        errorTitle: 'Failed to load build',
+                        onRetry: _retry,
+                        showProgress: false,
+                        showStaleBanner: false,
+                        skeletonBuilder: (_) => const DetailTabSkeleton(),
+                        emptyBuilder: (_) => const BuildMessageSurface(
+                          message: 'Build not found',
+                        ),
+                        builder: (context, build) {
+                          final builders = buildersAsync.value ?? const [];
+                          final repos = reposAsync.value ?? const [];
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -243,17 +275,22 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                                 onDirtyChanged: (dirty) =>
                                     _onDirtyChanged(dirty, build),
                               ),
-                              if (build.info.latestHash != null ||
-                                  build.info.builtHash != null) ...[
-                                const Gap(AppSpacing.md),
-                                BuildHashesContent(buildResource: build),
-                              ],
+                              AppExpand(
+                                expanded:
+                                    build.info.latestHash != null ||
+                                    build.info.builtHash != null,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: AppSpacing.md,
+                                  ),
+                                  child: BuildHashesContent(
+                                    buildResource: build,
+                                  ),
+                                ),
+                              ),
                             ],
                           );
                         },
-                        loading: () => const BuildLoadingSurface(),
-                        error: (error, _) =>
-                            BuildErrorSurface(error: error, onRetry: retry),
                       ),
                     ),
                   ),
@@ -263,12 +300,19 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
                   label: 'Logs',
                   icon: AppIcons.logs,
                   body: RefreshIndicator(
-                    onRefresh: () async => retry(),
+                    onRefresh: _pullAll,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey('build_${widget.buildId}_logs'),
                       maxContentWidth: 1100,
-                      child: buildAsync.when(
-                        data: (build) {
+                      child: AsyncContent<KomodoBuild?>(
+                        value: buildAsync,
+                        errorTitle: 'Failed to load build',
+                        onRetry: _retry,
+                        showProgress: false,
+                        showStaleBanner: false,
+                        skeletonBuilder: (_) =>
+                            const DetailTabSkeleton(count: 2),
+                        builder: (context, build) {
                           if (build == null) {
                             return const BuildMessageSurface(
                               message: 'Build not found',
@@ -294,20 +338,13 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
 
                           return BuildLogsContent(buildResource: build);
                         },
-                        loading: () => const BuildLoadingSurface(),
-                        error: (error, _) =>
-                            BuildErrorSurface(error: error, onRetry: retry),
                       ),
                     ),
                   ),
                 ),
               ],
             ),
-            if (actionsState.isLoading)
-              ColoredBox(
-                color: scheme.scrim.withValues(alpha: 0.25),
-                child: const Center(child: AppSkeletonCard()),
-              ),
+            ActionBusyOverlay(busy: actionsState.isLoading),
           ],
         ),
       ),
@@ -339,7 +376,8 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
   }
 
   void _discardConfig(KomodoBuild build) {
-    _configEditorKey.currentState?.resetTo(build.config);
+    final latest = ref.read(buildDetailProvider(widget.buildId)).value ?? build;
+    _configEditorKey.currentState?.resetTo(latest.config);
     hideDirtySnackBar();
   }
 
@@ -384,7 +422,7 @@ class _BuildDetailViewState extends ConsumerState<BuildDetailView>
         ..invalidate(buildsProvider);
 
       _configEditorKey.currentState?.resetTo(updated.config);
-      _dirty = false;
+      _setDirty(false);
       hideDirtySnackBar();
     }
 

@@ -1,18 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
+import 'package:komodo_go/core/widgets/async/refresh_progress_bar.dart';
+import 'package:komodo_go/core/widgets/async/stale_data_banner.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
 import 'package:komodo_go/core/widgets/filters/template_filter.dart';
 import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
@@ -23,7 +29,9 @@ import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_filters_provider.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
 import 'package:komodo_go/features/deployments/presentation/widgets/deployment_card.dart';
+import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
+import 'package:komodo_go/features/tags/data/models/tag.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
@@ -49,6 +57,25 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
   bool _isSearchVisible = false;
   late final _intro = AppListIntro();
   bool _areFiltersExpanded = false;
+
+  /// True while a pull-to-refresh runs, so the thin progress bar does not
+  /// double up with the RefreshIndicator spinner.
+  bool _pulling = false;
+
+  /// Refreshes without touching [_pulling], so the thin progress bar shows
+  /// (used by the stale-data banner's Retry).
+  Future<void> _refresh() =>
+      refreshProviders(ref, [deploymentsProvider.future]);
+
+  /// Pull-to-refresh: the RefreshIndicator spinner is visible, hide the bar.
+  Future<void> _pullRefresh() async {
+    setState(() => _pulling = true);
+    try {
+      await _refresh();
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
+  }
 
   @override
   void initState() {
@@ -93,25 +120,19 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
     final pendingUpdate = ref.watch(deploymentsPendingUpdateFilterProvider);
     final templateFilter = ref.watch(deploymentsTemplateFilterStateProvider);
 
-    final serverNames = serversAsync.maybeWhen(
-      data: (servers) => {for (final server in servers) server.id: server.name},
-      orElse: () => <String, String>{},
-    );
+    final serverNames = {
+      for (final server in serversAsync.value ?? const <Server>[])
+        server.id: server.name,
+    };
 
-    final tagOptions = tagsAsync.maybeWhen(
-      data: (tags) => [
-        for (final tag in tags)
-          if (tag.name.trim().isNotEmpty)
-            TagOption(id: tag.id, name: tag.name.trim()),
-      ],
-      orElse: () => <TagOption>[],
-    );
-    final fallbackTags = deploymentsAsync.maybeWhen(
-      data: (deployments) => _collectTags(
-        deployments,
-      ).map((name) => TagOption(id: name, name: name)).toList(),
-      orElse: () => <TagOption>[],
-    );
+    final tagOptions = [
+      for (final tag in tagsAsync.value ?? const <KomodoTag>[])
+        if (tag.name.trim().isNotEmpty)
+          TagOption(id: tag.id, name: tag.name.trim()),
+    ];
+    final fallbackTags = _collectTags(
+      deploymentsAsync.value ?? const <Deployment>[],
+    ).map((name) => TagOption(id: name, name: name)).toList();
     final availableTags = tagOptions.isNotEmpty ? tagOptions : fallbackTags;
     final tagNameById = {for (final tag in availableTags) tag.id: tag.name};
 
@@ -127,10 +148,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
           (pendingUpdate ? 1 : 0) +
           (templateFilter == TemplateFilter.exclude ? 0 : 1),
     );
-    final loadedItems = deploymentsAsync.maybeWhen(
-      data: (items) => items,
-      orElse: () => <Deployment>[],
-    );
+    final loadedItems = deploymentsAsync.value ?? <Deployment>[];
     final stateOptions = collectDistinct<Deployment>(loadedItems, _stateLabel);
     final serverOptions = collectDistinct<Deployment>(
       loadedItems,
@@ -172,15 +190,12 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
           ),
           ResourceListActionsMenu(
             kind: ResourceKind.deployments,
-            items: deploymentsAsync.maybeWhen(
-              data: (items) => [
-                for (final item in items)
-                  ResourceBatchItem(id: item.id, name: item.name),
-              ],
-              orElse: () => const [],
-            ),
+            items: [
+              for (final item in loadedItems)
+                ResourceBatchItem(id: item.id, name: item.name),
+            ],
             onCreate: () => context.openDetail('${AppRoutes.deployments}/new'),
-            onRefresh: () => ref.read(deploymentsProvider.notifier).refresh(),
+            onRefresh: _pullRefresh,
             onBatchCompleted: () => ref.invalidate(deploymentsProvider),
           ),
         ],
@@ -188,9 +203,10 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
       body: Stack(
         children: [
           RefreshIndicator(
-            onRefresh: () => ref.read(deploymentsProvider.notifier).refresh(),
+            onRefresh: _pullRefresh,
             child: CustomScrollView(
               controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 // Header: filters and search
                 SliverPadding(
@@ -345,10 +361,24 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                     ),
                   ),
                 ),
+                SliverToBoxAdapter(
+                  child: RefreshProgressBar(
+                    active: deploymentsAsync.isBackgroundRefresh && !_pulling,
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: StaleDataBanner(
+                    visible: deploymentsAsync.hasStaleError,
+                    error: deploymentsAsync.error,
+                    onRetry: () => unawaited(_refresh()),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  ),
+                ),
                 // Deployment list (virtualized)
                 deploymentsAsync.when(
                   skipLoadingOnRefresh: true,
                   skipLoadingOnReload: true,
+                  skipError: true,
                   data: (deployments) {
                     final searched = _applyFilters(
                       deployments,
@@ -466,9 +496,9 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
                   ),
                   error: (error, stack) => SliverFillRemaining(
                     hasScrollBody: false,
-                    child: ErrorStateView(
+                    child: ErrorStateView.fromError(
                       title: 'Failed to load deployments',
-                      message: error.toString(),
+                      error: error,
                       onRetry: () => ref.invalidate(deploymentsProvider),
                     ),
                   ),
@@ -476,13 +506,7 @@ class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
               ],
             ),
           ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: Theme.of(
-                context,
-              ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
+          ActionBusyOverlay(busy: actionsState.isLoading),
         ],
       ),
     );

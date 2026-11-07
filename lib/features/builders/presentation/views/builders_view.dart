@@ -4,10 +4,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
-import 'package:komodo_go/core/widgets/empty_error_state.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
+import 'package:komodo_go/features/builders/data/models/builder_list_item.dart';
 import 'package:komodo_go/features/builders/presentation/providers/builders_provider.dart';
 import 'package:komodo_go/features/builders/presentation/views/builders/builder_tile.dart';
 import 'package:komodo_go/features/builders/presentation/views/builders/builders_view_states.dart';
@@ -36,14 +38,21 @@ class _BuildersViewState extends ConsumerState<BuildersView> {
       body: Stack(
         children: [
           RefreshIndicator(
-            onRefresh: () => ref.read(buildersProvider.notifier).refresh(),
-            child: buildersAsync.when(
-              data: (items) {
+            onRefresh: () => refreshProviders(ref, [buildersProvider.future]),
+            child: AsyncContent<List<BuilderListItem>>(
+              value: buildersAsync,
+              fill: true,
+              showProgress: false,
+              errorTitle: 'Failed to load builders',
+              onRetry: () => ref.invalidate(buildersProvider),
+              skeletonBuilder: (_) => const _BuildersSkeletonList(),
+              builder: (context, items) {
                 if (items.isEmpty) {
                   return const BuildersEmptyState();
                 }
 
                 return ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
                   separatorBuilder: (_, _) => const Gap(12),
@@ -54,21 +63,9 @@ class _BuildersViewState extends ConsumerState<BuildersView> {
                   ),
                 );
               },
-              loading: () => const _BuildersSkeletonList(),
-              error: (error, _) => ErrorStateView(
-                title: 'Failed to load builders',
-                message: error.toString(),
-                onRetry: () => ref.invalidate(buildersProvider),
-              ),
             ),
           ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: Theme.of(
-                context,
-              ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
+          ActionBusyOverlay(busy: actionsState.isLoading),
         ],
       ),
     );
@@ -80,14 +77,11 @@ class _BuildersSkeletonList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SingleChildScrollView(
-      physics: NeverScrollableScrollPhysics(),
-      child: ResourceCardSkeletonList(
-        title: 'Builder name',
-        subtitle: 'Server',
-        metaLeft: 'Builder type',
-        metaRight: 'Instance type',
-      ),
+    return const ResourceCardSkeletonList(
+      title: 'Builder name',
+      subtitle: 'Server',
+      metaLeft: 'Builder type',
+      metaRight: 'Instance type',
     );
   }
 }

@@ -1,28 +1,36 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
+import 'package:komodo_go/core/widgets/async/refresh_progress_bar.dart';
+import 'package:komodo_go/core/widgets/async/stale_data_banner.dart';
 import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_filters_provider.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_card.dart';
 import 'package:komodo_go/features/stacks/presentation/widgets/stack_tag_filter_sheet.dart';
+import 'package:komodo_go/features/tags/data/models/tag.dart';
 import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
@@ -47,6 +55,24 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
   bool _isSearchVisible = false;
   bool _areFiltersExpanded = false;
   late final _intro = AppListIntro();
+
+  /// True while a pull-to-refresh runs, so the thin progress bar does not
+  /// double up with the RefreshIndicator spinner.
+  bool _pulling = false;
+
+  /// Refreshes without touching [_pulling], so the thin progress bar shows
+  /// (used by the stale-data banner's Retry).
+  Future<void> _refresh() => refreshProviders(ref, [stacksProvider.future]);
+
+  /// Pull-to-refresh: the RefreshIndicator spinner is visible, hide the bar.
+  Future<void> _pullRefresh() async {
+    setState(() => _pulling = true);
+    try {
+      await _refresh();
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
+  }
 
   @override
   void initState() {
@@ -91,27 +117,19 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
     final pendingUpdate = ref.watch(stacksPendingUpdateFilterProvider);
     final templateFilter = ref.watch(stacksTemplateFilterStateProvider);
 
-    final serverNames = serversAsync.maybeWhen(
-      data: (servers) => {
-        for (final server in servers) server.id: server.name,
-      },
-      orElse: () => <String, String>{},
-    );
+    final serverNames = {
+      for (final server in serversAsync.value ?? const <Server>[])
+        server.id: server.name,
+    };
 
-    final tagOptions = tagsAsync.maybeWhen(
-      data: (tags) => [
-        for (final tag in tags)
-          if (tag.name.trim().isNotEmpty)
-            StackTagOption(id: tag.id, name: tag.name.trim()),
-      ],
-      orElse: () => <StackTagOption>[],
-    );
-    final fallbackTags = stacksAsync.maybeWhen(
-      data: (stacks) => _collectTags(
-        stacks,
-      ).map((name) => StackTagOption(id: name, name: name)).toList(),
-      orElse: () => <StackTagOption>[],
-    );
+    final tagOptions = [
+      for (final tag in tagsAsync.value ?? const <KomodoTag>[])
+        if (tag.name.trim().isNotEmpty)
+          StackTagOption(id: tag.id, name: tag.name.trim()),
+    ];
+    final fallbackTags = _collectTags(
+      stacksAsync.value ?? const <StackListItem>[],
+    ).map((name) => StackTagOption(id: name, name: name)).toList();
     final availableTags = tagOptions.isNotEmpty ? tagOptions : fallbackTags;
     final tagNameById = {
       for (final tag in availableTags) tag.id: tag.name,
@@ -129,10 +147,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
           (pendingUpdate ? 1 : 0) +
           (templateFilter == StacksTemplateFilter.exclude ? 0 : 1),
     );
-    final loadedItems = stacksAsync.maybeWhen(
-      data: (items) => items,
-      orElse: () => <StackListItem>[],
-    );
+    final loadedItems = stacksAsync.value ?? <StackListItem>[];
     final stateOptions = collectDistinct<StackListItem>(
       loadedItems,
       _stateLabel,
@@ -177,15 +192,12 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
           ),
           ResourceListActionsMenu(
             kind: ResourceKind.stacks,
-            items: stacksAsync.maybeWhen(
-              data: (items) => [
-                for (final item in items)
-                  ResourceBatchItem(id: item.id, name: item.name),
-              ],
-              orElse: () => const [],
-            ),
+            items: [
+              for (final item in loadedItems)
+                ResourceBatchItem(id: item.id, name: item.name),
+            ],
             onCreate: () => context.openDetail('${AppRoutes.stacks}/new'),
-            onRefresh: () => ref.read(stacksProvider.notifier).refresh(),
+            onRefresh: _pullRefresh,
             onBatchCompleted: () => ref.invalidate(stacksProvider),
           ),
         ],
@@ -193,9 +205,10 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
       body: Stack(
         children: [
           RefreshIndicator(
-            onRefresh: () => ref.read(stacksProvider.notifier).refresh(),
+            onRefresh: _pullRefresh,
             child: ListView(
               controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.fromLTRB(
                 16,
                 16,
@@ -330,11 +343,21 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                   ),
                 ],
                 const Gap(12),
+                RefreshProgressBar(
+                  active: stacksAsync.isBackgroundRefresh && !_pulling,
+                ),
+                StaleDataBanner(
+                  visible: stacksAsync.hasStaleError,
+                  error: stacksAsync.error,
+                  onRetry: () => unawaited(_refresh()),
+                  padding: const EdgeInsets.only(bottom: 12),
+                ),
                 AppSwitcher(
                   animateSize: false,
                   child: stacksAsync.when(
                     skipLoadingOnRefresh: true,
                     skipLoadingOnReload: true,
+                    skipError: true,
                     data: (stacks) {
                       final searched = _applyFilters(
                         stacks,
@@ -433,10 +456,10 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
                     loading: () => const _StacksSkeletonList(
                       key: ValueKey('stacks_loading'),
                     ),
-                    error: (error, stack) => ErrorStateView(
+                    error: (error, stack) => ErrorStateView.fromError(
                       key: const ValueKey('stacks_error'),
                       title: 'Failed to load stacks',
-                      message: error.toString(),
+                      error: error,
                       onRetry: () => ref.invalidate(stacksProvider),
                     ),
                   ),
@@ -444,13 +467,7 @@ class _StacksListViewState extends ConsumerState<StacksListView> {
               ],
             ),
           ),
-          if (actionsState.isLoading)
-            ColoredBox(
-              color: Theme.of(
-                context,
-              ).colorScheme.scrim.withValues(alpha: 0.25),
-              child: const Center(child: AppSkeletonCard()),
-            ),
+          ActionBusyOverlay(busy: actionsState.isLoading),
         ],
       ),
     );

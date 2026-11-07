@@ -1,4 +1,5 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
@@ -24,14 +25,42 @@ typedef HomeServerOverview = ({
 final Provider<AsyncValue<HomeServerOverview?>> homeServerOverviewProvider =
     Provider.autoDispose<AsyncValue<HomeServerOverview?>>((ref) {
       final serversAsync = ref.watch(serversProvider);
-      return serversAsync.whenData((servers) {
-        if (servers.isEmpty) return null;
-        final statsValues = [
+      final servers = serversAsync.value;
+      if (servers == null) {
+        // No value yet: first load or failed first load.
+        return serversAsync.when(
+          data: (_) => const AsyncData(null),
+          loading: AsyncLoading.new,
+          error: AsyncError.new,
+        );
+      }
+      // Not `whenData`: it drops the previous value of an AsyncLoading, which
+      // would blank the overview on every reload/refresh of the servers.
+      HomeServerOverview? overview;
+      if (servers.isNotEmpty) {
+        overview = buildHomeServerOverview(servers, [
           for (final server in servers)
             ref.watch(serverStatsProvider(server.id)),
-        ];
-        return buildHomeServerOverview(servers, statsValues);
-      });
+        ]);
+      }
+      final data = AsyncData<HomeServerOverview?>(overview);
+      if (serversAsync.isLoading) {
+        return asyncWithPrevious<HomeServerOverview?>(
+          const AsyncLoading(),
+          data,
+          isRefresh: serversAsync.isRefreshing,
+        );
+      }
+      if (serversAsync.hasError) {
+        return asyncWithPrevious<HomeServerOverview?>(
+          AsyncError(
+            serversAsync.error!,
+            serversAsync.stackTrace ?? StackTrace.empty,
+          ),
+          data,
+        );
+      }
+      return data;
     });
 
 /// Pure aggregation behind [homeServerOverviewProvider] (unit-testable).
@@ -41,10 +70,10 @@ HomeServerOverview buildHomeServerOverview(
 ) {
   final statsEntries = <HomeServerStatsEntry>[
     for (var i = 0; i < servers.length; i++)
-      if (statsValues[i].asData?.value != null)
+      if (statsValues[i].value != null)
         HomeServerStatsEntry(
           server: servers[i],
-          stats: statsValues[i].asData!.value!,
+          stats: statsValues[i].value!,
         ),
   ];
   final summary = HomeServerStatsSummary.from(servers, statsEntries);

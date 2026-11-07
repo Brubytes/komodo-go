@@ -39,6 +39,21 @@ class _TestStackUpdates extends StackUpdates {
   Future<UpdatesState> build(String stackId) async => _state;
 }
 
+class _TestStackDetail extends StackDetail {
+  _TestStackDetail(this._stack);
+
+  final KomodoStack _stack;
+
+  @override
+  Future<KomodoStack?> build(String stackIdOrName) async => _stack;
+}
+
+class _TestStackServices extends StackServices {
+  @override
+  Future<List<StackService>> build(String stackIdOrName) async =>
+      <StackService>[];
+}
+
 class _TestServers extends Servers {
   _TestServers(this._servers);
 
@@ -158,9 +173,11 @@ void main() {
             (ref) async => const CoreInfo(webhookBaseUrl: ''),
           ),
           stacksProvider.overrideWith(() => _TestStacks(stacks)),
-          stackDetailProvider.overrideWith((ref, id) async => stack),
-          stackServicesProvider.overrideWith(
-            (ref, id) async => <StackService>[],
+          stackDetailProvider.overrideWith2(
+            (id) => _TestStackDetail(stack),
+          ),
+          stackServicesProvider.overrideWith2(
+            (id) => _TestStackServices(),
           ),
           stackLogProvider.overrideWith((ref, id) async => null),
           stackUpdatesProvider.overrideWith2(

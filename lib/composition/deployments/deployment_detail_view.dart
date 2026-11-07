@@ -15,10 +15,15 @@ import 'package:komodo_go/core/router/shell_state_provider.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/async_content.dart';
+import 'package:komodo_go/core/widgets/async/detail_skeletons.dart';
+import 'package:komodo_go/core/widgets/async/editor_host.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/detail/detail_widgets.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
+import 'package:komodo_go/features/builds/data/models/build.dart';
 import 'package:komodo_go/features/builds/presentation/providers/builds_provider.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/data/repositories/deployment_repository.dart';
@@ -61,6 +66,7 @@ class _DeploymentDetailViewState
   var _autoRefreshLogs = true;
   var _configSaveInFlight = false;
   var _dirty = false;
+  var _pulling = false;
 
   @override
   void dispose() {
@@ -82,11 +88,10 @@ class _DeploymentDetailViewState
       if (!shouldRunPollTick()) return;
       final current = ref
           .read(deploymentDetailProvider(widget.deploymentId))
-          .asData
-          ?.value;
+          .value;
       final buildId = current?.info?.buildId?.trim() ?? '';
       if (buildId.isEmpty) return;
-      ref.invalidate(buildDetailProvider(buildId));
+      unawaited(ref.read(buildDetailProvider(buildId).notifier).pollRefresh());
     });
   }
 
@@ -131,8 +136,7 @@ class _DeploymentDetailViewState
     final actionsState = ref.watch(deploymentActionsProvider);
     final serversListAsync = ref.watch(serversProvider);
     final registryAccountsAsync = ref.watch(dockerRegistryAccountsProvider);
-    final scheme = Theme.of(context).colorScheme;
-    final deployment = deploymentAsync.asData?.value;
+    final deployment = deploymentAsync.value;
     final isShellActive = ref.watch(mainShellIndexProvider) == 1;
     final logsPolling = shouldPoll(
       isActiveTab: isShellActive && _activeTabId == _tabLogs,
@@ -140,7 +144,7 @@ class _DeploymentDetailViewState
     );
 
     String? serverNameForId(String serverId) {
-      final servers = serversListAsync.asData?.value;
+      final servers = serversListAsync.value;
       if (servers == null || serverId.isEmpty) return null;
       for (final s in servers) {
         if (s.id == serverId) return s.name;
@@ -148,7 +152,7 @@ class _DeploymentDetailViewState
       return null;
     }
 
-    final buildsList = ref.watch(buildsProvider).asData?.value;
+    final buildsList = ref.watch(buildsProvider).value;
     String? buildNameForId(String buildId) {
       if (buildsList == null || buildId.isEmpty) return null;
       for (final b in buildsList) {
@@ -191,8 +195,16 @@ class _DeploymentDetailViewState
                       AppSpacing.lg,
                       AppSpacing.sm,
                     ),
-                    child: deploymentAsync.when(
-                      data: (deployment) {
+                    child: AsyncContent<Deployment?>(
+                      value: deploymentAsync,
+                      errorTitle: 'Failed to load deployment',
+                      onRetry: _reloadDeployment,
+                      showProgress: !_pulling,
+                      bannerPadding: const EdgeInsets.only(
+                        bottom: AppSpacing.sm,
+                      ),
+                      skeletonBuilder: (_) => const DetailHeaderSkeleton(),
+                      builder: (context, deployment) {
                         if (deployment == null) {
                           return const DeploymentMessageSurface(
                             message: 'Deployment not found',
@@ -258,9 +270,6 @@ class _DeploymentDetailViewState
                           ],
                         );
                       },
-                      loading: () => const DeploymentLoadingSurface(),
-                      error: (error, _) =>
-                          DeploymentMessageSurface(message: 'Error: $error'),
                     ),
                   ),
                 ),
@@ -271,32 +280,31 @@ class _DeploymentDetailViewState
                   label: 'Config',
                   icon: AppIcons.bolt,
                   body: RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(deploymentDetailProvider(deploymentId));
-                    },
+                    onRefresh: _pull,
                     child: DetailTabScrollView.box(
                       scrollKey: PageStorageKey(
                         'deployment_${widget.deploymentId}_config',
                       ),
-                      child: deploymentAsync.when(
-                        data: (deployment) {
-                          if (deployment == null) {
-                            return const DeploymentMessageSurface(
-                              message: 'Deployment not found',
-                            );
-                          }
-
+                      child: EditorHost<Deployment>(
+                        value: deploymentAsync,
+                        isDirty: () => _dirty,
+                        errorTitle: 'Failed to load deployment',
+                        onRetry: _reloadDeployment,
+                        showProgress: false,
+                        showStaleBanner: false,
+                        skeletonBuilder: (_) => const DetailTabSkeleton(),
+                        emptyBuilder: (_) => const DeploymentMessageSurface(
+                          message: 'Deployment not found',
+                        ),
+                        builder: (context, deployment) {
                           return deployment.config != null
                               ? DeploymentConfigEditorContent(
                                   key: _configEditorKey,
                                   initialConfig: deployment.config!,
                                   imageLabel: deployment.imageLabel,
-                                  servers:
-                                      serversListAsync.asData?.value ??
-                                      const [],
+                                  servers: serversListAsync.value ?? const [],
                                   registryAccounts:
-                                      registryAccountsAsync.asData?.value ??
-                                      const [],
+                                      registryAccountsAsync.value ?? const [],
                                   onDirtyChanged: (dirty) => _onDirtyChanged(
                                     deployment,
                                     dirty: dirty,
@@ -311,10 +319,6 @@ class _DeploymentDetailViewState
                                   ),
                                 );
                         },
-                        loading: () => const DeploymentLoadingSurface(),
-                        error: (error, _) => DeploymentMessageSurface(
-                          message: 'Error: $error',
-                        ),
                       ),
                     ),
                   ),
@@ -368,12 +372,7 @@ class _DeploymentDetailViewState
                     label: 'Build',
                     icon: AppIcons.builds,
                     body: RefreshIndicator(
-                      onRefresh: () async {
-                        final buildId = deployment?.info?.buildId?.trim() ?? '';
-                        if (buildId.isNotEmpty) {
-                          ref.invalidate(buildDetailProvider(buildId));
-                        }
-                      },
+                      onRefresh: _pull,
                       child: DetailTabScrollView.box(
                         scrollKey: PageStorageKey(
                           'deployment_${widget.deploymentId}_build',
@@ -384,11 +383,7 @@ class _DeploymentDetailViewState
                   ),
               ],
             ),
-            if (actionsState.isLoading)
-              ColoredBox(
-                color: scheme.scrim.withValues(alpha: 0.25),
-                child: const Center(child: AppSkeletonCard()),
-              ),
+            ActionBusyOverlay(busy: actionsState.isLoading),
           ],
         ),
       ),
@@ -404,8 +399,13 @@ class _DeploymentDetailViewState
     }
 
     final buildAsync = ref.watch(buildDetailProvider(buildId));
-    return buildAsync.when(
-      data: (build) {
+    return AsyncContent<KomodoBuild?>(
+      value: buildAsync,
+      errorTitle: 'Logs unavailable',
+      onRetry: () => ref.invalidate(buildDetailProvider(buildId)),
+      showProgress: !_pulling,
+      skeletonBuilder: (_) => const DetailTabSkeleton(count: 1),
+      builder: (context, build) {
         if (build == null) {
           return const DeploymentMessageSurface(message: 'Build not found');
         }
@@ -425,14 +425,41 @@ class _DeploymentDetailViewState
           child: BuildLogsContent(buildResource: build),
         );
       },
-      loading: () => const DeploymentLoadingSurface(),
-      error: (error, _) =>
-          DeploymentMessageSurface(message: 'Logs unavailable: $error'),
     );
   }
 
+  /// Pull-to-refresh for every tab: awaits the real data so the indicator
+  /// stays until it arrived.
+  Future<void> _pull() async {
+    setState(() => _pulling = true);
+    try {
+      final buildId =
+          ref
+              .read(deploymentDetailProvider(widget.deploymentId))
+              .value
+              ?.info
+              ?.buildId
+              ?.trim() ??
+          '';
+      await refreshProviders(ref, [
+        deploymentDetailProvider(widget.deploymentId).future,
+        deploymentsProvider.future,
+        if (buildId.isNotEmpty) buildDetailProvider(buildId).future,
+      ]);
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
+  }
+
+  void _reloadDeployment() {
+    ref.invalidate(deploymentDetailProvider(widget.deploymentId));
+  }
+
   void _discardConfig(Deployment deployment) {
-    final config = deployment.config;
+    final latest =
+        ref.read(deploymentDetailProvider(widget.deploymentId)).value ??
+        deployment;
+    final config = latest.config ?? deployment.config;
     if (config == null) return;
     _configEditorKey.currentState?.resetTo(config);
     hideDirtySnackBar();

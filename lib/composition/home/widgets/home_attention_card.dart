@@ -31,9 +31,10 @@ class _HomeAttentionCardState extends ConsumerState<HomeAttentionCard> {
   Widget build(BuildContext context) {
     final attention = ref.watch(homeAttentionProvider);
 
-    return attention.when(
-      loading: () => const HomeLoadingTile(),
-      error: (e, _) => HomeErrorTile(message: e.toString()),
+    return HomeAsyncSection<HomeAttentionSnapshot>(
+      value: attention,
+      skeletonHeight: 120,
+      error: (e) => HomeErrorTile(message: e.toString()),
       data: (snapshot) {
         if (snapshot.isClear) return const _AllClearRow();
 

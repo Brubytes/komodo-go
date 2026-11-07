@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/containers/containers_provider.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
@@ -11,10 +12,13 @@ import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
+import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
+import 'package:komodo_go/core/widgets/async/refresh_progress_bar.dart';
+import 'package:komodo_go/core/widgets/async/stale_data_banner.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
-import 'package:komodo_go/core/widgets/loading/app_skeleton.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/menus/komodo_select_menu_field.dart';
 import 'package:komodo_go/core/widgets/resource_list/resource_card.dart';
@@ -97,6 +101,24 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
     unawaited(ref.read(containersProvider.notifier).pollRefresh());
   }
 
+  /// True while a pull-to-refresh runs, so the thin progress bar does not
+  /// double up with the RefreshIndicator spinner.
+  bool _pulling = false;
+
+  /// Refreshes without touching [_pulling], so the thin progress bar shows
+  /// (used by the stale-data banner's Retry).
+  Future<void> _refresh() => refreshProviders(ref, [containersProvider.future]);
+
+  /// Pull-to-refresh: the RefreshIndicator spinner is visible, hide the bar.
+  Future<void> _pullRefresh() async {
+    setState(() => _pulling = true);
+    try {
+      await _refresh();
+    } finally {
+      if (mounted) setState(() => _pulling = false);
+    }
+  }
+
   void _stopRefreshTimer() {
     _refreshTimer?.cancel();
     _refreshTimer = null;
@@ -126,10 +148,7 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
         (selectedServerId == null ? 0 : 1) +
         prefs.activeCount;
     final stateOptions = collectDistinct<ContainerOverviewItem>(
-      containersAsync.maybeWhen(
-        data: (result) => result.items,
-        orElse: () => const <ContainerOverviewItem>[],
-      ),
+      containersAsync.value?.items ?? const <ContainerOverviewItem>[],
       (item) => resourceStateLabel(item.container.state),
     );
     void clearAllFilters() {
@@ -172,10 +191,10 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
             child: Stack(
               children: [
                 RefreshIndicator(
-                  onRefresh: () =>
-                      ref.read(containersProvider.notifier).refresh(),
+                  onRefresh: _pullRefresh,
                   child: ListView(
                     controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(
                       16,
                       16,
@@ -184,10 +203,7 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                     ),
                     children: [
                       _FiltersRow(
-                        servers: serversAsync.maybeWhen(
-                          data: (servers) => servers,
-                          orElse: () => const <Server>[],
-                        ),
+                        servers: serversAsync.value ?? const <Server>[],
                         selectedServerId: selectedServerId,
                         onServerChanged: (value) =>
                             ref
@@ -266,11 +282,22 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                         ),
                       ],
                       const Gap(12),
+                      RefreshProgressBar(
+                        active:
+                            containersAsync.isBackgroundRefresh && !_pulling,
+                      ),
+                      StaleDataBanner(
+                        visible: containersAsync.hasStaleError,
+                        error: containersAsync.error,
+                        onRetry: () => unawaited(_refresh()),
+                        padding: const EdgeInsets.only(bottom: 12),
+                      ),
                       AppSwitcher(
                         animateSize: false,
                         child: containersAsync.when(
                           skipLoadingOnRefresh: true,
                           skipLoadingOnReload: true,
+                          skipError: true,
                           data: (result) {
                             final filtered = _applyFilters(
                               result.items,
@@ -337,10 +364,10 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                             padding: EdgeInsets.only(top: 16),
                             child: _ContainersSkeletonBlock(),
                           ),
-                          error: (error, stack) => ErrorStateView(
+                          error: (error, stack) => ErrorStateView.fromError(
                             key: const ValueKey('containers_error'),
                             title: 'Failed to load containers',
-                            message: error.toString(),
+                            error: error,
                             onRetry: () => ref.invalidate(containersProvider),
                           ),
                         ),
@@ -348,13 +375,7 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                     ],
                   ),
                 ),
-                if (actionsState.isLoading)
-                  ColoredBox(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.scrim.withValues(alpha: 0.25),
-                    child: const Center(child: AppSkeletonCard()),
-                  ),
+                ActionBusyOverlay(busy: actionsState.isLoading),
               ],
             ),
           ),

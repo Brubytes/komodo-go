@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
@@ -126,7 +127,7 @@ class HomeStatCard<T> extends StatelessWidget {
                             ),
                         ],
                       ),
-                      asyncValue.when(
+                      asyncValue.whenStale(
                         data: (data) {
                           if (isTight) {
                             return Row(

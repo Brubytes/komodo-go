@@ -61,6 +61,7 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
+      addTearDown(listenProvider(container, containersProvider).close);
 
       final result = await readAsyncProvider(
         container,
@@ -112,6 +113,7 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
+      addTearDown(listenProvider(container, containersProvider).close);
 
       final result = await readAsyncProvider(
         container,

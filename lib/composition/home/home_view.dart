@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -11,10 +12,12 @@ import 'package:komodo_go/composition/home/widgets/home_attention_card.dart';
 import 'package:komodo_go/composition/home/widgets/home_dashboard_layout.dart';
 import 'package:komodo_go/composition/home/widgets/home_dashboard_tiles.dart';
 import 'package:komodo_go/composition/home/widgets/home_sections.dart';
+import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/status_colors.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
+import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
 import 'package:komodo_go/core/widgets/main_app_bar.dart';
 import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
 import 'package:komodo_go/features/actions/data/models/action.dart';
@@ -31,6 +34,7 @@ import 'package:komodo_go/features/procedures/data/models/procedure.dart';
 import 'package:komodo_go/features/procedures/presentation/providers/procedures_provider.dart';
 import 'package:komodo_go/features/repos/data/models/repo.dart';
 import 'package:komodo_go/features/repos/presentation/providers/repos_provider.dart';
+import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/presentation/providers/stacks_provider.dart';
@@ -78,6 +82,41 @@ class _HomeViewState extends ConsumerState<HomeView> {
   // Plays the staggered section intro once per screen lifetime.
   late final _intro = AppListIntro();
 
+  /// True while a pull-to-refresh runs (its spinner replaces the thin bar).
+  final _pulling = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _pulling.dispose();
+    super.dispose();
+  }
+
+  Future<void> _refreshAll() {
+    final servers = ref.read(serversProvider).value ?? const <Server>[];
+    return refreshProviders(ref, [
+      serversProvider.future,
+      for (final server in servers) serverStatsProvider(server.id).future,
+      deploymentsProvider.future,
+      stacksProvider.future,
+      reposProvider.future,
+      syncsProvider.future,
+      buildsProvider.future,
+      proceduresProvider.future,
+      actionsProvider.future,
+      alertsProvider.future,
+      updatesProvider.future,
+    ]);
+  }
+
+  Future<void> _pullRefresh() async {
+    _pulling.value = true;
+    try {
+      await _refreshAll();
+    } finally {
+      _pulling.value = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     var sectionIndex = 0;
@@ -89,35 +128,51 @@ class _HomeViewState extends ConsumerState<HomeView> {
 
     return Scaffold(
       appBar: const MainAppBar(title: 'Dashboard', icon: AppIcons.home),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref
-            ..invalidate(serversProvider)
-            ..invalidate(serverStatsProvider)
-            ..invalidate(deploymentsProvider)
-            ..invalidate(stacksProvider)
-            ..invalidate(reposProvider)
-            ..invalidate(syncsProvider)
-            ..invalidate(buildsProvider)
-            ..invalidate(proceduresProvider)
-            ..invalidate(actionsProvider)
-            ..invalidate(alertsProvider)
-            ..invalidate(updatesProvider);
-        },
-        child: HomeDashboardLayout(
-          attention: staggeredSection(
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                HomeAttentionCard(),
-                Gap(20),
-              ],
+      body: Column(
+        children: [
+          ValueListenableBuilder<bool>(
+            valueListenable: _pulling,
+            builder: (context, pulling, _) => Consumer(
+              builder: (context, ref, _) => HomeRefreshStatus(
+                pulling: pulling,
+                onRetry: () => unawaited(_refreshAll()),
+                sources: [
+                  ref.watch(serversProvider),
+                  ref.watch(deploymentsProvider),
+                  ref.watch(stacksProvider),
+                  ref.watch(reposProvider),
+                  ref.watch(syncsProvider),
+                  ref.watch(buildsProvider),
+                  ref.watch(proceduresProvider),
+                  ref.watch(actionsProvider),
+                  ref.watch(alertsProvider),
+                  ref.watch(updatesProvider),
+                ],
+              ),
             ),
           ),
-          serverOverview: staggeredSection(const HomeServerOverviewSection()),
-          alerts: staggeredSection(const HomeAlertsSection()),
-          opsPulse: staggeredSection(const HomeOpsPulseSection()),
-        ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _pullRefresh,
+              child: HomeDashboardLayout(
+                attention: staggeredSection(
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      HomeAttentionCard(),
+                      Gap(20),
+                    ],
+                  ),
+                ),
+                serverOverview: staggeredSection(
+                  const HomeServerOverviewSection(),
+                ),
+                alerts: staggeredSection(const HomeAlertsSection()),
+                opsPulse: staggeredSection(const HomeOpsPulseSection()),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -134,37 +189,36 @@ class HomeServerOverviewSection extends ConsumerWidget {
       children: [
         const HomeSectionHeader(title: 'Server overview'),
         const Gap(8),
-        ref
-            .watch(homeServerOverviewProvider)
-            .when(
-              data: (overview) {
-                if (overview == null) {
-                  return const HomeEmptyListTile(
-                    icon: AppIcons.server,
-                    message: 'No servers yet',
-                  );
-                }
-                return Column(
-                  children: [
-                    _ServerMetricGrid(
-                      overview: overview,
-                      onServersTap: () =>
-                          _goToResources(context, ref, ResourceType.servers),
-                    ),
-                    const Gap(16),
-                    HomeSectionHeader(
-                      title: 'Server stats',
-                      onSeeAll: () =>
-                          _goToResources(context, ref, ResourceType.servers),
-                    ),
-                    const Gap(8),
-                    const _ServerStatTiles(),
-                  ],
-                );
-              },
-              loading: () => const HomeLoadingTile(),
-              error: (e, _) => HomeErrorTile(message: e.toString()),
-            ),
+        HomeAsyncSection<HomeServerOverview?>(
+          value: ref.watch(homeServerOverviewProvider),
+          skeletonHeight: 280,
+          data: (overview) {
+            if (overview == null) {
+              return const HomeEmptyListTile(
+                icon: AppIcons.server,
+                message: 'No servers yet',
+              );
+            }
+            return Column(
+              children: [
+                _ServerMetricGrid(
+                  overview: overview,
+                  onServersTap: () =>
+                      _goToResources(context, ref, ResourceType.servers),
+                ),
+                const Gap(16),
+                HomeSectionHeader(
+                  title: 'Server stats',
+                  onSeeAll: () =>
+                      _goToResources(context, ref, ResourceType.servers),
+                ),
+                const Gap(8),
+                const _ServerStatTiles(),
+              ],
+            );
+          },
+          error: (e) => HomeErrorTile(message: e.toString()),
+        ),
         const Gap(20),
       ],
     );
@@ -274,7 +328,7 @@ class _ServerStatTiles extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final servers = ref.watch(serversProvider).asData?.value ?? const [];
+    final servers = ref.watch(serversProvider).value ?? const [];
     return SizedBox(
       height: 130,
       child: ListView.separated(
@@ -340,17 +394,43 @@ class _AlertsSummary {
       Object.hash(unresolvedCount, critical, warning, unknown, preview.length);
 }
 
+/// Maps the alerts state to its summary, keeping the previous summary during
+/// reloads and after failed refreshes (`whenData` would drop it).
+AsyncValue<_AlertsSummary> _summarize(AsyncValue<AlertsState> value) {
+  final state = value.value;
+  if (state == null) {
+    if (value.hasError) {
+      return AsyncError<_AlertsSummary>(
+        value.error!,
+        value.stackTrace ?? StackTrace.empty,
+      );
+    }
+    return const AsyncLoading<_AlertsSummary>();
+  }
+  final data = AsyncData(_AlertsSummary.from(state.items));
+  if (value.isLoading) {
+    return asyncWithPrevious<_AlertsSummary>(
+      const AsyncLoading(),
+      data,
+      isRefresh: value.isRefreshing,
+    );
+  }
+  if (value.hasError) {
+    return asyncWithPrevious<_AlertsSummary>(
+      AsyncError(value.error!, value.stackTrace ?? StackTrace.empty),
+      data,
+    );
+  }
+  return data;
+}
+
 /// Unresolved-alert summary; rebuilds only when the summary itself changes.
 class HomeAlertsSection extends ConsumerWidget {
   const HomeAlertsSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final alertsAsync = ref.watch(
-      alertsProvider.select(
-        (value) => value.whenData((state) => _AlertsSummary.from(state.items)),
-      ),
-    );
+    final alertsAsync = ref.watch(alertsProvider.select(_summarize));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -359,7 +439,9 @@ class HomeAlertsSection extends ConsumerWidget {
           onSeeAll: () => context.go(AppRoutes.notifications),
         ),
         const Gap(8),
-        alertsAsync.when(
+        HomeAsyncSection<_AlertsSummary>(
+          value: alertsAsync,
+          skeletonHeight: 100,
           data: (summary) {
             if (summary.unresolvedCount == 0) {
               return const HomeEmptyListTile(
@@ -399,8 +481,7 @@ class HomeAlertsSection extends ConsumerWidget {
               ],
             );
           },
-          loading: () => const HomeLoadingTile(),
-          error: (e, _) {
+          error: (e) {
             if (isAlertsPermissionError(e)) {
               return const HomeEmptyListTile(
                 icon: AppIcons.notifications,
@@ -427,21 +508,23 @@ class HomeOpsPulseSection extends ConsumerWidget {
       children: [
         const HomeSectionHeader(title: 'Ops pulse'),
         const Gap(8),
-        _buildOpsPulseCard(
-          context: context,
-          deploymentsAsync: ref.watch(deploymentsProvider),
-          stacksAsync: ref.watch(stacksProvider),
-          reposAsync: ref.watch(reposProvider),
-          syncsAsync: ref.watch(syncsProvider),
-          buildsAsync: ref.watch(buildsProvider),
-          proceduresAsync: ref.watch(proceduresProvider),
-          actionsAsync: ref.watch(actionsProvider),
-          onNavigate: (row) => _goToResources(
-            context,
-            ref,
-            row.type,
-            problemsOnly: row.statuses.any(
-              (s) => s.tone == HomeOpsTone.failed && s.count > 0,
+        AppSwitcher(
+          child: _buildOpsPulseCard(
+            context: context,
+            deploymentsAsync: ref.watch(deploymentsProvider),
+            stacksAsync: ref.watch(stacksProvider),
+            reposAsync: ref.watch(reposProvider),
+            syncsAsync: ref.watch(syncsProvider),
+            buildsAsync: ref.watch(buildsProvider),
+            proceduresAsync: ref.watch(proceduresProvider),
+            actionsAsync: ref.watch(actionsProvider),
+            onNavigate: (row) => _goToResources(
+              context,
+              ref,
+              row.type,
+              problemsOnly: row.statuses.any(
+                (s) => s.tone == HomeOpsTone.failed && s.count > 0,
+              ),
             ),
           ),
         ),
@@ -472,28 +555,30 @@ Widget _buildOpsPulseCard({
     actionsAsync,
   ];
 
-  final errorValue = asyncValues.cast<AsyncValue<dynamic>>().firstWhere(
-    (value) => value.hasError,
-    orElse: () => const AsyncValue.data(null),
-  );
-
+  // Only a first-load failure (no source has a value) replaces the card;
+  // a source that errors or reloads keeps its previous value.
   final hasAnyValue = asyncValues.any((value) => value.hasValue);
-  final isLoading = asyncValues.any((value) => value.isLoading);
-
-  if (!hasAnyValue && isLoading) {
-    return const HomeLoadingTile();
+  if (!hasAnyValue) {
+    final errorValue = asyncValues.where((value) => value.hasError).firstOrNull;
+    if (errorValue != null) {
+      return HomeErrorTile(
+        key: const ValueKey('home_error'),
+        message: errorValue.error.toString(),
+      );
+    }
+    return const HomeLoadingTile(
+      key: ValueKey('home_loading'),
+      minHeight: 260,
+    );
   }
-  if (errorValue.hasError) {
-    return HomeErrorTile(message: errorValue.error.toString());
-  }
 
-  final deployments = deploymentsAsync.asData?.value ?? <Deployment>[];
-  final stacks = stacksAsync.asData?.value ?? <StackListItem>[];
-  final repos = reposAsync.asData?.value ?? <RepoListItem>[];
-  final syncs = syncsAsync.asData?.value ?? <ResourceSyncListItem>[];
-  final builds = buildsAsync.asData?.value ?? <BuildListItem>[];
-  final procedures = proceduresAsync.asData?.value ?? <ProcedureListItem>[];
-  final actions = actionsAsync.asData?.value ?? <ActionListItem>[];
+  final deployments = deploymentsAsync.value ?? <Deployment>[];
+  final stacks = stacksAsync.value ?? <StackListItem>[];
+  final repos = reposAsync.value ?? <RepoListItem>[];
+  final syncs = syncsAsync.value ?? <ResourceSyncListItem>[];
+  final builds = buildsAsync.value ?? <BuildListItem>[];
+  final procedures = proceduresAsync.value ?? <ProcedureListItem>[];
+  final actions = actionsAsync.value ?? <ActionListItem>[];
 
   final snapshot = buildHomeOpsSnapshot(
     deployments: deployments,

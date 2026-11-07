@@ -6,6 +6,7 @@ import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/error/provider_error.dart';
 import 'package:komodo_go/core/network/app_lifecycle_provider.dart';
 import 'package:komodo_go/core/network/network_status.dart';
+import 'package:komodo_go/core/network/refresh_in_place.dart';
 import 'package:komodo_go/features/stacks/data/models/stack.dart';
 import 'package:komodo_go/features/stacks/data/repositories/stack_repository.dart';
 import 'package:komodo_go/shared/resources/providers/resource_activity_provider.dart';
@@ -18,7 +19,7 @@ part 'stacks_provider.g.dart';
 class Stacks extends _$Stacks {
   @override
   Future<List<StackListItem>> build() async {
-    ref.watch(resourceScopeActivityProvider(ActivityScope.stacks));
+    ref.refreshOnActivity(ActivityScope.stacks);
     final repository = ref.watch(stackRepositoryProvider);
     if (repository == null) {
       return [];
@@ -27,55 +28,91 @@ class Stacks extends _$Stacks {
     final result = await repository.listStacks();
 
     final stacks = unwrapOrThrow(result);
-    final transitioning = stacks
-        .where(
-          (stack) => switch (stack.info.state) {
-            StackState.deploying ||
-            StackState.restarting ||
-            StackState.removing => true,
-            _ => false,
-          },
-        )
-        .toList();
-    if (transitioning.isNotEmpty) {
-      bool canPoll() =>
-          ref.read(appLifecycleProvider) == AppLifecycleState.resumed &&
-          !ref.read(networkStatusProvider).isOffline;
+    ref.onDispose(() {
+      _pollTimer?.cancel();
+      _lifecycleWatched = false; // listeners are closed with the build
+    });
+    _watchLifecycle();
+    _schedulePoll(stacks);
+    return stacks;
+  }
 
-      void refreshTransitioning() {
-        for (final stack in transitioning) {
-          ref
-            ..invalidate(stackDetailProvider(stack.id))
-            ..invalidate(stackServicesProvider(stack.id));
+  Timer? _pollTimer;
+  var _lifecycleWatched = false;
+
+  static bool _isTransitioning(StackListItem stack) =>
+      switch (stack.info.state) {
+        StackState.deploying ||
+        StackState.restarting ||
+        StackState.removing => true,
+        _ => false,
+      };
+
+  bool _canPoll() =>
+      ref.read(appLifecycleProvider) == AppLifecycleState.resumed &&
+      !ref.read(networkStatusProvider).isOffline;
+
+  /// Pause while backgrounded/offline instead of rescheduling forever;
+  /// resume (or reconnect) kicks the poll off again.
+  void _watchLifecycle() {
+    if (_lifecycleWatched) return;
+    _lifecycleWatched = true;
+    ref
+      ..listen(appLifecycleProvider, (previous, next) {
+        if (next == AppLifecycleState.resumed && _canPoll()) {
+          unawaited(pollRefresh());
         }
-        ref.invalidateSelf();
+      })
+      ..listen(networkStatusProvider, (previous, next) {
+        if (previous?.isOffline == true && !next.isOffline && _canPoll()) {
+          unawaited(pollRefresh());
+        }
+      });
+  }
+
+  /// Schedules the next poll tick while any stack is still transitioning.
+  void _schedulePoll(List<StackListItem> stacks) {
+    _pollTimer?.cancel();
+    if (!stacks.any(_isTransitioning)) return;
+    final interval = ref
+        .read(networkStatusProvider)
+        .scaleInterval(const Duration(seconds: 5));
+    if (interval == null) return;
+    _pollTimer = Timer(interval, () {
+      if (_canPoll()) unawaited(pollRefresh());
+    });
+  }
+
+  /// Poll tick for transitioning stacks: refetches the list and applies it
+  /// only if it changed (no loading flicker). Keeps polling while any stack
+  /// is still transitioning. Detail/service providers of transitioning stacks
+  /// are polled the same way (silent, in place).
+  Future<void> pollRefresh() async {
+    final repository = ref.read(stackRepositoryProvider);
+    final previous = state.value;
+    if (repository == null || previous == null || state.isLoading) return;
+    if (!previous.any(_isTransitioning)) return;
+    for (final stack in previous.where(_isTransitioning)) {
+      // Only providers someone is watching; never build them just to poll.
+      if (ref.exists(stackDetailProvider(stack.id))) {
+        unawaited(
+          ref.read(stackDetailProvider(stack.id).notifier).pollRefresh(),
+        );
       }
-
-      // Pause while backgrounded/offline instead of rescheduling forever;
-      // resume (or reconnect) kicks the refresh off again.
-      ref
-        ..listen(appLifecycleProvider, (previous, next) {
-          if (next == AppLifecycleState.resumed && canPoll()) {
-            refreshTransitioning();
-          }
-        })
-        ..listen(networkStatusProvider, (previous, next) {
-          if (previous?.isOffline == true && !next.isOffline && canPoll()) {
-            refreshTransitioning();
-          }
-        });
-
-      final interval = ref
-          .read(networkStatusProvider)
-          .scaleInterval(const Duration(seconds: 5));
-      if (interval != null) {
-        final timer = Timer(interval, () {
-          if (canPoll()) refreshTransitioning();
-        });
-        ref.onDispose(timer.cancel);
+      if (ref.exists(stackServicesProvider(stack.id))) {
+        unawaited(
+          ref.read(stackServicesProvider(stack.id).notifier).pollRefresh(),
+        );
       }
     }
-    return stacks;
+    await refreshInPlace<List<StackListItem>>(
+      current: previous,
+      fetch: () async => unwrapOrThrow(await repository.listStacks()),
+      apply: (value) => state = AsyncData(value),
+      equals: listEq,
+      isMounted: () => ref.mounted,
+    );
+    if (ref.mounted) _schedulePoll(state.value ?? previous);
   }
 
   /// Refreshes the stacks list.
@@ -91,30 +128,64 @@ class Stacks extends _$Stacks {
 
 /// Provides details for a specific stack.
 @riverpod
-Future<KomodoStack?> stackDetail(Ref ref, String stackIdOrName) async {
-  ref.watch(resourceScopeActivityProvider(ActivityScope.stacks));
-  final repository = ref.watch(stackRepositoryProvider);
-  if (repository == null) {
-    return null;
+class StackDetail extends _$StackDetail {
+  @override
+  Future<KomodoStack?> build(String stackIdOrName) async {
+    ref.refreshOnActivity(ActivityScope.stacks);
+    final repository = ref.watch(stackRepositoryProvider);
+    if (repository == null) {
+      return null;
+    }
+
+    final result = await repository.getStack(stackIdOrName);
+
+    return unwrapOrThrow(result);
   }
 
-  final result = await repository.getStack(stackIdOrName);
-
-  return unwrapOrThrow(result);
+  /// Poll tick: updates state only when the stack changed, so watchers do not
+  /// rebuild (or flash a progress bar) on identical data.
+  Future<void> pollRefresh() {
+    final repository = ref.read(stackRepositoryProvider);
+    if (repository == null || state.isLoading) return Future.value();
+    return refreshInPlace<KomodoStack?>(
+      current: state.value,
+      fetch: () async =>
+          unwrapOrThrow(await repository.getStack(stackIdOrName)),
+      apply: (value) => state = AsyncData(value),
+      isMounted: () => ref.mounted,
+    );
+  }
 }
 
 /// Provides services (containers) for a specific stack.
 @riverpod
-Future<List<StackService>> stackServices(Ref ref, String stackIdOrName) async {
-  ref.watch(resourceScopeActivityProvider(ActivityScope.stacks));
-  final repository = ref.watch(stackRepositoryProvider);
-  if (repository == null) {
-    return [];
+class StackServices extends _$StackServices {
+  @override
+  Future<List<StackService>> build(String stackIdOrName) async {
+    ref.refreshOnActivity(ActivityScope.stacks);
+    final repository = ref.watch(stackRepositoryProvider);
+    if (repository == null) {
+      return [];
+    }
+
+    final result = await repository.listStackServices(stackIdOrName);
+
+    return unwrapOrThrow(result);
   }
 
-  final result = await repository.listStackServices(stackIdOrName);
-
-  return unwrapOrThrow(result);
+  /// Poll tick: updates state only when the services changed.
+  Future<void> pollRefresh() {
+    final repository = ref.read(stackRepositoryProvider);
+    if (repository == null || state.isLoading) return Future.value();
+    return refreshInPlace<List<StackService>>(
+      current: state.value,
+      fetch: () async =>
+          unwrapOrThrow(await repository.listStackServices(stackIdOrName)),
+      apply: (value) => state = AsyncData(value),
+      equals: listEq,
+      isMounted: () => ref.mounted,
+    );
+  }
 }
 
 /// Provides a recent log snapshot for a stack.
