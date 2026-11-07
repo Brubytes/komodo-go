@@ -87,6 +87,49 @@ void main() {
         });
       });
 
+      test(
+        'getStack with a malformed field returns a readable ParseFailure',
+        () async {
+          when(() => client.read(any())).thenAnswer(
+            (_) async => <String, dynamic>{
+              'id': 'stack-1',
+              'name': 'web',
+              'config': <String, dynamic>{
+                'server_id': <String, dynamic>{'unexpected': 'object'},
+              },
+            },
+          );
+
+          final result = await repository.getStack('stack-1');
+
+          final failure = result.fold((f) => f, (_) => fail('expected Left'));
+          expect(failure, isA<ParseFailure>());
+          expect(failure.displayMessage, contains('StackConfig.server_id'));
+          expect(failure.displayMessage, isNot(contains('subtype')));
+        },
+      );
+
+      test('listStacks skips a malformed item and returns the rest', () async {
+        when(() => client.read(any())).thenAnswer(
+          (_) async => [
+            {
+              'id': 'stack-1',
+              'name': 'web',
+              'info': <String, dynamic>{'state': 'Running'},
+            },
+            {
+              'id': 'stack-2',
+              'name': 5,
+              'info': <String, dynamic>{},
+            },
+          ],
+        );
+
+        final result = await repository.listStacks();
+
+        expect(_rightOrFail(result).map((s) => s.id), ['stack-1']);
+      });
+
       test('getStack sends GetStack with stack param', () async {
         when(() => client.read(any())).thenAnswer(
           (_) async => <String, dynamic>{

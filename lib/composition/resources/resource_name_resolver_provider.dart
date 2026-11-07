@@ -1,11 +1,13 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/features/actions/data/repositories/action_repository.dart';
+import 'package:komodo_go/features/alerters/data/repositories/alerter_repository.dart';
 import 'package:komodo_go/features/builds/data/repositories/build_repository.dart';
 import 'package:komodo_go/features/deployments/data/repositories/deployment_repository.dart';
 import 'package:komodo_go/features/procedures/data/repositories/procedure_repository.dart';
 import 'package:komodo_go/features/repos/data/repositories/repo_repository.dart';
 import 'package:komodo_go/features/servers/data/repositories/server_repository.dart';
 import 'package:komodo_go/features/stacks/data/repositories/stack_repository.dart';
+import 'package:komodo_go/features/syncs/data/repositories/sync_repository.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
 import 'package:komodo_go/shared/resources/models/resource_ref.dart';
 import 'package:komodo_go/shared/resources/providers/resource_name_resolver_provider.dart';
@@ -55,9 +57,19 @@ Future<String?> _fetchName(Ref ref, ResourceRef resourceRef) async {
       if (repo == null) return null;
       final result = await repo.getAction(resourceRef.id);
       return result.fold((_) => null, (action) => action.name);
-    case ResourceKind.builders:
-    case ResourceKind.alerters:
     case ResourceKind.syncs:
+      final repo = ref.watch(syncRepositoryProvider);
+      if (repo == null) return null;
+      final result = await repo.getSync(resourceRef.id);
+      return result.fold((_) => null, (sync) => sync.name);
+    case ResourceKind.alerters:
+      final repo = ref.watch(alerterRepositoryProvider);
+      if (repo == null) return null;
+      final result = await repo.getAlerterDetail(
+        alerterIdOrName: resourceRef.id,
+      );
+      return result.fold((_) => null, (alerter) => alerter.name);
+    case ResourceKind.builders:
     case ResourceKind.unknown:
       return null;
   }

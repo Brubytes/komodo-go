@@ -64,4 +64,44 @@ void main() {
       },
     );
   }
+
+  testWidgets('additional env files are written as {path, track} objects', (
+    tester,
+  ) async {
+    final key = GlobalKey<StackConfigEditorContentState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: StackConfigEditorContent(
+              key: key,
+              stackIdOrName: 'qa',
+              initialConfig: const StackConfig(
+                additionalEnvFiles: [
+                  StackAdditionalEnvFile(path: 'keep.env', track: false),
+                  StackAdditionalEnvFile(path: 'drop.env'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final state = key.currentState!;
+    expect(
+      state.buildPartialConfigParams(),
+      isNot(contains('additional_env_files')),
+    );
+
+    final fields = state.debugAdditionalEnvFileControllers;
+    expect(fields.map((c) => c.text), ['keep.env', 'drop.env']);
+    fields[1].text = 'new.env';
+
+    expect(state.buildPartialConfigParams()['additional_env_files'], [
+      {'path': 'keep.env', 'track': false},
+      {'path': 'new.env', 'track': true},
+    ]);
+  });
 }

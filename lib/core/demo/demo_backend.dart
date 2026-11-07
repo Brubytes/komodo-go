@@ -1381,7 +1381,7 @@ Map<String, dynamic> _serverItem({
       'send_disk_alerts': true,
       'send_version_mismatch_alerts': true,
       'terminals_disabled': false,
-      'container_exec_disabled': false,
+      'container_terminals_disabled': false,
     },
   };
 }
@@ -2458,7 +2458,7 @@ Map<String, dynamic> _actionDetail({required String? id}) {
       'webhook_secret': '',
       'reload_deno_deps': false,
       'file_contents': '',
-      'arguments_format': 'KeyValue',
+      'arguments_format': 'key_value',
       'arguments': 'service=frontend',
     },
   };
@@ -2755,7 +2755,7 @@ Map<String, dynamic> _systemInformation([String? serverIdOrName]) {
     'host_name': profile.host,
     'cpu_brand': profile.cpuBrand,
     'terminals_disabled': false,
-    'container_exec_disabled': false,
+    'container_terminals_disabled': false,
   };
 }
 

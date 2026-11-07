@@ -8,13 +8,25 @@ import 'package:komodo_go/features/servers/data/models/system_information.dart';
 import 'package:komodo_go/features/servers/data/models/system_stats.dart';
 
 class ServerSystemInfoContent extends StatelessWidget {
-  const ServerSystemInfoContent({required this.info, super.key});
+  const ServerSystemInfoContent({
+    required this.info,
+    this.terminalsDisabled,
+    this.containerTerminalsDisabled,
+    super.key,
+  });
 
   final SystemInformation info;
 
+  /// Access flags from the server list item (`ListServers`). Komodo 2.x does
+  /// not include them in `GetSystemInformation`; when null, [info] is used.
+  final bool? terminalsDisabled;
+  final bool? containerTerminalsDisabled;
+
   @override
   Widget build(BuildContext context) {
-    final isLockedDown = info.terminalsDisabled || info.containerExecDisabled;
+    final terminalsOff = terminalsDisabled ?? info.terminalsDisabled;
+    final execOff = containerTerminalsDisabled ?? info.containerExecDisabled;
+    final isLockedDown = terminalsOff || execOff;
     return DetailResponsiveColumns(
       children: [
         DetailSubCard(
@@ -67,7 +79,7 @@ class ServerSystemInfoContent extends StatelessWidget {
             runSpacing: 8,
             children: [
               StatusPill.onOff(
-                isOn: !info.terminalsDisabled,
+                isOn: !terminalsOff,
                 onLabel: 'Terminal enabled',
                 offLabel: 'Terminal disabled',
                 onIcon: AppIcons.ok,
@@ -75,7 +87,7 @@ class ServerSystemInfoContent extends StatelessWidget {
                 offTone: PillTone.warning,
               ),
               StatusPill.onOff(
-                isOn: !info.containerExecDisabled,
+                isOn: !execOff,
                 onLabel: 'Exec enabled',
                 offLabel: 'Exec disabled',
                 onIcon: AppIcons.ok,

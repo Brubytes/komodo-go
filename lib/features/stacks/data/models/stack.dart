@@ -142,9 +142,13 @@ sealed class StackConfig with _$StackConfig {
     @JsonKey(name: 'files_on_host') @Default(false) bool filesOnHost,
     @JsonKey(name: 'file_paths') @Default([]) List<String> filePaths,
     @JsonKey(name: 'env_file_path') @Default('') String envFilePath,
-    @JsonKey(name: 'additional_env_files')
+    @JsonKey(
+      name: 'additional_env_files',
+      fromJson: stackAdditionalEnvFilesFromJson,
+      toJson: stackAdditionalEnvFilesToJson,
+    )
     @Default([])
-    List<String> additionalEnvFiles,
+    List<StackAdditionalEnvFile> additionalEnvFiles,
     @JsonKey(name: 'config_files')
     @Default([])
     List<StackFileDependency> configFiles,
@@ -164,6 +168,42 @@ sealed class StackConfig with _$StackConfig {
   factory StackConfig.fromJson(Map<String, dynamic> json) =>
       _$StackConfigFromJson(json);
 }
+
+/// Additional env file of the Stack (`StackAdditionalEnvFile` in
+/// `komodo_client`). Older Core versions returned plain path strings.
+@freezed
+sealed class StackAdditionalEnvFile with _$StackAdditionalEnvFile {
+  const factory StackAdditionalEnvFile({
+    @Default('') String path,
+    @Default(true) bool track,
+  }) = _StackAdditionalEnvFile;
+
+  factory StackAdditionalEnvFile.fromJson(Map<String, dynamic> json) =>
+      _$StackAdditionalEnvFileFromJson(json);
+}
+
+/// Lenient parser: accepts legacy strings and 2.x objects, skips the rest.
+List<StackAdditionalEnvFile> stackAdditionalEnvFilesFromJson(Object? value) {
+  if (value is! List) return const [];
+  final result = <StackAdditionalEnvFile>[];
+  for (final entry in value) {
+    if (entry is String) {
+      result.add(StackAdditionalEnvFile(path: entry));
+    } else if (entry is Map) {
+      final path = entry['path'];
+      if (path is! String) continue;
+      final track = entry['track'];
+      result.add(
+        StackAdditionalEnvFile(path: path, track: track is! bool || track),
+      );
+    }
+  }
+  return result;
+}
+
+List<Map<String, dynamic>> stackAdditionalEnvFilesToJson(
+  List<StackAdditionalEnvFile> value,
+) => [for (final f in value) f.toJson()];
 
 /// Additional file dependencies of the Stack (`StackFileDependency` in `komodo_client`).
 @freezed

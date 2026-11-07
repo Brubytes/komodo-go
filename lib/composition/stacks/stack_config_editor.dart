@@ -109,7 +109,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _setRowControllers(_linkControllers, _initial.links);
     _setRowControllers(
       _additionalEnvFileControllers,
-      _initial.additionalEnvFiles,
+      _initial.additionalEnvFiles.map((e) => e.path).toList(),
     );
     _setRowControllers(_filePathControllers, _initial.filePaths);
     _setRowControllers(_ignoreServiceControllers, _initial.ignoreServices);
@@ -361,7 +361,7 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _setRowControllers(_linkControllers, config.links);
     _setRowControllers(
       _additionalEnvFileControllers,
-      config.additionalEnvFiles,
+      config.additionalEnvFiles.map((e) => e.path).toList(),
     );
     _setRowControllers(_filePathControllers, config.filePaths);
     _setRowControllers(_ignoreServiceControllers, config.ignoreServices);
@@ -423,6 +423,10 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     _lastDirty = dirty;
     widget.onDirtyChanged?.call(dirty);
   }
+
+  @visibleForTesting
+  List<TextEditingController> get debugAdditionalEnvFileControllers =>
+      _additionalEnvFileControllers;
 
   Map<String, dynamic> buildPartialConfigParams() {
     final params = <String, dynamic>{};
@@ -549,11 +553,24 @@ class StackConfigEditorContentState extends State<StackConfigEditorContent> {
     setIfChanged('webhook_secret', _webhookSecret.text, _initial.webhookSecret);
 
     setListIfChanged('links', _linkControllers, _initial.links);
-    setListIfChanged(
-      'additional_env_files',
-      _additionalEnvFileControllers,
-      _initial.additionalEnvFiles,
-    );
+    final currentEnvPaths = _additionalEnvFileControllers
+        .map((c) => c.text.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final initialEnvPaths = _initial.additionalEnvFiles
+        .map((e) => e.path.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (!_listEquals(currentEnvPaths, initialEnvPaths)) {
+      // Keep the existing `track` value for paths that were already present.
+      final trackByPath = {
+        for (final f in _initial.additionalEnvFiles) f.path.trim(): f.track,
+      };
+      params['additional_env_files'] = [
+        for (final path in currentEnvPaths)
+          <String, dynamic>{'path': path, 'track': trackByPath[path] ?? true},
+      ];
+    }
     setListIfChanged('file_paths', _filePathControllers, _initial.filePaths);
     setConfigFilesIfChanged('config_files', _initial.configFiles);
     setListIfChanged(

@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/paginated_read.dart';
+import 'package:komodo_go/core/api/parse_list_lenient.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/alerters/data/models/alerter.dart';
@@ -31,11 +32,11 @@ class AlerterRepository {
           ),
           pageSize: options.pageSize,
         );
-        return itemsJson
-            .map(
-              (json) => AlerterListItem.fromJson(json as Map<String, dynamic>),
-            )
-            .toList();
+        return parseListLenient(
+          itemsJson,
+          AlerterListItem.fromJson,
+          label: 'AlerterListItem',
+        );
       },
     );
   }

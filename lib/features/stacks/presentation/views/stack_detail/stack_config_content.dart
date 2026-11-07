@@ -130,7 +130,9 @@ class StackConfigContent extends StatelessWidget {
                 if (config.additionalEnvFiles.isNotEmpty)
                   DetailKeyValueRow(
                     label: 'Extra env',
-                    value: config.additionalEnvFiles.join('\n'),
+                    value: config.additionalEnvFiles
+                        .map((f) => f.track ? f.path : '${f.path} (untracked)')
+                        .join('\n'),
                   ),
                 if (config.filePaths.isNotEmpty)
                   DetailKeyValueRow(

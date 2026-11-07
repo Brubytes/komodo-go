@@ -1,0 +1,178 @@
+{
+ "_id": {
+  "$oid": "6aef181c56835308d22938e1"
+ },
+ "name": "zz-audit-proc",
+ "description": "",
+ "template": false,
+ "tags": [
+  "6aef181156835308d22938b3"
+ ],
+ "info": null,
+ "config": {
+  "stages": [
+   {
+    "name": "s1",
+    "enabled": true,
+    "executions": [
+     {
+      "execution": {
+       "type": "RunBuild",
+       "params": {
+        "build": "6aef181156835308d22938c8"
+       }
+      },
+      "enabled": true
+     },
+     {
+      "execution": {
+       "type": "Deploy",
+       "params": {
+        "deployment": "6aef181256835308d22938d2",
+        "stop_signal": "SIGTERM",
+        "stop_time": 5
+       }
+      },
+      "enabled": false
+     },
+     {
+      "execution": {
+       "type": "DeployStack",
+       "params": {
+        "stack": "6aef181256835308d22938d0",
+        "services": [
+         "web"
+        ],
+        "stop_time": null
+       }
+      },
+      "enabled": true
+     },
+     {
+      "execution": {
+       "type": "Sleep",
+       "params": {
+        "duration_ms": 100
+       }
+      },
+      "enabled": false
+     },
+     {
+      "execution": {
+       "type": "RunAction",
+       "params": {
+        "action": "6aef181c56835308d22938df",
+        "args": {
+         "a": 1
+        }
+       }
+      },
+      "enabled": true
+     },
+     {
+      "execution": {
+       "type": "PullRepo",
+       "params": {
+        "repo": "6aef181256835308d22938ce"
+       }
+      },
+      "enabled": false
+     },
+     {
+      "execution": {
+       "type": "RunSync",
+       "params": {
+        "sync": "6aef181256835308d22938d8",
+        "resource_type": null,
+        "resources": null
+       }
+      },
+      "enabled": true
+     }
+    ]
+   },
+   {
+    "name": "s2",
+    "enabled": false,
+    "executions": [
+     {
+      "execution": {
+       "type": "StartContainer",
+       "params": {
+        "server": "6aef181156835308d22938bc",
+        "container": "c"
+       }
+      },
+      "enabled": true
+     },
+     {
+      "execution": {
+       "type": "PruneImages",
+       "params": {
+        "server": "6aef181156835308d22938bc"
+       }
+      },
+      "enabled": true
+     },
+     {
+      "execution": {
+       "type": "BackupCoreDatabase",
+       "params": {}
+      },
+      "enabled": true
+     },
+     {
+      "execution": {
+       "type": "GlobalAutoUpdate",
+       "params": {
+        "skip_auto_update": false
+       }
+      },
+      "enabled": true
+     },
+     {
+      "execution": {
+       "type": "None",
+       "params": {}
+      },
+      "enabled": true
+     },
+     {
+      "execution": {
+       "type": "BatchDeploy",
+       "params": {
+        "pattern": "zz-*",
+        "tags": []
+       }
+      },
+      "enabled": true
+     },
+     {
+      "execution": {
+       "type": "TestAlerter",
+       "params": {
+        "alerter": "6aef181156835308d22938c0"
+       }
+      },
+      "enabled": true
+     }
+    ]
+   },
+   {
+    "name": "empty",
+    "enabled": true,
+    "executions": []
+   }
+  ],
+  "schedule_format": "Cron",
+  "schedule": "Every day at 03:00",
+  "schedule_enabled": true,
+  "schedule_timezone": "Europe/Berlin",
+  "schedule_alert": true,
+  "failure_alert": true,
+  "webhook_enabled": true,
+  "webhook_secret": "ws"
+ },
+ "base_permission": "None",
+ "updated_at": 1794054172108
+}

@@ -17,7 +17,14 @@ sealed class AlerterDetail with _$AlerterDetail {
     final nested = json['alerter'];
     final nestedMap = nested is Map ? Map<String, dynamic>.from(nested) : null;
     final name = (nestedMap?['name'] ?? json['name'] ?? '').toString().trim();
-    final id = (nestedMap?['id'] ?? json['id'] ?? name).toString().trim();
+    final id =
+        (nestedMap?['id'] ??
+                json['id'] ??
+                _readOid(nestedMap?['_id']) ??
+                _readOid(json['_id']) ??
+                name)
+            .toString()
+            .trim();
     final updatedAt = (json['updated_at'] ?? nestedMap?['updated_at'] ?? '')
         .toString();
     final configRaw = json['config'];
@@ -216,6 +223,12 @@ sealed class AlerterMaintenanceWindow with _$AlerterMaintenanceWindow {
     }
     return out;
   }
+}
+
+/// Reads a Mongo-style `{"$oid": "..."}` id (or a plain string).
+String? _readOid(Object? raw) {
+  if (raw is Map) return raw[r'$oid']?.toString();
+  return raw?.toString();
 }
 
 List<String> _readStringList(Object? v) {

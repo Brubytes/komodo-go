@@ -649,12 +649,7 @@ class ActionConfigEditorContentState extends State<ActionConfigEditorContent> {
     }
 
     if (_argumentsFormat != _initial.argumentsFormat) {
-      params['arguments_format'] = switch (_argumentsFormat) {
-        FileFormat.keyValue => 'KeyValue',
-        FileFormat.toml => 'Toml',
-        FileFormat.yaml => 'Yaml',
-        FileFormat.json => 'Json',
-      };
+      params['arguments_format'] = _argumentsFormat.apiValue;
     }
 
     final arguments = _arguments.text;

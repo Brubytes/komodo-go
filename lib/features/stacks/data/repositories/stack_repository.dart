@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/paginated_read.dart';
+import 'package:komodo_go/core/api/parse_list_lenient.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
@@ -36,9 +37,11 @@ class StackRepository {
           ),
           pageSize: options.pageSize,
         );
-        return stacksJson
-            .map((json) => StackListItem.fromJson(json as Map<String, dynamic>))
-            .toList();
+        return parseListLenient(
+          stacksJson,
+          StackListItem.fromJson,
+          label: 'StackListItem',
+        );
       },
       onUnknown: (error) {
         debugLog('Error parsing stacks', name: 'API', error: error);
@@ -62,9 +65,11 @@ class StackRepository {
           },
         ),
       );
-      return stacksJson
-          .map((json) => StackListItem.fromJson(json as Map<String, dynamic>))
-          .toList();
+      return parseListLenient(
+        stacksJson,
+        StackListItem.fromJson,
+        label: 'StackListItem',
+      );
     });
   }
 
@@ -101,9 +106,11 @@ class StackRepository {
         );
 
         final servicesJson = response as List<dynamic>? ?? [];
-        return servicesJson
-            .map((json) => StackService.fromJson(json as Map<String, dynamic>))
-            .toList();
+        return parseListLenient(
+          servicesJson,
+          StackService.fromJson,
+          label: 'StackService',
+        );
       },
     );
   }
@@ -211,13 +218,11 @@ class StackRepository {
         ),
       );
       final json = response as Map<String, dynamic>;
-      return (json['services'] as List<dynamic>? ?? const [])
-          .map(
-            (item) => StackServiceWithUpdate.fromJson(
-              item as Map<String, dynamic>,
-            ),
-          )
-          .toList();
+      return parseListLenient(
+        json['services'] as List<dynamic>? ?? const [],
+        StackServiceWithUpdate.fromJson,
+        label: 'StackServiceWithUpdate',
+      );
     });
   }
 

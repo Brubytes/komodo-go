@@ -1,6 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/parse_list_lenient.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/providers/data/models/git_provider_account.dart';
@@ -29,12 +30,11 @@ class GitProviderRepository {
       );
 
       final itemsJson = response as List<dynamic>? ?? [];
-      return itemsJson
-          .whereType<Map<dynamic, dynamic>>()
-          .map(
-            (json) => GitProviderAccount.fromJson(json.cast<String, dynamic>()),
-          )
-          .toList();
+      return parseListLenient(
+        itemsJson,
+        GitProviderAccount.fromJson,
+        label: 'GitProviderAccount',
+      );
     });
   }
 

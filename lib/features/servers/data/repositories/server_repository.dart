@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/paginated_read.dart';
+import 'package:komodo_go/core/api/parse_list_lenient.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
@@ -30,9 +31,7 @@ class ServerRepository {
           params: options.params(),
           pageSize: options.pageSize,
         );
-        return serversJson
-            .map((json) => Server.fromJson(json as Map<String, dynamic>))
-            .toList();
+        return parseListLenient(serversJson, Server.fromJson, label: 'Server');
       },
       onUnknown: (error) {
         debugLog('Error parsing servers', name: 'API', error: error);
@@ -108,10 +107,11 @@ class ServerRepository {
           params: {'server': serverIdOrName},
         ),
       );
-      return (response as List<dynamic>? ?? const [])
-          .whereType<Map<String, dynamic>>()
-          .map(SystemProcess.fromJson)
-          .toList(growable: false);
+      return parseListLenient(
+        response as List<dynamic>? ?? const [],
+        SystemProcess.fromJson,
+        label: 'SystemProcess',
+      );
     });
   }
 

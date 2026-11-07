@@ -56,4 +56,104 @@ void main() {
       expect(stack.sourceLabel, 'Git');
     });
   });
+
+  group('StackAdditionalEnvFile', () {
+    test('parses 2.x object entries', () {
+      final config = StackConfig.fromJson({
+        'additional_env_files': [
+          {'path': 'extra.env', 'track': true},
+          {'path': 'local.env', 'track': false},
+        ],
+      });
+      expect(config.additionalEnvFiles, const [
+        StackAdditionalEnvFile(path: 'extra.env'),
+        StackAdditionalEnvFile(path: 'local.env', track: false),
+      ]);
+    });
+
+    test('parses legacy string entries as tracked', () {
+      final config = StackConfig.fromJson({
+        'additional_env_files': ['extra.env'],
+      });
+      expect(config.additionalEnvFiles, const [
+        StackAdditionalEnvFile(path: 'extra.env'),
+      ]);
+    });
+
+    test('skips unparseable entries without throwing', () {
+      final config = StackConfig.fromJson({
+        'additional_env_files': [
+          1,
+          null,
+          {'track': true},
+          {'path': 5},
+          {'path': 'ok.env', 'track': 'yes'},
+        ],
+      });
+      expect(config.additionalEnvFiles, const [
+        StackAdditionalEnvFile(path: 'ok.env'),
+      ]);
+    });
+
+    test('parses a realistic 2.x GetStack payload', () {
+      final stack = KomodoStack.fromJson({
+        '_id': {r'$oid': '695d542f7f312f61ae431362'},
+        'name': 'hello-world',
+        'description': '',
+        'template': false,
+        'tags': <String>[],
+        'info': {
+          'missing_files': <String>[],
+          'deployed_project_name': 'librespeed',
+          'deployed_hash': null,
+          'deployed_message': null,
+          'deployed_contents': [
+            {'path': 'compose.yaml', 'contents': 'services: {}'},
+          ],
+          'deployed_services': [
+            {
+              'service_name': 'hello_world',
+              'container_name': 'librespeed-hello_world',
+              'image': 'hello-world',
+              'image_digest': null,
+            },
+          ],
+          'deployed_config': 'name: librespeed\n',
+          'remote_contents': null,
+          'remote_errors': null,
+          'latest_hash': null,
+          'latest_message': null,
+        },
+        'config': {
+          'swarm_id': '',
+          'server_id': '',
+          'links': ['https://x'],
+          'project_name': '',
+          'auto_pull': true,
+          'run_build': false,
+          'file_paths': ['compose.yaml'],
+          'env_file_path': '.env',
+          'additional_env_files': [
+            {'path': 'extra.env', 'track': true},
+          ],
+          'config_files': [
+            {'path': 'a.conf'},
+          ],
+          'pre_deploy': {'path': '', 'command': '', 'shell_mode': false},
+          'ignore_services': ['x'],
+          'file_contents': 'services: {}',
+          'environment': '',
+        },
+        'base_permission': 'None',
+        'updated_at': 1767724165313,
+      });
+
+      expect(stack.id, '695d542f7f312f61ae431362');
+      expect(stack.config.additionalEnvFiles, const [
+        StackAdditionalEnvFile(path: 'extra.env'),
+      ]);
+      expect(stack.config.configFiles.single.path, 'a.conf');
+      expect(stack.config.filePaths, ['compose.yaml']);
+    });
+  });
 }

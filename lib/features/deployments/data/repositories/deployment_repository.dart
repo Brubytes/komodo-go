@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/paginated_read.dart';
+import 'package:komodo_go/core/api/parse_list_lenient.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
@@ -35,9 +36,11 @@ class DeploymentRepository {
           ),
           pageSize: options.pageSize,
         );
-        return deploymentsJson
-            .map((json) => Deployment.fromJson(json as Map<String, dynamic>))
-            .toList();
+        return parseListLenient(
+          deploymentsJson,
+          Deployment.fromJson,
+          label: 'Deployment',
+        );
       },
       onUnknown: (error) {
         debugLog('Error parsing deployments', name: 'API', error: error);
@@ -60,9 +63,11 @@ class DeploymentRepository {
           },
         ),
       );
-      return deploymentsJson
-          .map((json) => Deployment.fromJson(json as Map<String, dynamic>))
-          .toList();
+      return parseListLenient(
+        deploymentsJson,
+        Deployment.fromJson,
+        label: 'Deployment',
+      );
     });
   }
 

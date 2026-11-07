@@ -1,0 +1,8 @@
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          # Throw CheckedFromJsonException (with class + key) on malformed
+          # fields so parse errors can be reported precisely.
+          checked: true

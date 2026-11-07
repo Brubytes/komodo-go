@@ -1,0 +1,52 @@
+{
+ "_id": {
+  "$oid": "6aef181256835308d22938d4"
+ },
+ "name": "zz-audit-dep-build",
+ "description": "",
+ "template": false,
+ "tags": [
+  "6aef181156835308d22938b3"
+ ],
+ "info": {
+  "latest_image_digest": "",
+  "deployed_name": ""
+ },
+ "config": {
+  "swarm_id": "",
+  "server_id": "697519a44d3b178d5a7e2f84",
+  "custom_name": "",
+  "image": {
+   "type": "Build",
+   "params": {
+    "build_id": "6aef181156835308d22938c8",
+    "version": {
+     "major": 1,
+     "minor": 2,
+     "patch": 3
+    }
+   }
+  },
+  "image_registry_account": "",
+  "skip_secret_interp": false,
+  "redeploy_on_build": false,
+  "poll_for_updates": false,
+  "auto_update": false,
+  "send_alerts": true,
+  "links": [],
+  "network": "bridge",
+  "restart": "on-failure",
+  "command": "",
+  "replicas": 1,
+  "termination_signal": "SIGINT",
+  "termination_timeout": 5,
+  "extra_args": [],
+  "term_signal_labels": "",
+  "ports": "",
+  "volumes": "",
+  "environment": "",
+  "labels": ""
+ },
+ "base_permission": "None",
+ "updated_at": 1794054162483
+}

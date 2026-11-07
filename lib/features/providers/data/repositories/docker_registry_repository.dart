@@ -1,6 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/parse_list_lenient.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/providers/data/models/docker_registry_account.dart';
@@ -32,13 +33,11 @@ class DockerRegistryRepository {
       );
 
       final itemsJson = response as List<dynamic>? ?? [];
-      return itemsJson
-          .whereType<Map<dynamic, dynamic>>()
-          .map(
-            (json) =>
-                DockerRegistryAccount.fromJson(json.cast<String, dynamic>()),
-          )
-          .toList();
+      return parseListLenient(
+        itemsJson,
+        DockerRegistryAccount.fromJson,
+        label: 'DockerRegistryAccount',
+      );
     });
   }
 

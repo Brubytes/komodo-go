@@ -197,6 +197,10 @@ class SyncResourceTarget {
   Map<String, dynamic> toJson() => <String, dynamic>{'type': type, 'id': id};
 }
 
+final _tomlNamePattern = RegExp(r'^name\s*=\s*"([^"]*)"', multiLine: true);
+
+String? _tomlName(String toml) => _tomlNamePattern.firstMatch(toml)?[1];
+
 enum SyncDiffOperation { create, update, delete, unknown }
 
 class SyncDiffData {
@@ -214,6 +218,14 @@ class SyncDiffData {
     final type = json['type']?.toString().toLowerCase();
     final rawData = json['data'];
     final data = rawData is Map ? rawData : json;
+    final proposed = data['proposed']?.toString() ?? '';
+    final current = data['current']?.toString() ?? '';
+    // Update/Delete diffs carry no `name`; it is only inside the TOML.
+    final name =
+        data['name']?.toString() ??
+        _tomlName(proposed) ??
+        _tomlName(current) ??
+        '';
     return SyncDiffData(
       operation: switch (type) {
         'create' => SyncDiffOperation.create,
@@ -221,9 +233,9 @@ class SyncDiffData {
         'delete' => SyncDiffOperation.delete,
         _ => SyncDiffOperation.unknown,
       },
-      name: data['name']?.toString() ?? '',
-      proposed: data['proposed']?.toString() ?? '',
-      current: data['current']?.toString() ?? '',
+      name: name,
+      proposed: proposed,
+      current: current,
     );
   }
 

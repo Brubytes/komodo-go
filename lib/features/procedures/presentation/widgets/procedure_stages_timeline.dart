@@ -28,6 +28,7 @@ const _targetKeys = <String, ResourceKind>{
   'procedure': ResourceKind.procedures,
   'action': ResourceKind.actions,
   'sync': ResourceKind.syncs,
+  'alerter': ResourceKind.alerters,
 };
 
 /// Splits an execution payload into its type and target reference.

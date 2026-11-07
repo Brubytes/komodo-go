@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/paginated_read.dart';
+import 'package:komodo_go/core/api/parse_list_lenient.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
@@ -28,11 +29,11 @@ class ActionRepository {
           params: options.params(),
           pageSize: options.pageSize,
         );
-        return actionsJson
-            .map(
-              (json) => ActionListItem.fromJson(json as Map<String, dynamic>),
-            )
-            .toList();
+        return parseListLenient(
+          actionsJson,
+          ActionListItem.fromJson,
+          label: 'ActionListItem',
+        );
       },
       onUnknown: (error) {
         debugLog('Error parsing actions', name: 'API', error: error);

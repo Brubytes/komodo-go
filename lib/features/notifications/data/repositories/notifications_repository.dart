@@ -1,6 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/parse_list_lenient.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/notifications/data/models/alert.dart';
@@ -47,10 +48,11 @@ class NotificationsRepository {
 
       final map = response.cast<String, dynamic>();
       final alertsJson = (map['alerts'] as List<dynamic>?) ?? <dynamic>[];
-      final alerts = [
-        for (final item in alertsJson)
-          if (item is Map) Alert.fromJson(item.cast<String, dynamic>()),
-      ];
+      final alerts = parseListLenient(
+        alertsJson,
+        Alert.fromJson,
+        label: 'Alert',
+      );
       final nextPage = _readNullableInt(map['next_page']);
       return AlertsPage(alerts: alerts, nextPage: nextPage);
     });
@@ -77,11 +79,11 @@ class NotificationsRepository {
 
       final map = response.cast<String, dynamic>();
       final updatesJson = (map['updates'] as List<dynamic>?) ?? <dynamic>[];
-      final updates = [
-        for (final item in updatesJson)
-          if (item is Map)
-            UpdateListItem.fromJson(item.cast<String, dynamic>()),
-      ];
+      final updates = parseListLenient(
+        updatesJson,
+        UpdateListItem.fromJson,
+        label: 'UpdateListItem',
+      );
       final nextPage = _readNullableInt(map['next_page']);
       return UpdatesPage(updates: updates, nextPage: nextPage);
     });

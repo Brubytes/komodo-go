@@ -1,0 +1,128 @@
+{
+ "_id": {
+  "$oid": "6aef181256835308d22938d0"
+ },
+ "name": "zz-audit-stack",
+ "description": "",
+ "template": false,
+ "tags": [
+  "6aef181156835308d22938b3"
+ ],
+ "info": {
+  "missing_files": [],
+  "deployed_project_name": null,
+  "deployed_hash": null,
+  "deployed_message": null,
+  "deployed_contents": null,
+  "deployed_services": null,
+  "deployed_config": null,
+  "latest_services": [],
+  "remote_contents": [],
+  "remote_errors": [
+   {
+    "path": "Failed at: Clone Repo",
+    "contents": "Cloning into '/repo-cache/git.example.com/org-repo/dev/abc'...\nfatal: unable to access 'http://git.example.com/org/repo/': Could not resolve host: git.example.com\n"
+   }
+  ],
+  "latest_hash": null,
+  "latest_message": null
+ },
+ "config": {
+  "swarm_id": "",
+  "server_id": "697519a44d3b178d5a7e2f84",
+  "links": [
+   "https://s.example.com"
+  ],
+  "project_name": "zzproj",
+  "auto_pull": false,
+  "run_build": true,
+  "poll_for_updates": true,
+  "auto_update": true,
+  "auto_update_all_services": true,
+  "auto_update_skip_services": [
+   "redis"
+  ],
+  "destroy_before_deploy": true,
+  "skip_secret_interp": true,
+  "linked_repo": "",
+  "git_provider": "git.example.com",
+  "git_https": false,
+  "git_account": "gacc",
+  "repo": "org/repo",
+  "branch": "dev",
+  "commit": "abc",
+  "clone_path": "/opt/c",
+  "reclone": true,
+  "webhook_enabled": true,
+  "webhook_secret": "ws",
+  "webhook_force_deploy": true,
+  "files_on_host": false,
+  "run_directory": "sub",
+  "file_paths": [
+   "a.yaml",
+   "b.yaml"
+  ],
+  "env_file_path": ".env",
+  "additional_env_files": [
+   {
+    "path": ".env.a",
+    "track": true
+   },
+   {
+    "path": ".env.b",
+    "track": false
+   }
+  ],
+  "config_files": [
+   {
+    "path": "conf/a.conf",
+    "services": [
+     "web",
+     "db"
+    ],
+    "requires": "Redeploy"
+   },
+   {
+    "path": "conf/b.conf",
+    "requires": "Restart"
+   },
+   {
+    "path": "conf/c.conf",
+    "services": [
+     "x"
+    ]
+   }
+  ],
+  "send_alerts": false,
+  "registry_provider": "ghcr.io",
+  "registry_account": "acc",
+  "pre_deploy": {
+   "path": "./",
+   "command": "echo pre\n",
+   "shell_mode": true
+  },
+  "post_deploy": {
+   "path": "./",
+   "command": "echo post\n",
+   "shell_mode": false
+  },
+  "extra_args": [
+   "--pull",
+   "always"
+  ],
+  "build_extra_args": [
+   "--no-cache"
+  ],
+  "compose_cmd_wrapper": "wrap [[COMPOSE_COMMAND]]",
+  "compose_cmd_wrapper_include": [
+   "up"
+  ],
+  "ignore_services": [
+   "db"
+  ],
+  "file_contents": "services:\n  web:\n    image: nginx\n",
+  "environment": "K=V\n"
+ },
+ "base_permission": "None",
+ "updated_at": 1794054162237
+}

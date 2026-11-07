@@ -21,7 +21,13 @@ sealed class Server with _$Server {
   factory Server.fromJson(Map<String, dynamic> json) => _$ServerFromJson(json);
 
   /// Gets the server address from either info or config.
-  String get address => info?.address ?? config?.address ?? '';
+  /// `GetServer` returns an `info` without an address (only public keys), so
+  /// an empty `info.address` must fall back to the config's address.
+  String get address {
+    final infoAddress = info?.address ?? '';
+    if (infoAddress.isNotEmpty) return infoAddress;
+    return config?.address ?? '';
+  }
 
   /// Gets the server state from info.
   ServerState get state => info?.state ?? ServerState.unknown;
@@ -149,7 +155,10 @@ sealed class ServerInfo with _$ServerInfo {
     @Default(true)
     bool sendVersionMismatchAlerts,
     @JsonKey(name: 'terminals_disabled') @Default(false) bool terminalsDisabled,
-    @JsonKey(name: 'container_exec_disabled')
+    @JsonKey(
+      name: 'container_terminals_disabled',
+      readValue: readContainerTerminalsDisabled,
+    )
     @Default(false)
     bool containerExecDisabled,
   }) = _ServerInfo;
@@ -159,6 +168,13 @@ sealed class ServerInfo with _$ServerInfo {
 }
 
 /// The state of a server.
+/// Komodo 2.x names this flag `container_terminals_disabled`; older Core
+/// versions used `container_exec_disabled`.
+Object? readContainerTerminalsDisabled(
+  Map<dynamic, dynamic> json,
+  String key,
+) => json['container_terminals_disabled'] ?? json['container_exec_disabled'];
+
 enum ServerState { ok, notOk, disabled, unknown }
 
 ServerState _serverStateFromJson(Object? value) {
