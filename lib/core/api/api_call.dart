@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/api/parse_error.dart';
 import 'package:komodo_go/core/error/failures.dart';
+import 'package:komodo_go/core/utils/debug_log.dart';
 
 typedef ApiAction<T> = Future<T> Function();
 typedef ApiExceptionMapper = Failure Function(ApiException error);
@@ -36,6 +38,15 @@ Future<Either<Failure, T>> apiCall<T>(
   } on Object catch (e) {
     if (e is Failure) {
       return Left(e);
+    }
+    final parseFailure = parseFailureFrom(e);
+    if (parseFailure != null) {
+      debugLog(
+        'Unreadable response: ${parseFailure.displayMessage}',
+        name: 'API',
+        error: e,
+      );
+      return Left(parseFailure);
     }
     if (onUnknown != null) {
       return Left(onUnknown(e));

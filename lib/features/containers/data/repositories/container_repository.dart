@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/api_exception.dart';
+import 'package:komodo_go/core/api/parse_list_lenient.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
@@ -32,12 +33,11 @@ class ContainerRepository {
         );
 
         final itemsJson = response as List<dynamic>? ?? [];
-        return itemsJson
-            .map(
-              (json) =>
-                  ContainerListItem.fromJson(json as Map<String, dynamic>),
-            )
-            .toList();
+        return parseListLenient(
+          itemsJson,
+          ContainerListItem.fromJson,
+          label: 'ContainerListItem',
+        );
       } catch (e, stackTrace) {
         if (e is ApiException) rethrow;
         debugLog(

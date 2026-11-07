@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/paginated_read.dart';
+import 'package:komodo_go/core/api/parse_list_lenient.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
@@ -30,9 +31,11 @@ class RepoRepository {
           ),
           pageSize: options.pageSize,
         );
-        return reposJson
-            .map((json) => RepoListItem.fromJson(json as Map<String, dynamic>))
-            .toList();
+        return parseListLenient(
+          reposJson,
+          RepoListItem.fromJson,
+          label: 'RepoListItem',
+        );
       },
       onUnknown: (error) {
         debugLog('Error parsing repos', name: 'API', error: error);

@@ -18,6 +18,10 @@ sealed class Failure with _$Failure {
   /// Authentication failure (invalid credentials, expired token, etc.)
   const factory Failure.auth({String? message}) = AuthFailure;
 
+  /// The server answered, but the response shape could not be decoded.
+  /// [path] names the offending field, e.g. `StackConfig.additional_env_files`.
+  const factory Failure.parse({String? path}) = ParseFailure;
+
   /// Unknown/unexpected error
   const factory Failure.unknown({String? message}) = UnknownFailure;
 }
@@ -28,9 +32,16 @@ extension FailureX on Failure {
     ServerFailure(:final message) => message,
     AuthFailure(:final message) =>
       message ?? 'Authentication failed. Please log in again.',
+    ParseFailure(:final path) => _parseMessage(path),
     UnknownFailure(:final message) =>
       message ?? 'An unexpected error occurred.',
   };
+
+  String _parseMessage(String? path) {
+    final where = path == null || path.isEmpty ? '' : ' ($path)';
+    return "Komodo returned data this app version can't read$where. "
+        'Please update the app or report this.';
+  }
 
   String _networkMessage(String? message) {
     final normalized = message?.trim();

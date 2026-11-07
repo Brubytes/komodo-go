@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
 import 'package:komodo_go/core/api/paginated_read.dart';
+import 'package:komodo_go/core/api/parse_list_lenient.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/core/utils/debug_log.dart';
@@ -28,12 +29,11 @@ class ProcedureRepository {
           params: options.params(),
           pageSize: options.pageSize,
         );
-        return proceduresJson
-            .map(
-              (json) =>
-                  ProcedureListItem.fromJson(json as Map<String, dynamic>),
-            )
-            .toList();
+        return parseListLenient(
+          proceduresJson,
+          ProcedureListItem.fromJson,
+          label: 'ProcedureListItem',
+        );
       },
       onUnknown: (error) {
         debugLog('Error parsing procedures', name: 'API', error: error);

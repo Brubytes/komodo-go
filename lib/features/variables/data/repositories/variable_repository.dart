@@ -1,6 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:komodo_go/core/api/api_call.dart';
 import 'package:komodo_go/core/api/api_client.dart';
+import 'package:komodo_go/core/api/parse_list_lenient.dart';
 import 'package:komodo_go/core/error/failures.dart';
 import 'package:komodo_go/core/providers/dio_provider.dart';
 import 'package:komodo_go/features/variables/data/models/variable.dart';
@@ -20,9 +21,11 @@ class VariableRepository {
       );
 
       final variablesJson = response as List<dynamic>? ?? [];
-      return variablesJson
-          .map((json) => KomodoVariable.fromJson(json as Map<String, dynamic>))
-          .toList();
+      return parseListLenient(
+        variablesJson,
+        KomodoVariable.fromJson,
+        label: 'KomodoVariable',
+      );
     });
   }
 

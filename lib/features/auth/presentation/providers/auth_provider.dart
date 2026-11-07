@@ -218,6 +218,7 @@ class Auth extends _$Auth {
         statusCode: statusCode,
       ),
       AuthFailure() => Failure.auth(message: message),
+      ParseFailure() => Failure.unknown(message: message),
       UnknownFailure() => Failure.unknown(message: message),
     };
   }
