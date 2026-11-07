@@ -1,0 +1,7 @@
+Fixes for Komodo 2.x and calmer refreshing.
+
+• Stacks with extra env files open again
+• Builder settings load and save correctly
+• Refresh keeps content on screen, with Retry on failure
+• New updates wait while you scroll
+• Same filters on every list
