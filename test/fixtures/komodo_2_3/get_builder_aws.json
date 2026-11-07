@@ -1,0 +1,64 @@
+{
+ "_id": {
+  "$oid": "6aef181156835308d22938ba"
+ },
+ "name": "zz-audit-b-aws",
+ "description": "",
+ "template": false,
+ "tags": [
+  "6aef181156835308d22938b3"
+ ],
+ "info": null,
+ "config": {
+  "type": "Aws",
+  "params": {
+   "region": "eu-central-1",
+   "instance_type": "t3.small",
+   "volume_gb": 30,
+   "ami_id": "ami-123",
+   "subnet_id": "subnet-1",
+   "key_pair_name": "kp",
+   "assign_public_ip": true,
+   "use_public_ip": true,
+   "security_group_ids": [
+    "sg-1",
+    "sg-2"
+   ],
+   "user_data": "#!/bin/sh",
+   "port": 8120,
+   "use_https": true,
+   "periphery_public_key": "k",
+   "insecure_tls": true,
+   "git_providers": [
+    {
+     "domain": "git.example.com",
+     "https": true,
+     "accounts": [
+      {
+       "username": "u"
+      }
+     ]
+    }
+   ],
+   "image_registries": [
+    {
+     "domain": "reg.example.com",
+     "accounts": [
+      {
+       "username": "u"
+      }
+     ],
+     "organizations": [
+      "org"
+     ]
+    }
+   ],
+   "secrets": [
+    "S1",
+    "S2"
+   ]
+  }
+ },
+ "base_permission": "None",
+ "updated_at": 1794054161459
+}

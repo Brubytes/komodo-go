@@ -1,0 +1,23 @@
+{
+ "_id": {
+  "$oid": "6aef181156835308d22938b6"
+ },
+ "name": "zz-audit-b-url",
+ "description": "",
+ "template": false,
+ "tags": [
+  "6aef181156835308d22938b3"
+ ],
+ "info": null,
+ "config": {
+  "type": "Url",
+  "params": {
+   "address": "https://builder.example.com:8120",
+   "periphery_public_key": "MCowBQYDK2VuAyEAabc",
+   "insecure_tls": true,
+   "passkey": "pk"
+  }
+ },
+ "base_permission": "None",
+ "updated_at": 1794054161344
+}

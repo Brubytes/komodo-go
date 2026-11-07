@@ -169,8 +169,9 @@ void main() {
         final result = await repository.refreshPending('sync-1');
 
         expect(
+          // Update diffs have no explicit name; it is read from the proposed TOML.
           _rightOrFail(result).info.resourceUpdates.single.name,
-          'stack-1',
+          'new',
         );
         final request = capturedWrite();
         expect(request.type, 'RefreshResourceSyncPending');

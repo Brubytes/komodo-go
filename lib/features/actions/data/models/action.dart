@@ -168,16 +168,19 @@ FileFormat _fileFormatFromJson(Object? value) {
   };
 }
 
-String _fileFormatToJson(FileFormat value) {
-  return switch (value) {
-    FileFormat.keyValue => 'KeyValue',
-    FileFormat.toml => 'Toml',
-    FileFormat.yaml => 'Yaml',
-    FileFormat.json => 'Json',
-  };
-}
+String _fileFormatToJson(FileFormat value) => value.apiValue;
 
 extension FileFormatX on FileFormat {
+  /// Wire value expected by Komodo 2.x (`FileFormat` is `snake_case`).
+  String get apiValue {
+    return switch (this) {
+      FileFormat.keyValue => 'key_value',
+      FileFormat.toml => 'toml',
+      FileFormat.yaml => 'yaml',
+      FileFormat.json => 'json',
+    };
+  }
+
   String get displayName {
     return switch (this) {
       FileFormat.keyValue => 'KeyValue',

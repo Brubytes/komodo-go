@@ -1,0 +1,53 @@
+{
+ "_id": {
+  "$oid": "6aef181156835308d22938c4"
+ },
+ "name": "zz-audit-al-ntfy",
+ "description": "",
+ "template": false,
+ "tags": [
+  "6aef181156835308d22938b3"
+ ],
+ "info": null,
+ "config": {
+  "enabled": true,
+  "endpoint": {
+   "type": "Ntfy",
+   "params": {
+    "url": "https://n.example.com/t",
+    "email": "x@y.z"
+   }
+  },
+  "alert_types": [
+   "BuildFailed"
+  ],
+  "resources": [
+   {
+    "type": "Stack",
+    "id": "zz-audit-stack"
+   }
+  ],
+  "except_resources": [
+   {
+    "type": "Stack",
+    "id": "x"
+   }
+  ],
+  "maintenance_windows": [
+   {
+    "name": "mw",
+    "description": "d",
+    "schedule_type": "Weekly",
+    "day_of_week": "Friday",
+    "date": "",
+    "hour": 1,
+    "minute": 2,
+    "duration_minutes": 3,
+    "timezone": "UTC",
+    "enabled": true
+   }
+  ]
+ },
+ "base_permission": "None",
+ "updated_at": 1794054161755
+}

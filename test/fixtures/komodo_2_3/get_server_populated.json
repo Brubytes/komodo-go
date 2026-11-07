@@ -1,0 +1,84 @@
+{
+ "_id": {
+  "$oid": "6aef181156835308d22938bc"
+ },
+ "name": "zz-audit-server",
+ "description": "",
+ "template": false,
+ "tags": [
+  "6aef181156835308d22938b3"
+ ],
+ "info": {
+  "attempted_public_key": "",
+  "public_key": ""
+ },
+ "config": {
+  "address": "https://periphery.example.com:8120",
+  "insecure_tls": true,
+  "external_address": "ext.example.com",
+  "region": "eu",
+  "enabled": false,
+  "auto_rotate_keys": false,
+  "passkey": "pass",
+  "ignore_mounts": [
+   "/mnt/a",
+   "/mnt/b"
+  ],
+  "auto_prune": false,
+  "links": [
+   "https://example.com"
+  ],
+  "stats_monitoring": false,
+  "send_unreachable_alerts": false,
+  "send_cpu_alerts": false,
+  "send_mem_alerts": false,
+  "send_disk_alerts": false,
+  "send_version_mismatch_alerts": false,
+  "cpu_warning": 55.0,
+  "cpu_critical": 77.0,
+  "mem_warning": 60.0,
+  "mem_critical": 80.0,
+  "disk_warning": 65.0,
+  "disk_critical": 85.0,
+  "maintenance_windows": [
+   {
+    "name": "daily",
+    "description": "dd",
+    "schedule_type": "Daily",
+    "day_of_week": "",
+    "date": "",
+    "hour": 3,
+    "minute": 15,
+    "duration_minutes": 30,
+    "timezone": "Europe/Berlin",
+    "enabled": true
+   },
+   {
+    "name": "weekly",
+    "description": "ww",
+    "schedule_type": "Weekly",
+    "day_of_week": "Monday",
+    "date": "",
+    "hour": 4,
+    "minute": 0,
+    "duration_minutes": 45,
+    "timezone": "UTC",
+    "enabled": false
+   },
+   {
+    "name": "once",
+    "description": "oo",
+    "schedule_type": "OneTime",
+    "day_of_week": "",
+    "date": "2030-01-02",
+    "hour": 5,
+    "minute": 5,
+    "duration_minutes": 10,
+    "timezone": "UTC",
+    "enabled": true
+   }
+  ]
+ },
+ "base_permission": "None",
+ "updated_at": 1794054161517
+}

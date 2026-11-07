@@ -381,7 +381,7 @@ List<String> _stringList(Object? value) {
   return value.map((item) => item.toString()).toList();
 }
 
-enum _ConfigEncoding { externalTagged, map }
+enum _ConfigEncoding { externalTagged, adjacentlyTagged, map }
 
 class _BuilderConfigShape {
   const _BuilderConfigShape({
@@ -402,6 +402,12 @@ class _BuilderConfigShape {
     final nextInner = updateInner(Map<String, dynamic>.from(inner));
     return switch (encoding) {
       _ConfigEncoding.externalTagged => <String, dynamic>{variant: nextInner},
+      // Komodo 2.x: `{"type": "Aws", "params": {...}}`.
+      _ConfigEncoding.adjacentlyTagged => <String, dynamic>{
+        ...raw,
+        'type': variant,
+        'params': nextInner,
+      },
       _ConfigEncoding.map => <String, dynamic>{...raw, ...nextInner},
     };
   }
@@ -412,6 +418,18 @@ _BuilderConfigShape _parseBuilderConfig(
   required String fallbackType,
 }) {
   if (raw is Map<String, dynamic>) {
+    final taggedType = raw['type'];
+    final taggedParams = raw['params'];
+    if (taggedType is String &&
+        taggedType.trim().isNotEmpty &&
+        taggedParams is Map) {
+      return _BuilderConfigShape(
+        variant: taggedType.trim(),
+        raw: raw,
+        inner: Map<String, dynamic>.from(taggedParams),
+        encoding: _ConfigEncoding.adjacentlyTagged,
+      );
+    }
     if (raw.length == 1) {
       final entry = raw.entries.first;
       if (entry.value is Map) {

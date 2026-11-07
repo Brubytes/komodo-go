@@ -340,7 +340,13 @@ class _ServerDetailViewState extends PollingRouteAwareState<ServerDetailView>
                         ? DetailSurface(
                             child: Column(
                               children: [
-                                ServerSystemInfoContent(info: info),
+                                ServerSystemInfoContent(
+                                  info: info,
+                                  terminalsDisabled:
+                                      listServer?.info?.terminalsDisabled,
+                                  containerTerminalsDisabled:
+                                      listServer?.info?.containerExecDisabled,
+                                ),
                                 const Gap(AppSpacing.md),
                                 processesAsync.when(
                                   data: (processes) => SystemProcessesContent(

@@ -1,4 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:komodo_go/features/servers/data/models/server.dart'
+    show readContainerTerminalsDisabled;
 
 part 'system_information.freezed.dart';
 part 'system_information.g.dart';
@@ -16,7 +18,10 @@ sealed class SystemInformation with _$SystemInformation {
     @JsonKey(name: 'host_name') String? hostName,
     @JsonKey(name: 'cpu_brand') @Default('') String cpuBrand,
     @JsonKey(name: 'terminals_disabled') @Default(false) bool terminalsDisabled,
-    @JsonKey(name: 'container_exec_disabled')
+    @JsonKey(
+      name: 'container_terminals_disabled',
+      readValue: readContainerTerminalsDisabled,
+    )
     @Default(false)
     bool containerExecDisabled,
   }) = _SystemInformation;
