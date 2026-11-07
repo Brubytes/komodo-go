@@ -1,1015 +1,169 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:komodo_go/core/async/async_value_x.dart';
+import 'package:komodo_go/composition/resources/resource_tag_options_provider.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/theme/app_tokens.dart';
 import 'package:komodo_go/core/ui/app_icons.dart';
-import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
-import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
 import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
-import 'package:komodo_go/core/widgets/async/refresh_progress_bar.dart';
-import 'package:komodo_go/core/widgets/async/stale_data_banner.dart';
-import 'package:komodo_go/core/widgets/detail/detail_pills.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
-import 'package:komodo_go/core/widgets/empty_error_state.dart';
-import 'package:komodo_go/core/widgets/filters/tag_filter_sheet.dart';
-import 'package:komodo_go/core/widgets/filters/template_filter.dart';
 import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
-import 'package:komodo_go/core/widgets/main_app_bar.dart';
-import 'package:komodo_go/core/widgets/resource_list/resource_batch_sheet.dart';
-import 'package:komodo_go/core/widgets/resource_list/resource_card_support.dart';
-import 'package:komodo_go/core/widgets/resource_list/resource_filter_disclosure.dart';
-import 'package:komodo_go/core/widgets/resource_list/resource_view_controls.dart';
-import 'package:komodo_go/core/widgets/surfaces/app_card_surface.dart';
+import 'package:komodo_go/core/widgets/resource_list/resource_list_view.dart';
 import 'package:komodo_go/features/deployments/data/models/deployment.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_filters_provider.dart';
 import 'package:komodo_go/features/deployments/presentation/providers/deployments_provider.dart';
 import 'package:komodo_go/features/deployments/presentation/widgets/deployment_card.dart';
 import 'package:komodo_go/features/servers/data/models/server.dart';
 import 'package:komodo_go/features/servers/presentation/providers/servers_provider.dart';
-import 'package:komodo_go/features/tags/data/models/tag.dart';
-import 'package:komodo_go/features/tags/presentation/providers/tags_provider.dart';
 import 'package:komodo_go/shared/resources/models/resource_batch.dart';
 import 'package:komodo_go/shared/resources/models/resource_kind.dart';
+import 'package:komodo_go/shared/resources/models/resource_list_config.dart';
 import 'package:komodo_go/shared/resources/resource_sorting.dart';
 
 /// View displaying the list of all deployments.
-class DeploymentsListView extends ConsumerStatefulWidget {
+class DeploymentsListView extends ConsumerWidget {
   const DeploymentsListView({this.selectedId, super.key});
 
   /// Id of the item open in the detail pane, highlighted in the list.
   final String? selectedId;
 
   @override
-  ConsumerState<DeploymentsListView> createState() =>
-      _DeploymentsListViewState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    // The server-name lookup feeds search, the server filter and the cards.
+    final servers = ref.watch(serversProvider).value;
+    return ResourceListView<Deployment>(
+      config: _deploymentsListConfig(_serverNames(servers), servers),
+      selectedId: selectedId,
+    );
+  }
 }
 
-class _DeploymentsListViewState extends ConsumerState<DeploymentsListView> {
-  late final TextEditingController _searchController;
-  late final FocusNode _searchFocusNode;
-  late final ScrollController _scrollController;
-  ProviderSubscription<String>? _searchQuerySubscription;
-  bool _isSearchVisible = false;
-  late final _intro = AppListIntro();
-  bool _areFiltersExpanded = false;
+Map<String, String> _serverNames(List<Server>? servers) => {
+  for (final server in servers ?? const <Server>[]) server.id: server.name,
+};
 
-  /// True while a pull-to-refresh runs, so the thin progress bar does not
-  /// double up with the RefreshIndicator spinner.
-  bool _pulling = false;
-
-  /// Refreshes without touching [_pulling], so the thin progress bar shows
-  /// (used by the stale-data banner's Retry).
-  Future<void> _refresh() =>
-      refreshProviders(ref, [deploymentsProvider.future]);
-
-  /// Pull-to-refresh: the RefreshIndicator spinner is visible, hide the bar.
-  Future<void> _pullRefresh() async {
-    setState(() => _pulling = true);
-    try {
-      await _refresh();
-    } finally {
-      if (mounted) setState(() => _pulling = false);
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController = TextEditingController(
-      text: ref.read(deploymentsSearchQueryProvider),
-    );
-    _searchFocusNode = FocusNode();
-    _scrollController = ListScrollMemory.controllerFor('resources_deployments');
-    _searchQuerySubscription = ref.listenManual<String>(
-      deploymentsSearchQueryProvider,
-      (previous, next) {
-        if (_searchController.text == next) return;
-        final selection = _searchController.selection;
-        _searchController.text = next;
-        _searchController.selection = selection.copyWith(
-          baseOffset: _searchController.text.length,
-          extentOffset: _searchController.text.length,
-        );
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _searchQuerySubscription?.close();
-    _searchQuerySubscription = null;
-    _searchFocusNode.dispose();
-    _scrollController.dispose();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final deploymentsAsync = ref.watch(deploymentsProvider);
-    final actionsState = ref.watch(deploymentActionsProvider);
-    final tagsAsync = ref.watch(tagsProvider);
-    final serversAsync = ref.watch(serversProvider);
-    final searchQuery = ref.watch(deploymentsSearchQueryProvider);
-    final selectedTags = ref.watch(deploymentsTagFilterProvider);
-    final pendingUpdate = ref.watch(deploymentsPendingUpdateFilterProvider);
-    final templateFilter = ref.watch(deploymentsTemplateFilterStateProvider);
-
-    final serverNames = {
-      for (final server in serversAsync.value ?? const <Server>[])
-        server.id: server.name,
-    };
-
-    final tagOptions = [
-      for (final tag in tagsAsync.value ?? const <KomodoTag>[])
-        if (tag.name.trim().isNotEmpty)
-          TagOption(id: tag.id, name: tag.name.trim()),
-    ];
-    final fallbackTags = _collectTags(
-      deploymentsAsync.value ?? const <Deployment>[],
-    ).map((name) => TagOption(id: name, name: name)).toList();
-    final availableTags = tagOptions.isNotEmpty ? tagOptions : fallbackTags;
-    final tagNameById = {for (final tag in availableTags) tag.id: tag.name};
-
-    const listId = 'deployments';
-    final prefs = watchResourceViewPrefs(ref, listId);
-    final activeFilterCount = countActiveResourceFilters(
-      query: searchQuery,
-      selectedTags: selectedTags,
-      problemsOnly: prefs.problemsOnly,
-      selectedStates: prefs.states,
-      selectedServers: prefs.servers,
-      extra:
-          (pendingUpdate ? 1 : 0) +
-          (templateFilter == TemplateFilter.exclude ? 0 : 1),
-    );
-    final loadedItems = deploymentsAsync.value ?? <Deployment>[];
-    final stateOptions = collectDistinct<Deployment>(loadedItems, _stateLabel);
-    final serverOptions = collectDistinct<Deployment>(
-      loadedItems,
-      (i) => _serverNameOf(i, serverNames),
-    );
-    void clearAllFilters() {
-      _searchController.clear();
-      ref.read(deploymentsSearchQueryProvider.notifier).query = '';
-      ref.read(deploymentsTagFilterProvider.notifier).clear();
-      ref.read(deploymentsTemplateFilterStateProvider.notifier).value =
-          TemplateFilter.exclude;
-      ref.read(deploymentsPendingUpdateFilterProvider.notifier).enabled = false;
-      clearResourceViewFilters(ref, listId);
-    }
-
-    final panelCollapsed = !_isSearchVisible || !_areFiltersExpanded;
-
-    return Scaffold(
-      appBar: MainAppBar(
-        title: 'Deployments',
-        icon: AppIcons.deployments,
-        markColor: AppTokens.resourceDeployments,
-        markUseGradient: true,
-        centerTitle: true,
-        actions: [
-          ResourceFilterToggleButton(
-            visible: _isSearchVisible,
-            activeCount: activeFilterCount,
-            onPressed: () {
-              setState(() => _isSearchVisible = !_isSearchVisible);
-              if (_isSearchVisible) {
-                Future<void>.delayed(const Duration(milliseconds: 50), () {
-                  if (context.mounted) _searchFocusNode.requestFocus();
-                });
-              } else {
-                FocusManager.instance.primaryFocus?.unfocus();
-              }
-            },
-          ),
-          ResourceListActionsMenu(
-            kind: ResourceKind.deployments,
-            items: [
-              for (final item in loadedItems)
-                ResourceBatchItem(id: item.id, name: item.name),
-            ],
-            onCreate: () => context.openDetail('${AppRoutes.deployments}/new'),
-            onRefresh: _pullRefresh,
-            onBatchCompleted: () => ref.invalidate(deploymentsProvider),
-          ),
-        ],
+ResourceListConfig<Deployment> _deploymentsListConfig(
+  Map<String, String> serverNames,
+  List<Server>? servers,
+) {
+  return ResourceListConfig<Deployment>(
+    kind: ResourceKind.deployments,
+    title: 'Deployments',
+    resourceName: 'deployments',
+    icon: AppIcons.deployments,
+    markColor: AppTokens.resourceDeployments,
+    searchFieldKey: const ValueKey('deployments_search'),
+    skeletonTitle: 'Deployment name',
+    skeletonSubtitle: 'registry/image:latest',
+    skeletonChipLeft: 'Server',
+    derivationKey: servers,
+    watchList: (ref) => ref.watch(deploymentsProvider),
+    watchTagOptions: (ref) => ref.watch(resourceTagOptionsProvider),
+    refreshList: (ref) => refreshProviders(ref, [deploymentsProvider.future]),
+    invalidateList: (ref) => ref.invalidate(deploymentsProvider),
+    watchActionsState: (ref) => ref.watch(deploymentActionsProvider),
+    isTemplate: (item) => item.template,
+    tagsOf: (item) => item.tags,
+    searchFieldsOf: (item) => [
+      item.name,
+      item.imageLabel,
+      serverNames[item.info?.serverId] ?? '',
+    ],
+    nameOf: (item) => item.name,
+    idOf: (item) => item.id,
+    severityOf: _severityOf,
+    stateLabelOf: _stateLabel,
+    serverNameOf: (item) => _serverNameOf(item, serverNames),
+    batchItemOf: (item) => ResourceBatchItem(id: item.id, name: item.name),
+    onCreate: (context) => context.openDetail('${AppRoutes.deployments}/new'),
+    extraFilters: [
+      ResourceToggleFilter<Deployment>(
+        label: 'Pending updates',
+        activeLabel: 'Pending updates',
+        icon: AppIcons.updateAvailable,
+        watchEnabled: (ref) =>
+            ref.watch(deploymentsPendingUpdateFilterProvider),
+        setEnabled: (ref, {required enabled}) =>
+            ref.read(deploymentsPendingUpdateFilterProvider.notifier).enabled =
+                enabled,
+        matches: (item) => item.info?.updateAvailable ?? false,
       ),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: _pullRefresh,
-            child: CustomScrollView(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                // Header: filters and search
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        AppSwitcher(
-                          child: _isSearchVisible
-                              ? Column(
-                                  key: const ValueKey(
-                                    'resource_search_and_filters',
-                                  ),
-                                  children: [
-                                    _SearchField(
-                                      focusNode: _searchFocusNode,
-                                      controller: _searchController,
-                                      onChanged: (value) =>
-                                          ref
-                                                  .read(
-                                                    deploymentsSearchQueryProvider
-                                                        .notifier,
-                                                  )
-                                                  .query =
-                                              value,
-                                      onClear: () {
-                                        _searchController.clear();
-                                        ref
-                                                .read(
-                                                  deploymentsSearchQueryProvider
-                                                      .notifier,
-                                                )
-                                                .query =
-                                            '';
-                                      },
-                                    ),
-                                    const Gap(10),
-                                    ResourceFilterDisclosure(
-                                      expanded: _areFiltersExpanded,
-                                      activeFilterCount: activeFilterCount,
-                                      onExpansionChanged: (value) => setState(
-                                        () => _areFiltersExpanded = value,
-                                      ),
-                                      child: _FiltersPanel(
-                                        viewSection: ResourceViewFiltersSection(
-                                          listId: listId,
-                                          stateOptions: stateOptions,
-                                          serverOptions: serverOptions,
-                                        ),
-
-                                        pendingUpdate: pendingUpdate,
-                                        templateFilter: templateFilter,
-                                        selectedTags: selectedTags,
-                                        availableTags: availableTags,
-                                        tagNameById: tagNameById,
-                                        onPendingUpdateChanged: (value) =>
-                                            ref
-                                                    .read(
-                                                      deploymentsPendingUpdateFilterProvider
-                                                          .notifier,
-                                                    )
-                                                    .enabled =
-                                                value,
-                                        onTemplateFilterChanged: (value) =>
-                                            ref
-                                                    .read(
-                                                      deploymentsTemplateFilterStateProvider
-                                                          .notifier,
-                                                    )
-                                                    .value =
-                                                value,
-                                        onSelectTags: (value) =>
-                                            ref
-                                                    .read(
-                                                      deploymentsTagFilterProvider
-                                                          .notifier,
-                                                    )
-                                                    .selected =
-                                                value,
-                                        onClearTags: () => ref
-                                            .read(
-                                              deploymentsTagFilterProvider
-                                                  .notifier,
-                                            )
-                                            .clear(),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                        if (activeFilterCount > 0 && panelCollapsed) ...[
-                          const Gap(8),
-                          ResourceActiveFilterChips(
-                            listId: listId,
-                            onClearAll: clearAllFilters,
-                            extraChips: [
-                              if (searchQuery.trim().isNotEmpty)
-                                ActiveFilterChip(
-                                  label: 'Search: ${searchQuery.trim()}',
-                                  onRemove: () {
-                                    _searchController.clear();
-                                    ref
-                                            .read(
-                                              deploymentsSearchQueryProvider
-                                                  .notifier,
-                                            )
-                                            .query =
-                                        '';
-                                  },
-                                ),
-                              for (final tag in selectedTags)
-                                ActiveFilterChip(
-                                  label: 'Tag: ${tagNameById[tag] ?? tag}',
-                                  onRemove: () => ref
-                                      .read(
-                                        deploymentsTagFilterProvider.notifier,
-                                      )
-                                      .toggle(tag),
-                                ),
-                              if (pendingUpdate)
-                                ActiveFilterChip(
-                                  label: 'Pending updates',
-                                  onRemove: () =>
-                                      ref
-                                              .read(
-                                                deploymentsPendingUpdateFilterProvider
-                                                    .notifier,
-                                              )
-                                              .enabled =
-                                          false,
-                                ),
-                              if (templateFilter != TemplateFilter.exclude)
-                                ActiveFilterChip(
-                                  label: templateFilter == TemplateFilter.only
-                                      ? 'Only templates'
-                                      : 'With templates',
-                                  onRemove: () =>
-                                      ref
-                                          .read(
-                                            deploymentsTemplateFilterStateProvider
-                                                .notifier,
-                                          )
-                                          .value = TemplateFilter
-                                          .exclude,
-                                ),
-                            ],
-                          ),
-                        ],
-                        const Gap(12),
-                      ],
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: RefreshProgressBar(
-                    active: deploymentsAsync.isBackgroundRefresh && !_pulling,
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: StaleDataBanner(
-                    visible: deploymentsAsync.hasStaleError,
-                    error: deploymentsAsync.error,
-                    onRetry: () => unawaited(_refresh()),
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  ),
-                ),
-                // Deployment list (virtualized)
-                deploymentsAsync.when(
-                  skipLoadingOnRefresh: true,
-                  skipLoadingOnReload: true,
-                  skipError: true,
-                  data: (deployments) {
-                    final searched = _applyFilters(
-                      deployments,
-                      query: searchQuery,
-                      selectedTags: selectedTags,
-                      pendingUpdate: pendingUpdate,
-                      templateFilter: templateFilter,
-                      serverNames: serverNames,
-                      tagNameById: tagNameById,
-                    );
-
-                    final filtered = prefs.process<Deployment>(
-                      searched,
-                      severityOf: _severityOf,
-                      nameOf: (item) => item.name,
-                      stateLabelOf: _stateLabel,
-                      serverNameOf: (item) => _serverNameOf(item, serverNames),
-                    );
-                    if (filtered.isEmpty) {
-                      return SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: _EmptyState(
-                          hasFilters:
-                              _hasActiveFilters(
-                                query: searchQuery,
-                                selectedTags: selectedTags,
-                                pendingUpdate: pendingUpdate,
-                                templateFilter: templateFilter,
-                              ) ||
-                              prefs.activeCount > 0,
-                          onClearFilters: () {
-                            clearResourceViewFilters(ref, listId);
-                            _searchController.clear();
-                            ref
-                                    .read(
-                                      deploymentsSearchQueryProvider.notifier,
-                                    )
-                                    .query =
-                                '';
-                            ref
-                                .read(deploymentsTagFilterProvider.notifier)
-                                .clear();
-                            ref
-                                    .read(
-                                      deploymentsPendingUpdateFilterProvider
-                                          .notifier,
-                                    )
-                                    .enabled =
-                                false;
-                            ref
-                                    .read(
-                                      deploymentsTemplateFilterStateProvider
-                                          .notifier,
-                                    )
-                                    .value =
-                                TemplateFilter.exclude;
-                          },
-                          tagOptions: availableTags,
-                          onSelectTags: (value) =>
-                              ref
-                                      .read(
-                                        deploymentsTagFilterProvider.notifier,
-                                      )
-                                      .selected =
-                                  value,
-                        ),
-                      );
-                    }
-
-                    return SliverPadding(
-                      padding: EdgeInsets.fromLTRB(
-                        16,
-                        0,
-                        16,
-                        28 + MediaQuery.paddingOf(context).bottom,
-                      ),
-                      sliver: SliverList.separated(
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, _) => const Gap(12),
-                        itemBuilder: (context, i) {
-                          final deployment = filtered[i];
-                          return _intro.wrap(
-                            i,
-                            id: deployment.id,
-                            SelectionHighlight(
-                              selected: deployment.id == widget.selectedId,
-                              child: DeploymentCard(
-                                deployment: deployment,
-                                serverName:
-                                    serverNames[deployment.info?.serverId],
-                                displayTags: _displayTags(
-                                  deployment.tags,
-                                  tagNameById,
-                                ),
-                                onTap: () => context.openDetail(
-                                  '${AppRoutes.deployments}/${deployment.id}?name=${Uri.encodeComponent(deployment.name)}',
-                                ),
-                                onAction: (action) => _handleAction(
-                                  context,
-                                  ref,
-                                  deployment.id,
-                                  deployment.name,
-                                  action,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                  loading: () => const SliverPadding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    sliver: _DeploymentsSkeletonSliver(),
-                  ),
-                  error: (error, stack) => SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: ErrorStateView.fromError(
-                      title: 'Failed to load deployments',
-                      error: error,
-                      onRetry: () => ref.invalidate(deploymentsProvider),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ActionBusyOverlay(busy: actionsState.isLoading),
-        ],
+    ],
+    cardBuilder: (context, ref, item, displayTags) => DeploymentCard(
+      deployment: item,
+      serverName: serverNames[item.info?.serverId],
+      displayTags: displayTags,
+      onTap: () => context.openDetail(
+        '${AppRoutes.deployments}/${item.id}?name=${Uri.encodeComponent(item.name)}',
       ),
+      onAction: (action) =>
+          _handleDeploymentAction(context, ref, item.id, item.name, action),
+    ),
+  );
+}
+
+Future<void> _handleDeploymentAction(
+  BuildContext context,
+  WidgetRef ref,
+  String deploymentId,
+  String deploymentName,
+  DeploymentAction action,
+) async {
+  if (action == DeploymentAction.destroy || action == DeploymentAction.stop) {
+    final destroy = action == DeploymentAction.destroy;
+    final confirmed = await confirmDestructive(
+      context,
+      title: destroy ? 'Destroy $deploymentName?' : 'Stop $deploymentName?',
+      message: destroy
+          ? 'This will stop and remove the container of "$deploymentName".'
+          : 'This will stop the container of "$deploymentName".',
+      confirmLabel: destroy ? 'Destroy' : 'Stop',
+    );
+    if (!confirmed) return;
+    if (!context.mounted) return;
+  }
+
+  final actions = ref.read(deploymentActionsProvider.notifier);
+  if (action == DeploymentAction.checkUpdates) {
+    final available = await actions.checkForUpdate(deploymentId);
+    if (!context.mounted) return;
+    ref.invalidate(deploymentsProvider);
+    AppSnackBar.show(
+      context,
+      available == null
+          ? 'Image check failed. Please try again.'
+          : available
+          ? 'A newer image is available.'
+          : 'The deployed image is up to date.',
+      tone: available == null
+          ? AppSnackBarTone.error
+          : available
+          ? AppSnackBarTone.warning
+          : AppSnackBarTone.success,
+    );
+    return;
+  }
+  final success = await switch (action) {
+    DeploymentAction.checkUpdates => Future<bool>.value(false),
+    DeploymentAction.deploy => actions.deploy(deploymentId),
+    DeploymentAction.pullImages => actions.pullImages(deploymentId),
+    DeploymentAction.start => actions.start(deploymentId),
+    DeploymentAction.stop => actions.stop(deploymentId),
+    DeploymentAction.restart => actions.restart(deploymentId),
+    DeploymentAction.pause => actions.pause(deploymentId),
+    DeploymentAction.unpause => actions.unpause(deploymentId),
+    DeploymentAction.destroy => actions.destroy(deploymentId),
+  };
+
+  if (context.mounted) {
+    AppSnackBar.show(
+      context,
+      success
+          ? 'Action submitted. Check updates for the result.'
+          : 'Action failed. Please try again.',
+      tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
     );
   }
-
-  Future<void> _handleAction(
-    BuildContext context,
-    WidgetRef ref,
-    String deploymentId,
-    String deploymentName,
-    DeploymentAction action,
-  ) async {
-    if (action == DeploymentAction.destroy || action == DeploymentAction.stop) {
-      final destroy = action == DeploymentAction.destroy;
-      final confirmed = await confirmDestructive(
-        context,
-        title: destroy ? 'Destroy $deploymentName?' : 'Stop $deploymentName?',
-        message: destroy
-            ? 'This will stop and remove the container of "$deploymentName".'
-            : 'This will stop the container of "$deploymentName".',
-        confirmLabel: destroy ? 'Destroy' : 'Stop',
-      );
-      if (!confirmed) return;
-      if (!context.mounted) return;
-    }
-
-    final actions = ref.read(deploymentActionsProvider.notifier);
-    if (action == DeploymentAction.checkUpdates) {
-      final available = await actions.checkForUpdate(deploymentId);
-      if (!context.mounted) return;
-      ref.invalidate(deploymentsProvider);
-      AppSnackBar.show(
-        context,
-        available == null
-            ? 'Image check failed. Please try again.'
-            : available
-            ? 'A newer image is available.'
-            : 'The deployed image is up to date.',
-        tone: available == null
-            ? AppSnackBarTone.error
-            : available
-            ? AppSnackBarTone.warning
-            : AppSnackBarTone.success,
-      );
-      return;
-    }
-    final success = await switch (action) {
-      DeploymentAction.checkUpdates => Future<bool>.value(false),
-      DeploymentAction.deploy => actions.deploy(deploymentId),
-      DeploymentAction.pullImages => actions.pullImages(deploymentId),
-      DeploymentAction.start => actions.start(deploymentId),
-      DeploymentAction.stop => actions.stop(deploymentId),
-      DeploymentAction.restart => actions.restart(deploymentId),
-      DeploymentAction.pause => actions.pause(deploymentId),
-      DeploymentAction.unpause => actions.unpause(deploymentId),
-      DeploymentAction.destroy => actions.destroy(deploymentId),
-    };
-
-    if (context.mounted) {
-      AppSnackBar.show(
-        context,
-        success
-            ? 'Action submitted. Check updates for the result.'
-            : 'Action failed. Please try again.',
-        tone: success ? AppSnackBarTone.success : AppSnackBarTone.error,
-      );
-    }
-  }
-}
-
-class _FiltersPanel extends StatelessWidget {
-  const _FiltersPanel({
-    required this.viewSection,
-    required this.pendingUpdate,
-    required this.templateFilter,
-    required this.selectedTags,
-    required this.availableTags,
-    required this.tagNameById,
-    required this.onPendingUpdateChanged,
-    required this.onTemplateFilterChanged,
-    required this.onSelectTags,
-    required this.onClearTags,
-  });
-
-  final Widget viewSection;
-  final bool pendingUpdate;
-  final TemplateFilter templateFilter;
-  final Set<String> selectedTags;
-  final List<TagOption> availableTags;
-  final Map<String, String> tagNameById;
-  final ValueChanged<bool> onPendingUpdateChanged;
-  final ValueChanged<TemplateFilter> onTemplateFilterChanged;
-  final ValueChanged<Set<String>> onSelectTags;
-  final VoidCallback onClearTags;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final tagLabel = selectedTags.isEmpty
-        ? 'Tags'
-        : 'Tags (${selectedTags.length})';
-    final templateLabel = switch (templateFilter) {
-      TemplateFilter.exclude => 'Exclude',
-      TemplateFilter.include => 'Include',
-      TemplateFilter.only => 'Only',
-    };
-
-    return AppCardSurface(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          viewSection,
-          _FilterRow(
-            icon: AppIcons.updateAvailable,
-            label: 'Pending updates',
-            trailing: Switch.adaptive(
-              value: pendingUpdate,
-              onChanged: onPendingUpdateChanged,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
-          Divider(
-            height: 20,
-            color: scheme.outlineVariant.withValues(alpha: .35),
-          ),
-          _FilterRow(
-            icon: AppIcons.factory,
-            label: 'Templates',
-            trailing: PopupMenuButton<TemplateFilter>(
-              onSelected: onTemplateFilterChanged,
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: TemplateFilter.exclude,
-                  child: Text('Exclude templates'),
-                ),
-                PopupMenuItem(
-                  value: TemplateFilter.include,
-                  child: Text('Include templates'),
-                ),
-                PopupMenuItem(
-                  value: TemplateFilter.only,
-                  child: Text('Only templates'),
-                ),
-              ],
-              child: _FilterValueButton(
-                label: templateLabel,
-                icon: Icons.expand_more,
-              ),
-            ),
-          ),
-          Divider(
-            height: 20,
-            color: scheme.outlineVariant.withValues(alpha: .35),
-          ),
-          _FilterRow(
-            icon: AppIcons.tag,
-            label: tagLabel,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _FilterValueButton(
-                  label: 'Select',
-                  icon: Icons.tune,
-                  onPressed: () async {
-                    final next = await TagFilterSheet.show(
-                      context,
-                      availableTags: availableTags,
-                      selected: selectedTags,
-                      resourceName: 'deployments',
-                    );
-                    if (next != null) {
-                      onSelectTags(next);
-                    }
-                  },
-                ),
-                if (selectedTags.isNotEmpty) ...[
-                  const Gap(6),
-                  IconButton(
-                    tooltip: 'Clear tags',
-                    icon: const Icon(AppIcons.close),
-                    onPressed: onClearTags,
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (selectedTags.isNotEmpty) ...[
-            const Gap(8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _buildSelectedTagPills(selectedTags, tagNameById),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildSelectedTagPills(
-    Set<String> tags,
-    Map<String, String> tagNameById,
-  ) {
-    final labels = [for (final tag in tags) tagNameById[tag] ?? tag]..sort();
-    final capped = labels.take(6).toList();
-    final remaining = labels.length - capped.length;
-    return [
-      for (final tag in capped) TextPill(label: tag),
-      if (remaining > 0) ValuePill(label: 'More', value: '+$remaining'),
-    ];
-  }
-}
-
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({
-    required this.icon,
-    required this.label,
-    required this.trailing,
-  });
-
-  final IconData icon;
-  final String label;
-  final Widget trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: scheme.onSurfaceVariant),
-        const Gap(8),
-        Expanded(
-          child: Text(
-            label,
-            style: textTheme.bodyMedium?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-        trailing,
-      ],
-    );
-  }
-}
-
-class _FilterValueButton extends StatelessWidget {
-  const _FilterValueButton({
-    required this.label,
-    required this.icon,
-    this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark
-        ? scheme.surfaceContainerHigh
-        : scheme.surfaceContainerHighest;
-
-    return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface,
-                ),
-              ),
-              const Gap(6),
-              Icon(icon, size: 16, color: scheme.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SearchField extends StatelessWidget {
-  const _SearchField({
-    required this.focusNode,
-    required this.controller,
-    required this.onChanged,
-    required this.onClear,
-  });
-
-  final FocusNode focusNode;
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      key: const ValueKey('deployments_search'),
-      focusNode: focusNode,
-      controller: controller,
-      onChanged: onChanged,
-      textInputAction: TextInputAction.search,
-      decoration: InputDecoration(
-        labelText: 'Search',
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: controller.text.trim().isEmpty
-            ? null
-            : IconButton(
-                tooltip: 'Clear',
-                icon: const Icon(Icons.close),
-                onPressed: onClear,
-              ),
-      ),
-    );
-  }
-}
-
-/// Sliver version of skeleton list for use in CustomScrollView.
-class _DeploymentsSkeletonSliver extends StatelessWidget {
-  const _DeploymentsSkeletonSliver();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SliverToBoxAdapter(
-      child: ResourceCardSkeletonList(
-        title: 'Deployment name',
-        subtitle: 'registry/image:latest',
-        metaLeft: 'Server',
-        padding: EdgeInsets.zero,
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({
-    required this.hasFilters,
-    required this.onClearFilters,
-    required this.tagOptions,
-    required this.onSelectTags,
-  });
-
-  final bool hasFilters;
-  final VoidCallback onClearFilters;
-  final List<TagOption> tagOptions;
-  final ValueChanged<Set<String>> onSelectTags;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-    final message = hasFilters
-        ? 'No deployments match your filters.'
-        : 'Create deployments in the Komodo web interface.';
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              AppIcons.deployments,
-              size: 64,
-              color: scheme.primary.withValues(alpha: 0.5),
-            ),
-            const Gap(16),
-            Text('No deployments found', style: textTheme.titleMedium),
-            const Gap(8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: textTheme.bodyMedium?.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-            if (hasFilters) ...[
-              const Gap(16),
-              FilledButton(
-                onPressed: onClearFilters,
-                child: const Text('Clear filters'),
-              ),
-            ],
-            if (!hasFilters && tagOptions.isNotEmpty) ...[
-              const Gap(16),
-              OutlinedButton.icon(
-                icon: const Icon(AppIcons.tag),
-                label: const Text('Filter by tag'),
-                onPressed: () async {
-                  final next = await TagFilterSheet.show(
-                    context,
-                    availableTags: tagOptions,
-                    selected: const <String>{},
-                    resourceName: 'deployments',
-                  );
-                  if (next != null) {
-                    onSelectTags(next);
-                  }
-                },
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-List<Deployment> _applyFilters(
-  List<Deployment> deployments, {
-  required String query,
-  required Set<String> selectedTags,
-  required bool pendingUpdate,
-  required TemplateFilter templateFilter,
-  required Map<String, String> serverNames,
-  required Map<String, String> tagNameById,
-}) {
-  final normalizedQuery = query.trim().toLowerCase();
-  final normalizedTags = selectedTags
-      .map((tag) => tag.trim().toLowerCase())
-      .where((tag) => tag.isNotEmpty)
-      .toSet();
-
-  return deployments.where((deployment) {
-    if (pendingUpdate && !(deployment.info?.updateAvailable ?? false)) {
-      return false;
-    }
-    switch (templateFilter) {
-      case TemplateFilter.exclude:
-        if (deployment.template) return false;
-      case TemplateFilter.only:
-        if (!deployment.template) return false;
-      case TemplateFilter.include:
-        break;
-    }
-
-    if (normalizedTags.isNotEmpty) {
-      final tagMatches = deployment.tags.any(
-        (tag) => normalizedTags.contains(tag.trim().toLowerCase()),
-      );
-      if (!tagMatches) return false;
-    }
-
-    if (normalizedQuery.isEmpty) return true;
-
-    final name = deployment.name.toLowerCase();
-    final image = deployment.imageLabel.toLowerCase();
-    final serverName = (serverNames[deployment.info?.serverId] ?? '')
-        .toLowerCase();
-    final displayTags = _displayTags(deployment.tags, tagNameById);
-    final tagMatch = displayTags.any(
-      (tag) => tag.trim().toLowerCase().contains(normalizedQuery),
-    );
-
-    return name.contains(normalizedQuery) ||
-        image.contains(normalizedQuery) ||
-        serverName.contains(normalizedQuery) ||
-        tagMatch;
-  }).toList();
-}
-
-bool _hasActiveFilters({
-  required String query,
-  required Set<String> selectedTags,
-  required bool pendingUpdate,
-  required TemplateFilter templateFilter,
-}) {
-  return query.trim().isNotEmpty ||
-      selectedTags.isNotEmpty ||
-      pendingUpdate ||
-      templateFilter != TemplateFilter.exclude;
-}
-
-List<String> _collectTags(List<Deployment> deployments) {
-  final tags = <String>{};
-  for (final deployment in deployments) {
-    for (final tag in deployment.tags) {
-      if (tag.trim().isNotEmpty) {
-        tags.add(tag.trim());
-      }
-    }
-  }
-  final sorted = tags.toList()..sort();
-  return sorted;
-}
-
-List<String> _displayTags(List<String> tags, Map<String, String> tagNameById) {
-  if (tags.isEmpty) return const [];
-  return [for (final tag in tags) tagNameById[tag] ?? tag];
 }
 
 int _severityOf(Deployment deployment) {

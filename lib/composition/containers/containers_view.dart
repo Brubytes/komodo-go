@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:komodo_go/composition/containers/containers_provider.dart';
-import 'package:komodo_go/core/async/async_value_x.dart';
 import 'package:komodo_go/core/router/app_router.dart';
 import 'package:komodo_go/core/router/polling_route_aware_state.dart';
 import 'package:komodo_go/core/router/shell_state_provider.dart';
@@ -13,9 +12,9 @@ import 'package:komodo_go/core/ui/app_icons.dart';
 import 'package:komodo_go/core/ui/app_motion.dart';
 import 'package:komodo_go/core/ui/app_snack_bar.dart';
 import 'package:komodo_go/core/widgets/async/action_busy_overlay.dart';
+import 'package:komodo_go/core/widgets/async/pull_refresh_mixin.dart';
 import 'package:komodo_go/core/widgets/async/refresh_helpers.dart';
-import 'package:komodo_go/core/widgets/async/refresh_progress_bar.dart';
-import 'package:komodo_go/core/widgets/async/stale_data_banner.dart';
+import 'package:komodo_go/core/widgets/async/refresh_status_header.dart';
 import 'package:komodo_go/core/widgets/dialogs/confirm_destructive_dialog.dart';
 import 'package:komodo_go/core/widgets/empty_error_state.dart';
 import 'package:komodo_go/core/widgets/layout/list_detail_layout.dart';
@@ -42,7 +41,8 @@ class ContainersView extends ConsumerStatefulWidget {
   ConsumerState<ContainersView> createState() => _ContainersViewState();
 }
 
-class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
+class _ContainersViewState extends PollingRouteAwareState<ContainersView>
+    with PullRefreshMixin<ContainersView> {
   static const _pollInterval = Duration(seconds: 10);
   Timer? _refreshTimer;
   late final TextEditingController _searchController;
@@ -101,23 +101,9 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
     unawaited(ref.read(containersProvider.notifier).pollRefresh());
   }
 
-  /// True while a pull-to-refresh runs, so the thin progress bar does not
-  /// double up with the RefreshIndicator spinner.
-  bool _pulling = false;
-
-  /// Refreshes without touching [_pulling], so the thin progress bar shows
-  /// (used by the stale-data banner's Retry).
-  Future<void> _refresh() => refreshProviders(ref, [containersProvider.future]);
-
-  /// Pull-to-refresh: the RefreshIndicator spinner is visible, hide the bar.
-  Future<void> _pullRefresh() async {
-    setState(() => _pulling = true);
-    try {
-      await _refresh();
-    } finally {
-      if (mounted) setState(() => _pulling = false);
-    }
-  }
+  @override
+  Future<void> refreshData() =>
+      refreshProviders(ref, [containersProvider.future]);
 
   void _stopRefreshTimer() {
     _refreshTimer?.cancel();
@@ -191,7 +177,7 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
             child: Stack(
               children: [
                 RefreshIndicator(
-                  onRefresh: _pullRefresh,
+                  onRefresh: pullRefresh,
                   child: ListView(
                     controller: _scrollController,
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -282,15 +268,10 @@ class _ContainersViewState extends PollingRouteAwareState<ContainersView> {
                         ),
                       ],
                       const Gap(12),
-                      RefreshProgressBar(
-                        active:
-                            containersAsync.isBackgroundRefresh && !_pulling,
-                      ),
-                      StaleDataBanner(
-                        visible: containersAsync.hasStaleError,
-                        error: containersAsync.error,
-                        onRetry: () => unawaited(_refresh()),
-                        padding: const EdgeInsets.only(bottom: 12),
+                      RefreshStatusHeader(
+                        async: containersAsync,
+                        pulling: isPulling,
+                        onRetry: refreshData,
                       ),
                       AppSwitcher(
                         animateSize: false,
