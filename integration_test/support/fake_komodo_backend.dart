@@ -875,7 +875,7 @@ Map<String, dynamic> _stackDetail({
       'files_on_host': false,
       'file_paths': <String>[],
       'env_file_path': '',
-      'additional_env_files': <String>[],
+      'additional_env_files': <Object>[],
       'config_files': <Object>[],
       'ignore_services': <String>[],
       'file_contents': '',
