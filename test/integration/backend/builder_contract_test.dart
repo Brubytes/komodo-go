@@ -86,6 +86,83 @@ void registerBuilderContractTests() {
           }
         }
       });
+
+      test(
+        'partial Aws edit keeps git_providers and image_registries',
+        () async {
+          final name = 'zz-aws-keep-${_randomToken(Random(7))}';
+          String? id;
+          try {
+            final created = await client.write(
+              RpcRequest(
+                type: 'CreateBuilder',
+                params: <String, dynamic>{
+                  'name': name,
+                  'config': <String, dynamic>{
+                    'type': 'Aws',
+                    'params': <String, dynamic>{
+                      'region': 'us-east-1',
+                      'git_providers': [
+                        {
+                          'domain': 'github.com',
+                          'https': true,
+                          'accounts': [
+                            {'username': 'zz-user'},
+                          ],
+                        },
+                      ],
+                      'image_registries': [
+                        {
+                          'domain': 'ghcr.io',
+                          'accounts': [
+                            {'username': 'zz-reg'},
+                          ],
+                        },
+                      ],
+                    },
+                  },
+                },
+              ),
+            ) as Map<String, dynamic>;
+            id = readIdFromMap(created);
+
+            // Same shape the builder editor sends for an unrelated edit.
+            expectRight(
+              await repository.updateBuilderConfig(
+                id: id,
+                config: <String, dynamic>{
+                  'type': 'Aws',
+                  'params': <String, dynamic>{
+                    'region': 'us-west-2',
+                    'instance_type': 't3.small',
+                    'use_https': true,
+                  },
+                },
+              ),
+            );
+
+            final json = expectRight(
+              await repository.getBuilderJson(builderIdOrName: id),
+            );
+            final params =
+                (json['config'] as Map<String, dynamic>)['params']
+                    as Map<String, dynamic>;
+            expect(params['region'], 'us-west-2');
+            final git = (params['git_providers'] as List).single as Map;
+            expect(
+              ((git['accounts'] as List).single as Map)['username'],
+              'zz-user',
+            );
+            final reg = (params['image_registries'] as List).single as Map;
+            expect(
+              ((reg['accounts'] as List).single as Map)['username'],
+              'zz-reg',
+            );
+          } finally {
+            if (id != null) await repository.deleteBuilder(id: id);
+          }
+        },
+      );
     },
     skip:
         missingConfigReason ??

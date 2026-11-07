@@ -331,10 +331,12 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
   void _onSave() {
     final next = _shape.updated((inner) {
       return switch (_shape.variant) {
+        // Core merges partial configs, so only editable fields are sent. The
+        // passkey is a secret and is only sent when the user changed it.
         'Url' => <String, dynamic>{
-          ...inner,
           'address': _addressController.text.trim(),
-          'passkey': _passkeyController.text,
+          if (_passkeyController.text != (inner['passkey'] ?? '').toString())
+            'passkey': _passkeyController.text,
         },
         'Server' => _serverBuilderConfig(inner),
         'Aws' => _awsBuilderConfig(inner),
@@ -359,20 +361,17 @@ class _BuilderConfigEditorSheetState extends State<BuilderConfigEditorSheet> {
   }
 
   Map<String, dynamic> _awsBuilderConfig(Map<String, dynamic> inner) {
-    return serializeAwsRegistryFields(
-        current: inner,
-        capabilities: widget.capabilities,
-      )
-      ..addAll(<String, dynamic>{
-        'region': _awsRegionController.text.trim(),
-        'instance_type': _awsInstanceTypeController.text.trim(),
-        'volume_gb': int.tryParse(_awsVolumeGbController.text.trim()),
-        'port': int.tryParse(_awsPortController.text.trim()),
-        'use_https': _awsUseHttps,
-        'assign_public_ip': _awsAssignPublicIp,
-        'use_public_ip': _awsUsePublicIp,
-      })
-      ..removeWhere((key, value) => value == null);
+    // Only editable fields: git_providers / image_registries (and their
+    // account entries) are never echoed back, so they cannot be replaced.
+    return <String, dynamic>{
+      'region': _awsRegionController.text.trim(),
+      'instance_type': _awsInstanceTypeController.text.trim(),
+      'volume_gb': int.tryParse(_awsVolumeGbController.text.trim()),
+      'port': int.tryParse(_awsPortController.text.trim()),
+      'use_https': _awsUseHttps,
+      'assign_public_ip': _awsAssignPublicIp,
+      'use_public_ip': _awsUsePublicIp,
+    }..removeWhere((key, value) => value == null);
   }
 }
 

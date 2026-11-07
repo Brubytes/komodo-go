@@ -79,9 +79,31 @@ void main() {
     expect(result!.config['type'], 'Url');
     final params = result.config['params']! as Map<String, dynamic>;
     expect(params['address'], 'https://changed.example.com:8120');
-    // Untouched fields survive the round trip.
-    expect(params['insecure_tls'], isTrue);
-    expect(params['periphery_public_key'], 'MCowBQYDK2VuAyEAabc');
+    // Core merges partial configs: untouched fields and secrets are not sent.
+    expect(params.keys, ['address']);
+    expect(params.containsKey('passkey'), isFalse);
+  });
+
+  testWidgets('Url builder sends passkey only when the user changed it', (
+    tester,
+  ) async {
+    final result = await pumpAndSave(
+      tester,
+      fixture: 'get_builder_url',
+      type: 'Url',
+      edit: () async {
+        await tester.enterText(
+          find.byWidgetPredicate(
+            (w) => w is EditableText && w.controller.text == 'pk',
+          ),
+          'new-pk',
+        );
+        await tester.pumpAndSettle();
+      },
+    );
+
+    final params = result!.config['params']! as Map<String, dynamic>;
+    expect(params['passkey'], 'new-pk');
   });
 
   testWidgets('Server builder keeps server_ids inside params', (tester) async {
@@ -118,6 +140,42 @@ void main() {
     final params = result!.config['params']! as Map<String, dynamic>;
     expect(result.config['type'], 'Aws');
     expect(params['volume_gb'], 30);
-    expect(params['security_group_ids'], ['sg-1', 'sg-2']);
+    // Only editable scalars are sent; nested lists that hold account entries
+    // (git_providers / image_registries) must never be echoed back.
+    expect(params.keys.toSet(), {
+      'region',
+      'instance_type',
+      'volume_gb',
+      'port',
+      'use_https',
+      'assign_public_ip',
+      'use_public_ip',
+    });
+  });
+
+  testWidgets('Aws unrelated edit sends no git_providers/image_registries', (
+    tester,
+  ) async {
+    final result = await pumpAndSave(
+      tester,
+      fixture: 'get_builder_aws',
+      type: 'Aws',
+      edit: () async {
+        await tester.enterText(
+          find.byWidgetPredicate(
+            (w) => w is EditableText && w.controller.text == 'eu-central-1',
+          ),
+          'us-west-2',
+        );
+        await tester.pumpAndSettle();
+      },
+    );
+
+    final params = result!.config['params']! as Map<String, dynamic>;
+    expect(params['region'], 'us-west-2');
+    expect(params.containsKey('git_providers'), isFalse);
+    expect(params.containsKey('image_registries'), isFalse);
+    expect(params.containsKey('docker_registries'), isFalse);
+    expect(params.containsKey('secrets'), isFalse);
   });
 }
